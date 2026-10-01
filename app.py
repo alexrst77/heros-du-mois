@@ -126,6 +126,9 @@ def run(job_id, form, refs):
         (folder / name).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
 
     meter = generator.start_meter()       # coût OpenAI de ce livre (images + textes + contrôles)
+    essai = job.get("_essai")             # None | "brouillon" (tout le livre, petite qualité) | "apercu" (couverture + 2 pages, vraie qualité)
+    if essai == "brouillon":
+        generator.MODE.set(generator.BROUILLON)
     try:
         portraits_pdf = None
         if form.get("demo") or not os.getenv("OPENAI_API_KEY"):
@@ -189,6 +192,13 @@ def run(job_id, form, refs):
                                                   "controle": qa_prev["problemes"]})
                 if d.get("action") != "redessiner":
                     break
+            if essai == "apercu":                         # essai : on s'arrête à l'aperçu (couverture + 2 pages)
+                qa_prev["cout_openai"] = {"dollars": round(meter["dollars"], 2), "appels": meter["appels"]}
+                save("controle.json", qa_prev)
+                job.update(etat="termine", progression=100, etape="Aperçu prêt", pdf="apercu.pdf",
+                           titre="[aperçu] " + " ".join(story["titre"]), controle=qa_prev["problemes"],
+                           mineurs=qa_prev.get("mineurs", []), pages=qa_prev["pages"], cout=round(meter["dollars"], 2))
+                return
             rest = generator.draw_scenes(board, story, portraits, folder, list(range(2, 18)),
                                          lambda s: progress(s, 48 + 2 * int(s.split()[-1].split("/")[0])))
             images = [cover, first[0], first[1]] + [rest[i] for i in range(2, 18)]
@@ -236,10 +246,10 @@ def parse_book(data):
     return form, None
 
 
-def start_job(job_id, form, refs, auto=False, on_end=None, reprise=False):
+def start_job(job_id, form, refs, auto=False, on_end=None, reprise=False, essai=None):
     """Lance la fabrication d'un livre dans un fil séparé (reprise=True : réutilise ce qui est déjà fait dans le dossier)."""
     (OUT / job_id).mkdir(exist_ok=True)
-    JOBS[job_id] = {"etat": "en_cours", "etape": "Démarrage", "progression": 1, "_auto": auto, "_reprise": reprise}
+    JOBS[job_id] = {"etat": "en_cours", "etape": "Démarrage", "progression": 1, "_auto": auto, "_reprise": reprise, "_essai": essai}
 
     def work():
         run(job_id, form, refs)

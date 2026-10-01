@@ -20,8 +20,18 @@ IMAGE_QUALITY = os.getenv("OPENAI_IMAGE_QUALITY", "high")   # portraits et couve
 SCENE_QUALITY = os.getenv("OPENAI_SCENE_QUALITY", "medium")  # 18 pages intérieures (le poste de coût principal)
 INPUT_FIDELITY = os.getenv("OPENAI_INPUT_FIDELITY", "high")  # high = personnages plus fidèles, mais références plus chères
 
-# ---------------------------------------------------------------- compteur de coût OpenAI (par livre)
+# ---------------------------------------------------------------- livres d'essai (brouillon à petit prix)
 import contextvars, threading as _th
+MODE = contextvars.ContextVar("mode", default=None)
+BROUILLON = {"q_main": "low", "q_scene": "low", "fidelity": "low", "retries": 0, "suffix": "_brouillon"}
+
+
+def _m(key, default):
+    m = MODE.get()
+    return m.get(key, default) if m else default
+
+
+# ---------------------------------------------------------------- compteur de coût OpenAI (par livre)
 METER = contextvars.ContextVar("meter", default=None)
 _mlock = _th.Lock()
 PRICES = {   # dollars par million de jetons : (texte entrée, image entrée, sortie)
@@ -281,7 +291,7 @@ def portrait_prompt(c, has_model, has_guide, diffs=None):
 
 def draw_portrait(c, guide=None, variant=0, base=None):
     """Portrait peint personnalisé. Mis en cache par clé (config + version) : réutilisé d'un livre à l'autre (abonnement)."""
-    out = REF_DIR / f"{c['cle']}_{variant}.png"
+    out = REF_DIR / f"{c['cle']}_{variant}{_m('suffix', '')}.png"     # un brouillon ne remplace jamais un vrai portrait
     if out.exists():
         return out
     model = base if base and Path(base).exists() else None     # aperçu recoloré du navigateur (couleurs, lunettes, yeux…)
@@ -303,7 +313,7 @@ def draw_invented(c, variant=0):
     """Personnage inventé par l'histoire (ex. une dinosaure) : portrait à partir de sa description, pour rester identique."""
     import hashlib
     key = hashlib.sha1((c["nom"] + c["desc"] + art.STYLE_VERSION).encode()).hexdigest()[:20]
-    out = REF_DIR / f"{key}_{variant}.png"
+    out = REF_DIR / f"{key}_{variant}{_m('suffix', '')}.png"
     if out.exists():
         return out
     return _edit(portrait_prompt(c, False, False), [art.STYLE_BOARD], out)
@@ -635,9 +645,10 @@ def _edit(prompt, refs, path, size="1024x1024", quality=None):
     def call():
         files = [open(r, "rb") for r in refs]
         try:
-            kw = dict(model=IMAGE_MODEL, image=files, prompt=prompt, size=size, quality=quality or IMAGE_QUALITY, n=1)
+            q = _m("q_scene", quality) if quality else _m("q_main", IMAGE_QUALITY)
+            kw = dict(model=IMAGE_MODEL, image=files, prompt=prompt, size=size, quality=q, n=1)
             try:
-                r = _client().images.edit(input_fidelity=INPUT_FIDELITY, **kw)
+                r = _client().images.edit(input_fidelity=_m("fidelity", INPUT_FIDELITY), **kw)
                 _count("image", IMAGE_MODEL, getattr(r, "usage", None))
                 return r
             except Exception as e:   # option non gérée par le SDK ou le modèle : on réessaie sans
@@ -683,7 +694,7 @@ def draw_scenes(board, story, portraits, folder, pages, progress, check=True):
         _edit(scene_prompt(p, story), ref_files(p["personnages"], portraits, style=False), path, quality=SCENE_QUALITY)
         verdict = review_scene(path, p, story) if check else {"ok": True}
         tries = 0
-        while not verdict.get("ok", True) and tries < MAX_RETRIES:   # nouvel essai UNIQUEMENT pour un écart bloquant
+        while not verdict.get("ok", True) and tries < _m("retries", MAX_RETRIES):   # nouvel essai UNIQUEMENT pour un écart bloquant
             tries += 1
             keep = path.with_name(path.stem + f"_essai{tries}.png"); shutil.copy(path, keep)
             p["fix"] = "; ".join(verdict.get("problemes", []))

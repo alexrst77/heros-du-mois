@@ -36,6 +36,7 @@ const H = { 'X-Admin': code };
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
 const date = t => t ? new Date(t * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+const ESSAI = { essai_brouillon: 'essai brouillon', essai_apercu: 'essai aperçu' };
 const LABEL = { attente_paiement: 'attente paiement', payee: 'payée', generation: 'fabrication', a_verifier: 'à relire', envoyee_impression: 'chez Lulu', expediee: 'expédiée', erreur: 'erreur', annulee: 'annulée' };
 const CONFIRM = { relancer: "Refaire entièrement ce livre ? (nouvelle génération, environ 4 € d'images)", imprimer: "Envoyer ce livre à l'impression chez Lulu ? (en production, c'est une vraie commande payée)", effacer: "Effacer définitivement les données et fichiers de cette commande ?", 'arreter-abonnement': "Arrêter cet abonnement ?" };
 
@@ -60,17 +61,19 @@ async function load() {
     const a = o.adresse || {}, q = '?code=' + encodeURIComponent(code);
     const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${q}">${esc(f)}</a>`).join('');
     const btns = [];
-    if (o.statut === 'a_verifier') btns.push(['couverture', 'Préparer la couverture'], ['cout', 'Coût Lulu'], ['imprimer', "Envoyer à l'impression", 'main']);
+    const essai = (o.formule || '').startsWith('essai');
+    if (o.statut === 'a_verifier' && !essai) btns.push(['couverture', 'Préparer la couverture'], ['cout', 'Coût Lulu'], ['imprimer', "Envoyer à l'impression", 'main']);
     if (o.statut === 'envoyee_impression') btns.push(['suivi', 'Actualiser le suivi']);
     if (['erreur', 'generation', 'payee'].includes(o.statut)) btns.push(['relancer', 'Relancer la fabrication']);
     if (o.statut === 'a_verifier') btns.push(['relancer', 'Refaire le livre']);
     if (o.statut === 'erreur' && o.lulu_id == null && o.pdf) btns.push(['imprimer', "Envoyer à l'impression", 'main']);
     if (o.statut === 'attente_paiement' && c.stripe === 'simulé') btns.push(['valider-paiement-test', 'Simuler le paiement']);
     if (o.abonnement_id) btns.push(['mois-suivant', 'Fabriquer le livre suivant'], ['arreter-abonnement', "Arrêter l'abonnement"]);
+    if (o.statut !== 'attente_paiement' && !essai) btns.push(['essai-brouillon', 'Essai brouillon (≈ 0,5 $)'], ['essai-apercu', 'Essai aperçu qualité finale (≈ 1,5 $)']);
     if (['expediee', 'erreur', 'annulee'].includes(o.statut) && o.job_id) btns.push(['effacer', 'Effacer les données']);
     return `<div class="card">
       <div class="top"><span class="st ${o.statut}">${LABEL[o.statut] || o.statut}</span><b>${esc(o.titre || '(livre en attente)')}</b>
-        <span class="muted">n°${o.numero} · ${esc(o.formule)}${o.montant ? ' · ' + eur(o.montant) : ''}${o.cout != null ? ' · coût OpenAI ≈ ' + o.cout.toFixed(2) + ' $' : ''} · ${date(o.cree)} · ${o.id}</span></div>
+        <span class="muted">n°${o.numero} · ${esc(ESSAI[o.formule] || o.formule)}${o.montant ? ' · ' + eur(o.montant) : ''}${o.cout != null ? ' · coût OpenAI ≈ ' + o.cout.toFixed(2) + ' $' : ''} · ${date(o.cree)} · ${o.id}</span></div>
       <div class="muted">${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} (${esc(a.pays)}) · ${esc(a.telephone)}</div>
       ${o.lulu_id ? `<div>Lulu : travail ${esc(o.lulu_id)} · <b>${esc(o.lulu_statut)}</b> · coût ${esc(o.lulu_cout)} ${(o.suivi || []).map(u => `<a target="_blank" href="${esc(u)}">suivi colis</a>`).join(' ')}</div>` : ''}
       ${o.controle && o.controle.length ? `<div class="warn">Contrôle qualité :<ul>${o.controle.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : (o.statut === 'a_verifier' ? '<div class="muted">Contrôle qualité : aucun problème détecté. Relis le PDF avant l\'envoi.</div>' : '')}

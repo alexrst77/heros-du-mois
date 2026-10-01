@@ -133,6 +133,8 @@ def confirm_paid(oid, stripe_sub=None):
 
 def start_book(oid, auto=False, reprise=False):
     o = db.get(oid)
+    essai = o["formule"].split("_", 1)[1] if (o["formule"] or "").startswith("essai_") else None
+    o = db.get(oid)
     form, refs = load_book(o["origine"])
     if o["origine"] != oid:                       # livre du mois suivant : nouveau thème, nouvel univers
         n = o["numero"]
@@ -148,7 +150,7 @@ def start_book(oid, auto=False, reprise=False):
     folder.mkdir(parents=True, exist_ok=True)
     (folder / ".commande").write_text(oid)
     db.update(oid, statut="generation", job_id=job_id, erreur=None)
-    A.start_job(job_id, form, refs, auto=auto, on_end=lambda j, job: book_done(oid, job), reprise=reprise)
+    A.start_job(job_id, form, refs, auto=auto, on_end=lambda j, job: book_done(oid, job), reprise=reprise, essai=essai)
 
 
 def book_done(oid, job):
@@ -162,7 +164,7 @@ def book_done(oid, job):
     for f in (A.OUT / job.get("_id", oid)).glob("*_essai*.png"):
         f.unlink(missing_ok=True)
     log(f"commande {oid} : livre prêt « {job['titre']} », à relire")
-    if auto_print() and not job.get("controle"):
+    if auto_print() and not job.get("controle") and not db.get(oid)["formule"].startswith("essai"):
         try:
             send_to_print(oid)
         except Exception as e:
@@ -285,6 +287,8 @@ def build_cover(oid):
 
 def send_to_print(oid):
     o = db.get(oid)
+    if (o["formule"] or "").startswith("essai"):
+        raise RuntimeError("livre d'essai : pas d'impression")
     if o["statut"] not in ("a_verifier", "erreur") or not o["job_id"]:
         raise RuntimeError(f"statut {o['statut']} : rien à imprimer")
     if not lulu.configured():
@@ -355,7 +359,7 @@ def admin_list():
     rows = db.lister()
     for r in rows:
         r.pop("jeton", None)
-        r["fichiers"] = sorted([p.name for p in (A.OUT / (r["job_id"] or "_")).glob("*.pdf") if p.name != "apercu.pdf"],
+        r["fichiers"] = sorted([p.name for p in (A.OUT / (r["job_id"] or "_")).glob("*.pdf") if p.name != "apercu.pdf" or r["pdf"] == "apercu.pdf"],
                                key=lambda n: n.startswith("impression_")) + \
                         (["controle.json"] if (A.OUT / (r["job_id"] or "_") / "controle.json").exists() else [])
     return jsonify(commandes=rows, abonnements=db.subs(),
@@ -422,6 +426,13 @@ def admin_action(oid, action):
         if action == "valider-paiement-test" and not paiement.configured():
             confirm_paid(oid)
             return jsonify(ok=True)
+        if action in ("essai-brouillon", "essai-apercu"):
+            # livre d'essai à partir de la même configuration, sans paiement ni impression
+            tid = uuid.uuid4().hex[:12]
+            db.create(id=tid, formule="essai_" + action.split("-")[1], email=o["email"], adresse=o["adresse"], statut="payee",
+                      montant=0, origine=o["origine"], numero=o["numero"])
+            start_book(tid, auto=True)
+            return jsonify(ok=True, info={"essai": tid})
         if action == "mois-suivant":
             s = db.sub_get(o["abonnement_id"] or "") or abort(404)
             return jsonify(ok=True, info=next_book(s))
