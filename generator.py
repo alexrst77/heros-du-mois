@@ -51,7 +51,7 @@ def start_meter():
 
 def _count(kind, model, usage):
     m = METER.get()
-    if m is None or usage is None:
+    if usage is None:
         return
     g = lambda o, k: (o.get(k) if isinstance(o, dict) else getattr(o, k, None)) or 0
     if kind == "image":
@@ -64,8 +64,43 @@ def _count(kind, model, usage):
         tin, _, out = _price(model)
         cost = (g(usage, "prompt_tokens") * tin + g(usage, "completion_tokens") * out) / 1e6
     with _mlock:
-        m["appels"] += 1; m["dollars"] += cost
-        d = m["detail"].setdefault(kind, [0, 0.0]); d[0] += 1; d[1] += cost
+        _spend(cost)
+        if m is not None:
+            m["appels"] += 1; m["dollars"] += cost
+            d = m["detail"].setdefault(kind, [0, 0.0]); d[0] += 1; d[1] += cost
+
+
+# ---------------------------------------------------------------- garde-fou : budget OpenAI par jour (toutes fabrications confondues)
+BUDGET_JOUR = float(os.getenv("BUDGET_OPENAI_JOUR", "15"))     # dollars ; au-delà, plus aucun appel jusqu'au lendemain
+SPEND_FILE = Path(os.getenv("DATA_DIR") or Path(__file__).parent) / "depenses_openai.json"
+
+
+class BudgetError(RuntimeError):
+    pass
+
+
+def _spend(cost):
+    try:
+        d = json.loads(SPEND_FILE.read_text()) if SPEND_FILE.exists() else {}
+    except Exception:
+        d = {}
+    day = time.strftime("%Y-%m-%d")
+    d[day] = round(d.get(day, 0) + cost, 4)
+    SPEND_FILE.write_text(json.dumps(dict(list(d.items())[-60:])))
+
+
+def spent_today():
+    try:
+        return json.loads(SPEND_FILE.read_text()).get(time.strftime("%Y-%m-%d"), 0) if SPEND_FILE.exists() else 0
+    except Exception:
+        return 0
+
+
+def check_budget():
+    if os.getenv("GENERATION_PAUSE") == "1":
+        raise BudgetError("Fabrications en pause (GENERATION_PAUSE=1)")
+    if spent_today() >= BUDGET_JOUR:
+        raise BudgetError(f"Budget OpenAI du jour atteint ({spent_today():.2f} $ / {BUDGET_JOUR:.0f} $) : fabrication arrêtée jusqu'à demain")
 WORKERS = int(os.getenv("IMAGE_WORKERS", "3"))
 
 
@@ -86,6 +121,7 @@ def _retry(fn, tries=3):
 
 
 def _chat_json(system, user):
+    check_budget()
     def call():
         r = _client().chat.completions.create(model=TEXT_MODEL, response_format={"type": "json_object"},
                                               messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
@@ -638,6 +674,7 @@ def _reused(path):
 
 
 def _edit(prompt, refs, path, size="1024x1024", quality=None):
+    check_budget()
     refs = [Path(r) for r in refs]
     missing = [str(r) for r in refs if not r.exists()]
     if missing:

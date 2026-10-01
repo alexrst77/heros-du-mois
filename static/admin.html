@@ -56,7 +56,7 @@ async function load() {
   const r = await fetch('/admin/api/commandes?code=' + encodeURIComponent(code), { headers: H });
   if (!r.ok) { document.getElementById('list').textContent = 'Accès refusé (ajoute ?code=… à l\'adresse).'; return; }
   const d = await r.json(), c = d.config;
-  document.getElementById('cfg').innerHTML = `Paiement : <b>${c.stripe}</b> · Impression : <b>${c.lulu}</b> · Produit : <b>${esc(c.pod)}</b> · Adresse publique : <b>${esc(c.public_url || 'aucune')}</b> · Impression auto : <b>${c.auto_impression ? 'oui' : 'non (tu relis puis tu envoies)'}</b>`;
+  document.getElementById('cfg').innerHTML = `OpenAI aujourd'hui : <b>${(c.depense_jour || 0).toFixed(2)} $ / ${c.budget_jour} $</b> · Paiement : <b>${c.stripe}</b> · Impression : <b>${c.lulu}</b> · Produit : <b>${esc(c.pod)}</b> · Adresse publique : <b>${esc(c.public_url || 'aucune')}</b> · Impression auto : <b>${c.auto_impression ? 'oui' : 'non (tu relis puis tu envoies)'}</b>`;
   document.getElementById('list').innerHTML = d.commandes.length ? d.commandes.map(o => {
     const a = o.adresse || {}, q = '?code=' + encodeURIComponent(code);
     const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${q}">${esc(f)}</a>`).join('');

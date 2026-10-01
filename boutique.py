@@ -32,6 +32,9 @@ def _resume():
     time.sleep(10)
     for o in db.lister(500):
         if o["statut"] in ("payee", "generation") and not A.JOBS.get(o["job_id"] or ""):
+            if (o.get("tentatives") or 0) >= 3:            # garde-fou : jamais de boucle de relances qui coûte
+                db.update(o["id"], statut="erreur", erreur="Fabrication interrompue 3 fois : relance-la à la main depuis l'admin")
+                continue
             log(f"commande {o['id']} : fabrication interrompue, relance")
             try:
                 start_book(o["id"], auto=True, reprise=True)   # reprend là où elle s'était arrêtée (rien n'est payé deux fois)
@@ -149,7 +152,7 @@ def start_book(oid, auto=False, reprise=False):
         shutil.rmtree(folder, ignore_errors=True)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / ".commande").write_text(oid)
-    db.update(oid, statut="generation", job_id=job_id, erreur=None)
+    db.update(oid, statut="generation", job_id=job_id, erreur=None, tentatives=(o.get("tentatives") or 0) + 1 if reprise else 1)
     A.start_job(job_id, form, refs, auto=auto, on_end=lambda j, job: book_done(oid, job), reprise=reprise, essai=essai)
 
 
@@ -365,7 +368,8 @@ def admin_list():
     return jsonify(commandes=rows, abonnements=db.subs(),
                    config={"stripe": "live" if paiement.live() else "test" if paiement.configured() else "simulé",
                            "lulu": lulu.env() if lulu.configured() else "non configuré", "pod": lulu.POD_PACKAGE,
-                           "public_url": os.getenv("PUBLIC_URL", ""), "auto_impression": auto_print()})
+                           "public_url": os.getenv("PUBLIC_URL", ""), "auto_impression": auto_print(),
+                           "depense_jour": A.generator.spent_today(), "budget_jour": A.generator.BUDGET_JOUR})
 
 
 @bp.get("/admin/fichier/<oid>/<name>")
