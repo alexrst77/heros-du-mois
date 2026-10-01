@@ -255,7 +255,7 @@
       }).filter(Boolean);
       if (targets.E && st.E && P.eyes) {
         const [hb, sb, lb] = rgb2hsl(...st.E.map(v => v / 255)), [ht, stt, lt] = rgb2hsl(...hex(targets.E));
-        zones.push({ i: 0, eye: true, dh: ht - hb, ks: stt / Math.max(sb, .05), lt: Math.min(lt, .55), lb });
+        zones.push({ i: 0, eye: true, dh: ht - hb, ks: stt / Math.max(sb, .05), lt: Math.min(lt, .55), lb, ht, st: stt });
       }
       for (let p = 0; p < px.length; p += 4) {
         if (!px[p + 3]) continue;
@@ -263,8 +263,9 @@
         for (const z of zones) {
           const w = (z.eye ? P.eyes[p] : M[p + z.i]) / 255; if (w < .01) continue;
           let [h, s, l] = rgb2hsl(r, g, b);
-          h = (h + z.dh + 1) % 1; s = Math.min(1, s * z.ks);
-          l = z.lt <= z.lb ? l * z.lt / Math.max(z.lb, 1e-3) : 1 - (1 - l) * (1 - z.lt) / Math.max(1 - z.lb, 1e-3);
+          if (z.eye) { h = z.ht; s = Math.min(1, z.st * 1.2) * Math.min(1, Math.max(0, (l - 0.06) / 0.22)); }   // iris : teinte imposée, pupille neutre
+          else { h = (h + z.dh + 1) % 1; s = Math.min(1, s * z.ks); }
+          l = z.lt <= z.lb ? l * z.lt / Math.max(z.lb, 1e-3) : Math.min(0.96, Math.max(0, Math.min(z.lt, 0.72) + (l - z.lb) * 0.8));   // éclaircir sans aplatir
           const [r2, g2, b2] = hsl2rgb(h, s, Math.max(0, Math.min(1, l)));
           r = r * (1 - w) + r2 * w; g = g * (1 - w) + g2 * w; b = b * (1 - w) + b2 * w;
         }

@@ -409,6 +409,8 @@
   $('next').onclick = () => {
     $('err').textContent = '';
     if (tab === 'enfant' && !S.enfant.prenom.trim()) { $('err').textContent = "Indique le prénom de l'enfant."; return; }
+    if (tab === 'doudou' && S.doudou.actif && !(S.doudou.nom || '').trim()) { $('err').textContent = "Donne un nom au doudou : il sera un vrai personnage de l'histoire."; return; }
+    if (tab === 'animaux') { const i = S.animaux.findIndex(a => !(a.nom || '').trim()); if (i >= 0) { pet = i; render(); $('err').textContent = "Indique le nom de chaque animal."; return; } }
     if (tab === 'histoire' && S.histoire.demo) return submit();
     if (tab !== 'commande') { tab = TABS[TABS.indexOf(tab) + 1]; render(); scrollTo({ top: 0, behavior: 'smooth' }); return; }
     submit();

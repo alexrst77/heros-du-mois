@@ -620,6 +620,13 @@ def _save(resp, path):
     return Path(path)
 
 
+REUSE = set()   # dossiers de livres repris après une coupure : les images déjà faites ne sont pas redessinées
+
+
+def _reused(path):
+    return str(Path(path).parent) in REUSE and Path(path).exists()
+
+
 def _edit(prompt, refs, path, size="1024x1024", quality=None):
     refs = [Path(r) for r in refs]
     missing = [str(r) for r in refs if not r.exists()]
@@ -658,6 +665,8 @@ def ref_files(ids, portraits, style=True):
 def draw_cover(board, story, portraits, folder):
     ids = [x for x in board["couverture"]["personnages"] if x in portraits]
     board["couverture"]["personnages"] = ids
+    if _reused(Path(folder) / "image_00.png"):
+        return Path(folder) / "image_00.png"
     return _edit(cover_prompt(board, story), ref_files(ids, portraits), Path(folder) / "image_00.png")
 
 
@@ -668,6 +677,9 @@ def draw_scenes(board, story, portraits, folder, pages, progress, check=True):
         p = board["pages"][i]
         p["personnages"] = [x for x in p["personnages"] if x in portraits]
         path = Path(folder) / f"image_{i + 1:02d}.png"
+        if _reused(path):                                  # reprise : page déjà dessinée (et payée)
+            done[0] += 1; progress(f"Illustrations {done[0]}/{len(pages)}")
+            return path
         _edit(scene_prompt(p, story), ref_files(p["personnages"], portraits, style=False), path, quality=SCENE_QUALITY)
         verdict = review_scene(path, p, story) if check else {"ok": True}
         tries = 0
@@ -853,7 +865,7 @@ def recolor_model(kind, cfg):
             ht, stt, lt = [float(v) for v in _rgb2hsl(*[np.array(v) for v in _hex(t[k])])]
             h, s, l = _rgb2hsl(r, g, b)
             h = (h + ht - hb + 1) % 1; s = np.minimum(1, s * stt / max(sb, .05))
-            l = l * lt / max(lb, 1e-3) if lt <= lb else 1 - (1 - l) * (1 - lt) / max(1 - lb, 1e-3)
+            l = l * lt / max(lb, 1e-3) if lt <= lb else np.clip(min(lt, 0.72) + (l - lb) * 0.8, 0, 0.96)   # éclaircir sans aplatir les mèches
             r2, g2, b2 = _hsl2rgb(h, s, np.clip(l, 0, 1))
             w = mask[..., i]
             r, g, b = r * (1 - w) + r2 * w, g * (1 - w) + g2 * w, b * (1 - w) + b2 * w

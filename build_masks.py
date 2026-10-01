@@ -73,12 +73,23 @@ def child(im):
     zone = fill_holes(largest(close(core, 15))) & A                     # tout le vêtement (ombres et étoiles comprises)
     strand = (H > 4) & (H < 31) & (S > 0.35) & (V < 0.72)               # mèches de cheveux posées sur le vêtement
     shirt = zone & ~strand
-    light_skin = A & ~shirt & warm & (S > 0.1) & (S < 0.72) & (V > 0.8)
-    # zone du visage/cou : peau claire refermée, trous (yeux, bouche, sourcils) bouchés
-    face = fill_holes(largest(close(light_skin, 13))) & A & ~shirt
-    feat = face & (V < 0.5)                                   # yeux, sourcils, traits : on n'y touche pas
-    skin = face & ~feat & warm & (S > 0.08)
-    hair = A & ~shirt & ~face & (((H > 4) & (H < 46)) | (V < 0.35)) & (S > 0.22) & (V < 0.9)
+    # visage : peau claire franche, refermée avec un petit rayon (pour ne pas engloutir les mèches voisines)
+    strict = A & ~shirt & warm & (S > 0.1) & (S < 0.62) & (V > 0.86)
+    core = fill_holes(largest(close(strict, 5))) & A & ~shirt
+    near = Image.fromarray((core * 255).astype(np.uint8))
+    for _ in range(3): near = near.filter(ImageFilter.MaxFilter(9))
+    near = np.asarray(near) > 127
+    cand = A & ~shirt & warm & (V > 0.74) & (S < 0.82)                # peau dans l'ombre (joues, oreilles, cou)
+    skinreg = (core | (near & cand)) & A & ~shirt
+    xx = np.mgrid[0:SIZE, 0:SIZE][1] / SIZE
+    neck = cand & (yy > 0.55) & (xx > 0.35) & (xx < 0.68)
+    for c in components(neck):
+        if c[0] > 300: skinreg[c[3][:, 0], c[3][:, 1]] = True
+    face = fill_holes(skinreg) & A & ~shirt
+    feat = face & ~skinreg & (V < 0.6)                                 # yeux, sourcils, bouche : on n'y touche pas
+    skin = skinreg & warm & (S > 0.08) & (V > 0.6)
+    hairlike = (((H > 4) & (H < 46)) | (V < 0.35)) & (S > 0.2) & (V < 0.9)
+    hair = A & ~shirt & ~skin & ~feat & hairlike
     return {"R": hair, "G": skin, "B": shirt, "_feat": feat, "_face": face}
 
 
@@ -118,8 +129,9 @@ def find_eyes(z, im):
         pts = c[3]; r = max(pts[:, 1].max() - pts[:, 1].min(), pts[:, 0].max() - pts[:, 0].min()) / 2 + 2
         eyes.append([round(float(c[1]), 1), round(float(c[2]), 1), round(float(r), 1)])
         yy, xx = np.mgrid[0:SIZE, 0:SIZE]
-        disk = (xx - c[1]) ** 2 + (yy - c[2]) ** 2 <= (r * 1.05) ** 2
-        iris |= disk & (V > 0.12) & (S > 0.25) & ~((V > 0.85) & (S < 0.2))   # iris coloré (ni pupille noire, ni reflet blanc)
+        disk = (xx - c[1]) ** 2 + (yy - c[2]) ** 2 <= (r * 0.82) ** 2
+        # iris seulement : ni la pupille noire, ni les reflets, ni les cils et paupières (sombres et peu saturés)
+        iris |= disk & (V > 0.08) & ~((V > 0.6) & (S < 0.3))       # ni la pupille, ni le blanc de l'œil, ni les reflets
     return eyes, iris
 
 

@@ -137,12 +137,21 @@ def run(job_id, form, refs):
             images += images[1:]                        # démo : 18 pages à partir des 9 illustrations de Léo
             board = None
         else:
-            cfg = generator.build_config(form); save("config.json", cfg)
-            progress("Écriture et relecture de l'histoire", 3)
-            story = generator.write_story(cfg, form); save("histoire.json", story)
-            progress("Storyboard des 18 pages", 7)
-            board = generator.make_storyboard(story); save("storyboard.json", board)
-            save("histoire.json", story)                 # le storyboard peut déclarer un personnage oublié (ex. une créature)
+            cfg = generator.build_config(form)
+            old = lambda n: json.loads((folder / n).read_text(encoding="utf-8")) if (folder / n).exists() else None
+            reprise = job.get("_reprise") and old("config.json") == cfg and old("histoire.json") and old("storyboard.json")
+            if reprise:                                   # reprise après coupure : histoire et storyboard déjà payés
+                story, board = old("histoire.json"), old("storyboard.json")
+                generator.REUSE.add(str(folder))
+            else:
+                generator.REUSE.discard(str(folder))
+                for f in folder.glob("image_*.png"): f.unlink()
+                save("config.json", cfg)
+                progress("Écriture et relecture de l'histoire", 3)
+                story = generator.write_story(cfg, form); save("histoire.json", story)
+                progress("Storyboard des 18 pages", 7)
+                board = generator.make_storyboard(story); save("storyboard.json", board)
+                save("histoire.json", story)             # le storyboard peut déclarer un personnage oublié (ex. une créature)
 
             # portraits de référence, un par personnage, validés par le parent (redessin personnage par personnage)
             variants, portraits = {}, {}
@@ -227,10 +236,10 @@ def parse_book(data):
     return form, None
 
 
-def start_job(job_id, form, refs, auto=False, on_end=None):
-    """Lance la fabrication d'un livre dans un fil séparé."""
+def start_job(job_id, form, refs, auto=False, on_end=None, reprise=False):
+    """Lance la fabrication d'un livre dans un fil séparé (reprise=True : réutilise ce qui est déjà fait dans le dossier)."""
     (OUT / job_id).mkdir(exist_ok=True)
-    JOBS[job_id] = {"etat": "en_cours", "etape": "Démarrage", "progression": 1, "_auto": auto}
+    JOBS[job_id] = {"etat": "en_cours", "etape": "Démarrage", "progression": 1, "_auto": auto, "_reprise": reprise}
 
     def work():
         run(job_id, form, refs)

@@ -34,7 +34,7 @@ def _resume():
         if o["statut"] in ("payee", "generation") and not A.JOBS.get(o["job_id"] or ""):
             log(f"commande {o['id']} : fabrication interrompue, relance")
             try:
-                start_book(o["id"], auto=True)
+                start_book(o["id"], auto=True, reprise=True)   # reprend là où elle s'était arrêtée (rien n'est payé deux fois)
             except Exception:
                 traceback.print_exc()
 
@@ -131,7 +131,7 @@ def confirm_paid(oid, stripe_sub=None):
     return True
 
 
-def start_book(oid, auto=False):
+def start_book(oid, auto=False, reprise=False):
     o = db.get(oid)
     form, refs = load_book(o["origine"])
     if o["origine"] != oid:                       # livre du mois suivant : nouveau thème, nouvel univers
@@ -143,10 +143,12 @@ def start_book(oid, auto=False):
         form = dict(form, numero=f"{o['numero']:02d}")
     job_id = oid
     folder = A.OUT / job_id
-    shutil.rmtree(folder, ignore_errors=True); folder.mkdir(parents=True)
+    if not reprise:
+        shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True, exist_ok=True)
     (folder / ".commande").write_text(oid)
     db.update(oid, statut="generation", job_id=job_id, erreur=None)
-    A.start_job(job_id, form, refs, auto=auto, on_end=lambda j, job: book_done(oid, job))
+    A.start_job(job_id, form, refs, auto=auto, on_end=lambda j, job: book_done(oid, job), reprise=reprise)
 
 
 def book_done(oid, job):
@@ -414,7 +416,8 @@ def admin_action(oid, action):
                 raise RuntimeError("seulement avant l'envoi à l'impression")
             if A.JOBS.get(o["job_id"] or "", {}).get("etat") in ("en_cours", "validation"):
                 raise RuntimeError("fabrication en cours : attends la fin avant de relancer")
-            start_book(oid, auto=True)
+            # en erreur ou bloquée : on reprend là où elle s'est arrêtée ; « Refaire le livre » (à relire) repart de zéro
+            start_book(oid, auto=True, reprise=o["statut"] != "a_verifier")
             return jsonify(ok=True)
         if action == "valider-paiement-test" and not paiement.configured():
             confirm_paid(oid)
