@@ -353,7 +353,8 @@ def admin_list():
     rows = db.lister()
     for r in rows:
         r.pop("jeton", None)
-        r["fichiers"] = [p.name for p in (A.OUT / (r["job_id"] or "_")).glob("*.pdf")] + \
+        r["fichiers"] = sorted([p.name for p in (A.OUT / (r["job_id"] or "_")).glob("*.pdf") if p.name != "apercu.pdf"],
+                               key=lambda n: n.startswith("impression_")) + \
                         (["controle.json"] if (A.OUT / (r["job_id"] or "_") / "controle.json").exists() else [])
     return jsonify(commandes=rows, abonnements=db.subs(),
                    config={"stripe": "live" if paiement.live() else "test" if paiement.configured() else "simulé",
