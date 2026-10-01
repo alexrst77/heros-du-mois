@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commandes – Mon Héros du Mois</title>
+<style>
+  :root { --bg:#0F2A37; --card:#16384A; --line:#2A5266; --cream:#FFF4E0; --muted:#A9C1C9; --gold:#F2CF7E; --ok:#7FD3A2; --err:#FF9B8A; }
+  body { margin:0; background:var(--bg); color:var(--cream); font:14px/1.45 system-ui, sans-serif; }
+  .wrap { max-width:1200px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font:600 24px Georgia, serif; margin:0 0 4px; } h2 { font:600 17px Georgia, serif; margin:28px 0 10px; }
+  .cfg { color:var(--muted); margin-bottom:16px; } .cfg b { color:var(--cream); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px; }
+  .top { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline; }
+  .st { padding:2px 10px; border-radius:999px; font-weight:600; font-size:12px; background:#24495B; }
+  .st.a_verifier { background:var(--gold); color:#1B2A2E; } .st.erreur { background:var(--err); color:#1B2A2E; }
+  .st.expediee, .st.envoyee_impression { background:var(--ok); color:#1B2A2E; }
+  .muted { color:var(--muted); } a { color:var(--gold); }
+  .files a { margin-right:12px; } .warn { color:var(--err); }
+  button { background:#24495B; color:var(--cream); border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer; margin:6px 6px 0 0; font:600 13px system-ui; }
+  button.main { background:var(--gold); color:#1B2A2E; border-color:var(--gold); }
+  .msg { margin-top:8px; white-space:pre-wrap; font-size:13px; }
+  ul { margin:6px 0 0 18px; padding:0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Commandes</h1>
+  <div class="cfg" id="cfg"></div>
+  <div id="list">Chargement…</div>
+  <h2>Abonnements</h2>
+  <div id="subs"></div>
+</div>
+<script>
+const code = new URLSearchParams(location.search).get('code') || '';
+const H = { 'X-Admin': code };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
+const date = t => t ? new Date(t * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+const LABEL = { attente_paiement: 'attente paiement', payee: 'payée', generation: 'fabrication', a_verifier: 'à relire', envoyee_impression: 'chez Lulu', expediee: 'expédiée', erreur: 'erreur', annulee: 'annulée' };
+const CONFIRM = { relancer: "Refaire entièrement ce livre ? (nouvelle génération, environ 4 € d'images)", imprimer: "Envoyer ce livre à l'impression chez Lulu ? (en production, c'est une vraie commande payée)", effacer: "Effacer définitivement les données et fichiers de cette commande ?", 'arreter-abonnement': "Arrêter cet abonnement ?" };
+
+async function act(id, action, btn) {
+  if (CONFIRM[action] && !confirm(CONFIRM[action])) return;
+  const out = btn.closest('.card').querySelector('.msg'); btn.disabled = true; out.textContent = '…';
+  try {
+    const r = await fetch(`/admin/api/${id}/${action}?code=${encodeURIComponent(code)}`, { method: 'POST', headers: H });
+    const j = await r.json(); out.textContent = j.erreur ? '⚠ ' + j.erreur : '✓ ' + (j.info ? JSON.stringify(j.info) : 'fait');
+    if (action === 'couverture' && !j.erreur) out.innerHTML += ` · <a target="_blank" href="/admin/fichier/${id}/impression_couverture.pdf?code=${encodeURIComponent(code)}&t=${Date.now()}">voir la couverture</a>`;
+    setTimeout(load, 1500);
+  } catch (e) { out.textContent = '⚠ ' + e.message; }
+  btn.disabled = false;
+}
+
+async function load() {
+  const r = await fetch('/admin/api/commandes?code=' + encodeURIComponent(code), { headers: H });
+  if (!r.ok) { document.getElementById('list').textContent = 'Accès refusé (ajoute ?code=… à l\'adresse).'; return; }
+  const d = await r.json(), c = d.config;
+  document.getElementById('cfg').innerHTML = `Paiement : <b>${c.stripe}</b> · Impression : <b>${c.lulu}</b> · Produit : <b>${esc(c.pod)}</b> · Adresse publique : <b>${esc(c.public_url || 'aucune')}</b> · Impression auto : <b>${c.auto_impression ? 'oui' : 'non (tu relis puis tu envoies)'}</b>`;
+  document.getElementById('list').innerHTML = d.commandes.length ? d.commandes.map(o => {
+    const a = o.adresse || {}, q = '?code=' + encodeURIComponent(code);
+    const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${q}">${esc(f)}</a>`).join('');
+    const btns = [];
+    if (o.statut === 'a_verifier') btns.push(['couverture', 'Préparer la couverture'], ['cout', 'Coût Lulu'], ['imprimer', "Envoyer à l'impression", 'main']);
+    if (o.statut === 'envoyee_impression') btns.push(['suivi', 'Actualiser le suivi']);
+    if (['erreur', 'generation', 'payee'].includes(o.statut)) btns.push(['relancer', 'Relancer la fabrication']);
+    if (o.statut === 'a_verifier') btns.push(['relancer', 'Refaire le livre']);
+    if (o.statut === 'erreur' && o.lulu_id == null && o.pdf) btns.push(['imprimer', "Envoyer à l'impression", 'main']);
+    if (o.statut === 'attente_paiement' && c.stripe === 'simulé') btns.push(['valider-paiement-test', 'Simuler le paiement']);
+    if (o.abonnement_id) btns.push(['mois-suivant', 'Fabriquer le livre suivant'], ['arreter-abonnement', "Arrêter l'abonnement"]);
+    if (['expediee', 'erreur', 'annulee'].includes(o.statut) && o.job_id) btns.push(['effacer', 'Effacer les données']);
+    return `<div class="card">
+      <div class="top"><span class="st ${o.statut}">${LABEL[o.statut] || o.statut}</span><b>${esc(o.titre || '(livre en attente)')}</b>
+        <span class="muted">n°${o.numero} · ${esc(o.formule)}${o.montant ? ' · ' + eur(o.montant) : ''} · ${date(o.cree)} · ${o.id}</span></div>
+      <div class="muted">${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} (${esc(a.pays)}) · ${esc(a.telephone)}</div>
+      ${o.lulu_id ? `<div>Lulu : travail ${esc(o.lulu_id)} · <b>${esc(o.lulu_statut)}</b> · coût ${esc(o.lulu_cout)} ${(o.suivi || []).map(u => `<a target="_blank" href="${esc(u)}">suivi colis</a>`).join(' ')}</div>` : ''}
+      ${o.controle && o.controle.length ? `<div class="warn">Contrôle qualité :<ul>${o.controle.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : (o.statut === 'a_verifier' ? '<div class="muted">Contrôle qualité : aucun problème détecté. Relis le PDF avant l\'envoi.</div>' : '')}
+      ${o.erreur ? `<div class="warn">${esc(o.erreur)}</div>` : ''}
+      <div class="files">${files}</div>
+      <div>${btns.map(b => `<button class="${b[2] || ''}" onclick="act('${o.id}','${b[0]}',this)">${b[1]}</button>`).join('')}</div>
+      <div class="msg"></div></div>`;
+  }).join('') : '<p class="muted">Aucune commande pour l\'instant.</p>';
+  document.getElementById('subs').innerHTML = d.abonnements.length ? d.abonnements.map(s => `<div class="card"><b>${esc(s.formule)}</b> · ${esc(s.statut)} · ${esc(s.email)} · dernier livre n°${s.numero}${s.livres_restants != null ? ' · ' + s.livres_restants + ' livre(s) restant(s)' : ''}${s.prochain ? ' · prochain le ' + date(s.prochain) : s.statut === 'actif' ? ' · prochain à la prochaine facture Stripe' : ''}</div>`).join('') : '<p class="muted">Aucun abonnement.</p>';
+}
+load(); setInterval(load, 30000);
+</script>
+</body>
+</html>

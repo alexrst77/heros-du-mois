@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mon Héros du Mois – Crée ton héros</title>
+<style>
+  :root { --bg:#0F2733; --card:#163646; --card2:#12303E; --line:#24495B; --cream:#FFF2D9; --muted:#B9C8C6; --gold:#F2CF7E; --gold2:#E3B558; --err:#F29C8F; }
+  * { box-sizing:border-box; }
+  html { background:#0F2733; }
+  body { margin:0; background:radial-gradient(1200px 600px at 50% -10%, #1E4A5C 0%, var(--bg) 60%) fixed; color:var(--cream); font:16px/1.5 Georgia, "DejaVu Serif", serif; }
+  .wrap { max-width:1120px; margin:0 auto; padding:24px 16px 64px; }
+  .kicker { font:600 11px/1 system-ui, sans-serif; letter-spacing:3px; color:var(--gold); text-transform:uppercase; }
+  h1 { font-size:32px; line-height:1.1; margin:10px 0 6px; } h1 span { color:var(--gold); }
+  .lead { color:var(--muted); margin:0 0 22px; max-width:640px; }
+  .layout { display:grid; grid-template-columns:400px 1fr; gap:22px; align-items:start; }
+  @media (max-width:880px) { .layout { grid-template-columns:1fr; } .stage { position:relative !important; top:0 !important; } }
+
+  /* scène */
+  .stage { position:sticky; top:16px; background:rgba(22,54,70,.85); border:1px solid var(--line); border-radius:20px; padding:16px; }
+  .scene { position:relative; aspect-ratio:1/1; border-radius:14px; overflow:hidden;
+           background:radial-gradient(circle at 50% 38%, #2C5A66 0%, #173C44 55%, #10272E 100%); display:flex; align-items:flex-end; justify-content:center; }
+  .scene .big { width:84%; height:94%; display:flex; align-items:flex-end; justify-content:center; }
+  .scene .big svg { width:100%; height:100%; }
+  .scene .group { display:flex; align-items:flex-end; justify-content:center; width:100%; height:100%; padding:0 4%; }
+  .scene .group svg { display:block; }
+  .scene .fl { position:absolute; inset:0; pointer-events:none; }
+  .who { text-align:center; font-size:20px; font-weight:700; margin:12px 0 2px; min-height:28px; }
+  .who small { display:block; font:500 12px system-ui, sans-serif; color:var(--muted); letter-spacing:.5px; }
+  .team { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+  .team button { width:62px; height:62px; border-radius:50%; border:2px solid var(--line); background:var(--card2); padding:4px; cursor:pointer; position:relative; }
+  .team button.on { border-color:var(--gold); box-shadow:0 0 0 3px rgba(242,207,126,.25); }
+  .team button svg { width:100%; height:100%; }
+  .scene .big img, .scene .group img { width:100%; height:100%; object-fit:contain; display:block; filter:drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
+  .scene .group > div { display:flex; align-items:flex-end; }
+  .mine { position:absolute; left:10px; top:10px; width:74px; height:74px; border-radius:50%; background:rgba(15,39,51,.8); border:1px solid var(--line); padding:6px; }
+  .mine svg { width:100%; height:100%; }
+  .mine span { position:absolute; left:0; right:0; bottom:-16px; text-align:center; font:600 9px system-ui,sans-serif; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+  .badge { margin-top:10px; background:rgba(15,39,51,.88); border:1px solid var(--line); border-radius:12px; padding:9px 10px; font:13px system-ui,sans-serif; color:var(--cream); text-align:center; }
+  .badge.ok { color:#BFE3B4; }
+  .badge .btn { width:100%; margin-top:8px; padding:10px; font-size:14px; }
+  .busy { position:absolute; inset:0; display:grid; place-items:center; background:rgba(10,28,36,.55); font:600 14px system-ui,sans-serif; color:var(--gold); text-align:center; }
+  .busy i { display:block; width:34px; height:34px; margin:0 auto 10px; border-radius:50%; border:3px solid rgba(242,207,126,.25); border-top-color:var(--gold); animation:sp 1s linear infinite; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .team button img { width:100%; height:100%; object-fit:contain; }
+  .thumbs button img { width:100%; aspect-ratio:1/1; object-fit:contain; display:block; }
+  .team button.add { font:600 26px system-ui; color:var(--gold); border-style:dashed; }
+
+  /* panneau */
+  .panel { background:rgba(22,54,70,.75); border:1px solid var(--line); border-radius:20px; overflow:hidden; }
+  .tabs { display:flex; border-bottom:1px solid var(--line); overflow-x:auto; }
+  .tabs button { flex:1; min-width:110px; background:none; border:0; color:var(--muted); padding:14px 10px; font:600 13px system-ui, sans-serif; letter-spacing:.5px; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
+  .tabs button b { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--card2); border:1px solid var(--line); margin-right:6px; font-size:11px; }
+  .tabs button.on { color:var(--cream); border-bottom-color:var(--gold); } .tabs button.on b { background:var(--gold); color:#1B2A2E; border-color:var(--gold); }
+  .body { padding:18px 18px 8px; }
+  .grp { margin:0 0 18px; }
+  .grp > .lbl { font:600 12px system-ui, sans-serif; letter-spacing:1.5px; text-transform:uppercase; color:var(--gold); margin-bottom:8px; }
+  .grp > .lbl em { font-style:normal; color:var(--muted); letter-spacing:0; text-transform:none; font-weight:500; margin-left:6px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; } @media (max-width:520px) { .row2 { grid-template-columns:1fr; } }
+  input[type=text], select, textarea { width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--line); background:#0F2A37; color:var(--cream); font:15px system-ui, sans-serif; }
+  textarea { min-height:70px; resize:vertical; }
+  input:focus, select:focus, textarea:focus { outline:2px solid var(--gold2); outline-offset:1px; }
+  .sw { display:flex; flex-wrap:wrap; gap:9px; }
+  .sw button { width:36px; height:36px; border-radius:50%; border:3px solid transparent; outline:1px solid rgba(255,255,255,.15); cursor:pointer; padding:0; position:relative; }
+  .sw button.on { border-color:var(--gold); outline:2px solid var(--gold); outline-offset:2px; }
+  .sw button.none { background:repeating-linear-gradient(45deg,#0F2A37 0 5px,#1B3A48 5px 10px); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chips button { border:1px solid var(--line); background:var(--card2); color:var(--cream); padding:8px 14px; border-radius:999px; font:500 14px system-ui, sans-serif; cursor:pointer; }
+  .chips button.on { background:var(--gold); color:#1B2A2E; border-color:var(--gold); font-weight:600; }
+  .thumbs { display:grid; grid-template-columns:repeat(auto-fill, minmax(78px, 1fr)); gap:8px; }
+  .thumbs button { border:2px solid var(--line); background:var(--card2); border-radius:14px; padding:4px 4px 2px; cursor:pointer; color:var(--muted); font:500 11px system-ui, sans-serif; }
+  .thumbs button svg { width:100%; aspect-ratio:1/1; display:block; }
+  .thumbs button.on { border-color:var(--gold); color:var(--cream); background:#1B4050; }
+  .toggle { display:flex; gap:10px; align-items:center; font:500 15px system-ui, sans-serif; margin:0 0 16px; cursor:pointer; }
+  .toggle input { width:20px; height:20px; accent-color:#E3B558; }
+  .pets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .pets button { border:1px solid var(--line); background:var(--card2); color:var(--cream); padding:8px 14px; border-radius:12px; font:500 14px system-ui, sans-serif; cursor:pointer; }
+  .pets button.on { border-color:var(--gold); background:#1B4050; }
+  .pets button.add { color:var(--gold); border-style:dashed; }
+  .empty { text-align:center; color:var(--muted); font:15px system-ui, sans-serif; padding:24px 10px; }
+  .foot { display:flex; gap:10px; justify-content:space-between; padding:14px 18px 18px; border-top:1px solid var(--line); }
+  .btn { appearance:none; border:0; border-radius:12px; padding:13px 20px; font:600 15px system-ui, sans-serif; cursor:pointer; background:linear-gradient(180deg, #F6D98A, #E3B558); color:#1B2A2E; box-shadow:0 6px 24px rgba(242,207,126,.2); }
+  .btn.ghost { background:transparent; color:var(--gold); box-shadow:none; border:1px solid var(--line); }
+  .btn.danger { background:transparent; color:var(--err); box-shadow:none; border:1px solid rgba(242,156,143,.35); padding:8px 14px; font-size:13px; }
+  .btn:disabled { opacity:.6; cursor:wait; }
+  .err { color:var(--err); font:14px system-ui, sans-serif; min-height:18px; margin:0 18px 6px; }
+  .hint { font:12px system-ui, sans-serif; color:#8FA5A3; margin:6px 0 0; }
+  .check { display:flex; gap:8px; align-items:center; font:14px system-ui, sans-serif; color:var(--muted); }
+  .check input { width:auto; accent-color:#E3B558; }
+  .plans { display:grid; gap:10px; margin-bottom:6px; }
+  .plan { display:flex; gap:12px; align-items:center; text-align:left; width:100%; border:2px solid var(--line); background:var(--card2); color:var(--cream); border-radius:14px; padding:12px 14px; cursor:pointer; font:500 14px system-ui, sans-serif; }
+  .plan.on { border-color:var(--gold); background:#1B4050; }
+  .plan b { display:block; font:600 16px Georgia, serif; } .plan span { color:var(--muted); font-size:13px; }
+  .plan .px { margin-left:auto; font:700 17px system-ui; color:var(--gold); white-space:nowrap; }
+  .plan .tag { display:inline-block; background:var(--gold); color:#1B2A2E; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:700; margin-left:6px; vertical-align:middle; }
+  .check a { color:var(--gold); }
+
+  #suivi { display:none; max-width:640px; margin:10px auto; text-align:center; padding:26px 18px; border:1px solid var(--line); border-radius:20px; background:rgba(22,54,70,.85); }
+  #suivi .av { width:180px; height:180px; margin:14px auto 0; }
+  .bar { height:10px; border-radius:6px; background:#0F2A37; overflow:hidden; margin:18px 0 10px; border:1px solid var(--line); }
+  .bar i { display:block; height:100%; width:0; background:linear-gradient(90deg,#E3B558,#F6D98A); transition:width .6s; }
+  #etape { font:14px system-ui, sans-serif; color:var(--muted); }
+  #fini { display:none; margin-top:18px; } #fini .btn { width:100%; margin-top:10px; } #fini a { text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">Mon Héros du Mois</div>
+  <h1>Crée le héros <span>de son histoire</span></h1>
+  <p class="lead">Compose l'avatar de ton enfant, de son doudou et de ses animaux : ils apparaîtront tels quels dans les illustrations de son livre.</p>
+
+  <div id="builder" class="layout">
+    <aside class="stage">
+      <div class="scene"><svg class="fl" id="fl" xmlns="http://www.w3.org/2000/svg"></svg><div id="big" class="big"></div></div>
+      <div id="stat"></div>
+      <div class="who" id="who"></div>
+      <div class="team" id="team"></div>
+    </aside>
+
+    <section class="panel">
+      <nav class="tabs" id="tabs">
+        <button data-t="enfant"><b>1</b>L'enfant</button>
+        <button data-t="doudou"><b>2</b>Le doudou</button>
+        <button data-t="animaux"><b>3</b>Les animaux</button>
+        <button data-t="histoire"><b>4</b>L'aventure</button>
+        <button data-t="commande"><b>5</b>La commande</button>
+      </nav>
+      <div class="body" id="body"></div>
+      <p class="err" id="err"></p>
+      <div class="foot"><button class="btn ghost" id="prev" type="button">Retour</button><button class="btn" id="next" type="button">Suivant</button></div>
+    </section>
+  </div>
+
+  <div id="suivi">
+    <div class="kicker">Création en cours</div>
+    <h2 id="titreSuivi" style="margin:10px 0 0">On écrit l'histoire de <span id="nom"></span>…</h2>
+    <div class="av" id="suiviAv"></div>
+    <div class="bar"><i id="pct"></i></div>
+    <div id="etape">Démarrage</div>
+    <p class="hint" id="duree" style="margin-top:14px">Compte 10 à 15 minutes. Tu peux laisser la page ouverte.</p>
+    <div id="valid" style="display:none">
+      <h3 id="vTitre" style="margin:16px 0 4px"></h3>
+      <p class="hint" id="vTexte" style="font-size:14px"></p>
+      <img id="vImg" alt="" style="display:none;width:100%;border-radius:14px;margin:10px 0;border:1px solid var(--line)">
+      <div id="vGrid" style="display:none;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0"></div>
+      <a id="vPdf" target="_blank" style="display:none;color:var(--gold);font:600 15px system-ui,sans-serif">Ouvrir l'aperçu complet (PDF) ↗</a>
+      <p class="hint" id="vCtrl"></p>
+      <button class="btn" type="button" id="vOk" style="width:100%;margin-top:12px">C'est parfait, on continue</button>
+      <button class="btn ghost" type="button" id="vNo" style="width:100%;margin-top:10px">Redessiner</button>
+    </div>
+    <div id="fini">
+      <a id="dl" href="#"><button class="btn" type="button">Télécharger le livre (PDF)</button></a>
+      <button type="button" class="btn ghost" onclick="location.href='/'">Créer un autre livre</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/avatar.js"></script>
+<script>
+(async function () {
+  const OPT = await (await fetch('/static/options.json')).json();
+  Avatar.init(OPT);
+  const $ = id => document.getElementById(id);
+  const TABS = ['enfant', 'doudou', 'animaux', 'histoire', 'commande'];
+  const PLANS = [
+    { id: 'mensuel', nom: 'Un livre chaque mois', txt: 'Une nouvelle aventure chaque mois, sans engagement', px: '29,90 €/mois', tag: 'Le plus choisi' },
+    { id: 'annuel', nom: '12 livres, un par mois', txt: 'Payé en une fois, soit 24,92 € le livre', px: '299 €' },
+    { id: 'livre', nom: 'Ce livre seulement', txt: 'Un livre relié, livré chez vous', px: '34,90 €' }];
+  const THEMES = ["La peur du noir", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Apprendre à partager", "Oser se faire des amis", "La confiance en soi", "Gérer la colère", "Un déménagement", "Une aventure pour rire"];
+  const UNIVERS = ["Une forêt enchantée", "L'espace et les étoiles", "Le fond de la mer", "Le temps des dinosaures", "Un château de chevaliers", "La jungle", "Le pôle Nord"];
+  const newPet = () => Object.assign({ nom: '', type: 'chat', taille: 'moyen', oreilles: 'dressees' }, OPT.modeles.animal.chat);
+  const DEF = {
+    enfant: { prenom: '', age: '5', genre: 'fille', peau: 'p2', coiffure: 'long', couleur_cheveux: 'chatain', yeux: 'marron', lunettes: 'aucune', couleur_lunettes: 'rouge', taches: 'non', tenue: 'pyjama', couleur_tenue: 'jaune' },
+    doudou: { actif: true, nom: '', type: 'lapin', couleur: 'bleu', accessoire: 'noeud', couleur_accessoire: 'rouge' },
+    animaux: [],
+    histoire: { theme: THEMES[0], univers: UNIVERS[0], passions: '', precision: '', numero: '01', code: '', demo: false },
+    commande: { formule: 'mensuel', email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false }
+  };
+  let S;
+  try { S = JSON.parse(localStorage.getItem('heros-avatar')) || null; } catch (_) { S = null; }
+  S = S && S.enfant ? Object.assign(structuredClone(DEF), S) : structuredClone(DEF);
+  let tab = 'enfant', pet = 0;
+  const TEST = new URLSearchParams(location.search).has('test');   // options d'essai (mode démo) : adresse ?test seulement
+  if (!TEST) S.histoire.demo = false;
+  const save = () => { try { localStorage.setItem('heros-avatar', JSON.stringify(S)); } catch (_) {} };
+  const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  /* ---------- scène ---------- */
+  (function () {
+    let h = ''; for (let i = 0; i < 22; i++) { const x = Math.random() * 100, y = 8 + Math.random() * 84, r = 1.5 + Math.random() * 2.5;
+      h += `<circle cx="${x}%" cy="${y}%" r="${r * 3.2}" fill="#F6C85F" opacity=".09"/><circle cx="${x}%" cy="${y}%" r="${r / 1.8}" fill="#FFE7A3" opacity=".75"/>`; }
+    $('fl').innerHTML = h;
+  })();
+  /* ---------- avatars peints : modèle exact, avatar déjà peint (cache) ou « à peindre » ---------- */
+  const PAINT = new Map();
+  const H = { 'Content-Type': 'application/json' };
+  const kindOf = w => w === 'enfant' ? 'enfant' : w === 'doudou' ? 'doudou' : 'animal';
+  const cfgOf = w => w === 'enfant' ? S.enfant : w === 'doudou' ? S.doudou : S.animaux[+w.split('_')[1]];
+  const svgOf = (kind, cfg) => kind === 'enfant' ? Avatar.child(cfg) : Avatar.creature(cfg, kind);
+  function modelUrl(kind, cfg) {
+    const list = kind === 'enfant' ? OPT.enfant.coiffure : OPT[kind].type;
+    return '/static/avatars/' + Avatar.pick(list, kind === 'enfant' ? cfg.coiffure : cfg.type).img + '.webp';
+  }
+  function keyOf(kind, cfg) {
+    const k = {}; Object.keys(OPT[kind]).forEach(x => { if (cfg[x] !== undefined) k[x] = cfg[x]; });
+    if (kind === 'enfant') k.age = S.enfant.age;
+    return kind + JSON.stringify(k);
+  }
+  /* recoloration instantanée : quelles zones changer, et ce qui n'est visible qu'après « Peindre » */
+  const modelBase = (kind, cfg) => kind === 'animal' ? OPT.modeles.animal[cfg.type] : OPT.modeles[kind];
+  const modelName = (kind, cfg) => kind === 'enfant' ? Avatar.pick(OPT.enfant.coiffure, cfg.coiffure).img : Avatar.pick(OPT[kind].type, cfg.type).img;
+  const colorOf = (list, id) => Avatar.pick(list, id).c;
+  function targetsOf(kind, cfg) {
+    const b = modelBase(kind, cfg), t = {};
+    if (kind === 'enfant') {
+      if (cfg.couleur_cheveux !== b.couleur_cheveux) t.R = colorOf(OPT.enfant.couleur_cheveux, cfg.couleur_cheveux);
+      if (cfg.peau !== b.peau) t.G = colorOf(OPT.enfant.peau, cfg.peau);
+      if (cfg.couleur_tenue !== b.couleur_tenue) t.B = colorOf(OPT.enfant.couleur_tenue, cfg.couleur_tenue);
+      if (cfg.yeux !== b.yeux) t.E = colorOf(OPT.enfant.yeux, cfg.yeux);
+      if (cfg.taches === 'oui') t.freckles = Avatar.shade(colorOf(OPT.enfant.peau, cfg.peau), -.42);
+      if (cfg.lunettes !== 'aucune') t.glasses = { type: cfg.lunettes, color: colorOf(OPT.enfant.couleur_lunettes, cfg.couleur_lunettes) };
+    } else if (kind === 'doudou') {
+      if (cfg.couleur !== b.couleur) t.R = colorOf(OPT.doudou.couleur, cfg.couleur);
+      if (cfg.accessoire !== 'aucun' && cfg.couleur_accessoire !== b.couleur_accessoire) t.B = colorOf(OPT.doudou.couleur_accessoire, cfg.couleur_accessoire);
+    } else {
+      const main = colorOf(OPT.animal.couleur, cfg.couleur);
+      if (cfg.couleur !== b.couleur) t.R = main;
+      if (cfg.motif === 'uni' && cfg.type !== 'oiseau') t.G = Avatar.shade(main, .2);
+      else if (cfg.couleur2 !== b.couleur2) t.G = colorOf(OPT.animal.couleur2, cfg.couleur2);
+    }
+    return t;
+  }
+  function bookOnly(kind, cfg) {
+    const b = modelBase(kind, cfg), l = [];
+    if (kind === 'enfant') { if (cfg.tenue !== b.tenue) l.push('le type de tenue'); }
+    else if (kind === 'doudou') { if (cfg.accessoire !== b.accessoire) l.push("l'accessoire"); }
+    else {
+      if (['taches', 'raye', 'masque'].includes(cfg.motif)) l.push('le motif');
+      if (cfg.collier && cfg.collier !== 'aucun' && cfg.type !== 'oiseau') l.push('le collier');
+      if (cfg.yeux !== b.yeux) l.push('la couleur des yeux');
+      if ((cfg.type === 'chien' || cfg.type === 'lapin') && cfg.oreilles !== b.oreilles) l.push('les oreilles');
+    }
+    return l;
+  }
+  function paintState(kind, cfg) {
+    const k = keyOf(kind, cfg); let st = PAINT.get(k);
+    if (!st) {
+      st = { url: modelUrl(kind, cfg) }; PAINT.set(k, st);
+      const t = targetsOf(kind, cfg);
+      if (Object.keys(t).length)       // aperçu instantané : on recolore le modèle peint (aucun appel payant)
+        Avatar.recolor(modelName(kind, cfg), t).then(u => { st.url = u; st.recolore = true; renderStage(); }).catch(() => {});
+    }
+    return st;
+  }
+  const img = (st, alt) => `<img src="${st.url}" alt="${esc(alt || '')}" loading="lazy">`;
+  function status(which) {
+    const rest = bookOnly(kindOf(which), cfgOf(which));
+    return rest.length ? `<div class="badge">✓ Aperçu en direct. ${rest.join(', ').replace(/^./, c => c.toUpperCase())} apparaîtr${rest.length > 1 ? 'ont' : 'a'} dans les illustrations du livre.</div>` : '';
+  }
+  const petName = (p, i) => p.nom || `Animal ${i + 1}`;
+  const petScale = p => p.taille === 'petit' ? 70 : p.taille === 'grand' ? 96 : 84;
+  function renderStage() {
+    const e = S.enfant, big = $('big');
+    let who = '', sub = '', which = null;
+    if (tab === 'enfant' || (tab === 'animaux' && !S.animaux.length) || (tab === 'doudou' && !S.doudou.actif)) which = 'enfant';
+    else if (tab === 'doudou') which = 'doudou';
+    else if (tab === 'animaux') which = 'animal_' + pet;
+    if (which) {
+      const kind = kindOf(which), cfg = cfgOf(which), st = paintState(kind, cfg);
+      const size = kind === 'animal' ? petScale(cfg) : kind === 'doudou' ? 84 : 100;
+      big.className = 'big';
+      big.innerHTML = `<div style="width:${size}%;height:${size}%">${img(st)}</div>` +
+        '';
+      $('stat').innerHTML = status(which);
+      if (kind === 'enfant') { who = e.prenom || 'Ton héros'; sub = e.age ? `${e.age} ans` : ''; }
+      else if (kind === 'doudou') { who = S.doudou.nom || 'Le doudou'; sub = 'Doudou · ' + Avatar.pick(OPT.doudou.type, S.doudou.type).fr; }
+      else { who = petName(cfg, pet); sub = Avatar.pick(OPT.animal.type, cfg.type).fr; }
+    } else {
+      big.className = 'group';
+      let h = '';
+      if (S.doudou.actif) h += `<div style="width:24%;margin-right:-3%">${img(paintState('doudou', S.doudou))}</div>`;
+      h += `<div style="width:${S.animaux.length > 1 ? 44 : 52}%">${img(paintState('enfant', e))}</div>`;
+      S.animaux.forEach(p => { const w = p.taille === 'petit' ? 20 : p.taille === 'grand' ? 32 : 26; h += `<div style="width:${w}%;margin-left:-3%">${img(paintState('animal', p))}</div>`; });
+      big.innerHTML = h; $('stat').innerHTML = ''; who = e.prenom ? `L'équipe de ${e.prenom}` : "L'équipe au complet"; sub = 'Prêts pour l\'aventure';
+    }
+    $('who').innerHTML = esc(who) + (sub ? `<small>${esc(sub)}</small>` : '');
+    let t = `<button data-go="enfant" class="${tab === 'enfant' ? 'on' : ''}" title="${esc(e.prenom || 'Enfant')}">${img(paintState('enfant', e))}</button>`;
+    if (S.doudou.actif) t += `<button data-go="doudou" class="${tab === 'doudou' ? 'on' : ''}" title="Doudou">${img(paintState('doudou', S.doudou))}</button>`;
+    S.animaux.forEach((p, i) => { t += `<button data-go="animaux" data-pet="${i}" class="${tab === 'animaux' && pet === i ? 'on' : ''}" title="${esc(petName(p, i))}">${img(paintState('animal', p))}</button>`; });
+    if (S.animaux.length < 3) t += `<button class="add" data-addpet="1" title="Ajouter un animal">+</button>`;
+    $('team').innerHTML = t;
+  }
+
+  /* ---------- contrôles ---------- */
+  function swatches(obj, key, list) {
+    return `<div class="sw">` + list.map(o => `<button type="button" title="${esc(o.fr)}" class="${obj[key] === o.id ? 'on' : ''} ${o.c ? '' : 'none'}" data-k="${key}" data-v="${o.id}" style="${o.c ? 'background:' + o.c : ''}"></button>`).join('') + `</div>`;
+  }
+  function chips(obj, key, list) {
+    return `<div class="chips">` + list.map(o => `<button type="button" class="${obj[key] === o.id ? 'on' : ''}" data-k="${key}" data-v="${o.id}">${esc(o.fr)}</button>`).join('') + `</div>`;
+  }
+  function thumbs(obj, key, list, draw) {
+    return `<div class="thumbs">` + list.map(o => `<button type="button" class="${obj[key] === o.id ? 'on' : ''}" data-k="${key}" data-v="${o.id}">${draw(o.id)}${esc(o.fr)}</button>`).join('') + `</div>`;
+  }
+  const G = (label, html, extra) => `<div class="grp"><div class="lbl">${label}${extra ? `<em>${extra}</em>` : ''}</div>${html}</div>`;
+  const sel = (o, k) => (Avatar.pick(o, k) || {}).fr || '';
+
+  function panelEnfant() {
+    const e = S.enfant, O = OPT.enfant;
+    return `<div class="row2">${G('Prénom *', `<input type="text" data-in="prenom" maxlength="20" placeholder="Léo" value="${esc(e.prenom)}">`)}
+      ${G('Âge *', `<select data-in="age">${[3, 4, 5, 6, 7, 8].map(a => `<option ${e.age == a ? 'selected' : ''}>${a}</option>`).join('')}</select>`)}</div>` +
+      G("C'est", chips(e, 'genre', O.genre)) +
+      G('Teint', swatches(e, 'peau', O.peau), sel(O.peau, e.peau)) +
+      G('Coiffure', thumbs(e, 'coiffure', O.coiffure, id => `<img src="/static/avatars/${Avatar.pick(O.coiffure, id).img}.webp" alt="" loading="lazy">`), sel(O.coiffure, e.coiffure)) +
+      G('Couleur des cheveux', swatches(e, 'couleur_cheveux', O.couleur_cheveux), sel(O.couleur_cheveux, e.couleur_cheveux)) +
+      G('Yeux', swatches(e, 'yeux', O.yeux), sel(O.yeux, e.yeux)) +
+      G('Lunettes', chips(e, 'lunettes', O.lunettes) + (e.lunettes !== 'aucune' ? `<div style="margin-top:10px">${swatches(e, 'couleur_lunettes', O.couleur_lunettes)}</div>` : '')) +
+      G('Taches de rousseur', chips(e, 'taches', O.taches)) +
+      G('Tenue', chips(e, 'tenue', O.tenue)) +
+      G('Couleur de la tenue', swatches(e, 'couleur_tenue', O.couleur_tenue), sel(O.couleur_tenue, e.couleur_tenue)) +
+      `<p class="hint">Aucune photo n'est demandée : l'avatar sert de modèle aux illustrations.</p>`;
+  }
+  function panelDoudou() {
+    const d = S.doudou, O = OPT.doudou;
+    let h = `<label class="toggle"><input type="checkbox" data-chk="actif" ${d.actif ? 'checked' : ''}> ${esc(S.enfant.prenom || 'Mon enfant')} a un doudou</label>`;
+    if (!d.actif) return h + `<div class="empty">Pas de doudou dans l'histoire. Tu peux passer à l'étape suivante.</div>`;
+    return h + G('Nom du doudou', `<input type="text" data-in="nom" maxlength="20" placeholder="Nino" value="${esc(d.nom)}">`) +
+      G('Le doudou est un…', thumbs(d, 'type', O.type, id => `<img src="/static/avatars/doudou-${id}.webp" alt="" loading="lazy">`)) +
+      G('Couleur', swatches(d, 'couleur', O.couleur), sel(O.couleur, d.couleur)) +
+      G('Accessoire', chips(d, 'accessoire', O.accessoire) + (d.accessoire !== 'aucun' ? `<div style="margin-top:10px">${swatches(d, 'couleur_accessoire', O.couleur_accessoire)}</div>` : ''));
+  }
+  function panelAnimaux() {
+    let h = `<div class="pets">` + S.animaux.map((p, i) => `<button type="button" data-pet="${i}" class="${i === pet ? 'on' : ''}">${esc(petName(p, i))}</button>`).join('') +
+      (S.animaux.length < 3 ? `<button type="button" class="add" data-addpet="1">+ Ajouter un animal</button>` : '') + `</div>`;
+    if (!S.animaux.length) return h + `<div class="empty">Ajoute le chat, le chien ou le lapin de la maison pour qu'il vive l'aventure lui aussi.<br>Pas d'animal ? Passe simplement à l'étape suivante.</div>`;
+    const p = S.animaux[pet], O = OPT.animal;
+    const colors = p.type === 'oiseau' ? O.couleur : O.couleur.filter(c => !/oiseau/.test(c.fr));
+    h += G('Son nom', `<input type="text" data-in="nom" maxlength="20" placeholder="Pistache" value="${esc(p.nom)}">`) +
+      G('Espèce', thumbs(p, 'type', O.type, id => `<img src="/static/avatars/animal-${id}.webp" alt="" loading="lazy">`)) +
+      G('Taille', chips(p, 'taille', O.taille)) +
+      (p.type === 'chien' || p.type === 'lapin' ? G('Oreilles', chips(p, 'oreilles', O.oreilles)) : '') +
+      G('Couleur', swatches(p, 'couleur', colors), sel(O.couleur, p.couleur)) +
+      G(p.type === 'oiseau' ? 'Ventre' : 'Motif', chips(p, 'motif', p.type === 'oiseau' ? O.motif.filter(m => m.id === 'uni' || m.id === 'ventre') : O.motif)) +
+      (p.motif !== 'uni' && p.type !== 'hamster' || (p.type === 'hamster' && p.motif !== 'uni') ? G('Deuxième couleur', swatches(p, 'couleur2', O.couleur2), sel(O.couleur2, p.couleur2)) : '') +
+      G('Yeux', swatches(p, 'yeux', O.yeux)) +
+      (p.type !== 'oiseau' ? G('Collier', swatches(p, 'collier', O.collier), sel(O.collier, p.collier)) : '') +
+      `<button type="button" class="btn danger" data-delpet="1">Retirer ${esc(petName(p, pet))}</button>`;
+    return h;
+  }
+  function panelHistoire() {
+    const h = S.histoire;
+    return G('Thème du mois', `<select data-in="theme">${THEMES.map(t => `<option ${h.theme === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`) +
+      G('Univers', `<select data-in="univers">${UNIVERS.map(t => `<option ${h.univers === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`) +
+      G('Ses passions', `<input type="text" data-in="passions" maxlength="120" placeholder="les camions, chanter, les dinosaures" value="${esc(h.passions)}">`) +
+      G('Un mot du parent', `<textarea data-in="precision" maxlength="280" placeholder="Il a peur des bruits de la nuit en ce moment, mais adore quand on chante ensemble.">${esc(h.precision)}</textarea>`, 'facultatif') +
+      (TEST ? `<div class="row2">${G("N° d'aventure", `<input type="text" data-in="numero" maxlength="3" value="${esc(h.numero)}">`)}${G("Code d'accès", `<input type="text" data-in="code" placeholder="si demandé" value="${esc(h.code)}">`)}</div>` +
+      `<label class="check"><input type="checkbox" data-chk="demo" ${h.demo ? 'checked' : ''}> Mode démo : tester sans appel API (livre d'exemple)</label>` : '');
+  }
+  function panelCommande() {
+    const c = S.commande, inp = (k, ph, extra) => `<input type="text" data-in="${k}" value="${esc(c[k])}" placeholder="${ph}" ${extra || ''}>`;
+    return `<div class="plans">` + PLANS.map(p => `<button type="button" class="plan ${c.formule === p.id ? 'on' : ''}" data-k="formule" data-v="${p.id}">
+        <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>` +
+      `<p class="hint" style="margin:4px 0 16px">Livraison offerte. Le livre est créé juste après le paiement ; tu valideras les personnages et un aperçu.</p>` +
+      G('E-mail', inp('email', 'pour suivre la commande', 'type="email" autocomplete="email"')) +
+      G('Nom et prénom', inp('nom', 'destinataire du colis', 'autocomplete="name"')) +
+      G('Adresse', inp('adresse1', 'numéro et rue', 'autocomplete="address-line1"') + '<div style="height:8px"></div>' + inp('adresse2', 'bâtiment, étage (facultatif)', 'autocomplete="address-line2"')) +
+      `<div class="row2">${G('Code postal', inp('code_postal', '77000', 'autocomplete="postal-code"'))}${G('Ville', inp('ville', '', 'autocomplete="address-level2"'))}</div>` +
+      `<div class="row2">${G('Pays', `<select data-in="pays">${[['FR', 'France'], ['BE', 'Belgique'], ['LU', 'Luxembourg'], ['CH', 'Suisse'], ['MC', 'Monaco']].map(([v, l]) => `<option value="${v}" ${c.pays === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}${G('Téléphone', inp('telephone', 'pour le transporteur', 'type="tel" autocomplete="tel"'))}</div>` +
+      `<label class="check"><input type="checkbox" data-chk="cgv" ${c.cgv ? 'checked' : ''}><span>J'accepte les <a href="/cgv" target="_blank">conditions de vente</a> et je reconnais que ce livre personnalisé n'ouvre pas de droit de rétractation.</span></label>`;
+  }
+  const target = () => tab === 'enfant' ? S.enfant : tab === 'doudou' ? S.doudou : tab === 'animaux' ? S.animaux[pet] : tab === 'commande' ? S.commande : S.histoire;
+
+  function render() {
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
+    $('body').innerHTML = { enfant: panelEnfant, doudou: panelDoudou, animaux: panelAnimaux, histoire: panelHistoire, commande: panelCommande }[tab]();
+    $('prev').style.visibility = tab === 'enfant' ? 'hidden' : 'visible';
+    const plan = PLANS.find(p => p.id === S.commande.formule) || PLANS[0];
+    $('next').textContent = tab === 'commande' ? `Payer ${plan.px} ✨` : (tab === 'histoire' && S.histoire.demo) ? 'Créer le livre démo' : 'Suivant';
+    renderStage(); save();
+  }
+
+  /* ---------- événements ---------- */
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.dataset.t) { tab = b.dataset.t; $('err').textContent = ''; return render(); }
+    if (b.dataset.go) { tab = b.dataset.go; if (b.dataset.pet) pet = +b.dataset.pet; return render(); }
+    if (b.dataset.addpet) { S.animaux.push(newPet()); pet = S.animaux.length - 1; tab = 'animaux'; return render(); }
+    if (b.dataset.delpet) { S.animaux.splice(pet, 1); pet = Math.max(0, pet - 1); return render(); }
+    if (b.dataset.pet !== undefined && b.closest('.pets')) { pet = +b.dataset.pet; return render(); }
+    if (b.dataset.k) {
+      const o = target(); o[b.dataset.k] = b.dataset.v;
+      if (tab === 'animaux' && b.dataset.k === 'type') {      // on ne remplace que les réglages que le parent n'a pas encore touchés
+        const base = OPT.modeles.animal[o.type]; o._choisi = o._choisi || [];
+        Object.keys(base).forEach(k => { if (!o._choisi.includes(k)) o[k] = base[k]; });
+      } else if (tab === 'animaux') { o._choisi = [...new Set([...(o._choisi || []), b.dataset.k])]; }
+      return render();
+    }
+  });
+  document.addEventListener('input', ev => {
+    const el = ev.target;
+    if (el.dataset.in) { target()[el.dataset.in] = el.value; renderStage(); save();
+      if (tab === 'animaux' && el.dataset.in === 'nom') document.querySelectorAll('.pets button')[pet].textContent = petName(S.animaux[pet], pet); }
+  });
+  document.addEventListener('change', ev => {
+    const el = ev.target;
+    if (el.dataset.chk) { target()[el.dataset.chk] = el.checked; render(); }
+    else if (el.tagName === 'SELECT' && el.dataset.in) { target()[el.dataset.in] = el.value; renderStage(); save(); }
+  });
+  $('prev').onclick = () => { tab = TABS[Math.max(0, TABS.indexOf(tab) - 1)]; render(); scrollTo({ top: 0, behavior: 'smooth' }); };
+  $('next').onclick = () => {
+    $('err').textContent = '';
+    if (tab === 'enfant' && !S.enfant.prenom.trim()) { $('err').textContent = "Indique le prénom de l'enfant."; return; }
+    if (tab === 'histoire' && S.histoire.demo) return submit();
+    if (tab !== 'commande') { tab = TABS[TABS.indexOf(tab) + 1]; render(); scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    submit();
+  };
+
+  /* ---------- avatars -> PNG (références visuelles pour les illustrations) ---------- */
+  async function toPng(svg, w, h) {
+    const src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.replace('<svg ', `<svg width="${w}" height="${h}" `));
+    const img = new Image(); img.src = src; await img.decode();
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d'); x.fillStyle = '#F6EEDE'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
+    return c.toDataURL('image/png');
+  }
+  async function avatarPngs() {
+    try {
+      const o = { enfant: await toPng(Avatar.child(S.enfant), 600, 680), animaux: [] };
+      if (S.doudou.actif) o.doudou = await toPng(Avatar.creature(S.doudou, 'doudou'), 512, 512);
+      for (const p of S.animaux) o.animaux.push(await toPng(Avatar.creature(p, 'animal'), 512, 512));
+      return o;
+    } catch (_) { return null; }
+  }
+
+  /* ---------- envoi ---------- */
+  async function submit() {
+    if (!S.enfant.prenom.trim()) { tab = 'enfant'; render(); $('err').textContent = "Indique le prénom de l'enfant."; return; }
+    const h = S.histoire, e = S.enfant;
+    const payload = {
+      prenom: e.prenom.trim(), age: e.age, genre: e.genre, theme: h.theme, univers: h.univers, passions: h.passions,
+      precision: h.precision, numero: h.numero, code: h.code, demo: h.demo ? '1' : '',
+      avatar: { enfant: e, doudou: S.doudou, animaux: S.animaux }
+    };
+    payload.avatar_png = await avatarPngs();
+    const ap = async (kind, cfg) => { const st = paintState(kind, cfg); return (st.recolore && st.url.startsWith('data:')) ? st.url : null; };
+    payload.apercus = { enfant: await ap('enfant', e), doudou: S.doudou.actif ? await ap('doudou', S.doudou) : null,
+                        animaux: await Promise.all(S.animaux.map(p => ap('animal', p))) };
+    const demo = !!h.demo, c = S.commande;
+    if (!demo) {
+      if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(c.email.trim())) { $('err').textContent = 'Indique ton adresse e-mail.'; return; }
+      for (const [k, l] of [['nom', 'le nom du destinataire'], ['adresse1', "l'adresse"], ['code_postal', 'le code postal'], ['ville', 'la ville'], ['telephone', 'le téléphone']])
+        if (!String(c[k]).trim()) { $('err').textContent = `Indique ${l}.`; return; }
+      if (!c.cgv) { $('err').textContent = 'Coche la case des conditions de vente.'; return; }
+      payload.commande = { formule: c.formule, email: c.email.trim(), cgv: true,
+        adresse: { nom: c.nom, adresse1: c.adresse1, adresse2: c.adresse2, code_postal: c.code_postal, ville: c.ville, pays: c.pays, telephone: c.telephone } };
+    }
+    const go = $('next'), label = go.textContent; go.disabled = true; go.textContent = demo ? 'Envoi…' : 'Redirection vers le paiement…';
+    try {
+      const r = await fetch(demo ? '/api/livres' : '/api/commandes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.erreur || 'Erreur');
+      if (!demo) { location.href = j.url; return; }
+      $('builder').style.display = 'none'; $('suivi').style.display = 'block';
+      $('nom').textContent = payload.prenom; $('suiviAv').innerHTML = Avatar.child(e, 'head');
+      scrollTo({ top: 0 }); follow(j.id);
+    } catch (x) { $('err').textContent = x.message; go.disabled = false; go.textContent = label; }
+  }
+  let waiting = null;
+  async function decide(id, action, ids) {
+    $('vOk').disabled = $('vNo').disabled = true;
+    await fetch('/api/livres/' + id + '/decision', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ids: ids || [] }) });
+    $('valid').style.display = 'none'; waiting = null;
+  }
+  function follow(id, order) {
+    $('vOk').onclick = () => decide(id, 'valider');
+    $('vNo').onclick = () => {
+      const ids = [...document.querySelectorAll('#vGrid .redo:checked')].map(i => i.value);
+      if ($('vGrid').style.display === 'grid' && !ids.length) { $('vCtrl').textContent = 'Coche au moins un personnage à redessiner.'; return; }
+      decide(id, 'redessiner', ids);
+    };
+    const t = setInterval(async () => {
+      try {
+        const j = await (await fetch('/api/livres/' + id)).json();
+        $('pct').style.width = (j.progression || 1) + '%'; $('etape').textContent = j.etape || '';
+        if (j.etat === 'validation' && j.validation && waiting !== j.validation.etape + j.validation.image) {
+          const v = j.validation; waiting = v.etape + (v.image || '') + JSON.stringify(v.images || []);
+          $('vTitre').textContent = v.titre; $('vTexte').textContent = v.texte;
+          if (v.images) {
+            $('vImg').style.display = 'none'; $('vGrid').style.display = 'grid';
+            $('vGrid').innerHTML = v.images.map(x => `<label style="display:block;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:6px;cursor:pointer">
+              <img src="/api/livres/${id}/fichier/${x.fichier}?t=${Date.now()}" style="width:100%;border-radius:8px;display:block">
+              <div style="font:600 14px system-ui;margin:6px 2px 2px">${esc(x.nom)}</div>
+              <span class="check" style="margin:2px"><input type="checkbox" class="redo" value="${x.id}"> à redessiner</span></label>`).join('');
+            $('vNo').textContent = 'Redessiner les personnages cochés';
+          } else {
+            $('vGrid').style.display = 'none'; $('vImg').style.display = 'block';
+            $('vImg').src = '/api/livres/' + id + '/fichier/' + v.image + '?t=' + Date.now();
+            $('vNo').textContent = 'Redessiner';
+          }
+          $('vPdf').style.display = v.pdf ? 'inline-block' : 'none';
+          if (v.pdf) $('vPdf').href = '/api/livres/' + id + '/fichier/' + v.pdf + '?t=' + Date.now();
+          $('vCtrl').textContent = (v.controle && v.controle.length) ? 'Contrôle : ' + v.controle.join(' · ') : '';
+          $('vOk').disabled = $('vNo').disabled = false;
+          $('valid').style.display = 'block'; $('etape').textContent = 'En attente de ta validation';
+        }
+        if (j.etat === 'termine') {
+          clearInterval(t); $('titreSuivi').textContent = '« ' + j.titre + ' » est prêt !';
+          $('etape').textContent = (j.controle && j.controle.length) ? 'Contrôle qualité : ' + j.controle.join(' · ') : `Contrôle qualité OK : ${j.pages} pages, textes lisibles, rien ne déborde.`;
+          $('dl').href = '/api/livres/' + id + '/pdf'; $('fini').style.display = 'block';
+          if (order) $('etape').textContent = "Tu peux déjà le lire en PDF. Nous relisons chaque livre avant de l'envoyer à l'impression ; tu recevras un e-mail à l'expédition.";
+        } else if (j.etat === 'erreur') {
+          clearInterval(t); $('etape').innerHTML = '<span style="color:var(--err)">Oups : ' + esc(j.erreur || 'erreur') + '</span>';
+          $('fini').style.display = 'block'; $('dl').style.display = 'none';
+        }
+      } catch (_) {}
+    }, 2000);
+  }
+  /* ---------- retour du paiement : suivi de la commande ---------- */
+  async function trackOrder(id) {
+    const q = new URLSearchParams(location.search), e = S.enfant;
+    $('builder').style.display = 'none'; $('suivi').style.display = 'block';
+    $('nom').textContent = e.prenom || ''; $('suiviAv').innerHTML = Avatar.child(e, 'head');
+    if (q.get('annule')) {
+      $('titreSuivi').textContent = 'Paiement annulé';
+      $('etape').innerHTML = `Aucun montant n'a été débité. <a href="/" style="color:var(--gold)">Revenir à mon livre</a>`; return;
+    }
+    const url = '/api/commandes/' + id + (q.get('session_id') ? '?session_id=' + encodeURIComponent(q.get('session_id')) : '');
+    const tick = async () => {
+      try {
+        const o = await (await fetch(url)).json();
+        if (o.statut === 'attente_paiement') {
+          $('titreSuivi').textContent = 'En attente du paiement…';
+          if (o.test && !$('payTest')) {
+            $('etape').innerHTML = `Mode test : aucun paiement réel. <button class="btn" id="payTest" type="button" style="margin-top:10px;width:100%">Simuler le paiement</button>`;
+            $('payTest').onclick = async () => { $('payTest').disabled = true; await fetch('/api/commandes/' + id + '/paiement-test', { method: 'POST' }); };
+          }
+          return setTimeout(tick, 2500);
+        }
+        try { localStorage.removeItem('heros-avatar'); } catch (_) {}
+        $('titreSuivi').textContent = 'Merci, ta commande est confirmée !';
+        $('pct').style.width = '100%';
+        $('etape').innerHTML = `Nous créons maintenant le livre de <b>${esc(e.prenom ? e.prenom.trim().replace(/^./, c => c.toUpperCase()) : 'ton enfant')}</b>. Chaque livre est relu avant l'impression, puis expédié chez toi.<br><span class="hint">Commande n° ${esc(id)}${o.formule === 'mensuel' ? ' · un nouveau livre chaque mois' : o.formule === 'annuel' ? ' · 12 livres, un par mois' : ''}</span>`;
+        $('duree').style.display = 'none';
+        document.querySelector('#suivi .kicker').textContent = 'Commande confirmée';
+        $('fini').style.display = 'block'; $('dl').style.display = 'none';
+        return;
+      } catch (_) { setTimeout(tick, 4000); }
+    };
+    tick();
+  }
+  const cmd = new URLSearchParams(location.search).get('commande');
+  if (cmd && /^[a-f0-9]{12}$/.test(cmd)) trackOrder(cmd); else render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+.venv
+.env
+output
+data
+cache_avatars
+cache_references
+__pycache__
+*.zip
+tests

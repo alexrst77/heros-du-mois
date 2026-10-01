@@ -1,0 +1,68 @@
+# Mon Héros du Mois – générateur de livres personnalisés
+
+Éditeur d'avatars → histoire → storyboard → planche personnages (validée par le parent) → aperçu couverture + 2 doubles pages (validé) → livre de 20 pages en 21 x 21 cm, avec contrôle qualité automatique.
+
+## Démarrage sur Mac
+1. Installe Python 3 si besoin : https://www.python.org/downloads/
+2. Double-clique sur **lancer.command** (la première fois : clic droit > Ouvrir). Il installe tout et crée le fichier `.env`.
+3. Ajoute ta clé OpenAI dans `.env` (`OPENAI_API_KEY=`), puis relance **lancer.command**.
+4. Le site s'ouvre sur http://localhost:8000.
+
+Sans clé, ou en cochant « Mode démo », le site met en page le livre d'exemple de Léo, sans appel à l'API.
+
+## Avatars peints (éditeur)
+- 22 modèles peints dans le style de Léo (`static/avatars/`, références 1024 px dans `style/avatars/`).
+- **Aperçu instantané et gratuit** : couleurs (cheveux, peau, tenue, pelage, doudou, nœud), lunettes, couleur des yeux et taches de rousseur s'appliquent directement sur le modèle peint dans le navigateur (masques calculés par `build_masks.py`). Aucun appel à OpenAI avant la commande.
+- Ce qui n'apparaît que dans le livre : type de tenue, motif, collier et oreilles des animaux, accessoire du doudou autre que le nœud.
+
+## Comment un livre est fabriqué (après paiement)
+0. **Configuration** (`generator.build_config`) : enregistrée dans `config.json` avec un identifiant stable par personnage (heros, doudou, animal_1…). C'est la seule source utilisée ensuite. Les données manquantes ou invalides sont signalées, jamais remplacées en silence.
+1. **Histoire** de 18 pages illustrées, puis **relecture** (prénoms, accords, pronoms). Un personnage inventé ne peut jamais reprendre le nom d'un personnage imposé.
+2. **Storyboard** par identifiants : tout personnage cité par le texte est à l'image, les personnages oubliés sont déclarés, les palettes sont variées.
+3. **Portraits de référence** : un par personnage, mis en cache par configuration et version de style (`art.STYLE_VERSION`), validés par le parent (redessin au cas par cas).
+4. **Illustrations** : chaque page reçoit exactement les portraits de ses personnages et la planche de style (trace dans `references_transmises.jsonl`). Un **contrôle visuel** automatique vérifie chaque image ; en cas d'écart, un seul nouvel essai (`MAX_RETRIES`), puis l'échec est signalé.
+5. **PDF** : 20 pages à l'écran (couverture, 18 pages, 4e) et intérieur d'impression Lulu de 24 pages (8,5 × 8,5 pouces, fond perdu, 300 dpi).
+
+Tests : `python3 tests/test_generation.py` et `python3 tests/test_commande.py` (sans coût, tout est simulé). Livre test réel : `python3 generer_livre_test.py tests/config_jeade.json`.
+
+## Commande, paiement, impression
+- Étape 5 « La commande » : formule (un livre 34,90 € ; 29,90 €/mois ; 299 € l'année pour 12 livres), adresse, acceptation des CGV (pas de droit de rétractation pour un livre personnalisé). Rien n'est généré avant le paiement.
+- **Paiement** : Stripe Checkout. Sans clé Stripe, un bouton « Simuler le paiement » permet de tout tester. Webhook : `https://TON-SITE/api/stripe/webhook` (événements `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`).
+- Après paiement, le livre est fabriqué (le parent valide personnages et aperçu), puis la commande passe **« à relire »**.
+- **Administration** : `/admin` (liste, PDF, contrôle qualité, « Préparer la couverture », « Coût Lulu », « Envoyer à l'impression », suivi du colis, abonnements, effacement des données). Rien ne part à l'impression sans ton clic (sauf `AUTO_IMPRESSION=1`).
+- **Impression** : Lulu, en **bac à sable** par défaut (`LULU_ENV=sandbox`). Lulu télécharge les PDF sur ton site : il faut une adresse publique (`PUBLIC_URL`), donc héberger le site.
+- **Abonnements** : mensuel = un nouveau livre à chaque facture Stripe payée ; annuel = un livre par mois pendant 12 mois. Nouveau thème et nouvel univers à chaque numéro, même héros, sans validation du parent.
+- Les données des commandes sont dans `data/` (base SQLite + configuration de chaque enfant). CGV à compléter : `static/cgv.html`.
+
+## Mise en ligne (Railway)
+1. Compte sur railway.com (offre Hobby), puis dans le Terminal : `brew install railway` (ou `npm i -g @railway/cli`), `railway login`.
+2. Dans le dossier du site : `railway init` (nouveau projet), puis `railway up` (envoie le dossier ; le `Dockerfile` est utilisé, `.env` et `.venv` ne sont pas envoyés).
+3. Sur railway.com, dans le service : **Volume** monté sur `/data` (commandes, livres, portraits), **Networking > Generate Domain** (adresse `…up.railway.app`).
+4. **Variables** : `OPENAI_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ADMIN_CODE` (obligatoire en ligne), `PUBLIC_URL=https://…up.railway.app`, `LULU_CLIENT_KEY`, `LULU_CLIENT_SECRET`, `LULU_ENV=sandbox`.
+5. Stripe (mode test) > Développeurs > Webhooks > Ajouter une destination : `https://…up.railway.app/api/stripe/webhook`, événements `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted` ; copie le secret `whsec_…` dans `STRIPE_WEBHOOK_SECRET`.
+6. Admin en ligne : `https://…up.railway.app/admin?code=TON_ADMIN_CODE`.
+Mise à jour du site : `railway up` depuis le dossier. Un livre en cours de fabrication pendant une mise à jour repart tout seul au redémarrage.
+Place disque : seules les images finales sont gardées ; les fichiers d'un livre expédié sont effacés après 30 jours (`PURGE_JOURS`).
+
+## Couleurs
+Chaque image générée passe par une correction de la dominante jaune-orangée (`couleur.py`) ; l'original est gardé en `*_brut.png`.
+
+## Anciennes étapes (pour mémoire)
+1. **Histoire** (`generator.write_story`) : arc en 9 étapes, dialogues, prénoms exacts, compagnons actifs. Un contrôle vérifie les prénoms et les longueurs, puis une 2e passe corrige les écarts.
+2. **Storyboard** (`generator.make_storyboard`) : pour chaque page, l'action, les personnages présents, les gestes, le décor, les objets cités par le texte, le cadrage (plan large, action, moment intime, détail, découverte, plongée), la zone de texte et la lumière. Des garde-fous imposent la variété des plans et des zones, et que chaque élément cité par le texte soit visible.
+3. **Planche personnages** : les avatars du formulaire (envoyés en images) et la planche de style servent de références pour peindre l'enfant, le doudou et les animaux. **Le parent valide** ou fait redessiner.
+4. **Illustrations** : pour chaque scène, la planche validée et la planche de style sont passées en images de référence (`images.edit`, fidélité haute). Seuls les personnages présents sont décrits, et la zone calme pour le texte est prévue dès la composition.
+5. **Aperçu** (couverture + 2 doubles pages) à valider, puis le reste du livre.
+6. **Mise en page** (`layout.py`) : illustrations pleine page, texte dans la zone la plus calme, fondu continu teinté par le décor, halo doux sous les lettres, pages chapitre sur des décors d'ambiance sans personnage, et contrôle (contraste ≥ 4,5:1, aucun débordement, nombre de pages). Le résultat est enregistré dans `controle.json`.
+
+## Les fichiers
+- `art.py` : **toutes les règles graphiques** (style, univers, lumières, cadrages, zones de texte, typo, fondus). C'est le seul fichier à modifier pour changer la direction artistique.
+- `style/planche_style.png` : extraits de décors de « Léo » (sans personnage), utilisés comme référence de technique picturale.
+- `generator.py` : histoire, storyboard et appels images
+- `layout.py` : moteur de mise en page et contrôle qualité
+- `app.py` : serveur et étapes de validation
+- `static/` : éditeur d'avatars et suivi de création
+
+## Coût et durée
+Un livre = 2 à 4 appels texte + 13 images (planche, couverture, 9 scènes, 2 décors), plus les éventuels « redessiner ». En qualité `high`, compte environ 2,5 à 3 € par livre, et environ 4 à 5 fois moins en `medium`. Vérifie les tarifs à jour sur platform.openai.com. Durée : 5 à 8 minutes hors validations.
+`AUTO_VALIDATE=1` dans `.env` enchaîne tout sans les étapes de validation.

@@ -1,0 +1,171 @@
+{
+ "prenom": "Léo",
+ "numero": "01",
+ "titre": [
+  "Léo et la forêt",
+  "des petites lumières"
+ ],
+ "accroche_couverture": "UNE AVENTURE À LIRE ENSEMBLE",
+ "titre_court": "LA FORÊT DES PETITES LUMIÈRES",
+ "personnages": "",
+ "prompt_couverture": "",
+ "doubles_pages": [
+  {
+   "texte_image": [
+    "Ce soir, Léo n’arrive pas à dormir. Sur le mur, une grande ombre remue. Il serre Nino, son lapin en tissu.",
+    "« Et si c’était un monstre ? » murmure-t-il."
+   ],
+   "titre_chapitre": "Une ombre dans la chambre",
+   "texte_chapitre": [
+    "Maman entrouvre la porte.",
+    "« Tu veux qu’on regarde ensemble ? »",
+    "Elle allume la lampe. L’ombre vient du manteau posé sur la chaise ! Léo sourit, mais son ventre reste un peu serré.",
+    "« Je laisse la porte entrouverte. Je suis juste à côté. »",
+    "Quand la chambre redevient douce et sombre, Léo ferme les yeux. Un rêve commence…"
+   ],
+   "prompt_illustration": ""
+  },
+  {
+   "texte_image": [
+    "« Psst… Léo ! »",
+    "Une petite lumière chatouille le nez de Nino. C’est une luciole ! Ses ailes brillent comme deux gouttes de miel.",
+    "« Je m’appelle Luma. J’ai besoin de toi. »"
+   ],
+   "titre_chapitre": "Une visite minuscule",
+   "texte_chapitre": [
+    "« Le grand saule de ma forêt ne brille presque plus, explique Luma. Mes amies les lucioles dorment encore. Je n’arrive pas à les réveiller. »",
+    "Sur le mur, une porte de feuilles apparaît.",
+    "« Mais… j’ai un peu peur du noir », avoue Léo.",
+    "« Moi aussi, parfois. Nous pouvons avancer ensemble. »",
+    "Léo prend Nino sous son bras et suit la petite lueur."
+   ],
+   "prompt_illustration": ""
+  },
+  {
+   "texte_image": [
+    "Dans la forêt, quelque chose de gros se dresse devant eux. Deux oreilles ! Un dos tout rond !",
+    "Léo s’arrête net.",
+    "« Un ours ! » souffle-t-il en serrant Nino."
+   ],
+   "titre_chapitre": "Le drôle d’ours",
+   "texte_chapitre": [
+    "Luma s’approche doucement. Sa lumière éclaire… une vieille souche coiffée de fougères !",
+    "« Oh ! Elle n’a même pas de pattes ! » dit Léo.",
+    "Il ose toucher l’écorce, rugueuse sous ses doigts.",
+    "Léo regarde la souche, puis son ombre immense. La même chose peut sembler bien différente dans le noir.",
+    "Il respire un grand coup.",
+    "« D’accord, drôle d’ours. Bonne nuit ! »"
+   ],
+   "prompt_illustration": ""
+  },
+  {
+   "texte_image": [
+    "Cric, crac… frrr !",
+    "Cette fois, le bruit vient du sol. Léo se penche derrière Luma. Sous une feuille rousse, un petit museau tremble.",
+    "C’est un hérisson roulé en boule."
+   ],
+   "titre_chapitre": "Ça gratte sous les feuilles",
+   "texte_chapitre": [
+    "« Je m’appelle Picotin. Je voudrais rentrer sous le grand saule, mais le ruisseau fait un bruit terrible. »",
+    "Léo s’accroupit à côté de lui.",
+    "« Tu peux venir avec nous. Nino est très fort pour les câlins. Enfin… attention à tes piquants ! »",
+    "Picotin déroule son museau et laisse échapper un petit rire.",
+    "À trois, avec un lapin sous le bras, le chemin paraît déjà moins sombre."
+   ],
+   "prompt_illustration": ""
+  },
+  {
+   "texte_image": [
+    "Devant le petit pont, Léo hésite. L’eau chuchote sous les planches. Picotin s’arrête aussi.",
+    "Luma attend près d’eux.",
+    "Personne ne se moque. Personne ne les presse."
+   ],
+   "titre_chapitre": "Un pas, puis un autre",
+   "texte_chapitre": [
+    "Léo pose une main sur son ventre. Il inspire doucement, puis souffle comme pour refroidir une soupe.",
+    "Une fois. Deux fois.",
+    "« On essaie un tout petit pas ? » propose-t-il.",
+    "Picotin avance une patte. Léo avance un pied. Ils s’arrêtent, regardent, puis recommencent.",
+    "Bientôt, les voilà de l’autre côté !",
+    "« J’avais encore peur, dit Léo. Mais j’ai réussi à traverser avec vous. »"
+   ],
+   "prompt_illustration": ""
+  },
+  {
+   "texte_image": [
+    "Au bout du sentier se tient le grand saule. Ses longues branches touchent presque la mousse.",
+    "Sous les feuilles dorment les lucioles. Elles brillent à peine.",
+    "Luma baisse ses ailes."
+   ],
+   "titre_chapitre": "Le saule endormi",
+   "texte_chapitre": [
+    "« Réveillez-vous ! » appelle-t-elle.",
+    "Rien ne bouge.",
+    "Léo essaie de taper dans ses mains. Picotin secoue une feuille. Une luciole se retourne… et se rendort.",
+    "Alors Léo s’assoit pour réfléchir. Dans le silence, il entend le vent glisser entre les branches. Cela lui rappelle la voix de maman au bord du lit.",
+    "« Et si on essayait tout doucement ? »"
+   ],
+   "prompt_illustration": ""
+  },
+  {
+   "texte_image": [
+    "Léo berce Nino contre lui et invente une chanson :",
+    "« Petite lumière, ouvre les yeux,\nla nuit est grande, on sera deux.\nPuis trois, puis mille, tout doucement,\nviens éclairer nos pas d’enfant. »"
+   ],
+   "titre_chapitre": "La chanson de Léo",
+   "texte_chapitre": [
+    "Luma reprend la mélodie. Picotin marque le rythme avec une petite patte.",
+    "Sous une feuille, une lumière s’allume. Puis une deuxième. Puis trois autres !",
+    "Les lucioles étirent leurs ailes.",
+    "« On a entendu une chanson dans nos rêves », murmure l’une d’elles.",
+    "Léo chante encore, un peu plus sûr de sa voix. Tout autour de lui, les branches commencent à pétiller."
+   ],
+   "prompt_illustration": ""
+  },
+  {
+   "texte_image": [
+    "Le grand saule scintille maintenant comme un ciel d’étoiles. Des points dorés dansent entre les feuilles.",
+    "Léo tourne sur lui-même en riant. Même les piquants de Picotin semblent porter des paillettes."
+   ],
+   "titre_chapitre": "Mille petites lumières",
+   "texte_chapitre": [
+    "« Tu nous as aidées, Léo ! » dit Luma.",
+    "« Vous m’avez aidé aussi. »",
+    "Autour du saule, la forêt est toujours sombre. Pourtant, Léo distingue le chemin, les fougères et ses nouveaux amis.",
+    "Il n’a pas besoin que tout soit éclairé pour se sentir bien ici.",
+    "Picotin retrouve son nid entre les racines. Luma effleure la joue de Léo.",
+    "« Il est temps de rentrer. »"
+   ],
+   "prompt_illustration": ""
+  },
+  {
+   "texte_image": [
+    "Léo ouvre les yeux dans son lit. Nino repose contre sa joue. Sur la chaise, le manteau n’a pas bougé.",
+    "Son ombre non plus.",
+    "« Bonne nuit, drôle d’ours », chuchote Léo."
+   ],
+   "titre_chapitre": "La lumière reste",
+   "texte_chapitre": [
+    "« Tout va bien ? » demande maman depuis la porte.",
+    "« Oui. J’ai rêvé d’une forêt… et j’ai aidé une luciole ! »",
+    "Léo prend une grande inspiration, puis souffle lentement. Il serre Nino.",
+    "Il sait qu’il peut appeler maman si la peur revient. Pour l’instant, il a envie de fermer les yeux.",
+    "Dehors, une étoile brille.",
+    "Et Léo s’endort, sa petite chanson encore au creux du cœur."
+   ],
+   "prompt_illustration": ""
+  }
+ ],
+ "quatrieme": {
+  "accroche": [
+   "La nuit est grande.",
+   "Les petits courages aussi."
+  ],
+  "paragraphes": [
+   "Une ombre, une luciole et un lapin en tissu…",
+   "Léo découvre qu’on peut avoir peur, demander de l’aide et avancer à son rythme."
+  ],
+  "question": "ET TOI, QU’EST-CE QUI TE RASSURE LE SOIR ?",
+  "age": "4–6 ans"
+ }
+}

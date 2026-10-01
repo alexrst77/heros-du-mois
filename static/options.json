@@ -1,0 +1,818 @@
+{
+ "enfant": {
+  "genre": [
+   {
+    "id": "fille",
+    "fr": "Fille",
+    "en": "girl"
+   },
+   {
+    "id": "garcon",
+    "fr": "Garçon",
+    "en": "boy"
+   }
+  ],
+  "peau": [
+   {
+    "id": "p1",
+    "fr": "Très clair",
+    "c": "#FBE3D2",
+    "sh": "#EFC7AE",
+    "en": "very fair skin"
+   },
+   {
+    "id": "p2",
+    "fr": "Clair",
+    "c": "#F4CFB0",
+    "sh": "#E4B28D",
+    "en": "fair skin"
+   },
+   {
+    "id": "p3",
+    "fr": "Doré",
+    "c": "#E8B98E",
+    "sh": "#D39C6D",
+    "en": "light golden-tan skin"
+   },
+   {
+    "id": "p4",
+    "fr": "Mat",
+    "c": "#C98D5E",
+    "sh": "#B07446",
+    "en": "olive-tan medium skin"
+   },
+   {
+    "id": "p5",
+    "fr": "Brun",
+    "c": "#9A6340",
+    "sh": "#80502F",
+    "en": "medium-brown skin"
+   },
+   {
+    "id": "p6",
+    "fr": "Foncé",
+    "c": "#6B4029",
+    "sh": "#55301D",
+    "en": "deep dark-brown skin"
+   }
+  ],
+  "coiffure": [
+   {
+    "id": "court",
+    "fr": "Court",
+    "en": "short neat hair",
+    "img": "enfant-court"
+   },
+   {
+    "id": "bataille",
+    "fr": "En bataille",
+    "en": "short messy tousled hair",
+    "img": "enfant-bataille"
+   },
+   {
+    "id": "boucle",
+    "fr": "Bouclé court",
+    "en": "short curly hair",
+    "img": "enfant-boucle-court"
+   },
+   {
+    "id": "afro",
+    "fr": "Afro",
+    "en": "big round afro hair",
+    "img": "enfant-afro"
+   },
+   {
+    "id": "carre",
+    "fr": "Carré",
+    "en": "chin-length bob haircut with bangs",
+    "img": "enfant-carre"
+   },
+   {
+    "id": "long",
+    "fr": "Long",
+    "en": "long straight hair falling past the shoulders",
+    "img": "enfant-long"
+   },
+   {
+    "id": "longboucle",
+    "fr": "Long bouclé",
+    "en": "long curly hair",
+    "img": "enfant-long-boucle"
+   },
+   {
+    "id": "couettes",
+    "fr": "Couettes",
+    "en": "hair in two pigtails",
+    "img": "enfant-couettes"
+   },
+   {
+    "id": "queue",
+    "fr": "Queue de cheval",
+    "en": "hair in a high ponytail",
+    "img": "enfant-queue-cheval"
+   },
+   {
+    "id": "tresses",
+    "fr": "Tresses",
+    "en": "hair in two long braids",
+    "img": "enfant-tresses"
+   },
+   {
+    "id": "chignon",
+    "fr": "Chignon",
+    "en": "hair in a round top bun",
+    "img": "enfant-chignon"
+   },
+   {
+    "id": "rase",
+    "fr": "Très court",
+    "en": "very short buzz-cut hair",
+    "img": "enfant-tres-court"
+   }
+  ],
+  "couleur_cheveux": [
+   {
+    "id": "platine",
+    "fr": "Blond clair",
+    "c": "#F3DC9A",
+    "en": "light platinum-blond"
+   },
+   {
+    "id": "blond",
+    "fr": "Blond",
+    "c": "#E2B55A",
+    "en": "golden-blond"
+   },
+   {
+    "id": "roux",
+    "fr": "Roux",
+    "c": "#D0692C",
+    "en": "ginger-red"
+   },
+   {
+    "id": "chatain_clair",
+    "fr": "Châtain clair",
+    "c": "#A8743F",
+    "en": "light-brown"
+   },
+   {
+    "id": "chatain",
+    "fr": "Châtain",
+    "c": "#7A4E2C",
+    "en": "chestnut-brown"
+   },
+   {
+    "id": "brun",
+    "fr": "Brun",
+    "c": "#4A2E1C",
+    "en": "dark-brown"
+   },
+   {
+    "id": "noir",
+    "fr": "Noir",
+    "c": "#231A16",
+    "en": "black"
+   }
+  ],
+  "yeux": [
+   {
+    "id": "marron",
+    "fr": "Marron",
+    "c": "#6B4226",
+    "en": "brown eyes"
+   },
+   {
+    "id": "noisette",
+    "fr": "Noisette",
+    "c": "#9A6B2F",
+    "en": "hazel eyes"
+   },
+   {
+    "id": "vert",
+    "fr": "Verts",
+    "c": "#4E8A4B",
+    "en": "green eyes"
+   },
+   {
+    "id": "bleu",
+    "fr": "Bleus",
+    "c": "#3F7FC1",
+    "en": "blue eyes"
+   },
+   {
+    "id": "gris",
+    "fr": "Gris",
+    "c": "#7F8C94",
+    "en": "grey eyes"
+   },
+   {
+    "id": "noir",
+    "fr": "Noirs",
+    "c": "#2A1C16",
+    "en": "very dark eyes"
+   }
+  ],
+  "lunettes": [
+   {
+    "id": "aucune",
+    "fr": "Sans",
+    "en": ""
+   },
+   {
+    "id": "rondes",
+    "fr": "Rondes",
+    "en": "wears round glasses"
+   },
+   {
+    "id": "carrees",
+    "fr": "Carrées",
+    "en": "wears rectangular glasses"
+   }
+  ],
+  "couleur_lunettes": [
+   {
+    "id": "rouge",
+    "fr": "Rouge",
+    "c": "#D8453B",
+    "en": "red"
+   },
+   {
+    "id": "bleu",
+    "fr": "Bleu",
+    "c": "#3563B8",
+    "en": "blue"
+   },
+   {
+    "id": "noir",
+    "fr": "Noir",
+    "c": "#222222",
+    "en": "black"
+   },
+   {
+    "id": "dore",
+    "fr": "Doré",
+    "c": "#C99A3A",
+    "en": "gold"
+   },
+   {
+    "id": "rose",
+    "fr": "Rose",
+    "c": "#E07AA6",
+    "en": "pink"
+   }
+  ],
+  "taches": [
+   {
+    "id": "non",
+    "fr": "Non",
+    "en": ""
+   },
+   {
+    "id": "oui",
+    "fr": "Oui",
+    "en": "light freckles on the cheeks"
+   }
+  ],
+  "tenue": [
+   {
+    "id": "pyjama",
+    "fr": "Pyjama étoilé",
+    "en": "pyjamas with small white stars"
+   },
+   {
+    "id": "tshirt",
+    "fr": "T-shirt",
+    "en": "t-shirt and shorts"
+   },
+   {
+    "id": "salopette",
+    "fr": "Salopette",
+    "en": "dungarees over a white t-shirt"
+   },
+   {
+    "id": "sweat",
+    "fr": "Sweat à capuche",
+    "en": "cosy hoodie"
+   },
+   {
+    "id": "robe",
+    "fr": "Robe",
+    "en": "dress with a round white collar"
+   },
+   {
+    "id": "mariniere",
+    "fr": "Marinière",
+    "en": "and white striped sailor top"
+   }
+  ],
+  "couleur_tenue": [
+   {
+    "id": "jaune",
+    "fr": "Jaune",
+    "c": "#E9B840",
+    "en": "yellow"
+   },
+   {
+    "id": "rouge",
+    "fr": "Rouge",
+    "c": "#D8513F",
+    "en": "red"
+   },
+   {
+    "id": "rose",
+    "fr": "Rose",
+    "c": "#E88BAE",
+    "en": "pink"
+   },
+   {
+    "id": "violet",
+    "fr": "Violet",
+    "c": "#8C68C4",
+    "en": "purple"
+   },
+   {
+    "id": "bleu",
+    "fr": "Bleu",
+    "c": "#3F72C4",
+    "en": "blue"
+   },
+   {
+    "id": "vert",
+    "fr": "Vert",
+    "c": "#4F9A64",
+    "en": "green"
+   },
+   {
+    "id": "orange",
+    "fr": "Orange",
+    "c": "#EC8A3A",
+    "en": "orange"
+   },
+   {
+    "id": "gris",
+    "fr": "Gris",
+    "c": "#8E9AA3",
+    "en": "grey"
+   }
+  ]
+ },
+ "doudou": {
+  "type": [
+   {
+    "id": "lapin",
+    "fr": "Lapin",
+    "en": "bunny",
+    "img": "doudou-lapin"
+   },
+   {
+    "id": "ours",
+    "fr": "Ours",
+    "en": "teddy bear",
+    "img": "doudou-ours"
+   },
+   {
+    "id": "chat",
+    "fr": "Chat",
+    "en": "cat",
+    "img": "doudou-chat"
+   },
+   {
+    "id": "chien",
+    "fr": "Chien",
+    "en": "puppy",
+    "img": "doudou-chien"
+   },
+   {
+    "id": "elephant",
+    "fr": "Éléphant",
+    "en": "elephant",
+    "img": "doudou-elephant"
+   }
+  ],
+  "couleur": [
+   {
+    "id": "blanc",
+    "fr": "Blanc",
+    "c": "#F4EFE6",
+    "sh": "#DCD3C4",
+    "en": "off-white"
+   },
+   {
+    "id": "beige",
+    "fr": "Beige",
+    "c": "#E6CFA8",
+    "sh": "#CDB087",
+    "en": "beige"
+   },
+   {
+    "id": "marron",
+    "fr": "Marron",
+    "c": "#A87A52",
+    "sh": "#8B6040",
+    "en": "brown"
+   },
+   {
+    "id": "gris",
+    "fr": "Gris",
+    "c": "#B2B0AC",
+    "sh": "#94918D",
+    "en": "neutral soft grey (not blue)"
+   },
+   {
+    "id": "rose",
+    "fr": "Rose",
+    "c": "#F2B8C8",
+    "sh": "#DE98AD",
+    "en": "pastel-pink"
+   },
+   {
+    "id": "bleu",
+    "fr": "Bleu",
+    "c": "#A9C7E8",
+    "sh": "#86A9D1",
+    "en": "pastel-blue"
+   },
+   {
+    "id": "vert",
+    "fr": "Vert",
+    "c": "#B9DDB0",
+    "sh": "#96C58B",
+    "en": "mint-green"
+   },
+   {
+    "id": "jaune",
+    "fr": "Jaune",
+    "c": "#F4DC8A",
+    "sh": "#DFC169",
+    "en": "pastel-yellow"
+   }
+  ],
+  "accessoire": [
+   {
+    "id": "aucun",
+    "fr": "Aucun",
+    "en": ""
+   },
+   {
+    "id": "noeud",
+    "fr": "Nœud",
+    "en": "wearing a little bow at the neck"
+   },
+   {
+    "id": "echarpe",
+    "fr": "Écharpe",
+    "en": "wearing a small scarf"
+   }
+  ],
+  "couleur_accessoire": [
+   {
+    "id": "rouge",
+    "fr": "Rouge",
+    "c": "#D8513F",
+    "en": "red"
+   },
+   {
+    "id": "bleu",
+    "fr": "Bleu",
+    "c": "#3F72C4",
+    "en": "blue"
+   },
+   {
+    "id": "orange",
+    "fr": "Orange",
+    "c": "#EC8A3A",
+    "en": "orange"
+   },
+   {
+    "id": "rose",
+    "fr": "Rose",
+    "c": "#E07AA6",
+    "en": "pink"
+   },
+   {
+    "id": "vert",
+    "fr": "Vert",
+    "c": "#4F9A64",
+    "en": "green"
+   }
+  ]
+ },
+ "animal": {
+  "type": [
+   {
+    "id": "chat",
+    "fr": "Chat",
+    "en": "cat",
+    "img": "animal-chat"
+   },
+   {
+    "id": "chien",
+    "fr": "Chien",
+    "en": "dog",
+    "img": "animal-chien"
+   },
+   {
+    "id": "lapin",
+    "fr": "Lapin",
+    "en": "rabbit",
+    "img": "animal-lapin"
+   },
+   {
+    "id": "hamster",
+    "fr": "Hamster",
+    "en": "hamster",
+    "img": "animal-hamster"
+   },
+   {
+    "id": "oiseau",
+    "fr": "Oiseau",
+    "en": "small bird",
+    "img": "animal-oiseau"
+   }
+  ],
+  "taille": [
+   {
+    "id": "petit",
+    "fr": "Petit",
+    "en": "small"
+   },
+   {
+    "id": "moyen",
+    "fr": "Moyen",
+    "en": "medium-sized"
+   },
+   {
+    "id": "grand",
+    "fr": "Grand",
+    "en": "large"
+   }
+  ],
+  "oreilles": [
+   {
+    "id": "dressees",
+    "fr": "Dressées",
+    "en": "pointy upright ears"
+   },
+   {
+    "id": "tombantes",
+    "fr": "Tombantes",
+    "en": "floppy ears"
+   }
+  ],
+  "couleur": [
+   {
+    "id": "blanc",
+    "fr": "Blanc",
+    "c": "#F5F1EA",
+    "sh": "#DDD5C8",
+    "en": "white"
+   },
+   {
+    "id": "creme",
+    "fr": "Crème",
+    "c": "#EBD6B0",
+    "sh": "#D2B98E",
+    "en": "cream"
+   },
+   {
+    "id": "fauve",
+    "fr": "Fauve",
+    "c": "#D6A15B",
+    "sh": "#BA8441",
+    "en": "golden-fawn"
+   },
+   {
+    "id": "roux",
+    "fr": "Roux",
+    "c": "#D9803A",
+    "sh": "#BA6526",
+    "en": "ginger"
+   },
+   {
+    "id": "marron",
+    "fr": "Marron",
+    "c": "#8A5A36",
+    "sh": "#6E4426",
+    "en": "brown"
+   },
+   {
+    "id": "gris",
+    "fr": "Gris",
+    "c": "#9A9894",
+    "sh": "#7D7B78",
+    "en": "neutral grey (not blue-grey)"
+   },
+   {
+    "id": "noir",
+    "fr": "Noir",
+    "c": "#2E2A29",
+    "sh": "#1C1918",
+    "en": "black"
+   },
+   {
+    "id": "bleu",
+    "fr": "Bleu (oiseau)",
+    "c": "#5BA3D9",
+    "sh": "#3F86BD",
+    "en": "sky-blue"
+   },
+   {
+    "id": "vert",
+    "fr": "Vert (oiseau)",
+    "c": "#7CC36A",
+    "sh": "#5EA64D",
+    "en": "bright-green"
+   },
+   {
+    "id": "jaune",
+    "fr": "Jaune (oiseau)",
+    "c": "#F2D14C",
+    "sh": "#D8B530",
+    "en": "bright-yellow"
+   }
+  ],
+  "motif": [
+   {
+    "id": "uni",
+    "fr": "Uni",
+    "en": "solid-coloured fur"
+   },
+   {
+    "id": "ventre",
+    "fr": "Museau et ventre clairs",
+    "en": "with a white muzzle and white belly"
+   },
+   {
+    "id": "taches",
+    "fr": "Taches",
+    "en": "with large patches of a second colour"
+   },
+   {
+    "id": "raye",
+    "fr": "Tigré",
+    "en": "with tabby stripes of a second colour"
+   },
+   {
+    "id": "masque",
+    "fr": "Masque",
+    "en": "with a mask-like face pattern and paws of a second colour"
+   }
+  ],
+  "couleur2": [
+   {
+    "id": "blanc",
+    "fr": "Blanc",
+    "c": "#F5F1EA",
+    "en": "white"
+   },
+   {
+    "id": "creme",
+    "fr": "Crème",
+    "c": "#EBD6B0",
+    "en": "cream"
+   },
+   {
+    "id": "noir",
+    "fr": "Noir",
+    "c": "#2E2A29",
+    "en": "black"
+   },
+   {
+    "id": "marron",
+    "fr": "Marron",
+    "c": "#6E4426",
+    "en": "dark-brown"
+   },
+   {
+    "id": "roux",
+    "fr": "Roux",
+    "c": "#C96A2A",
+    "en": "ginger"
+   },
+   {
+    "id": "gris",
+    "fr": "Gris",
+    "c": "#6F6D6A",
+    "en": "dark-grey"
+   },
+   {
+    "id": "fauve",
+    "fr": "Fauve",
+    "c": "#C99248",
+    "en": "tan"
+   }
+  ],
+  "yeux": [
+   {
+    "id": "sombres",
+    "fr": "Sombres",
+    "c": "#2A1C16",
+    "en": "dark eyes"
+   },
+   {
+    "id": "verts",
+    "fr": "Verts",
+    "c": "#6BA34B",
+    "en": "green eyes"
+   },
+   {
+    "id": "jaunes",
+    "fr": "Jaunes",
+    "c": "#D8AE2F",
+    "en": "amber eyes"
+   },
+   {
+    "id": "bleus",
+    "fr": "Bleus",
+    "c": "#5B9BD5",
+    "en": "blue eyes"
+   }
+  ],
+  "collier": [
+   {
+    "id": "aucun",
+    "fr": "Aucun",
+    "en": ""
+   },
+   {
+    "id": "rouge",
+    "fr": "Rouge",
+    "c": "#D8453B",
+    "en": "wearing a red collar"
+   },
+   {
+    "id": "bleu",
+    "fr": "Bleu",
+    "c": "#3563B8",
+    "en": "wearing a blue collar"
+   },
+   {
+    "id": "vert",
+    "fr": "Vert",
+    "c": "#3F8F55",
+    "en": "wearing a green collar"
+   },
+   {
+    "id": "rose",
+    "fr": "Rose",
+    "c": "#E07AA6",
+    "en": "wearing a pink collar"
+   }
+  ]
+ },
+ "modeles": {
+  "enfant": {
+   "peau": "p2",
+   "couleur_cheveux": "chatain",
+   "yeux": "marron",
+   "lunettes": "aucune",
+   "taches": "non",
+   "tenue": "pyjama",
+   "couleur_tenue": "jaune"
+  },
+  "doudou": {
+   "couleur": "bleu",
+   "accessoire": "noeud",
+   "couleur_accessoire": "rouge"
+  },
+  "animal": {
+   "chat": {
+    "couleur": "roux",
+    "motif": "ventre",
+    "couleur2": "creme",
+    "yeux": "verts",
+    "collier": "aucun"
+   },
+   "chien": {
+    "couleur": "fauve",
+    "motif": "ventre",
+    "couleur2": "creme",
+    "yeux": "sombres",
+    "collier": "aucun",
+    "oreilles": "tombantes"
+   },
+   "lapin": {
+    "couleur": "roux",
+    "motif": "ventre",
+    "couleur2": "creme",
+    "yeux": "sombres",
+    "collier": "aucun",
+    "oreilles": "dressees"
+   },
+   "hamster": {
+    "couleur": "fauve",
+    "motif": "ventre",
+    "couleur2": "creme",
+    "yeux": "sombres",
+    "collier": "aucun"
+   },
+   "oiseau": {
+    "couleur": "jaune",
+    "motif": "ventre",
+    "couleur2": "creme",
+    "yeux": "sombres",
+    "collier": "aucun"
+   }
+  }
+ }
+}
