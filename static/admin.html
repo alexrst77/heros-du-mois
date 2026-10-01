@@ -70,12 +70,12 @@ async function load() {
     if (['expediee', 'erreur', 'annulee'].includes(o.statut) && o.job_id) btns.push(['effacer', 'Effacer les données']);
     return `<div class="card">
       <div class="top"><span class="st ${o.statut}">${LABEL[o.statut] || o.statut}</span><b>${esc(o.titre || '(livre en attente)')}</b>
-        <span class="muted">n°${o.numero} · ${esc(o.formule)}${o.montant ? ' · ' + eur(o.montant) : ''} · ${date(o.cree)} · ${o.id}</span></div>
+        <span class="muted">n°${o.numero} · ${esc(o.formule)}${o.montant ? ' · ' + eur(o.montant) : ''}${o.cout != null ? ' · coût OpenAI ≈ ' + o.cout.toFixed(2) + ' $' : ''} · ${date(o.cree)} · ${o.id}</span></div>
       <div class="muted">${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} (${esc(a.pays)}) · ${esc(a.telephone)}</div>
       ${o.lulu_id ? `<div>Lulu : travail ${esc(o.lulu_id)} · <b>${esc(o.lulu_statut)}</b> · coût ${esc(o.lulu_cout)} ${(o.suivi || []).map(u => `<a target="_blank" href="${esc(u)}">suivi colis</a>`).join(' ')}</div>` : ''}
       ${o.controle && o.controle.length ? `<div class="warn">Contrôle qualité :<ul>${o.controle.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : (o.statut === 'a_verifier' ? '<div class="muted">Contrôle qualité : aucun problème détecté. Relis le PDF avant l\'envoi.</div>' : '')}
       ${o.erreur ? `<div class="warn">${esc(o.erreur)}</div>` : ''}
-      <div class="files">${files}</div>
+      <div class="files">${files}${o.job_id && o.statut !== 'attente_paiement' ? `<a href="/admin/archive/${o.id}${q}">📦 tout le dossier (zip, pour Claude)</a>` : ''}</div>
       <div>${btns.map(b => `<button class="${b[2] || ''}" onclick="act('${o.id}','${b[0]}',this)">${b[1]}</button>`).join('')}</div>
       <div class="msg"></div></div>`;
   }).join('') : '<p class="muted">Aucune commande pour l\'instant.</p>';

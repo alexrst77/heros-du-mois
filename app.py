@@ -125,6 +125,7 @@ def run(job_id, form, refs):
     def save(name, data):
         (folder / name).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
 
+    meter = generator.start_meter()       # coût OpenAI de ce livre (images + textes + contrôles)
     try:
         portraits_pdf = None
         if form.get("demo") or not os.getenv("OPENAI_API_KEY"):
@@ -196,13 +197,15 @@ def run(job_id, form, refs):
         qa["histoire"] = story.get("controle_histoire", []) + [f"doublon supprimé : {x}" for x in story.get("doublons_supprimes", [])]
         qa["storyboard"] = (board or {}).get("controle", [])
         qa["configuration"] = json.loads((folder / "config.json").read_text())["problemes"] if (folder / "config.json").exists() else []
+        qa["cout_openai"] = {"dollars": round(meter["dollars"], 2), "appels": meter["appels"],
+                             "detail": {k: {"appels": v[0], "dollars": round(v[1], 2)} for k, v in meter["detail"].items()}}
         save("controle.json", qa)
         job.update(etat="termine", progression=100, etape="Livre prêt", pdf=pdf.name, titre=" ".join(story["titre"]),
                    controle=qa["problemes"] + [f"impression : {x}" for x in qa["impression"]["problemes"]] + qa["configuration"],
-                   mineurs=qa.get("mineurs", []), pages=qa["pages"])
+                   mineurs=qa.get("mineurs", []), pages=qa["pages"], cout=qa["cout_openai"]["dollars"])
     except Exception as e:
         traceback.print_exc()
-        job.update(etat="erreur", erreur=str(e)[:400])
+        job.update(etat="erreur", erreur=str(e)[:400], cout=round(meter["dollars"], 2))
 
 
 @app.get("/")

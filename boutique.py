@@ -151,10 +151,10 @@ def start_book(oid, auto=False):
 
 def book_done(oid, job):
     if job["etat"] != "termine":
-        db.update(oid, statut="erreur", erreur="Fabrication : " + str(job.get("erreur", "inconnue")))
+        db.update(oid, statut="erreur", erreur="Fabrication : " + str(job.get("erreur", "inconnue")), cout=job.get("cout"))
         log(f"commande {oid} : erreur de fabrication {job.get('erreur')}")
         return
-    db.update(oid, statut="a_verifier", pdf=job["pdf"], titre=job["titre"], controle=job.get("controle") or [])
+    db.update(oid, statut="a_verifier", pdf=job["pdf"], titre=job["titre"], controle=job.get("controle") or [], cout=job.get("cout"))
     for f in (A.OUT / job.get("_id", oid)).glob("*_brut.png"):      # place disque : on ne garde que les images finales
         f.unlink(missing_ok=True)
     for f in (A.OUT / job.get("_id", oid)).glob("*_essai*.png"):
@@ -370,6 +370,27 @@ def admin_file(oid, name):
         abort(404)
     p = A.OUT / (o["job_id"] or "_") / name
     return send_file(p) if p.exists() else abort(404)
+
+
+@bp.get("/admin/archive/<oid>")
+def admin_archive(oid):
+    """Tout le dossier d'un livre (configuration, histoire, storyboard, portraits, images, contrôle) en un zip, pour la relecture."""
+    if not admin_ok():
+        abort(403)
+    import zipfile, io
+    o = db.get(oid) or abort(404)
+    folder = A.OUT / (o["job_id"] or "_")
+    if not folder.exists():
+        abort(404)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
+        for p in sorted(folder.iterdir()):
+            if p.is_file() and not p.name.startswith("impression_"):
+                z.write(p, f"livre_{oid}/{p.name}")
+        for p in (STORE / o["origine"]).glob("*"):
+            z.write(p, f"livre_{oid}/commande/{p.name}")
+    buf.seek(0)
+    return send_file(buf, mimetype="application/zip", as_attachment=True, download_name=f"livre_{oid}.zip")
 
 
 @bp.post("/admin/api/<oid>/<action>")

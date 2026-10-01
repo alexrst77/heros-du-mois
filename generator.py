@@ -16,7 +16,46 @@ import couleur
 
 TEXT_MODEL = os.getenv("OPENAI_TEXT_MODEL", "gpt-4.1")
 IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
-IMAGE_QUALITY = os.getenv("OPENAI_IMAGE_QUALITY", "high")   # low | medium | high
+IMAGE_QUALITY = os.getenv("OPENAI_IMAGE_QUALITY", "high")   # portraits et couverture : low | medium | high
+SCENE_QUALITY = os.getenv("OPENAI_SCENE_QUALITY", "medium")  # 18 pages intérieures (le poste de coût principal)
+INPUT_FIDELITY = os.getenv("OPENAI_INPUT_FIDELITY", "high")  # high = personnages plus fidèles, mais références plus chères
+
+# ---------------------------------------------------------------- compteur de coût OpenAI (par livre)
+import contextvars, threading as _th
+METER = contextvars.ContextVar("meter", default=None)
+_mlock = _th.Lock()
+PRICES = {   # dollars par million de jetons : (texte entrée, image entrée, sortie)
+    "gpt-image-1.5": (5, 8, 32), "gpt-image-1-mini": (2, 2.5, 8), "gpt-image-1": (5, 10, 40), "gpt-image-2.5": (5, 8, 30),
+    "gpt-4.1-mini": (0.4, 0.4, 1.6), "gpt-4.1": (2, 2, 8), "gpt-4o-mini": (0.15, 0.15, 0.6), "gpt-4o": (2.5, 2.5, 10)}
+
+
+def _price(model):
+    return next((v for k, v in sorted(PRICES.items(), key=lambda kv: -len(kv[0])) if model.startswith(k)), (5, 10, 40))
+
+
+def start_meter():
+    m = {"appels": 0, "dollars": 0.0, "detail": {}}
+    METER.set(m)
+    return m
+
+
+def _count(kind, model, usage):
+    m = METER.get()
+    if m is None or usage is None:
+        return
+    g = lambda o, k: (o.get(k) if isinstance(o, dict) else getattr(o, k, None)) or 0
+    if kind == "image":
+        det = g(usage, "input_tokens_details") or {}
+        txt, img = g(det, "text_tokens"), g(det, "image_tokens")
+        if not (txt or img): txt = g(usage, "input_tokens")
+        tin, iin, out = _price(model)
+        cost = (txt * tin + img * iin + g(usage, "output_tokens") * out) / 1e6
+    else:
+        tin, _, out = _price(model)
+        cost = (g(usage, "prompt_tokens") * tin + g(usage, "completion_tokens") * out) / 1e6
+    with _mlock:
+        m["appels"] += 1; m["dollars"] += cost
+        d = m["detail"].setdefault(kind, [0, 0.0]); d[0] += 1; d[1] += cost
 WORKERS = int(os.getenv("IMAGE_WORKERS", "3"))
 
 
@@ -40,6 +79,7 @@ def _chat_json(system, user):
     def call():
         r = _client().chat.completions.create(model=TEXT_MODEL, response_format={"type": "json_object"},
                                               messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
+        _count("texte", TEXT_MODEL, getattr(r, "usage", None))
         return json.loads(r.choices[0].message.content)
     return _retry(call)
 
@@ -230,7 +270,9 @@ def portrait_prompt(c, has_model, has_guide, diffs=None):
         f"Create the official REFERENCE PORTRAIT of {kind} {c['nom'].upper()} for this picture book: {c['desc']}.",
         "Full body, three-quarter view, relaxed natural pose, gentle expression, centred, on a plain soft cream paper background, "
         "even soft daylight with true neutral colours (no yellow or orange colour cast). Every attribute listed above must be clearly visible "
-        "(species, colours, markings, accessories, glasses, clothing). One single character only. No scenery, no text."]
+        + ("(hair, skin, eyes, glasses if listed, clothing). " if c["type"] == "enfant" else
+           "(species, fur colours, markings, ears, collar if listed). It wears NO glasses and NO clothes. ")
+        + "One single character only. No scenery, no text."]
         + ([f"IMPORTANT, the base model differs from this character: " + "; ".join(diffs) + "."] if diffs else [])
         + (["This is a STUFFED PLUSH TOY made of soft fabric: visible seams, small stitched or button eyes, stubby limbs without claws, "
             "sitting like a toy. It must never look like a living animal."] if c["type"] == "doudou" else [])
@@ -521,11 +563,14 @@ def _world(story, lumiere, palette=None):
             f"COLOUR PALETTE OF THIS PAGE: {palette or 'rich and varied'}. " + art.COLOUR_RULE)
 
 
-def refs_block(ids, story, first_index=1):
+def refs_block(ids, story, first_index=1, style=True):
     """Liste explicite des images de référence transmises (une par personnage présent), dans l'ordre d'envoi."""
     by = _ids(story)
     lines = [f"Image {first_index + k}: {by[x]['nom'].upper()} ({by[x]['role']}) - {by[x]['desc']}." for k, x in enumerate(ids)]
     notes = []
+    h = by.get("heros")
+    if h and "heros" in ids and ((h.get("config") or {}).get("lunettes") not in (None, "aucune")) and len(ids) > 1:
+        notes.append(f"Only {h['nom'].upper()} wears glasses: the animals, the plush toy and every other character NEVER wear glasses.")
     if "doudou" in ids:
         d = by["doudou"]; hero = by.get("heros", {}).get("nom", "the hero").upper()
         notes.append(f"{d['nom'].upper()} is a STUFFED PLUSH TOY (fabric, seams, stitched eyes, stubby limbs), about the size of {hero}'s torso: "
@@ -536,7 +581,7 @@ def refs_block(ids, story, first_index=1):
                 notes.append(f"Do not confuse them: {by[x]['nom'].upper()} is a LIVING {dt and _opt('animal', 'type', dt).get('en', dt)} (real fur, natural pose), "
                              f"{d['nom'].upper()} is the plush toy (fabric, smaller, held by {hero}). They must look clearly different.")
     return ("REFERENCE IMAGES (one per character, sent in this order): " + " ".join(lines + notes) +
-            f" Image {first_index + len(ids)}: style swatch board (painting technique, texture and light only; never copy its content). "
+            (f" Image {first_index + len(ids)}: style swatch board (painting technique, texture and light only; never copy its content). " if style else " ") +
             "Each character must match its reference portrait exactly: same species, face, hair, colours, markings, clothes, "
             "accessories and relative size. Poses and expressions change with the scene.")
 
@@ -545,7 +590,7 @@ def scene_prompt(p, story):
     ids = p.get("personnages", [])
     by = _ids(story)
     names = ", ".join(by[x]["nom"].upper() for x in ids)
-    parts = [art.STYLE_BIBLE, refs_block(ids, story), _world(story, p.get("lumiere"), p.get("palette_en")),
+    parts = [art.STYLE_BIBLE, refs_block(ids, story, style=False), _world(story, p.get("lumiere"), p.get("palette_en")),
              f"CHARACTERS IN THIS SCENE: exactly {len(ids)} ({names}). Do not add any other person or animal (no extra pet, "
              "no rabbit, no bird, no background creature unless it is listed in the story elements below), do not merge characters. "
              "Every listed character must be clearly visible, whole and recognisable (not hidden or cropped out).",
@@ -575,7 +620,7 @@ def _save(resp, path):
     return Path(path)
 
 
-def _edit(prompt, refs, path, size="1024x1024"):
+def _edit(prompt, refs, path, size="1024x1024", quality=None):
     refs = [Path(r) for r in refs]
     missing = [str(r) for r in refs if not r.exists()]
     if missing:
@@ -583,14 +628,18 @@ def _edit(prompt, refs, path, size="1024x1024"):
     def call():
         files = [open(r, "rb") for r in refs]
         try:
-            kw = dict(model=IMAGE_MODEL, image=files, prompt=prompt, size=size, quality=IMAGE_QUALITY, n=1)
+            kw = dict(model=IMAGE_MODEL, image=files, prompt=prompt, size=size, quality=quality or IMAGE_QUALITY, n=1)
             try:
-                return _client().images.edit(input_fidelity="high", **kw)
+                r = _client().images.edit(input_fidelity=INPUT_FIDELITY, **kw)
+                _count("image", IMAGE_MODEL, getattr(r, "usage", None))
+                return r
             except Exception as e:   # option non gérée par le SDK ou le modèle : on réessaie sans
                 if not isinstance(e, TypeError) and "input_fidelity" not in str(e):
                     raise
                 for fh in files: fh.seek(0)
-                return _client().images.edit(**kw)
+                r = _client().images.edit(**kw)
+                _count("image", IMAGE_MODEL, getattr(r, "usage", None))
+                return r
         finally:
             for fh in files: fh.close()
     out = _retry(lambda: _save(call(), path))
@@ -601,8 +650,9 @@ def _edit(prompt, refs, path, size="1024x1024"):
     return out
 
 
-def ref_files(ids, portraits):
-    return [portraits[x] for x in ids if x in portraits] + [art.STYLE_BOARD]
+def ref_files(ids, portraits, style=True):
+    """Portraits des personnages présents (+ planche de style pour la couverture ; les pages s'en passent : moins de coût)."""
+    return [portraits[x] for x in ids if x in portraits] + ([art.STYLE_BOARD] if style else [])
 
 
 def draw_cover(board, story, portraits, folder):
@@ -618,14 +668,14 @@ def draw_scenes(board, story, portraits, folder, pages, progress, check=True):
         p = board["pages"][i]
         p["personnages"] = [x for x in p["personnages"] if x in portraits]
         path = Path(folder) / f"image_{i + 1:02d}.png"
-        _edit(scene_prompt(p, story), ref_files(p["personnages"], portraits), path)
+        _edit(scene_prompt(p, story), ref_files(p["personnages"], portraits, style=False), path, quality=SCENE_QUALITY)
         verdict = review_scene(path, p, story) if check else {"ok": True}
         tries = 0
         while not verdict.get("ok", True) and tries < MAX_RETRIES:   # nouvel essai UNIQUEMENT pour un écart bloquant
             tries += 1
             keep = path.with_name(path.stem + f"_essai{tries}.png"); shutil.copy(path, keep)
             p["fix"] = "; ".join(verdict.get("problemes", []))
-            _edit(scene_prompt(p, story), ref_files(p["personnages"], portraits), path)
+            _edit(scene_prompt(p, story), ref_files(p["personnages"], portraits, style=False), path, quality=SCENE_QUALITY)
             new = review_scene(path, p, story)
             if len(new.get("bloquants", [])) > len(verdict.get("bloquants", [])):   # le nouvel essai est pire : on garde l'ancien
                 shutil.copy(keep, path); new = dict(verdict, garde_essai=tries)
@@ -635,8 +685,9 @@ def draw_scenes(board, story, portraits, folder, pages, progress, check=True):
         p["controle_visuel"] = verdict
         done[0] += 1; progress(f"Illustrations {done[0]}/{len(pages)}")
         return path
-    with ThreadPoolExecutor(max_workers=WORKERS) as ex:
-        return dict(zip(pages, ex.map(one, pages)))
+    with ThreadPoolExecutor(max_workers=WORKERS) as ex:   # le compteur de coût suit chaque tâche
+        futs = [ex.submit(contextvars.copy_context().run, one, i) for i in pages]
+        return dict(zip(pages, [f.result() for f in futs]))
 
 
 # ====================================================================== 6. contrôle visuel automatique
@@ -648,6 +699,7 @@ BLOQUANTS (l'image doit être refaite) — uniquement :
 - un personnage ou un animal en trop (humain, animal de compagnie, créature) ; les petits éléments de décor (papillons, lucioles) ne comptent pas ;
 - mauvaise espèce ou couleur principale nettement fausse (ex. chien marron au lieu de noir, peluche bleue au lieu de grise) ;
 - la peluche (doudou) dessinée comme un animal vivant, ou deux personnages confondus ;
+- un accessoire porté par le mauvais personnage (ex. des lunettes sur un animal ou sur la peluche) ;
 - l'action principale du texte est absente (ex. le texte parle d'un dinosaure et il n'y en a pas) ;
 - du texte écrit dans l'image.
 MINEURS (signalés, l'image est gardée) : détails de vêtements (col, motifs), couleur des yeux, coutures, gestes secondaires,
@@ -668,6 +720,7 @@ def review_scene(path, p, story):
                 {"role": "system", "content": SYSTEM_REVIEW},
                 {"role": "user", "content": [{"type": "text", "text": json.dumps(fiche, ensure_ascii=False)},
                                              {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}}]}])
+            _count("controle", REVIEW_MODEL, getattr(r, "usage", None))
             v = json.loads(r.choices[0].message.content)
             v["bloquants"] = [x for x in v.get("bloquants") or [] if isinstance(x, str)][:6]
             v["mineurs"] = [x for x in v.get("mineurs") or [] if isinstance(x, str)][:6]

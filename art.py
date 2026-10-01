@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 STYLE_BOARD = ROOT / "style" / "planche_style.png"
-STYLE_VERSION = "2026-10-v4"   # à changer quand le style évolue : invalide tous les portraits en cache
+STYLE_VERSION = "2026-10-v5"   # à changer quand le style évolue : invalide tous les portraits en cache
 
 # ---------------------------------------------------------------- style des illustrations
 STYLE_BIBLE = (

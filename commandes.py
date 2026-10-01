@@ -29,6 +29,11 @@ def _db():
 
 with _db() as _c:
     _c.executescript(SCHEMA)
+    for _col in ("cout real",):                      # colonnes ajoutées après la première mise en ligne
+        try:
+            _c.execute(f"alter table commandes add column {_col}")
+        except sqlite3.OperationalError:
+            pass
 
 
 def _row(r):
