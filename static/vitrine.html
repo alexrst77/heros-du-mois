@@ -154,9 +154,17 @@
   @media (max-width:860px) { .univ { grid-template-columns:1fr; gap:32px; } .univ-couv { max-width:240px; margin:0 auto; } }
   .univ-couv img { width:100%; aspect-ratio:4/5; object-fit:cover; display:block; border-radius:22px; box-shadow:0 30px 50px -24px rgba(31,37,87,.6); }
   .univ-t { font:800 14px var(--texte); text-transform:uppercase; letter-spacing:1.2px; color:var(--encre-2); margin:28px 0 10px; }
-  .puces { display:flex; flex-wrap:wrap; gap:8px; }
-  .puces span { background:var(--papier); border:1px solid var(--trait); border-radius:999px; padding:8px 15px; font-weight:700; font-size:15px; }
-  #pucesFetes span { background:#FFF3D1; border-color:#F5DE9E; }
+  .calendrier { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-top:26px; }
+  @media (max-width:560px) { .calendrier { grid-template-columns:repeat(3, 1fr); gap:8px; } .calendrier b { font-size:14px; } .calendrier small { font-size:10px; letter-spacing:.8px; } }
+  .calendrier div { background:var(--papier); border:1px solid var(--trait); border-radius:14px; padding:10px 8px 11px; text-align:center;
+                    box-shadow:0 10px 20px -16px rgba(31,37,87,.5); overflow:hidden; position:relative; }
+  .calendrier div::before { content:""; position:absolute; left:0; right:0; top:0; height:5px; background:var(--encre); }
+  .calendrier small { display:block; font:800 11px var(--texte); letter-spacing:1.3px; text-transform:uppercase; color:var(--encre-2); margin-top:3px; }
+  .calendrier b { display:block; font:400 16px/1.2 var(--titre); color:var(--encre); margin-top:4px; }
+  .calendrier div.moi { background:linear-gradient(160deg,#FFF3D1,#FFE7A6); border-color:#F2CF6E; }
+  .calendrier div.moi::before { background:var(--luciole); }
+  .univ-liste { margin:22px 0 0; color:var(--encre-2); font-size:16px; line-height:1.7; }
+  .univ-liste b { color:var(--encre); }
   .etagere { display:grid; grid-template-columns:repeat(4,1fr); gap:28px; margin-top:44px; }
   @media (max-width:1000px) { .etagere { grid-template-columns:repeat(2,1fr); } }
   @media (max-width:760px) { .etagere { grid-template-columns:1fr; gap:28px; max-width:420px; } }
@@ -449,10 +457,8 @@
       <div>
         <h2>Un univers différent chaque mois, et un livre pour chaque fête</h2>
         <p class="sous">Son anniversaire, Noël, l'Aïd, Hanoukka, Diwali… Choisissez les fêtes de votre famille : le livre arrive juste avant, avec votre enfant en héros de la fête.</p>
-        <h3 class="univ-t">Les fêtes</h3>
-        <div class="puces" id="pucesFetes"></div>
-        <h3 class="univ-t">Les univers</h3>
-        <div class="puces" id="pucesUnivers"></div>
+        <div class="calendrier" id="calendrier"></div>
+        <p class="univ-liste" id="univListe"></p>
       </div>
     </div>
   </div>
@@ -725,8 +731,13 @@
 
   /* univers et fêtes (même liste que l'éditeur) */
   fetch('/api/univers').then(r => r.json()).then(l => {
-    $('pucesFetes').innerHTML = l.filter(u => u.fete).map(u => `<span>${esc(u.puce)}</span>`).join('');
-    $('pucesUnivers').innerHTML = l.filter(u => !u.fete).map(u => `<span>${esc(u.nom)}</span>`).join('');
+    const MOIS = { anniversaire: 'Le jour J', galette: 'Janvier', nouvelan_chinois: 'Janv. – févr.', carnaval: 'Février', ramadan: 'Selon l\'année',
+                   aid: 'Selon l\'année', paques: 'Mars – avril', halloween: 'Octobre', diwali: 'Oct. – nov.', hanoukka: 'Décembre', noel: 'Décembre' };
+    const ordre = ['anniversaire', 'galette', 'nouvelan_chinois', 'carnaval', 'ramadan', 'aid', 'paques', 'halloween', 'diwali', 'hanoukka', 'noel'];
+    const f = l.filter(u => u.fete).sort((a, b) => ordre.indexOf(a.cle) - ordre.indexOf(b.cle));
+    $('calendrier').innerHTML = f.map(u => `<div class="${u.cle === 'anniversaire' ? 'moi' : ''}"><small>${esc(MOIS[u.cle] || '')}</small><b>${esc(u.puce)}</b></div>`).join('');
+    const un = l.filter(u => !u.fete).map(u => u.nom.replace(/^(Une?|Les?|La|L')\s?/, '').replace(/^./, c => c.toLowerCase()));
+    $('univListe').innerHTML = `<b>Et ${un.length} univers pour les autres mois :</b> ` + esc(un.join(', ')) + '.';
   }).catch(() => {});
 
   /* avis : uniquement de vrais avis clients (static/avis.json) */
