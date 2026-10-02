@@ -60,8 +60,8 @@ def checkout(order_id, formule, email, base_url):
         price["recurring"] = {"interval": "month"}
     data = {"mode": f["mode"], "customer_email": email, "client_reference_id": order_id, "locale": "fr",
             "line_items": [{"price_data": price, "quantity": 1}], "metadata": {"commande": order_id, "formule": formule},
-            "success_url": f"{base_url}/?commande={order_id}&session_id={{CHECKOUT_SESSION_ID}}",
-            "cancel_url": f"{base_url}/?commande={order_id}&annule=1"}
+            "success_url": f"{base_url}/creer?commande={order_id}&session_id={{CHECKOUT_SESSION_ID}}",
+            "cancel_url": f"{base_url}/creer?commande={order_id}&annule=1"}
     if f["mode"] == "subscription":
         data["subscription_data"] = {"metadata": {"commande": order_id}}
     else:

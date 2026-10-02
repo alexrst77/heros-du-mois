@@ -4,7 +4,7 @@
 Lancement : python app.py   puis ouvrir http://localhost:8000"""
 import os, sys, json, uuid, threading, time, shutil, traceback, base64, io, re
 from pathlib import Path
-from flask import Flask, request, jsonify, send_file, send_from_directory, abort
+from flask import Flask, request, jsonify, send_file, send_from_directory, abort, redirect
 from PIL import Image
 
 ROOT = Path(__file__).parent
@@ -228,6 +228,13 @@ def run(job_id, form, refs):
 
 
 @app.get("/")
+def vitrine():
+    if request.args.get("commande"):                 # anciens liens de retour de paiement
+        return redirect("/creer?" + request.query_string.decode())
+    return send_from_directory(app.static_folder, "vitrine.html")
+
+
+@app.get("/creer")
 def index():
     return send_from_directory(app.static_folder, "index.html")
 

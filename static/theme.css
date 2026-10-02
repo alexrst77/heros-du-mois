@@ -1,0 +1,45 @@
+/* Mon Héros du Mois : thème commun (vitrine, création du livre, pages annexes) */
+@font-face { font-family: "Young Serif"; src: url("/static/fonts/YoungSerif-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Nunito"; src: url("/static/fonts/Nunito.woff") format("woff"); font-weight: 200 1000; font-display: swap; }
+:root {
+  --ciel: #EEF1FA;      /* fond : bleu ciel du matin */
+  --papier: #FFFDF8;    /* pages, cartes */
+  --encre: #1F2557;     /* texte, boutons principaux */
+  --encre-2: #4A4F7A;   /* texte secondaire */
+  --nuit: #1A1F4A;      /* bandeaux du soir (les illustrations y brillent) */
+  --luciole: #FFC94A;   /* l'accent : la lumière des lucioles */
+  --mousse: #2F6B57;    /* coches, détails */
+  --joue: #F49A8A;
+  --trait: #D9DEF0;
+  --erreur: #B3261E;
+  --titre: "Young Serif", Georgia, serif;
+  --texte: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--ciel); scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--ciel); color: var(--encre); font: 400 17px/1.6 var(--texte); -webkit-font-smoothing: antialiased; }
+img { max-width: 100%; }
+a { color: var(--encre); }
+:focus-visible { outline: 3px solid var(--luciole); outline-offset: 2px; border-radius: 6px; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
+h2 { font: 400 clamp(30px, 3.8vw, 44px)/1.1 var(--titre); margin: 0 0 12px; letter-spacing: -.3px; max-width: 22ch; }
+.sous { color: var(--encre-2); font-size: 18px; margin: 0; max-width: 60ch; }
+.bloc { padding: 84px 0; }
+.bloc.doux { background: linear-gradient(180deg, var(--ciel), #E4E9F8); }
+
+.logo { display: inline-flex; align-items: center; gap: 10px; font: 400 20px/1 var(--titre); color: var(--encre); text-decoration: none; white-space: nowrap; }
+.logo-mark { width: 30px; height: 30px; border-radius: 50%; background: var(--encre); position: relative; flex: none; }
+.logo-mark::after { content: ""; position: absolute; width: 9px; height: 9px; border-radius: 50%; right: 6px; top: 6px; background: var(--luciole); box-shadow: 0 0 10px 3px rgba(255, 201, 74, .7); }
+
+.btn { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; padding: 15px 26px;
+       font: 800 16px/1 var(--texte); text-decoration: none; white-space: nowrap; cursor: pointer; background: var(--luciole); color: var(--encre);
+       box-shadow: 0 10px 24px -12px rgba(200, 140, 0, .8); transition: transform .15s, box-shadow .15s; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px -12px rgba(200, 140, 0, .9); }
+.btn:disabled { opacity: .6; cursor: wait; transform: none; }
+.btn.petit { padding: 11px 18px; font-size: 15px; }
+.btn.clair { background: var(--encre); color: #fff; box-shadow: none; }
+.btn.ghost { background: transparent; color: var(--encre); box-shadow: none; border: 2px solid var(--trait); }
+.btn.ghost:hover { border-color: var(--encre); }
+
+@media (max-width: 420px) { .logo { font-size: 17px; } .logo-mark { width: 26px; height: 26px; } .btn.petit { padding: 10px 14px; font-size: 14px; } }

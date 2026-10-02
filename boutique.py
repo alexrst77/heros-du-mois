@@ -97,7 +97,7 @@ def order_create():
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
               montant=paiement.FORMULES[formule]["prix"], origine=oid, numero=int(form.get("numero") or 1) if str(form.get("numero", "1")).isdigit() else 1)
     if not paiement.configured():
-        return jsonify(id=oid, url=f"/?commande={oid}&test=1")
+        return jsonify(id=oid, url=f"/creer?commande={oid}&test=1")
     try:
         sid, url = paiement.checkout(oid, formule, email, base_url())
     except paiement.StripeError as e:
