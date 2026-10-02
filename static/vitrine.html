@@ -161,6 +161,7 @@
   .calendrier div::before { content:""; position:absolute; left:0; right:0; top:0; height:5px; background:var(--encre); }
   .calendrier small { display:block; font:800 11px var(--texte); letter-spacing:1.3px; text-transform:uppercase; color:var(--encre-2); margin-top:3px; }
   .calendrier b { display:block; font:400 16px/1.2 var(--titre); color:var(--encre); margin-top:4px; }
+  @media (max-width:560px) { .calendrier b { font-size:14px; } .calendrier small { font-size:10px; letter-spacing:.6px; } .calendrier div { padding:10px 4px 11px; } }
   .calendrier div.moi { background:linear-gradient(160deg,#FFF3D1,#FFE7A6); border-color:#F2CF6E; }
   .calendrier div.moi::before { background:var(--luciole); }
   .univ-liste { margin:22px 0 0; color:var(--encre-2); font-size:16px; line-height:1.7; }
