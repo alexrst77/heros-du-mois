@@ -62,7 +62,7 @@
   .nuit { background:var(--nuit); color:#EEF0FF; padding:84px 0 92px; position:relative; }
   .nuit h2 { color:#fff; }
   .nuit .sous { color:#C4C9EE; }
-  .double { margin-top:36px; display:grid; grid-template-columns:1fr 1fr; background:var(--papier); border-radius:6px; overflow:hidden; position:relative;
+  .double { margin-top:36px; grid-template-columns:1fr 1fr; background:var(--papier); border-radius:6px; overflow:hidden; position:relative;
             box-shadow:0 40px 80px -30px rgba(0,0,0,.7), 0 0 0 10px rgba(255,255,255,.04); }
   .double::after { content:""; position:absolute; top:0; bottom:0; left:50%; width:60px; transform:translateX(-50%); pointer-events:none;
                    background:linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.16) 46%, rgba(0,0,0,.24) 50%, rgba(0,0,0,.12) 54%, rgba(0,0,0,0) 100%); }
@@ -95,6 +95,40 @@
   .etagere .t { position:absolute; left:0; right:0; top:7%; text-align:center; color:#FFF6DC; font:400 clamp(30px,4vw,44px)/1 var(--titre); text-shadow:0 2px 14px rgba(10,20,40,.75); }
   .etagere .t small { display:block; font-size:.42em; margin-top:6px; padding:0 10%; line-height:1.2; }
   .etagere figcaption { margin-top:16px; font-weight:700; color:var(--encre-2); text-align:center; }
+
+  /* livre interactif qui s'ouvre (ordinateur et tablette) ; sur téléphone : pages simples */
+  .flip { margin-top:44px; perspective:2600px; display:flex; flex-direction:column; align-items:center; }
+  .livre-o { position:relative; width:min(1060px, 100%); aspect-ratio:2/1; transform-style:preserve-3d; container-type:inline-size;
+             transition:transform 1s cubic-bezier(.3,.7,.2,1); outline:none; }
+  .livre-o.ferme { transform:translateX(-25%); } .livre-o.fin { transform:translateX(25%); }
+  .feuille { position:absolute; left:50%; top:0; width:50%; height:100%; transform-origin:left center; transform-style:preserve-3d;
+             transition:transform 1.1s cubic-bezier(.35,.65,.2,1); cursor:pointer; }
+  .feuille.tournee { transform:rotateY(-180deg); }
+  .face { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; overflow:hidden; background:var(--papier); }
+  .face.verso { transform:rotateY(180deg); }
+  .face img { width:100%; height:100%; object-fit:cover; display:block; }
+  .face.recto::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg, rgba(0,0,0,.22), rgba(0,0,0,.05) 7%, rgba(0,0,0,0) 14%); }
+  .face.verso::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(270deg, rgba(0,0,0,.22), rgba(0,0,0,.05) 7%, rgba(0,0,0,0) 14%); }
+  .face.couv { border-radius:2px 8px 8px 2px; }
+  .face.couv::after { background:linear-gradient(90deg, rgba(0,0,0,.35), rgba(255,255,255,.08) 3%, rgba(0,0,0,0) 8%); }
+  .face.couv .tc { position:absolute; left:0; right:0; top:7%; text-align:center; color:#FFF6DC; text-shadow:0 2px 14px rgba(10,20,40,.75); z-index:1; padding:0 8%; }
+  .face.couv .tc b { display:block; font:400 6cqw/1 var(--titre); }
+  .face.couv .tc span { display:block; font:400 2.5cqw/1.2 var(--titre); margin-top:.6cqw; }
+  .face.texte { display:flex; flex-direction:column; justify-content:center; padding:5cqw 5.5cqw; color:#2B2622; font:400 1.62cqw/1.62 Georgia, "Iowan Old Style", serif; }
+  .face.texte h3 { font:400 2.5cqw/1.15 var(--titre); color:var(--encre); margin:0 0 1.4cqw; }
+  .face.texte p { margin:0 0 .8cqw; white-space:pre-line; }
+  .face.texte .folio { position:absolute; bottom:2.4cqw; left:0; right:0; text-align:center; font:600 1.15cqw var(--texte); color:#9A928A; }
+  .face.dos { background:var(--nuit); color:#E3E6FA; display:flex; flex-direction:column; justify-content:center; padding:6cqw; text-align:center; }
+  .face.dos h3 { font:400 3cqw/1.15 var(--titre); color:#fff; margin:0 0 2cqw; }
+  .face.dos p { font:600 1.6cqw/1.5 var(--texte); margin:0 0 1cqw; }
+  .face.dos .q { color:var(--luciole); margin-top:1.4cqw; }
+  .ombre-livre { position:absolute; left:2%; right:2%; bottom:-5%; height:10%; background:radial-gradient(closest-side, rgba(0,0,0,.45), transparent); filter:blur(8px); transform:translateZ(-1px); transition:left 1s, right 1s; }
+  .livre-o.ferme .ombre-livre { left:52%; } .livre-o.fin .ombre-livre { right:52%; }
+  .ouvrir { margin-top:30px; font-weight:800; color:var(--luciole); transition:opacity .4s; }
+  .ouvrir.cache { opacity:0; }
+  .double { display:none; }
+  @media (max-width:760px) { .flip { display:none; } .double { display:grid; } }
+  @media (prefers-reduced-motion: reduce) { .feuille, .livre-o { transition:none; } }
   /* ------------------------------------------------ étapes */
   .etapes { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; margin-top:44px; counter-reset:e; }
   @media (max-width:860px) { .etapes { grid-template-columns:1fr; } }
@@ -218,13 +252,17 @@
   <div class="wrap">
     <h2>Feuilletez un vrai livre</h2>
     <p class="sous">Voici « Léo et la forêt des petites lumières », une histoire sur la peur du noir. Le vôtre aura le prénom, le visage et les compagnons de votre enfant.</p>
+    <div class="flip" id="flip">
+      <div class="livre-o ferme" id="livreO" tabindex="0" aria-label="Livre de Léo : cliquez sur une page pour la tourner"></div>
+      <span class="ouvrir" id="ouvrir">Cliquez pour ouvrir le livre</span>
+    </div>
     <div class="double" id="double">
       <div class="img"><img id="dImg" src="/static/vitrine/leo_01.webp" alt="Illustration de la page"></div>
       <div class="txt" id="dTxt"></div>
     </div>
     <div class="tourne">
       <button type="button" id="prev" aria-label="Page précédente"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <span id="compteur" aria-live="polite">Page 1 sur 9</span>
+      <span id="compteur" aria-live="polite">Couverture</span>
       <button type="button" id="next" aria-label="Page suivante"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5l7 7-7 7"/></svg></button>
     </div>
     <div class="miniatures" id="minis"></div>
@@ -374,28 +412,64 @@
     go.textContent = tape ? 'Créer le livre de ' + nom(input.value) : 'Créer son livre';
   });
 
-  /* feuilleter */
-  let p = 0;
+  /* feuilleter : livre qui s'ouvre (grand écran) ou pages simples (téléphone) */
+  const N = PAGES.length, grand = matchMedia('(min-width:761px)');
+  const img = n => `/static/vitrine/leo_${String(n).padStart(2, '0')}.webp`;
+  const texte = (i, d) => `<div class="face recto texte"><h3>${esc(d.t)}</h3>${d.a.concat(d.b).map(x => `<p>${esc(x)}</p>`).join('')}<span class="folio">${i + 1}</span></div>`;
+  const livre = $('livreO');
+  let html = '<div class="ombre-livre"></div>';
+  html += `<div class="feuille" data-j="0"><div class="face recto couv"><img src="${img(0)}" alt="Couverture du livre de Léo"><div class="tc"><b>Léo</b><span>et la forêt des petites lumières</span></div></div><div class="face verso"><img src="${img(1)}" alt="" loading="lazy"></div></div>`;
+  PAGES.forEach((d, i) => {
+    const verso = i < N - 1 ? `<div class="face verso"><img src="${img(i + 2)}" alt="" loading="lazy"></div>`
+      : `<div class="face verso dos"><h3>La nuit est grande.<br>Les petits courages aussi.</h3><p>Une ombre, une luciole et un lapin en tissu…</p><p>Léo découvre qu'on peut avoir peur, demander de l'aide et avancer à son rythme.</p><p class="q">Et toi, qu'est-ce qui te rassure le soir ?</p></div>`;
+    html += `<div class="feuille" data-j="${i + 1}">${texte(i, d)}${verso}</div>`;
+  });
+  livre.innerHTML = html;
+  const feuilles = [...livre.querySelectorAll('.feuille')], F = feuilles.length;   // F = N + 1 feuilles
+  let kk = 0;                                   // nombre de feuilles tournées : 0 = fermé, F = refermé à la fin
+  const zs = () => feuilles.forEach((f, j) => { f.style.zIndex = j < kk ? j + 1 : F - j + 1; });
+  function tourner(nk) {
+    nk = Math.max(0, Math.min(F, nk)); if (nk === kk) return;
+    const sens = nk > kk ? 1 : -1, liste = [];
+    for (let j = sens > 0 ? kk : kk - 1; sens > 0 ? j < nk : j >= nk; j += sens) liste.push(j);
+    liste.forEach((j, n) => setTimeout(() => {
+      const f = feuilles[j]; f.style.zIndex = 200 + n; f.classList.toggle('tournee', sens > 0);
+    }, calme ? 0 : n * 90));
+    kk = nk;
+    livre.classList.toggle('ferme', kk === 0); livre.classList.toggle('fin', kk === F);
+    $('ouvrir').classList.toggle('cache', kk !== 0);
+    clearTimeout(tourner.t); tourner.t = setTimeout(zs, calme ? 0 : 1150 + liste.length * 90);
+    etat();
+  }
+  feuilles.forEach((f, j) => f.addEventListener('click', () => tourner(f.classList.contains('tournee') ? j : j + 1)));
+  livre.addEventListener('keydown', e => { if (e.key === 'ArrowRight') tourner(kk + 1); if (e.key === 'ArrowLeft') tourner(kk - 1); });
+  zs();
+
+  let p = 0;                                   // téléphone : une page à la fois
   const minis = $('minis');
   minis.innerHTML = PAGES.map((_, i) => `<button type="button" data-p="${i}" aria-label="Aller à la page ${i + 1}"><img src="/static/vitrine/leo_${String(i + 1).padStart(2, '0')}_s.webp" alt="" loading="lazy"></button>`).join('');
   function montrer(i) {
-    p = Math.max(0, Math.min(PAGES.length - 1, i));
-    const d = PAGES[p], img = $('dImg'), txt = $('dTxt');
+    p = Math.max(0, Math.min(N - 1, i));
+    const d = PAGES[p], im = $('dImg'), txt = $('dTxt');
     const maj = () => {
-      img.src = `/static/vitrine/leo_${String(p + 1).padStart(2, '0')}.webp`;
+      im.src = img(p + 1);
       txt.innerHTML = `<h3>${esc(d.t)}</h3>` + d.a.concat(d.b).map(x => `<p>${esc(x)}</p>`).join('') + `<span class="folio">${p + 1}</span>`;
-      img.classList.remove('fade'); txt.classList.remove('fade');
+      im.classList.remove('fade'); txt.classList.remove('fade');
     };
-    if (calme || !txt.innerHTML) maj(); else { img.classList.add('fade'); txt.classList.add('fade'); setTimeout(maj, 260); }
-    $('compteur').textContent = `Page ${p + 1} sur ${PAGES.length}`;
-    $('prev').disabled = p === 0; $('next').disabled = p === PAGES.length - 1;
-    minis.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === p));
+    if (calme || !txt.innerHTML) maj(); else { im.classList.add('fade'); txt.classList.add('fade'); setTimeout(maj, 260); }
+    etat();
   }
-  $('prev').onclick = () => montrer(p - 1);
-  $('next').onclick = () => montrer(p + 1);
-  minis.onclick = e => { const b = e.target.closest('button'); if (b) montrer(+b.dataset.p); };
-  $('double').addEventListener('keydown', e => { if (e.key === 'ArrowRight') montrer(p + 1); if (e.key === 'ArrowLeft') montrer(p - 1); });
-  PAGES.forEach((_, i) => { const im = new Image(); im.src = `/static/vitrine/leo_${String(i + 1).padStart(2, '0')}.webp`; });
+  function etat() {
+    const g = grand.matches, cur = g ? kk - 1 : p;
+    $('compteur').textContent = g ? (kk === 0 ? 'Couverture' : kk === F ? 'Fin' : `Page ${kk} sur ${N}`) : `Page ${p + 1} sur ${N}`;
+    $('prev').disabled = g ? kk === 0 : p === 0; $('next').disabled = g ? kk === F : p === N - 1;
+    minis.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === cur));
+  }
+  $('prev').onclick = () => grand.matches ? tourner(kk - 1) : montrer(p - 1);
+  $('next').onclick = () => grand.matches ? tourner(kk + 1) : montrer(p + 1);
+  minis.onclick = e => { const b = e.target.closest('button'); if (!b) return; grand.matches ? tourner(+b.dataset.p + 1) : montrer(+b.dataset.p); };
+  grand.addEventListener('change', etat);
+  for (let n = 1; n <= N; n++) { const im = new Image(); im.src = img(n); }
   montrer(0);
 
   /* avis : uniquement de vrais avis clients (static/avis.json) */
