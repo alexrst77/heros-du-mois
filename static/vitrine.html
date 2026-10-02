@@ -202,8 +202,20 @@
   .livre-o.ferme .ombre-livre { left:52%; } .livre-o.fin .ombre-livre { right:52%; }
   .ouvrir { margin-top:30px; font-weight:800; color:var(--luciole); transition:opacity .4s; }
   .ouvrir.cache { opacity:0; }
-  .double { display:none; }
-  @media (max-width:760px) { .flip { display:none; } .double { display:grid; } }
+  /* téléphone : une page à la fois */
+  .livre-o.mono { width:min(560px, 100%); aspect-ratio:1; }
+  .livre-o.mono.ferme, .livre-o.mono.fin { transform:none; }
+  .mono .feuille { left:0; width:100%; transition-duration:.8s; }
+  .mono .ombre-livre, .livre-o.mono.ferme .ombre-livre { left:4%; right:4%; }
+  .mono .face.texte { padding:8cqw 8cqw; font-size:4.5cqw; line-height:1.5; }
+  .mono .face.texte h3 { font-size:6cqw; margin-bottom:3cqw; } .mono .face.texte p { margin-bottom:1.8cqw; }
+  .mono .face.texte .folio { font-size:3cqw; bottom:3.5cqw; }
+  .mono .face .bande { font-size:4.3cqw; line-height:1.45; padding:8cqw 5.5cqw 3.5cqw; background:linear-gradient(180deg, rgba(246,239,224,0), rgba(246,239,224,.93) 5cqw, #F6EFE0 8cqw); }
+  .mono .face.sombre .bande { background:linear-gradient(180deg, rgba(26,28,70,0), rgba(26,28,70,.92) 5cqw, #1A1C46 8cqw); }
+  .mono .face .bande .folio { font-size:3cqw; margin-top:1.5cqw; }
+  .mono .face.couv .tc b { font-size:12cqw; } .mono .face.couv .tc span { font-size:5cqw; margin-top:1.2cqw; }
+  .mono .face.dos { padding:10cqw; } .mono .face.dos h3 { font-size:6.5cqw; margin-bottom:4cqw; } .mono .face.dos p { font-size:4.2cqw; margin-bottom:2cqw; }
+  @media (max-width:760px) { .flip { margin-top:28px; } .ouvrir { margin-top:18px; font-size:15px; } }
   @media (prefers-reduced-motion: reduce) { .feuille, .livre-o { transition:none; } }
   /* ------------------------------------------------ étapes */
   .etapes { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; margin-top:44px; counter-reset:e; }
@@ -346,10 +358,6 @@
     <div class="flip" id="flip">
       <div class="livre-o ferme" id="livreO" tabindex="0" aria-label="Livre à feuilleter"></div>
       <span class="ouvrir" id="ouvrir">Cliquez pour ouvrir le livre</span>
-    </div>
-    <div class="double" id="double">
-      <div class="img"><img id="dImg" src="/static/vitrine/leo_01.webp" alt="Illustration de la page"></div>
-      <div class="txt" id="dTxt"></div>
     </div>
     <div class="tourne">
       <button type="button" id="prev" aria-label="Page précédente"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -559,69 +567,77 @@
   const grand = matchMedia('(min-width:761px)'), livre = $('livreO'), minis = $('minis');
   let L, N, F, feuilles = [], kk = 0, p = 0;
   const zs = () => feuilles.forEach((f, j) => { f.style.zIndex = j < kk ? j + 1 : F - j + 1; });
+  /* grand écran : livre ouvert sur deux pages ; téléphone (mono) : le même livre, une page à la fois, qu'on tourne */
+  let mono = !grand.matches, cur = null;
   function charger(id) {
-    L = LIVRES[id]; N = L.n;
+    L = LIVRES[id]; N = L.n; cur = id; mono = !grand.matches;
+    const verso = (cls, html) => `<div class="face ${mono ? 'recto' : 'verso'} ${cls}">${html}</div>`;
+    const pg = L.pdf ? ' mi' + (L.sombre ? ' sombre' : '') : '';
     let html = '<div class="ombre-livre"></div>';
-    for (let j = 0; j <= N; j++) {
-      const recto = j === 0 ? L.couv : (d => `<div class="face recto ${d.cls}">${d.html}</div>`)(L.droite(j));
-      const verso = j < N ? `<div class="face verso${L.pdf ? ' mi' : ''}${L.sombre ? ' sombre' : ''}">${L.gauche(j + 1)}</div>` : `<div class="face verso dos">${L.dos}</div>`;
-      html += `<div class="feuille">${recto}${verso}</div>`;
+    if (mono) {                                     // une feuille par page : couverture, pages 1…2N, quatrième de couverture
+      const pages = [L.couv];
+      for (let i = 1; i <= N; i++) { const d = L.droite(i); pages.push(verso(pg, L.gauche(i)), `<div class="face recto ${d.cls}">${d.html}</div>`); }
+      pages.push(verso('dos', L.dos));
+      html += pages.map(x => `<div class="feuille">${x}</div>`).join('');
+    } else {
+      for (let j = 0; j <= N; j++) {
+        const recto = j === 0 ? L.couv : (d => `<div class="face recto ${d.cls}">${d.html}</div>`)(L.droite(j));
+        html += `<div class="feuille">${recto}${j < N ? verso(pg, L.gauche(j + 1)) : verso('dos', L.dos)}</div>`;
+      }
     }
-    livre.innerHTML = html;
+    livre.innerHTML = html; livre.classList.toggle('mono', mono);
     feuilles = [...livre.querySelectorAll('.feuille')]; F = feuilles.length; kk = 0;
     livre.classList.add('ferme'); livre.classList.remove('fin'); $('ouvrir').classList.remove('cache');
-    livre.setAttribute('aria-label', 'Livre ouvert : cliquez sur une page pour la tourner');
+    $('ouvrir').textContent = mono ? 'Touchez le livre pour tourner les pages' : 'Cliquez pour ouvrir le livre';
+    livre.setAttribute('aria-label', 'Livre : cliquez sur une page pour la tourner');
     $('sousLivre').textContent = L.sous;
     minis.innerHTML = Array.from({ length: N }, (_, i) => `<button type="button" data-p="${i}" aria-label="Aller à la double page ${i + 1}"><img src="${L.mini(i + 1)}" alt="" loading="lazy"></button>`).join('');
-    zs(); $('dTxt').innerHTML = ''; montrer(0);
+    zs(); etat();
     for (let n = 1; n <= N; n++) { const im = new Image(); im.src = L.img(n); }
   }
+  const MAX = () => mono ? F - 1 : F;              // téléphone : la quatrième de couverture reste visible à la fin
   function tourner(nk) {
-    nk = Math.max(0, Math.min(F, nk)); if (nk === kk) return;
+    nk = Math.max(0, Math.min(MAX(), nk)); if (nk === kk) return;
     const sens = nk > kk ? 1 : -1, liste = [];
     for (let j = sens > 0 ? kk : kk - 1; sens > 0 ? j < nk : j >= nk; j += sens) liste.push(j);
     liste.forEach((j, n) => setTimeout(() => {
       const f = feuilles[j]; f.style.zIndex = 200 + n; f.classList.toggle('tournee', sens > 0);
-    }, calme ? 0 : n * 90));
+    }, calme ? 0 : n * (mono ? 60 : 90)));
     kk = nk;
     livre.classList.toggle('ferme', kk === 0); livre.classList.toggle('fin', kk === F);
     $('ouvrir').classList.toggle('cache', kk !== 0);
     clearTimeout(tourner.t); tourner.t = setTimeout(zs, calme ? 0 : 1150 + liste.length * 90);
     etat();
   }
-  livre.addEventListener('click', e => { const f = e.target.closest('.feuille'); if (!f) return; const j = feuilles.indexOf(f); tourner(f.classList.contains('tournee') ? j : j + 1); });
+  livre.addEventListener('click', e => {
+    if (mono) { const r = livre.getBoundingClientRect(); return tourner(kk + (e.clientX - r.left < r.width * .3 ? -1 : 1)); }
+    const f = e.target.closest('.feuille'); if (!f) return; const j = feuilles.indexOf(f); tourner(f.classList.contains('tournee') ? j : j + 1);
+  });
   livre.addEventListener('keydown', e => { if (e.key === 'ArrowRight') tourner(kk + 1); if (e.key === 'ArrowLeft') tourner(kk - 1); });
-
-  function montrer(i) {
-    p = Math.max(0, Math.min(N - 1, i));
-    const d = L.tel(p + 1), im = $('dImg'), txt = $('dTxt');
-    const maj = () => {
-      im.src = d.img; $('double').classList.toggle('pano', d.pano);
-      txt.innerHTML = d.html;
-      im.classList.remove('fade'); txt.classList.remove('fade');
-    };
-    if (calme || !txt.innerHTML) maj(); else { im.classList.add('fade'); txt.classList.add('fade'); setTimeout(maj, 260); }
-    etat();
-  }
+  let x0 = null;                                   // téléphone : glisser le doigt pour tourner
+  livre.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  livre.addEventListener('touchend', e => {
+    if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (Math.abs(dx) > 40) { e.preventDefault(); tourner(kk + (dx < 0 ? 1 : -1)); }
+  });
   function etat() {
-    const g = grand.matches, cur = g ? kk - 1 : p;
-    $('compteur').textContent = g ? (kk === 0 ? 'Couverture' : kk === F ? 'Fin' : `Page ${kk} sur ${N}`) : `Page ${p + 1} sur ${N}`;
-    $('prev').disabled = g ? kk === 0 : p === 0; $('next').disabled = g ? kk === F : p === N - 1;
-    minis.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === cur));
+    if (!L) return;
+    const sp = mono ? Math.ceil(kk / 2) - 1 : kk - 1;          // double page affichée (miniatures)
+    $('compteur').textContent = kk === 0 ? 'Couverture' : kk === MAX() ? 'Fin' : mono ? `Page ${kk} sur ${2 * N}` : `Page ${kk} sur ${N}`;
+    $('prev').disabled = kk === 0; $('next').disabled = kk === MAX();
+    minis.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === sp));
   }
-  $('prev').onclick = () => grand.matches ? tourner(kk - 1) : montrer(p - 1);
-  $('next').onclick = () => grand.matches ? tourner(kk + 1) : montrer(p + 1);
-  minis.onclick = e => { const b = e.target.closest('button'); if (!b) return; grand.matches ? tourner(+b.dataset.p + 1) : montrer(+b.dataset.p); };
-  grand.addEventListener('change', etat);
+  $('prev').onclick = () => tourner(kk - 1);
+  $('next').onclick = () => tourner(kk + 1);
+  minis.onclick = e => { const b = e.target.closest('button'); if (!b) return; tourner(mono ? 2 * +b.dataset.p + 1 : +b.dataset.p + 1); };
+  grand.addEventListener('change', () => { if (cur) charger(cur); });
   /* étal : un clic ouvre le livre et le centre à l'écran */
-  let ouvert = null;
   $('etal').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     $('etal').classList.add('choisi'); $('etal').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    if (ouvert !== b.dataset.l) { ouvert = b.dataset.l; $('lecteur').hidden = false; charger(ouvert); }
-    const cible = grand.matches ? $('livreO') : $('double');
-    requestAnimationFrame(() => cible.scrollIntoView({ behavior: calme ? 'auto' : 'smooth', block: 'center' }));
-    if (grand.matches && kk === 0) setTimeout(() => tourner(1), calme ? 0 : 750);
+    if (cur !== b.dataset.l) { $('lecteur').hidden = false; charger(b.dataset.l); }
+    requestAnimationFrame(() => $('flip').scrollIntoView({ behavior: calme ? 'auto' : 'smooth', block: 'center' }));
+    if (kk === 0) setTimeout(() => tourner(1), calme ? 0 : 750);
   };
 
   /* univers et fêtes (même liste que l'éditeur) */
