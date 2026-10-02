@@ -264,7 +264,7 @@
           const w = (z.eye ? P.eyes[p] : M[p + z.i]) / 255; if (w < .01) continue;
           let [h, s, l] = rgb2hsl(r, g, b);
           if (z.eye) { h = z.ht; s = Math.min(1, z.st * 1.2) * Math.min(1, Math.max(0, (l - 0.06) / 0.22)); }   // iris : teinte imposée, pupille neutre
-          else { h = (h + z.dh + 1) % 1; s = Math.min(1, s * z.ks); }
+          else { h = (h + z.dh + 1) % 1; s = Math.min(1, s * (z.lt > z.lb ? Math.min(1, z.ks) : z.ks)); }   // éclaircir sans sursaturer
           l = z.lt <= z.lb ? l * z.lt / Math.max(z.lb, 1e-3) : Math.min(0.96, Math.max(0, Math.min(z.lt, 0.72) + (l - z.lb) * 0.8));   // éclaircir sans aplatir
           const [r2, g2, b2] = hsl2rgb(h, s, Math.max(0, Math.min(1, l)));
           r = r * (1 - w) + r2 * w; g = g * (1 - w) + g2 * w; b = b * (1 - w) + b2 * w;

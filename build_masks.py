@@ -90,6 +90,8 @@ def child(im):
     skin = skinreg & warm & (S > 0.08) & (V > 0.6)
     hairlike = (((H > 4) & (H < 46)) | (V < 0.35)) & (S > 0.2) & (V < 0.9)
     hair = A & ~shirt & ~skin & ~feat & hairlike
+    grow = np.asarray(Image.fromarray((hair * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3))) > 127
+    hair = grow & A & ~shirt & ~skin & ~feat                         # attrape les petites mèches sombres isolées
     return {"R": hair, "G": skin, "B": shirt, "_feat": feat, "_face": face}
 
 
@@ -129,9 +131,10 @@ def find_eyes(z, im):
         pts = c[3]; r = max(pts[:, 1].max() - pts[:, 1].min(), pts[:, 0].max() - pts[:, 0].min()) / 2 + 2
         eyes.append([round(float(c[1]), 1), round(float(c[2]), 1), round(float(r), 1)])
         yy, xx = np.mgrid[0:SIZE, 0:SIZE]
-        disk = (xx - c[1]) ** 2 + (yy - c[2]) ** 2 <= (r * 0.82) ** 2
-        # iris seulement : ni la pupille noire, ni les reflets, ni les cils et paupières (sombres et peu saturés)
-        iris |= disk & (V > 0.08) & ~((V > 0.6) & (S < 0.3))       # ni la pupille, ni le blanc de l'œil, ni les reflets
+        disk = (xx - c[1]) ** 2 + (yy - c[2]) ** 2 <= (r * 1.1) ** 2
+        # iris = tout ce qui est brun-orangé dans l'œil (y compris ses reflets clairs) ; ni le blanc, ni la peau, ni la pupille noire
+        brun = (H > 5) & (H < 45) & (S > 0.3) & (V > 0.12) & ((V < 0.8) | (S > 0.6))
+        iris |= disk & brun
     return eyes, iris
 
 
@@ -168,6 +171,9 @@ def main():
             eyes, iris = find_eyes(zones, im)
             if eyes:
                 extra["eyes"] = eyes
+                yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+                for ex, ey, er in eyes:                    # jamais de couleur de cheveux sur les yeux, cils et sourcils proches
+                    zones["R"] &= ~((xx - ex) ** 2 + (yy - ey) ** 2 <= (er * 1.9) ** 2)
                 Image.fromarray((blur(iris.astype(np.float32), 0.8) * 255).astype(np.uint8)).save(f"static/avatars/{name}.eyes.png", optimize=True)
                 zones["E"] = iris
         rgb = np.asarray(im.convert("RGB")).astype(np.float32)

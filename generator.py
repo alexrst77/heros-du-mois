@@ -912,7 +912,7 @@ def recolor_model(kind, cfg):
             hb, sb, lb = [float(v) for v in _rgb2hsl(*[np.array(v / 255) for v in st[k]])]
             ht, stt, lt = [float(v) for v in _rgb2hsl(*[np.array(v) for v in _hex(t[k])])]
             h, s, l = _rgb2hsl(r, g, b)
-            h = (h + ht - hb + 1) % 1; s = np.minimum(1, s * stt / max(sb, .05))
+            h = (h + ht - hb + 1) % 1; s = np.minimum(1, s * (min(1, stt / max(sb, .05)) if lt > lb else stt / max(sb, .05)))
             l = l * lt / max(lb, 1e-3) if lt <= lb else np.clip(min(lt, 0.72) + (l - lb) * 0.8, 0, 0.96)   # éclaircir sans aplatir les mèches
             r2, g2, b2 = _hsl2rgb(h, s, np.clip(l, 0, 1))
             w = mask[..., i]
