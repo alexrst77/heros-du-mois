@@ -39,7 +39,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
 const date = t => t ? new Date(t * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 const ESSAI = { essai_brouillon: 'essai brouillon', essai_apercu: 'essai aperçu' };
-const LABEL = { attente_paiement: 'attente paiement', payee: 'payée', generation: 'fabrication', a_verifier: 'à relire', envoyee_impression: 'chez Lulu', expediee: 'expédiée', erreur: 'erreur', annulee: 'annulée' };
+const LABEL = { attente_paiement: 'attente paiement', payee: 'payée', attente_fete: 'attend sa fête', generation: 'fabrication', a_verifier: 'à relire', envoyee_impression: 'chez Lulu', expediee: 'expédiée', erreur: 'erreur', annulee: 'annulée' };
 const CONFIRM = { relancer: "Refaire entièrement ce livre ? (nouvelle génération, environ 4 € d'images)", imprimer: "Envoyer ce livre à l'impression chez Lulu ? (en production, c'est une vraie commande payée)", effacer: "Effacer définitivement les données et fichiers de cette commande ?", 'arreter-abonnement': "Arrêter cet abonnement ?" };
 
 async function act(id, action, btn) {

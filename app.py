@@ -29,7 +29,7 @@ app = Flask(__name__, static_folder=str(ROOT / "static"))
 
 REQUIRED = ["prenom", "age"]
 FIELDS = ["prenom", "age", "genre", "cheveux", "yeux", "peau", "lunettes", "tenue", "doudou_nom", "doudou_type",
-          "doudou_desc", "animal", "passions", "univers", "theme", "precision", "numero", "demo", "code"]
+          "doudou_desc", "animal", "passions", "univers", "fetes", "anniversaire", "theme", "precision", "numero", "demo", "code"]
 PUBLIC = re.compile(r"^(portrait_[a-z0-9_]+\.png|image_\d\d\.png|apercu\.pdf|controle\.json)$")
 
 
@@ -263,6 +263,12 @@ def start_job(job_id, form, refs, auto=False, on_end=None, reprise=False, essai=
         if on_end:
             on_end(job_id, JOBS[job_id])
     threading.Thread(target=work, daemon=True).start()
+
+
+@app.get("/api/univers")
+def api_univers():
+    import univers
+    return jsonify(univers.public())
 
 
 @app.post("/api/livres")

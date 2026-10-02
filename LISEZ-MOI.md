@@ -26,12 +26,13 @@ Sans clé, ou en cochant « Mode démo », le site met en page le livre d'exempl
 Tests : `python3 tests/test_generation.py` et `python3 tests/test_commande.py` (sans coût, tout est simulé). Livre test réel : `python3 generer_livre_test.py tests/config_jeade.json`.
 
 ## Commande, paiement, impression
-- Étape 5 « La commande » : formule (un livre 34,90 € ; 29,90 €/mois ; 299 € l'année pour 12 livres), adresse, acceptation des CGV (pas de droit de rétractation pour un livre personnalisé). Rien n'est généré avant le paiement.
+- Étape 5 « La commande » : formule (un livre 34,90 € ; 29,90 €/mois ; 6 livres de fête à 12,45 €/mois pendant 12 mois), adresse, acceptation des CGV (pas de droit de rétractation pour un livre personnalisé). Rien n'est généré avant le paiement.
 - **Paiement** : Stripe Checkout. Sans clé Stripe, un bouton « Simuler le paiement » permet de tout tester. Webhook : `https://TON-SITE/api/stripe/webhook` (événements `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`).
 - Après paiement, le livre est fabriqué (le parent valide personnages et aperçu), puis la commande passe **« à relire »**.
 - **Administration** : `/admin` (liste, PDF, contrôle qualité, « Préparer la couverture », « Coût Lulu », « Envoyer à l'impression », suivi du colis, abonnements, effacement des données). Rien ne part à l'impression sans ton clic (sauf `AUTO_IMPRESSION=1`).
 - **Impression** : Lulu, en **bac à sable** par défaut (`LULU_ENV=sandbox`). Lulu télécharge les PDF sur ton site : il faut une adresse publique (`PUBLIC_URL`), donc héberger le site.
-- **Abonnements** : mensuel = un nouveau livre à chaque facture Stripe payée ; annuel = un livre par mois pendant 12 mois. Nouveau thème et nouvel univers à chaque numéro, même héros, sans validation du parent.
+- **Abonnements** : mensuel = un nouveau livre à chaque facture Stripe payée ; le livre qui arrive juste avant une fête cochée par la famille (anniversaire, Noël, Aïd…) est un livre de fête. Formule « 6 livres de fête » = 12 mensualités de 12,45 € ; chaque livre est lancé 35 jours avant sa fête (planificateur horaire), l'abonnement Stripe s'arrête seul après la 12e mensualité.
+- **Univers et fêtes** : une seule liste dans `univers.py` (éditeur, vitrine, illustrations, consignes d'histoire, dates des fêtes jusqu'en 2030 ; les fêtes lunaires sont à un ou deux jours près).
 - Les données des commandes sont dans `data/` (base SQLite + configuration de chaque enfant). CGV à compléter : `static/cgv.html`.
 
 ## Mise en ligne (Railway)

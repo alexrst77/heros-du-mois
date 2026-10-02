@@ -170,16 +170,19 @@
   const TABS = ['enfant', 'doudou', 'animaux', 'histoire', 'commande'];
   const PLANS = [
     { id: 'mensuel', nom: 'Un livre chaque mois', txt: 'Une nouvelle aventure chaque mois, sans engagement', px: '29,90 €/mois', tag: 'Le plus choisi' },
-    { id: 'annuel', nom: '12 livres, un par mois', txt: 'Payé en une fois, soit 24,92 € le livre', px: '299 €' },
+    { id: 'fetes', nom: 'Les 6 livres de fête', txt: 'Un livre avant chacune de vos 6 fêtes (anniversaire, Noël…), payé en 12 mensualités', px: '12,45 €/mois' },
     { id: 'livre', nom: 'Ce livre seulement', txt: 'Un livre relié, livré chez vous', px: '34,90 €' }];
   const THEMES = ["La peur du noir", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Apprendre à partager", "Oser se faire des amis", "La confiance en soi", "Gérer la colère", "Un déménagement", "Une aventure pour rire"];
-  const UNIVERS = ["Une forêt enchantée", "L'espace et les étoiles", "Le fond de la mer", "Le temps des dinosaures", "Un château de chevaliers", "La jungle", "Le pôle Nord"];
+  const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  const anniv = () => S.enfant.anniv_j && S.enfant.anniv_m ? `${String(S.enfant.anniv_m).padStart(2, '0')}-${String(S.enfant.anniv_j).padStart(2, '0')}` : '';
+  const UNIV = await (await fetch('/api/univers')).json();          // univers et fêtes (univers.py)
+  const UNIVERS = UNIV.filter(u => !u.fete).map(u => u.nom), FETES = UNIV.filter(u => u.fete);
   const newPet = () => Object.assign({ nom: '', type: 'chat', taille: 'moyen', oreilles: 'dressees' }, OPT.modeles.animal.chat);
   const DEF = {
     enfant: { prenom: '', age: '5', genre: 'fille', peau: 'p2', coiffure: 'long', couleur_cheveux: 'chatain', yeux: 'marron', lunettes: 'aucune', couleur_lunettes: 'rouge', taches: 'non', tenue: 'pyjama', couleur_tenue: 'jaune' },
     doudou: { actif: true, nom: '', type: 'lapin', couleur: 'bleu', accessoire: 'noeud', couleur_accessoire: 'rouge' },
     animaux: [],
-    histoire: { theme: THEMES[0], univers: UNIVERS[0], passions: '', precision: '', numero: '01', code: '', demo: false },
+    histoire: { theme: THEMES[0], univers: UNIVERS[0], fetes: ['anniversaire', 'noel'], passions: '', precision: '', numero: '01', code: '', demo: false },
     commande: { formule: 'mensuel', email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false }
   };
   let S;
@@ -188,6 +191,7 @@
   let tab = 'enfant', pet = 0;
   const TEST = new URLSearchParams(location.search).has('test');   // options d'essai (mode démo) : adresse ?test seulement
   if (!TEST) S.histoire.demo = false;
+  if (!Array.isArray(S.histoire.fetes)) S.histoire.fetes = ['anniversaire', 'noel'];
   const save = () => { try { localStorage.setItem('heros-avatar', JSON.stringify(S)); } catch (_) {} };
   const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -318,6 +322,8 @@
     const e = S.enfant, O = OPT.enfant;
     return `<div class="row2">${G('Prénom *', `<input type="text" data-in="prenom" maxlength="20" placeholder="Léo" value="${esc(e.prenom)}">`)}
       ${G('Âge *', `<select data-in="age">${[3, 4, 5, 6, 7, 8].map(a => `<option ${e.age == a ? 'selected' : ''}>${a}</option>`).join('')}</select>`)}</div>` +
+      G('Son anniversaire', `<div class="row2" style="gap:0 10px"><select data-in="anniv_j" aria-label="Jour"><option value="">Jour</option>${Array.from({ length: 31 }, (_, i) => `<option ${e.anniv_j == i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>` +
+        `<select data-in="anniv_m" aria-label="Mois"><option value="">Mois</option>${MOIS.map((m, i) => `<option value="${i + 1}" ${e.anniv_m == i + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select></div>`, 'pour son livre d\'anniversaire') +
       G("C'est", chips(e, 'genre', O.genre)) +
       G('Teint', swatches(e, 'peau', O.peau), sel(O.peau, e.peau)) +
       G('Coiffure', thumbs(e, 'coiffure', O.coiffure, id => `<img src="/static/avatars/${Avatar.pick(O.coiffure, id).img}.webp" alt="" loading="lazy">`), sel(O.coiffure, e.coiffure)) +
@@ -359,7 +365,10 @@
   function panelHistoire() {
     const h = S.histoire;
     return G('Thème du mois', `<select data-in="theme">${THEMES.map(t => `<option ${h.theme === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`) +
-      G('Univers', `<select data-in="univers">${UNIVERS.map(t => `<option ${h.univers === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`) +
+      (S.commande.formule === 'fetes' ? '' : G('Univers', `<select data-in="univers"><optgroup label="Univers">${UNIVERS.map(t => `<option ${h.univers === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</optgroup>` +
+        `<optgroup label="Un livre de fête">${FETES.map(u => `<option ${h.univers === u.nom ? 'selected' : ''}>${esc(u.nom)}</option>`).join('')}</optgroup></select>`)) +
+      G('Les fêtes de votre famille', `<div class="chips">${FETES.map(u => `<button type="button" data-fete="${u.cle}" class="${h.fetes.includes(u.cle) ? 'on' : ''}">${esc(u.puce)}</button>`).join('')}</div>` +
+        `<p class="hint" style="margin:8px 0 0">${S.commande.formule === 'fetes' ? `Formule « 6 livres de fête » : choisissez 6 fêtes (${h.fetes.length}/6). Chaque livre arrive avant sa fête.` : "Avec l'abonnement, le livre qui arrive juste avant une de ces fêtes est un livre de fête."}</p>`, S.commande.formule === 'fetes' ? '6 à choisir' : 'facultatif') +
       G('Ses passions', `<input type="text" data-in="passions" maxlength="120" placeholder="les camions, chanter, les dinosaures" value="${esc(h.passions)}">`) +
       G('Un mot du parent', `<textarea data-in="precision" maxlength="280" placeholder="Il a peur des bruits de la nuit en ce moment, mais adore quand on chante ensemble.">${esc(h.precision)}</textarea>`, 'facultatif') +
       (TEST ? `<div class="row2">${G("N° d'aventure", `<input type="text" data-in="numero" maxlength="3" value="${esc(h.numero)}">`)}${G("Code d'accès", `<input type="text" data-in="code" placeholder="si demandé" value="${esc(h.code)}">`)}</div>` +
@@ -391,6 +400,9 @@
   /* ---------- événements ---------- */
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button'); if (!b) return;
+    if (b.dataset.fete) { const f = S.histoire.fetes, c = b.dataset.fete;
+      if (f.includes(c)) f.splice(f.indexOf(c), 1); else if (S.commande.formule === 'fetes' && f.length >= 6) { $('err').textContent = 'La formule comprend 6 fêtes : retirez-en une avant d\'en ajouter une autre.'; return; } else f.push(c);
+      $('err').textContent = ''; return render(); }
     if (b.dataset.t) { tab = b.dataset.t; $('err').textContent = ''; return render(); }
     if (b.dataset.go) { tab = b.dataset.go; if (b.dataset.pet) pet = +b.dataset.pet; return render(); }
     if (b.dataset.addpet) { S.animaux.push(newPet()); pet = S.animaux.length - 1; tab = 'animaux'; return render(); }
@@ -446,9 +458,11 @@
   /* ---------- envoi ---------- */
   async function submit() {
     if (!S.enfant.prenom.trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez le prénom de l'enfant."; return; }
+    if (S.commande.formule === 'fetes' && S.histoire.fetes.length !== 6) { tab = 'histoire'; render(); $('err').textContent = `Choisissez 6 fêtes pour la formule « 6 livres de fête » (${S.histoire.fetes.length} pour l'instant).`; return; }
+    if (S.histoire.fetes.includes('anniversaire') && !anniv()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez la date d'anniversaire de l'enfant (jour et mois) pour son livre d'anniversaire."; return; }
     const h = S.histoire, e = S.enfant;
     const payload = {
-      prenom: e.prenom.trim(), age: e.age, genre: e.genre, theme: h.theme, univers: h.univers, passions: h.passions,
+      prenom: e.prenom.trim(), age: e.age, genre: e.genre, theme: h.theme, univers: h.univers, fetes: h.fetes.join(','), anniversaire: anniv(), passions: h.passions,
       precision: h.precision, numero: h.numero, code: h.code, demo: h.demo ? '1' : '',
       avatar: { enfant: e, doudou: S.doudou, animaux: S.animaux }
     };
@@ -550,7 +564,11 @@
         try { localStorage.removeItem('heros-avatar'); } catch (_) {}
         $('titreSuivi').textContent = 'Merci, votre commande est confirmée !';
         $('pct').style.width = '100%';
-        $('etape').innerHTML = `Nous créons maintenant le livre de <b>${esc(e.prenom ? e.prenom.trim().replace(/^./, c => c.toUpperCase()) : 'votre enfant')}</b>. Chaque livre est relu avant l'impression, puis expédié chez vous.<br><span class="hint">Commande n° ${esc(id)}${o.formule === 'mensuel' ? ' · un nouveau livre chaque mois' : o.formule === 'annuel' ? ' · 12 livres, un par mois' : ''}</span>`;
+        const pn = esc(e.prenom ? e.prenom.trim().replace(/^./, c => c.toUpperCase()) : 'votre enfant');
+        $('etape').innerHTML = (o.formule === 'fetes'
+          ? `Chaque livre de fête de <b>${pn}</b> sera créé environ 5 semaines avant sa fête, relu, puis expédié pour arriver à temps.`
+          : `Nous créons maintenant le livre de <b>${pn}</b>. Chaque livre est relu avant l'impression, puis expédié chez vous.`) +
+          `<br><span class="hint">Commande n° ${esc(id)}${o.formule === 'mensuel' ? ' · un nouveau livre chaque mois' : o.formule === 'fetes' ? ' · 6 livres de fête, 12 mensualités' : ''}</span>`;
         $('duree').style.display = 'none';
         document.querySelector('#suivi .kicker').textContent = 'Commande confirmée';
         $('fini').style.display = 'block'; $('dl').style.display = 'none';
@@ -561,7 +579,7 @@
   }
   { const q = new URLSearchParams(location.search);       // venant de la vitrine : prénom tapé, formule choisie
     if (q.get('prenom')) { S.enfant.prenom = q.get('prenom').trim().slice(0, 20).replace(/^./, c => c.toUpperCase()); save(); }
-    if (['livre', 'mensuel', 'annuel'].includes(q.get('formule'))) { S.commande.formule = q.get('formule'); save(); } }
+    if (['livre', 'mensuel', 'fetes'].includes(q.get('formule'))) { S.commande.formule = q.get('formule'); save(); } }
   const cmd = new URLSearchParams(location.search).get('commande');
   if (cmd && /^[a-f0-9]{12}$/.test(cmd)) trackOrder(cmd); else render();
 })();

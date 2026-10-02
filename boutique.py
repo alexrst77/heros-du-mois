@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Commande -> paiement (Stripe) -> fabrication du livre -> relecture -> impression (Lulu) -> suivi.
-Abonnements : mensuel (Stripe facture chaque mois, un livre à chaque facture payée) ou annuel (12 livres, un par mois).
+Abonnements : mensuel (Stripe facture chaque mois, un livre à chaque facture payée) ou livres de fête (6 livres, chacun lancé
+35 jours avant une fête choisie par la famille, anniversaire compris ; payés en 12 mensualités).
 Aucun appel OpenAI avant le paiement. Aucune impression sans ton accord (sauf AUTO_IMPRESSION=1)."""
 import os, re, json, time, uuid, shutil, secrets, threading, traceback
 from pathlib import Path
@@ -14,8 +15,8 @@ MOIS = 30 * 86400
 THEMES = ["La peur du noir", "La rentrée à l'école", "Apprendre à partager", "Oser se faire des amis", "La confiance en soi",
           "Gérer la colère", "Une aventure pour rire", "La patience", "Prendre soin de la nature", "Dire la vérité",
           "Essayer quelque chose de nouveau", "Aider les autres"]
-UNIVERS = ["Une forêt enchantée", "L'espace et les étoiles", "Le fond de la mer", "Le temps des dinosaures",
-           "Un château de chevaliers", "La jungle", "Le pôle Nord"]
+import univers as U
+UNIVERS = U.NOMS                                  # univers hors fêtes (rotation de l'abonnement)
 PAYS = {"FR", "BE", "LU", "CH", "MC"}
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[a-z]{2,}$", re.I)
 
@@ -87,6 +88,12 @@ def order_create():
         return jsonify(erreur=err), 400
     if c.get("cgv") is not True:
         return jsonify(erreur="Merci d'accepter les conditions générales de vente."), 400
+    fetes = [x for x in (form.get("fetes") or "").split(",") if x in U.PAR_CLE and U.PAR_CLE[x].get("fete")]
+    form["fetes"] = ",".join(fetes)
+    if formule == "fetes" and len(fetes) != 6:
+        return jsonify(erreur="Choisissez 6 fêtes pour la formule « 6 livres de fête »."), 400
+    if "anniversaire" in fetes and not re.match(r"^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", form.get("anniversaire") or ""):
+        return jsonify(erreur="Indiquez la date d'anniversaire de l'enfant."), 400
 
     oid = uuid.uuid4().hex[:12]
     folder = STORE / oid; folder.mkdir(parents=True)
@@ -123,6 +130,13 @@ def confirm_paid(oid, stripe_sub=None):
     o = db.get(oid)
     log(f"commande {oid} payée ({o['formule']})")
     f = paiement.FORMULES[o["formule"]]
+    if o["formule"] == "fetes":       # pack fêtes : chaque livre part 35 jours avant sa fête, le premier peut attendre
+        sid = uuid.uuid4().hex[:12]
+        db.sub_create(id=sid, commande_origine=oid, formule="fetes", statut="actif", email=o["email"], livres_restants=f["livres"],
+                      numero=0, prochain=None, stripe_sub=stripe_sub, faites="[]", paiements=1)
+        db.update(oid, abonnement_id=sid, statut="attente_fete")
+        check_fetes(db.sub_get(sid))
+        return True
     if o["formule"] != "livre":
         sid = uuid.uuid4().hex[:12]
         monthly_by_stripe = o["formule"] == "mensuel" and paiement.configured()
@@ -134,6 +148,24 @@ def confirm_paid(oid, stripe_sub=None):
     return True
 
 
+def check_fetes(s, jour=None):
+    """Pack fêtes : lance le livre de chaque fête qui approche (une seule fois par fête et par an), dans la limite du pack."""
+    if not s or s["formule"] != "fetes" or s["statut"] != "actif":
+        return []
+    form, _ = load_book(s["commande_origine"])
+    cles = [c for c in (form.get("fetes") or "").split(",") if c in U.PAR_CLE]
+    faites = json.loads(s.get("faites") or "[]")
+    lances = []
+    for k, nom, d in U.fetes_dues(cles, faites, jour=jour, anniv=form.get("anniversaire")):
+        s = db.sub_get(s["id"])
+        if (s["livres_restants"] or 0) <= 0:
+            break
+        faites.append(k)
+        db.sub_update(s["id"], faites=json.dumps(faites))
+        lances.append(next_book(s, univers=nom))
+    return lances
+
+
 def start_book(oid, auto=False, reprise=False):
     o = db.get(oid)
     essai = o["formule"].split("_", 1)[1] if (o["formule"] or "").startswith("essai_") else None
@@ -142,10 +174,19 @@ def start_book(oid, auto=False, reprise=False):
     if o["origine"] != oid:                       # livre du mois suivant : nouveau thème, nouvel univers
         n = o["numero"]
         form = dict(form, numero=f"{n:02d}", theme=THEMES[(THEMES.index(form["theme"]) + n - 1) % len(THEMES)] if form.get("theme") in THEMES else THEMES[n % len(THEMES)],
-                    univers=UNIVERS[(UNIVERS.index(form["univers"]) + n - 1) % len(UNIVERS)] if form.get("univers") in UNIVERS else UNIVERS[n % len(UNIVERS)])
+                    univers=U.fete_a_venir([c for c in (form.get("fetes") or "").split(",") if c in U.PAR_CLE], anniv=form.get("anniversaire"))   # fête cochée qui approche
+                    or (UNIVERS[(UNIVERS.index(form["univers"]) + n - 1) % len(UNIVERS)] if form.get("univers") in UNIVERS else UNIVERS[n % len(UNIVERS)]))
         form.pop("precision", None)               # le mot du parent concernait le premier livre
     else:
         form = dict(form, numero=f"{o['numero']:02d}")
+    if o.get("univers"):                          # livre de fête : univers imposé
+        form = dict(form, univers=o["univers"])
+    if U.cle_de(form.get("univers")) == "anniversaire":   # il a un an de plus le jour J
+        try:
+            depuis = int((time.time() - db.get(o["origine"] or oid)["cree"]) // (365.25 * 86400))
+            form = dict(form, age=str(int(form["age"]) + 1 + depuis))
+        except (ValueError, TypeError, KeyError):
+            pass
     job_id = oid
     folder = A.OUT / job_id
     if not reprise:
@@ -214,41 +255,52 @@ def stripe_webhook():
                 confirm_paid(oid, o.get("subscription"))
         elif t == "invoice.paid" and o.get("billing_reason") == "subscription_cycle":
             s = db.sub_find(stripe_sub=paiement.invoice_subscription(o))
-            if s and s["statut"] == "actif":
+            if s and s["formule"] == "fetes":                     # mensualité du pack : pas de livre, on compte
+                n = (s.get("paiements") or 1) + 1
+                db.sub_update(s["id"], paiements=n)
+                if n >= paiement.FORMULES["fetes"]["mensualites"]:
+                    paiement.stop_after_period(s["stripe_sub"])
+            elif s and s["statut"] == "actif":
                 next_book(s)
         elif t == "customer.subscription.deleted":
             s = db.sub_find(stripe_sub=o.get("id"))
-            if s:
-                db.sub_update(s["id"], statut="arrete")
+            if s and not (s["formule"] == "fetes" and (s.get("paiements") or 0) >= paiement.FORMULES["fetes"]["mensualites"]):
+                db.sub_update(s["id"], statut="arrete")         # pack fêtes payé en entier : les livres restants restent dus
     except Exception:
         traceback.print_exc()
         return jsonify(erreur="traitement"), 500
     return jsonify(ok=True)
 
 
-def next_book(s):
-    """Livre du mois suivant d'un abonnement (numéro +1), fabriqué sans validation du parent."""
-    n = (s["numero"] or 1) + 1
-    oid = uuid.uuid4().hex[:12]
+def next_book(s, univers=None):
+    """Livre suivant d'un abonnement (numéro +1), fabriqué sans validation du parent. `univers` : imposé (livre de fête)."""
+    n = (s["numero"] or 0) + 1
     o = db.get(s["commande_origine"])
-    db.create(id=oid, formule=s["formule"], email=o["email"], adresse=o["adresse"], statut="payee", montant=0,
-              abonnement_id=s["id"], origine=s["commande_origine"], numero=n, stripe_sub=s["stripe_sub"])
+    oid = s["commande_origine"] if (s["formule"] == "fetes" and n == 1) else uuid.uuid4().hex[:12]   # 1er livre du pack = la commande
+    if oid == s["commande_origine"]:
+        db.update(oid, statut="payee", univers=univers, numero=1)
+    else:
+        db.create(id=oid, formule=s["formule"], email=o["email"], adresse=o["adresse"], statut="payee", montant=0,
+                  abonnement_id=s["id"], origine=s["commande_origine"], numero=n, stripe_sub=s["stripe_sub"], univers=univers)
     left = s["livres_restants"] - 1 if s["livres_restants"] is not None else None
     db.sub_update(s["id"], numero=n, livres_restants=left,
                   prochain=(time.time() + MOIS) if s["prochain"] is not None and (left is None or left > 0) else None,
                   statut="termine" if left == 0 else s["statut"])
-    log(f"abonnement {s['id']} : livre n°{n} (commande {oid})")
+    log(f"abonnement {s['id']} : livre n°{n} (commande {oid}){' – ' + univers if univers else ''}")
     start_book(oid, auto=True)
     return oid
 
 
 def _scheduler():
-    """Toutes les heures : livres du mois des abonnements annuels, et suivi des impressions Lulu."""
+    """Toutes les heures : livres des abonnements (mensuel sans Stripe, fêtes qui approchent) et suivi des impressions Lulu."""
     while True:
         time.sleep(int(os.getenv("SCHEDULER_SECONDS", "3600")))
         try:
             for s in db.due_subs():
                 next_book(s)
+            for s in db.subs("actif"):
+                if s["formule"] == "fetes":
+                    check_fetes(s)
             purge_old()
             if lulu.configured():
                 for o in db.lister(statut="envoyee_impression"):

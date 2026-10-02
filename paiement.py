@@ -7,8 +7,8 @@ FORMULES = {
     "livre":   {"nom": "Un livre personnalisé", "prix": int(os.getenv("PRIX_LIVRE", "3490")), "livres": 1, "mode": "payment"},
     "mensuel": {"nom": "Abonnement mensuel : un nouveau livre chaque mois", "prix": int(os.getenv("PRIX_MENSUEL", "2990")),
                 "livres": None, "mode": "subscription"},
-    "annuel":  {"nom": "Abonnement annuel : 12 livres, un par mois", "prix": int(os.getenv("PRIX_ANNUEL", "29900")),
-                "livres": 12, "mode": "payment"},
+    "fetes":   {"nom": "Les livres de fête : 6 livres dans l'année, 12 mensualités", "prix": int(os.getenv("PRIX_FETES", "1245")),
+                "livres": 6, "mode": "subscription", "mensualites": 12},
 }
 
 
@@ -99,3 +99,8 @@ def verify_webhook(payload: bytes, header: str, tolerance=300):
 def invoice_subscription(inv):
     """Identifiant d'abonnement d'une facture (ancien et nouveau format de l'API Stripe)."""
     return inv.get("subscription") or (((inv.get("parent") or {}).get("subscription_details") or {}).get("subscription"))
+
+
+def stop_after_period(sub_id):
+    """Dernière mensualité payée : l'abonnement Stripe s'arrête à la fin de la période, sans nouveau prélèvement."""
+    return _api("POST", f"/subscriptions/{sub_id}", {"cancel_at_period_end": "true"})

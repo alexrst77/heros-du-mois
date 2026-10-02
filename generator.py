@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import art
+import univers
 import couleur
 
 TEXT_MODEL = os.getenv("OPENAI_TEXT_MODEL", "gpt-4.1")
@@ -251,11 +252,7 @@ def hero_description(f):
 
 
 def univers_key(u):
-    u = (u or "").lower()
-    for k in art.UNIVERS:
-        if k in u or (k == "espace" and "étoile" in u) or (k == "pôle" and "nord" in u) or (k == "dinosaure" and "dino" in u):
-            return k
-    return None
+    return univers.cle_de(u)
 
 
 def _fold(s):
@@ -431,6 +428,12 @@ def write_story(cfg, form):
                        "genre": (cfg["personnages"][0].get("config") or {}).get("genre") or form.get("genre")},
              "personnages_imposes": [{"prenom": c["nom"], "role": c["role"]} for c in cfg["personnages"]],
              **{k: v for k, v in cfg["histoire"].items() if k != "numero"}}
+    u = univers.PAR_CLE.get(univers_key(brief.get("univers")) or "")
+    if u and u.get("histoire"):
+        brief["consignes_univers"] = u["histoire"]
+    if u and u.get("fete"):
+        brief["fete"] = (f"Ce livre est le livre de {u['fete']} : la fête est au cœur de l'histoire, vécue par l'enfant avec sa famille, "
+                         "avec des traditions exactes et un ton chaleureux et inclusif.")
     user = "Brief du parent :\n" + json.dumps(brief, ensure_ascii=False)
     s = _chat_json(SYSTEM_STORY, user)
     probs = check_story(s, cfg)
@@ -605,7 +608,7 @@ def make_storyboard(story):
 # ====================================================================== 4. prompts d'images
 def _world(story, lumiere, palette=None):
     k = univers_key(story.get("univers"))
-    return (f"WORLD: {art.UNIVERS.get(k, art.DEFAULT_UNIVERS)}. LIGHT: {art.MOMENTS.get(lumiere, art.MOMENTS['jour'])}. "
+    return (f"WORLD: {univers.PAR_CLE[k]['image'] if k else art.DEFAULT_UNIVERS}. LIGHT: {art.MOMENTS.get(lumiere, art.MOMENTS['jour'])}. "
             f"COLOUR PALETTE OF THIS PAGE: {palette or 'rich and varied'}. " + art.COLOUR_RULE)
 
 
