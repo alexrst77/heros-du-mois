@@ -118,7 +118,8 @@
   .nuit .note { text-align:center; color:#AEB4E0; font-size:14px; margin-top:20px; }
 
   .couvs { padding-bottom:20px; }
-  .etagere { display:grid; grid-template-columns:repeat(3,1fr); gap:34px; margin-top:44px; }
+  .etagere { display:grid; grid-template-columns:repeat(4,1fr); gap:28px; margin-top:44px; }
+  @media (max-width:1000px) { .etagere { grid-template-columns:repeat(2,1fr); } }
   @media (max-width:760px) { .etagere { grid-template-columns:1fr; gap:28px; max-width:420px; } }
   .etagere figure { margin:0; position:relative; }
   .etagere img { width:100%; aspect-ratio:1; object-fit:cover; display:block; border-radius:3px 8px 8px 3px;
@@ -136,7 +137,10 @@
              transition:transform 1.1s cubic-bezier(.35,.65,.2,1); cursor:pointer; }
   .feuille.tournee { transform:rotateY(-180deg); }
   .face { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; overflow:hidden; background:var(--papier); }
-  .face.verso { transform:rotateY(180deg); }
+  .face.recto { transform:translateZ(.5px); }
+  .face.verso { transform:rotateY(180deg) translateZ(.5px); }
+  .face > *, .face .tc * { backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+  .face.dos { border-radius:8px 2px 2px 8px; }
   .face img { width:100%; height:100%; object-fit:cover; display:block; }
   .face.recto::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(90deg, rgba(0,0,0,.22), rgba(0,0,0,.05) 7%, rgba(0,0,0,0) 14%); }
   .face.verso::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(270deg, rgba(0,0,0,.22), rgba(0,0,0,.05) 7%, rgba(0,0,0,0) 14%); }
@@ -153,6 +157,22 @@
   .face.dos h3 { font:400 3cqw/1.15 var(--titre); color:#fff; margin:0 0 2cqw; }
   .face.dos p { font:600 1.6cqw/1.5 var(--texte); margin:0 0 1cqw; }
   .face.dos .q { color:var(--luciole); margin-top:1.4cqw; }
+  .choix { display:flex; gap:12px; flex-wrap:wrap; margin:22px 0 16px; }
+  .choix button { display:grid; grid-template-columns:44px auto; grid-template-rows:auto auto; column-gap:12px; align-items:center; text-align:left; cursor:pointer;
+                  padding:8px 18px 8px 8px; border-radius:16px; border:1.5px solid rgba(255,255,255,.22); background:transparent; color:#fff; font:800 17px/1.1 var(--texte); }
+  .choix button img { grid-row:span 2; width:44px; height:44px; border-radius:8px; object-fit:cover; }
+  .choix button small { font:600 13px/1.2 var(--texte); color:#AEB4E0; }
+  .choix button[aria-pressed="true"] { background:#fff; color:var(--encre); border-color:#fff; }
+  .choix button[aria-pressed="true"] small { color:var(--encre-2); }
+  .face.mi { background:#F6EFE0; }
+  .face .pano { position:absolute; inset:0; background-size:200% 100%; }
+  .face .pano.g { background-position:left top; } .face .pano.d { background-position:right top; }
+  .face .bande { position:absolute; left:0; right:0; bottom:0; padding:4cqw 4.6cqw 2.4cqw; color:#2B2622; font:400 1.45cqw/1.5 Georgia, "Iowan Old Style", serif;
+                 background:linear-gradient(180deg, rgba(246,239,224,0), rgba(246,239,224,.92) 2.6cqw, #F6EFE0 4cqw); }
+  .face .bande p { margin:0; }
+  .face .bande .folio { display:block; text-align:center; margin-top:.8cqw; font:600 1.1cqw var(--texte); color:#9A928A; }
+  .double.pano .img { aspect-ratio:2/1; }
+  .double .txt .folio { display:block; }
   .ombre-livre { position:absolute; left:2%; right:2%; bottom:-5%; height:10%; background:radial-gradient(closest-side, rgba(0,0,0,.45), transparent); filter:blur(8px); transform:translateZ(-1px); transition:left 1s, right 1s; }
   .livre-o.ferme .ombre-livre { left:52%; } .livre-o.fin .ombre-livre { right:52%; }
   .ouvrir { margin-top:30px; font-weight:800; color:var(--luciole); transition:opacity .4s; }
@@ -290,9 +310,13 @@
 <section class="nuit" id="feuilleter">
   <div class="wrap">
     <h2>Feuilletez un vrai livre</h2>
-    <p class="sous">Voici « Léo et la forêt des petites lumières », une histoire sur la peur du noir. Le vôtre aura le prénom, le visage et les compagnons de votre enfant.</p>
+    <div class="choix" role="group" aria-label="Choisir le livre">
+      <button type="button" data-l="leo" aria-pressed="true"><img src="/static/vitrine/leo_00_s.webp" alt="">Léo<small>La forêt des petites lumières</small></button>
+      <button type="button" data-l="mila" aria-pressed="false"><img src="/static/vitrine/mila_00_s.webp" alt="">Mila<small>Le secret de l'océan</small></button>
+    </div>
+    <p class="sous" id="sousLivre"></p>
     <div class="flip" id="flip">
-      <div class="livre-o ferme" id="livreO" tabindex="0" aria-label="Livre de Léo : cliquez sur une page pour la tourner"></div>
+      <div class="livre-o ferme" id="livreO" tabindex="0" aria-label="Livre à feuilleter"></div>
       <span class="ouvrir" id="ouvrir">Cliquez pour ouvrir le livre</span>
     </div>
     <div class="double" id="double">
@@ -311,11 +335,12 @@
 <section class="bloc couvs">
   <div class="wrap">
     <h2>Un univers différent chaque mois</h2>
-    <p class="sous">Forêt enchantée, espace, temps des dinosaures… Chaque enfant a sa propre couverture, avec son prénom.</p>
+    <p class="sous">Forêt enchantée, espace, dinosaures, fond de l'océan… Chaque enfant a sa propre couverture, avec son prénom.</p>
     <div class="etagere">
       <figure><img src="/static/vitrine/leo_00.webp" alt="Couverture : Léo et la forêt des petites lumières" loading="lazy"><span class="t">Léo<small>et la forêt des petites lumières</small></span><figcaption>La forêt enchantée</figcaption></figure>
       <figure><img src="/static/vitrine/couv_noe.webp" alt="Couverture : Noé et la poussière d'étoiles" loading="lazy"><figcaption>L'espace et les étoiles</figcaption></figure>
       <figure><img src="/static/vitrine/couv_jade.webp" alt="Couverture : Jade et la vallée des dinosaures" loading="lazy"><figcaption>Le temps des dinosaures</figcaption></figure>
+      <figure><img src="/static/vitrine/mila_00.webp" alt="Couverture : Mila et le secret de l'océan" loading="lazy"><figcaption>Le fond de l'océan</figcaption></figure>
     </div>
   </div>
 </section>
@@ -433,7 +458,8 @@
 
 <script>
 (function () {
-  const PAGES = [{"t": "Une ombre dans la chambre", "a": ["Ce soir, Léo n’arrive pas à dormir. Sur le mur, une grande ombre remue. Il serre Nino, son lapin en tissu.", "« Et si c’était un monstre ? » murmure-t-il."], "b": ["Maman entrouvre la porte.", "« Tu veux qu’on regarde ensemble ? »"]}, {"t": "Une visite minuscule", "a": ["« Psst… Léo ! »", "Une petite lumière chatouille le nez de Nino. C’est une luciole ! Ses ailes brillent comme deux gouttes de miel.", "« Je m’appelle Luma. J’ai besoin de toi. »"], "b": ["« Le grand saule de ma forêt ne brille presque plus, explique Luma. Mes amies les lucioles dorment encore. Je n’arrive pas à les réveiller. »", "Sur le mur, une porte de feuilles apparaît."]}, {"t": "Le drôle d’ours", "a": ["Dans la forêt, quelque chose de gros se dresse devant eux. Deux oreilles ! Un dos tout rond !", "Léo s’arrête net.", "« Un ours ! » souffle-t-il en serrant Nino."], "b": ["Luma s’approche doucement. Sa lumière éclaire… une vieille souche coiffée de fougères !", "« Oh ! Elle n’a même pas de pattes ! » dit Léo."]}, {"t": "Ça gratte sous les feuilles", "a": ["Cric, crac… frrr !", "Cette fois, le bruit vient du sol. Léo se penche derrière Luma. Sous une feuille rousse, un petit museau tremble.", "C’est un hérisson roulé en boule."], "b": ["« Je m’appelle Picotin. Je voudrais rentrer sous le grand saule, mais le ruisseau fait un bruit terrible. »", "Léo s’accroupit à côté de lui."]}, {"t": "Un pas, puis un autre", "a": ["Devant le petit pont, Léo hésite. L’eau chuchote sous les planches. Picotin s’arrête aussi.", "Luma attend près d’eux.", "Personne ne se moque. Personne ne les presse."], "b": ["Léo pose une main sur son ventre. Il inspire doucement, puis souffle comme pour refroidir une soupe.", "Une fois. Deux fois."]}, {"t": "Le saule endormi", "a": ["Au bout du sentier se tient le grand saule. Ses longues branches touchent presque la mousse.", "Sous les feuilles dorment les lucioles. Elles brillent à peine.", "Luma baisse ses ailes."], "b": ["« Réveillez-vous ! » appelle-t-elle.", "Rien ne bouge."]}, {"t": "La chanson de Léo", "a": ["Léo berce Nino contre lui et invente une chanson :", "« Petite lumière, ouvre les yeux,\nla nuit est grande, on sera deux.\nPuis trois, puis mille, tout doucement,\nviens éclairer nos pas d’enfant. »"], "b": ["Luma reprend la mélodie. Picotin marque le rythme avec une petite patte.", "Sous une feuille, une lumière s’allume. Puis une deuxième. Puis trois autres !"]}, {"t": "Mille petites lumières", "a": ["Le grand saule scintille maintenant comme un ciel d’étoiles. Des points dorés dansent entre les feuilles.", "Léo tourne sur lui-même en riant. Même les piquants de Picotin semblent porter des paillettes."], "b": ["« Tu nous as aidées, Léo ! » dit Luma.", "« Vous m’avez aidé aussi. »"]}, {"t": "La lumière reste", "a": ["Léo ouvre les yeux dans son lit. Nino repose contre sa joue. Sur la chaise, le manteau n’a pas bougé.", "Son ombre non plus.", "« Bonne nuit, drôle d’ours », chuchote Léo."], "b": ["« Tout va bien ? » demande maman depuis la porte.", "« Oui. J’ai rêvé d’une forêt… et j’ai aidé une luciole ! »"]}];
+  const LEO = [{"t": "Une ombre dans la chambre", "a": ["Ce soir, Léo n’arrive pas à dormir. Sur le mur, une grande ombre remue. Il serre Nino, son lapin en tissu.", "« Et si c’était un monstre ? » murmure-t-il."], "b": ["Maman entrouvre la porte.", "« Tu veux qu’on regarde ensemble ? »"]}, {"t": "Une visite minuscule", "a": ["« Psst… Léo ! »", "Une petite lumière chatouille le nez de Nino. C’est une luciole ! Ses ailes brillent comme deux gouttes de miel.", "« Je m’appelle Luma. J’ai besoin de toi. »"], "b": ["« Le grand saule de ma forêt ne brille presque plus, explique Luma. Mes amies les lucioles dorment encore. Je n’arrive pas à les réveiller. »", "Sur le mur, une porte de feuilles apparaît."]}, {"t": "Le drôle d’ours", "a": ["Dans la forêt, quelque chose de gros se dresse devant eux. Deux oreilles ! Un dos tout rond !", "Léo s’arrête net.", "« Un ours ! » souffle-t-il en serrant Nino."], "b": ["Luma s’approche doucement. Sa lumière éclaire… une vieille souche coiffée de fougères !", "« Oh ! Elle n’a même pas de pattes ! » dit Léo."]}, {"t": "Ça gratte sous les feuilles", "a": ["Cric, crac… frrr !", "Cette fois, le bruit vient du sol. Léo se penche derrière Luma. Sous une feuille rousse, un petit museau tremble.", "C’est un hérisson roulé en boule."], "b": ["« Je m’appelle Picotin. Je voudrais rentrer sous le grand saule, mais le ruisseau fait un bruit terrible. »", "Léo s’accroupit à côté de lui."]}, {"t": "Un pas, puis un autre", "a": ["Devant le petit pont, Léo hésite. L’eau chuchote sous les planches. Picotin s’arrête aussi.", "Luma attend près d’eux.", "Personne ne se moque. Personne ne les presse."], "b": ["Léo pose une main sur son ventre. Il inspire doucement, puis souffle comme pour refroidir une soupe.", "Une fois. Deux fois."]}, {"t": "Le saule endormi", "a": ["Au bout du sentier se tient le grand saule. Ses longues branches touchent presque la mousse.", "Sous les feuilles dorment les lucioles. Elles brillent à peine.", "Luma baisse ses ailes."], "b": ["« Réveillez-vous ! » appelle-t-elle.", "Rien ne bouge."]}, {"t": "La chanson de Léo", "a": ["Léo berce Nino contre lui et invente une chanson :", "« Petite lumière, ouvre les yeux,\nla nuit est grande, on sera deux.\nPuis trois, puis mille, tout doucement,\nviens éclairer nos pas d’enfant. »"], "b": ["Luma reprend la mélodie. Picotin marque le rythme avec une petite patte.", "Sous une feuille, une lumière s’allume. Puis une deuxième. Puis trois autres !"]}, {"t": "Mille petites lumières", "a": ["Le grand saule scintille maintenant comme un ciel d’étoiles. Des points dorés dansent entre les feuilles.", "Léo tourne sur lui-même en riant. Même les piquants de Picotin semblent porter des paillettes."], "b": ["« Tu nous as aidées, Léo ! » dit Luma.", "« Vous m’avez aidé aussi. »"]}, {"t": "La lumière reste", "a": ["Léo ouvre les yeux dans son lit. Nino repose contre sa joue. Sur la chaise, le manteau n’a pas bougé.", "Son ombre non plus.", "« Bonne nuit, drôle d’ours », chuchote Léo."], "b": ["« Tout va bien ? » demande maman depuis la porte.", "« Oui. J’ai rêvé d’une forêt… et j’ai aidé une luciole ! »"]}];
+  const MILA = ["Ce soir, Mila n’a pas très envie de dormir. Elle pose contre son oreille le coquillage rapporté de la plage. Au lieu du bruit des vagues, elle entend une toute petite voix : « Mila… nous avons besoin de toi ! »", "Une vague de lumière glisse jusqu’à la fenêtre. Derrière le rideau, un jardin de coraux remplace les étoiles ! Mila tend la main. Une combinaison corail et un casque de bulles l’enveloppent. « Juste une petite aventure », souffle-t-elle.", "Mila traverse la fenêtre et flotte dans une eau douce comme un rêve. Ses palmes font danser les bulles. Des poissons jaunes passent près de son nez. Elle éclate de rire : même son rire fait des bulles !", "Une tortue s’approche lentement. « Je m’appelle Nacre. Bienvenue, Mila ! » Au loin, un palais semble presque éteint. « La perle qui éclaire notre jardin a perdu ses couleurs. Viens, je vais te montrer. »", "Dans un immense coquillage repose une perle pâle. Mila se penche vers elle. « Elle est malade ? » Nacre secoue la tête. « Elle attend trois lumières : une dorée, une rose et une bleue. »", "« Où sont-elles cachées ? » demande Mila. « On ne peut pas les prendre, explique Nacre. Elles apparaissent lorsqu’un petit geste fait du bien. » Mila réfléchit, puis sourit : « Alors, ouvrons grand les yeux… et les oreilles ! »", "Derrière les algues, quelqu’un renifle. C’est un hippocampe qui n’ose pas sortir. « Les poissons vont trop vite. Personne ne m’attend. » Mila reste près de lui, sans le presser. « Raconte-moi. J’ai tout mon temps. »", "L’hippocampe relève enfin la tête. « Tu veux voir mon jardin ? » Au milieu des algues, une lumière dorée s’allume. Nacre sourit. « Tu l’as écouté, Mila. » La petite lumière se met à les suivre comme une étoile.", "Un peu plus loin, un crabe pousse une branche de toutes ses forces. Elle bloque l’entrée de sa maison ! Mila tire, mais la branche ne bouge pas. « Nacre, tu m’aides ? À trois : un… deux… trois ! »", "La branche se soulève et le passage se libère. « Ma maison ! Merci ! » s’écrie le crabe. Une lumière rose jaillit près de sa pince. Mila applaudit. « Ensemble, c’était beaucoup plus facile ! » Deux lumières les accompagnent désormais.", "Pour rentrer, il faut passer sous une arche sombre. Mila s’arrête. « Je n’aime pas beaucoup le noir… » Nacre se rapproche. « Nous pouvons avancer doucement. Je reste près de toi. » Mila respire et fait un premier petit mouvement de palme.", "Sous l’arche, des poissons minuscules brillent comme des étoiles. « Oh ! Vous étiez là ! » murmure Mila. Une lumière bleue rejoint les deux autres. Mila sourit : elle avait encore un peu peur, mais elle a osé avancer, bien accompagnée.", "Les voilà revenus près du grand coquillage. Les trois lumières tournent autour de Mila. Elle ouvre doucement les mains. « Nous avons écouté, nous avons aidé… et nous avons avancé ensemble. Maintenant, c’est à vous de briller ! »", "La lumière dorée, la rose et la bleue se posent sur la perle. Un éclat tendre traverse l’eau. Les coraux retrouvent leurs couleurs, et les fenêtres du palais s’allument une à une. « Tu as réussi ! » s’émerveille Nacre.", "L’hippocampe arrive en dansant. Le petit crabe claque des pinces. Mila tourne parmi les bulles, légère comme un ruban. « Nous avons tous réussi ! » répond-elle. Même les anémones semblent applaudir avec leurs longs bras roses.", "« Alors, quel est le secret de l’océan ? » demande Nacre. Mila regarde ses nouveaux amis. « Les petits gestes peuvent faire une grande lumière. » La tortue hoche la tête. « Et cette lumière-là, tu peux l’emporter partout avec toi. »", "Une fenêtre apparaît entre les bulles : sa chambre ! Mila salue Nacre. « Je reviendrai te raconter mes petits gestes. » La tortue lui fait un signe de nageoire. « Je les verrai peut-être briller jusque dans mon jardin ! »", "Mila retrouve son pyjama et se glisse dans son lit. Le coquillage repose près d’elle. Demain, elle écoutera, elle aidera… et elle osera un petit pas. Les yeux fermés, elle entend un doux murmure : « Bonne nuit, Mila. »"];
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const calme = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -451,22 +477,51 @@
     go.textContent = tape ? 'Créer le livre de ' + nom(input.value) : 'Créer son livre';
   });
 
-  /* feuilleter : livre qui s'ouvre (grand écran) ou pages simples (téléphone) */
-  const N = PAGES.length, grand = matchMedia('(min-width:761px)');
-  const img = n => `/static/vitrine/leo_${String(n).padStart(2, '0')}.webp`;
-  const texte = (i, d) => `<div class="face recto texte"><h3>${esc(d.t)}</h3>${d.a.concat(d.b).map(x => `<p>${esc(x)}</p>`).join('')}<span class="folio">${i + 1}</span></div>`;
-  const livre = $('livreO');
-  let html = '<div class="ombre-livre"></div>';
-  html += `<div class="feuille" data-j="0"><div class="face recto couv"><img src="${img(0)}" alt="Couverture du livre de Léo"><div class="tc"><b>Léo</b><span>et la forêt des petites lumières</span></div></div><div class="face verso"><img src="${img(1)}" alt="" loading="lazy"></div></div>`;
-  PAGES.forEach((d, i) => {
-    const verso = i < N - 1 ? `<div class="face verso"><img src="${img(i + 2)}" alt="" loading="lazy"></div>`
-      : `<div class="face verso dos"><h3>La nuit est grande.<br>Les petits courages aussi.</h3><p>Une ombre, une luciole et un lapin en tissu…</p><p>Léo découvre qu'on peut avoir peur, demander de l'aide et avancer à son rythme.</p><p class="q">Et toi, qu'est-ce qui te rassure le soir ?</p></div>`;
-    html += `<div class="feuille" data-j="${i + 1}">${texte(i, d)}${verso}</div>`;
-  });
-  livre.innerHTML = html;
-  const feuilles = [...livre.querySelectorAll('.feuille')], F = feuilles.length;   // F = N + 1 feuilles
-  let kk = 0;                                   // nombre de feuilles tournées : 0 = fermé, F = refermé à la fin
+  /* feuilleter : deux livres (Léo, Mila). Chaque livre = suite de faces : couverture, puis gauche/droite de chaque double page, puis 4e de couverture.
+     Sur grand écran : livre 3D (feuille j = faces 2j et 2j+1). Sur téléphone : une double page à la fois. */
+  const V = '/static/vitrine/', pad = n => String(n).padStart(2, '0');
+  const ptxt = (h, ps, n) => `${h ? `<h3>${esc(h)}</h3>` : ''}${ps.map(x => `<p>${esc(x)}</p>`).join('')}<span class="folio">${n}</span>`;
+  const LIVRES = {
+    leo: {
+      sous: '« Léo et la forêt des petites lumières », une histoire sur la peur du noir. Le vôtre aura le prénom, le visage et les compagnons de votre enfant.',
+      n: LEO.length, img: i => V + `leo_${pad(i)}.webp`, mini: i => V + `leo_${pad(i)}_s.webp`,
+      couv: `<div class="face recto couv"><img src="${V}leo_00.webp" alt="Couverture du livre de Léo"><div class="tc"><b>Léo</b><span>et la forêt des petites lumières</span></div></div>`,
+      gauche: i => `<img src="${V}leo_${pad(i)}.webp" alt="" loading="lazy">`,
+      droite: i => ({ cls: 'texte', html: ptxt(LEO[i - 1].t, LEO[i - 1].a.concat(LEO[i - 1].b), i) }),
+      dos: `<h3>La nuit est grande.<br>Les petits courages aussi.</h3><p>Une ombre, une luciole et un lapin en tissu…</p><p>Léo découvre qu'on peut avoir peur, demander de l'aide et avancer à son rythme.</p><p class="q">Et toi, qu'est-ce qui te rassure le soir ?</p>`,
+      tel: i => ({ pano: false, img: V + `leo_${pad(i)}.webp`, html: ptxt(LEO[i - 1].t, LEO[i - 1].a.concat(LEO[i - 1].b), i) })
+    },
+    mila: {
+      sous: '« Mila et le secret de l’océan », une aventure sous la mer sur l’entraide et le courage. Le vôtre aura le prénom, le visage et les compagnons de votre enfant.',
+      n: 9, img: i => V + `mila_${pad(i)}.webp`, mini: i => V + `mila_${pad(i)}_s.webp`,
+      couv: `<div class="face recto couv"><img src="${V}mila_00.webp" alt="Couverture : Mila et le secret de l'océan"></div>`,
+      gauche: i => `<div class="pano g" style="background-image:url(${V}mila_${pad(i)}.webp)"></div><div class="bande">${ptxt('', [MILA[2 * i - 2]], 2 * i - 1)}</div>`,
+      droite: i => ({ cls: 'mi', html: `<div class="pano d" style="background-image:url(${V}mila_${pad(i)}.webp)"></div><div class="bande">${ptxt('', [MILA[2 * i - 1]], 2 * i)}</div>` }),
+      dos: `<h3>Les petits gestes<br>font les grandes lumières.</h3><p>Un coquillage qui murmure, une tortue qui attend de l'aide et une perle qui a perdu ses couleurs…</p><p>Au fond de l'océan, Mila découvre qu'écouter, aider et oser ensemble peuvent illuminer tout un monde.</p><p class="q">Et toi, quel petit geste feras-tu demain ?</p>`,
+      tel: i => ({ pano: true, img: V + `mila_${pad(i)}.webp`, html: `<p>${esc(MILA[2 * i - 2])}</p><p>${esc(MILA[2 * i - 1])}</p><span class="folio">${2 * i - 1}–${2 * i}</span>` })
+    }
+  };
+  const grand = matchMedia('(min-width:761px)'), livre = $('livreO'), minis = $('minis');
+  let L, N, F, feuilles = [], kk = 0, p = 0;
   const zs = () => feuilles.forEach((f, j) => { f.style.zIndex = j < kk ? j + 1 : F - j + 1; });
+  function charger(id) {
+    L = LIVRES[id]; N = L.n;
+    let html = '<div class="ombre-livre"></div>';
+    for (let j = 0; j <= N; j++) {
+      const recto = j === 0 ? L.couv : (d => `<div class="face recto ${d.cls}">${d.html}</div>`)(L.droite(j));
+      const verso = j < N ? `<div class="face verso${id === 'mila' ? ' mi' : ''}">${L.gauche(j + 1)}</div>` : `<div class="face verso dos">${L.dos}</div>`;
+      html += `<div class="feuille">${recto}${verso}</div>`;
+    }
+    livre.innerHTML = html;
+    feuilles = [...livre.querySelectorAll('.feuille')]; F = feuilles.length; kk = 0;
+    livre.classList.add('ferme'); livre.classList.remove('fin'); $('ouvrir').classList.remove('cache');
+    livre.setAttribute('aria-label', `Livre de ${id === 'leo' ? 'Léo' : 'Mila'} : cliquez sur une page pour la tourner`);
+    $('sousLivre').textContent = L.sous;
+    document.querySelectorAll('.choix button').forEach(b => b.setAttribute('aria-pressed', b.dataset.l === id));
+    minis.innerHTML = Array.from({ length: N }, (_, i) => `<button type="button" data-p="${i}" aria-label="Aller à la double page ${i + 1}"><img src="${L.mini(i + 1)}" alt="" loading="lazy"></button>`).join('');
+    zs(); $('dTxt').innerHTML = ''; montrer(0);
+    for (let n = 1; n <= N; n++) { const im = new Image(); im.src = L.img(n); }
+  }
   function tourner(nk) {
     nk = Math.max(0, Math.min(F, nk)); if (nk === kk) return;
     const sens = nk > kk ? 1 : -1, liste = [];
@@ -480,19 +535,15 @@
     clearTimeout(tourner.t); tourner.t = setTimeout(zs, calme ? 0 : 1150 + liste.length * 90);
     etat();
   }
-  feuilles.forEach((f, j) => f.addEventListener('click', () => tourner(f.classList.contains('tournee') ? j : j + 1)));
+  livre.addEventListener('click', e => { const f = e.target.closest('.feuille'); if (!f) return; const j = feuilles.indexOf(f); tourner(f.classList.contains('tournee') ? j : j + 1); });
   livre.addEventListener('keydown', e => { if (e.key === 'ArrowRight') tourner(kk + 1); if (e.key === 'ArrowLeft') tourner(kk - 1); });
-  zs();
 
-  let p = 0;                                   // téléphone : une page à la fois
-  const minis = $('minis');
-  minis.innerHTML = PAGES.map((_, i) => `<button type="button" data-p="${i}" aria-label="Aller à la page ${i + 1}"><img src="/static/vitrine/leo_${String(i + 1).padStart(2, '0')}_s.webp" alt="" loading="lazy"></button>`).join('');
   function montrer(i) {
     p = Math.max(0, Math.min(N - 1, i));
-    const d = PAGES[p], im = $('dImg'), txt = $('dTxt');
+    const d = L.tel(p + 1), im = $('dImg'), txt = $('dTxt');
     const maj = () => {
-      im.src = img(p + 1);
-      txt.innerHTML = `<h3>${esc(d.t)}</h3>` + d.a.concat(d.b).map(x => `<p>${esc(x)}</p>`).join('') + `<span class="folio">${p + 1}</span>`;
+      im.src = d.img; $('double').classList.toggle('pano', d.pano);
+      txt.innerHTML = d.html;
       im.classList.remove('fade'); txt.classList.remove('fade');
     };
     if (calme || !txt.innerHTML) maj(); else { im.classList.add('fade'); txt.classList.add('fade'); setTimeout(maj, 260); }
@@ -508,8 +559,8 @@
   $('next').onclick = () => grand.matches ? tourner(kk + 1) : montrer(p + 1);
   minis.onclick = e => { const b = e.target.closest('button'); if (!b) return; grand.matches ? tourner(+b.dataset.p + 1) : montrer(+b.dataset.p); };
   grand.addEventListener('change', etat);
-  for (let n = 1; n <= N; n++) { const im = new Image(); im.src = img(n); }
-  montrer(0);
+  document.querySelector('.choix').onclick = e => { const b = e.target.closest('button'); if (b && b.getAttribute('aria-pressed') !== 'true') charger(b.dataset.l); };
+  charger('leo');
 
   /* avis : uniquement de vrais avis clients (static/avis.json) */
   fetch('/static/avis.json').then(r => r.json()).then(list => {
