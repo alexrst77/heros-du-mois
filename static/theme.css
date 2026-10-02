@@ -2,7 +2,7 @@
 @font-face { font-family: "Young Serif"; src: url("/static/fonts/YoungSerif-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Nunito"; src: url("/static/fonts/Nunito.woff") format("woff"); font-weight: 200 1000; font-display: swap; }
 :root {
-  --ciel: #EEF1FA;      /* fond : bleu ciel du matin */
+  --ciel: #FBF5EA;      /* fond : crème chaud, comme le papier des livres */
   --papier: #FFFDF8;    /* pages, cartes */
   --encre: #1F2557;     /* texte, boutons principaux */
   --encre-2: #4A4F7A;   /* texte secondaire */
@@ -10,7 +10,7 @@
   --luciole: #FFC94A;   /* l'accent : la lumière des lucioles */
   --mousse: #2F6B57;    /* coches, détails */
   --joue: #F49A8A;
-  --trait: #D9DEF0;
+  --trait: #EADFCB;
   --erreur: #B3261E;
   --titre: "Young Serif", Georgia, serif;
   --texte: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -26,7 +26,16 @@ a { color: var(--encre); }
 h2 { font: 400 clamp(30px, 3.8vw, 44px)/1.1 var(--titre); margin: 0 0 12px; letter-spacing: -.3px; max-width: 22ch; }
 .sous { color: var(--encre-2); font-size: 18px; margin: 0; max-width: 60ch; }
 .bloc { padding: 84px 0; }
-.bloc.doux { background: linear-gradient(180deg, var(--ciel), #E4E9F8); }
+.bloc.doux { background: linear-gradient(180deg, var(--ciel), #F4E9D4 55%, var(--ciel)); }
+/* touches féeriques discrètes : quelques étoiles fines dorées (aucune animation) */
+.etoiles-fines { position: relative; }
+.etoiles-fines::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .55;
+  background:
+    radial-gradient(1.6px 1.6px at 6% 14%, #E2B653 50%, transparent 52%), radial-gradient(1.2px 1.2px at 13% 30%, #E2B653 50%, transparent 52%),
+    radial-gradient(1.4px 1.4px at 92% 10%, #E2B653 50%, transparent 52%), radial-gradient(1px 1px at 86% 26%, #E2B653 50%, transparent 52%),
+    radial-gradient(1.2px 1.2px at 96% 46%, #E2B653 50%, transparent 52%), radial-gradient(1px 1px at 3% 62%, #E2B653 50%, transparent 52%),
+    radial-gradient(60px 60px at 94% 12%, rgba(255,201,74,.16), transparent 70%), radial-gradient(70px 70px at 5% 70%, rgba(255,201,74,.12), transparent 70%); }
+.etoiles-fines > * { position: relative; }
 
 .logo { display: inline-flex; align-items: center; gap: 10px; font: 400 20px/1 var(--titre); color: var(--encre); text-decoration: none; white-space: nowrap; }
 .logo-mark { width: 40px; height: 40px; background: url("/static/marque/etoile-128.png") center/contain no-repeat; flex: none; }

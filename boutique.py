@@ -487,6 +487,18 @@ def admin_archive(oid):
     return send_file(buf, mimetype="application/zip", as_attachment=True, download_name=f"livre_{oid}.zip")
 
 
+@bp.post("/admin/api/vignettes")
+def admin_vignettes():
+    """Génère en arrière-plan les vignettes illustrées manquantes des univers et des fêtes (OpenAI)."""
+    if not admin_ok():
+        abort(403)
+    import vignettes
+    todo = [u["cle"] for u in vignettes.manquantes()]
+    if todo:
+        threading.Thread(target=lambda: (lambda r: log(f"vignettes générées : {r}"))(vignettes.generer(log)), daemon=True).start()
+    return jsonify(lancees=todo)
+
+
 @bp.post("/admin/api/<oid>/<action>")
 def admin_action(oid, action):
     if not admin_ok():

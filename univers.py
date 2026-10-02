@@ -134,7 +134,18 @@ def cle_de(nom):
 
 def public():
     """Liste pour l'éditeur et la vitrine."""
-    return [{"nom": u["nom"], "cle": u["cle"], "fete": u.get("fete"), "puce": PUCES.get(u["cle"])} for u in UNIVERS]
+    import vignettes
+    return [{"nom": u["nom"], "cle": u["cle"], "fete": u.get("fete"), "puce": PUCES.get(u["cle"]), "court": COURTS.get(u["cle"], u["nom"]),
+             "img": f"/vignette/{u['cle']}.webp" if vignettes.chemin(u["cle"]) else None} for u in UNIVERS]
+
+
+COURTS = {"foret": "Forêt enchantée", "espace": "Parmi les étoiles", "mer": "Sous l’océan", "dinosaure": "Terre des dinosaures",
+          "chateau": "Château des chevaliers", "pirates": "Île aux pirates", "jungle": "Cœur de la jungle", "pole": "Pôle Nord",
+          "fees": "Royaume des fées", "cirque": "Cirque des étoiles", "ferme": "Ferme des petits matins", "savane": "Grande savane",
+          "superheros": "Ville des super-héros", "desert": "Désert et oasis", "montagne": "Montagne des marmottes",
+          "anniversaire": "Son anniversaire", "noel": "Noël", "halloween": "Halloween", "paques": "Pâques", "galette": "Galette des rois",
+          "carnaval": "Mardi gras", "ramadan": "Ramadan", "aid": "Aïd", "nouvelan_chinois": "Nouvel An chinois", "hanoukka": "Hanoukka",
+          "diwali": "Diwali"}
 
 
 DELAI = 35          # pack fêtes : le livre est lancé 35 jours avant la fête (fabrication + impression + livraison)

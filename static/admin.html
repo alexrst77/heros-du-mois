@@ -31,6 +31,9 @@
   <div id="list">Chargement…</div>
   <h2>Abonnements</h2>
   <div id="subs"></div>
+  <h2>Vignettes de l'accueil</h2>
+  <p class="muted">Illustrations des cartes univers et fêtes encore manquantes. Coût : une image par vignette manquante.</p>
+  <button class="btn" id="vign" type="button">Générer les vignettes manquantes</button> <span id="vignR" class="muted"></span>
   <h2>Messages du site</h2>
   <div id="msgs"></div>
 </div>
@@ -86,6 +89,8 @@ async function load() {
       <div>${btns.map(b => `<button class="${b[2] || ''}" onclick="act('${o.id}','${b[0]}',this)">${b[1]}</button>`).join('')}</div>
       <div class="msg"></div></div>`;
   }).join('') : '<p class="muted">Aucune commande pour l\'instant.</p>';
+  document.getElementById('vign').onclick = async () => { const r = await (await fetch('/admin/api/vignettes', { method: 'POST', headers: H })).json();
+    document.getElementById('vignR').textContent = r.lancees ? (r.lancees.length ? r.lancees.length + ' vignette(s) en cours (quelques minutes)' : 'Toutes les vignettes sont faites.') : (r.erreur || 'erreur'); };
   fetch('/admin/api/messages', { headers: H }).then(r => r.json()).then(m => {
     document.getElementById('msgs').innerHTML = (m.envoi ? '' : '<p class="muted">Envoi par e-mail non configuré (SMTP_PASSWORD) : les messages arrivent seulement ici.</p>') +
       (m.messages.length ? m.messages.map(x => `<div class="card"><b>${esc(x.sujet)}</b> · ${esc(x.nom || '')} · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a> · ${date(x.cree)}<p style="white-space:pre-wrap;margin:8px 0 0">${esc(x.message)}</p></div>`).join('') : '<p class="muted">Aucun message.</p>');

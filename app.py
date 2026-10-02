@@ -281,6 +281,13 @@ def start_job(job_id, form, refs, auto=False, on_end=None, reprise=False, essai=
     threading.Thread(target=work, daemon=True).start()
 
 
+@app.get("/vignette/<cle>.webp")
+def vignette(cle):
+    import vignettes
+    p = vignettes.chemin(cle) if re.match(r"^[a-z_]+$", cle) else None
+    return send_file(p, max_age=86400) if p else abort(404)
+
+
 @app.get("/api/univers")
 def api_univers():
     import univers

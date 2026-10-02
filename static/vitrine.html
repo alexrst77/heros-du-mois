@@ -99,6 +99,8 @@
   @media (max-width:900px) { .ombre { bottom:30px; } }
 
   /* ------------------------------------------------ feuilleter */
+  .nuit::before, .nuit::after { content:""; position:absolute; left:0; right:0; height:40px; pointer-events:none; }
+  .nuit::before { top:-40px; background:linear-gradient(180deg, rgba(26,31,74,0), rgba(26,31,74,.08)); }
   .nuit { background:var(--nuit); color:#EEF0FF; padding:84px 0 92px; position:relative; }
   .nuit h2 { color:#fff; }
   .nuit .sous { color:#C4C9EE; }
@@ -142,7 +144,7 @@
   .contact input, .contact select, .contact textarea { width:100%; padding:12px 14px; border-radius:12px; border:2px solid var(--trait); background:#fff; font:600 16px var(--texte); color:var(--encre); }
   .contact textarea { resize:vertical; } .contact .piege { position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
   .contact .btn { justify-self:start; } .contact .retour { margin:0; font-weight:700; min-height:1.4em; }
-  .collection { background:linear-gradient(180deg, var(--ciel), #E4E9F8); }
+  .collection { background:linear-gradient(180deg, var(--ciel), #F4E9D4 50%, var(--ciel)); }
   .coll { display:grid; grid-template-columns:1fr 1.1fr; gap:56px; align-items:center; }
   @media (max-width:860px) { .coll { grid-template-columns:1fr; gap:32px; } }
   .jalons { list-style:none; padding:0; margin:26px 0 0; display:grid; gap:12px; }
@@ -150,22 +152,30 @@
   .jalons b { flex:none; min-width:62px; text-align:center; background:var(--luciole); color:var(--encre); border-radius:999px; padding:5px 10px; font-size:14px; }
   .etagere-coll { border-radius:22px; overflow:hidden; box-shadow:0 30px 60px -30px rgba(31,37,87,.55); }
   .etagere-coll img { display:block; width:100%; height:auto; }
-  .univ { display:grid; grid-template-columns:.8fr 1.2fr; gap:56px; align-items:center; }
-  @media (max-width:860px) { .univ { grid-template-columns:1fr; gap:32px; } .univ-couv { max-width:240px; margin:0 auto; } }
-  .univ-couv img { width:100%; aspect-ratio:4/5; object-fit:cover; display:block; border-radius:22px; box-shadow:0 30px 50px -24px rgba(31,37,87,.6); }
-  .univ-t { font:800 14px var(--texte); text-transform:uppercase; letter-spacing:1.2px; color:var(--encre-2); margin:28px 0 10px; }
-  .calendrier { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-top:26px; }
-  @media (max-width:560px) { .calendrier { grid-template-columns:repeat(3, 1fr); gap:8px; } .calendrier b { font-size:14px; } .calendrier small { font-size:10px; letter-spacing:.8px; } }
-  .calendrier div { background:var(--papier); border:1px solid var(--trait); border-radius:14px; padding:10px 8px 11px; text-align:center;
-                    box-shadow:0 10px 20px -16px rgba(31,37,87,.5); overflow:hidden; position:relative; }
-  .calendrier div::before { content:""; position:absolute; left:0; right:0; top:0; height:5px; background:var(--encre); }
-  .calendrier small { display:block; font:800 11px var(--texte); letter-spacing:1.3px; text-transform:uppercase; color:var(--encre-2); margin-top:3px; }
-  .calendrier b { display:block; font:400 16px/1.2 var(--titre); color:var(--encre); margin-top:4px; }
-  @media (max-width:560px) { .calendrier b { font-size:14px; } .calendrier small { font-size:10px; letter-spacing:.6px; } .calendrier div { padding:10px 4px 11px; } }
-  .calendrier div.moi { background:linear-gradient(160deg,#FFF3D1,#FFE7A6); border-color:#F2CF6E; }
-  .calendrier div.moi::before { background:var(--luciole); }
-  .univ-liste { margin:22px 0 0; color:var(--encre-2); font-size:16px; line-height:1.7; }
-  .univ-liste b { color:var(--encre); }
+  .mondes { position:relative; }
+  .cartes { list-style:none; padding:0; margin:34px 0 0; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:18px; }
+  .cartes.petites { grid-template-columns:repeat(6, minmax(0, 1fr)); gap:14px; }
+  @media (max-width:980px) { .cartes { grid-template-columns:repeat(3, minmax(0, 1fr)); } .cartes.petites { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
+  @media (max-width:640px) { .cartes, .cartes.petites { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; } }
+  .cartes li[hidden] { display:none; }
+  .carte { display:block; text-decoration:none; color:var(--encre); border-radius:18px; background:var(--papier); padding:8px 8px 12px;
+           box-shadow:0 1px 0 rgba(120,90,40,.08), 0 18px 34px -24px rgba(31,37,87,.55); transition:transform .25s, box-shadow .25s; position:relative; }
+  .carte:hover { transform:translateY(-4px); box-shadow:0 1px 0 rgba(120,90,40,.08), 0 26px 40px -24px rgba(31,37,87,.6); }
+  .carte:focus-visible { outline:3px solid var(--luciole); outline-offset:3px; }
+  .carte .vis { position:relative; display:block; aspect-ratio:1; border-radius:12px; overflow:hidden; background:#1A1F4A; }
+  .carte .vis img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .5s; }
+  .carte:hover .vis img { transform:scale(1.04); }
+  .carte .vis::after { content:""; position:absolute; inset:6px; border:1.5px solid rgba(232,196,110,.85); border-radius:8px; pointer-events:none; }
+  .carte .vis.attente { background:radial-gradient(120% 90% at 30% 20%, var(--c1), var(--c2) 70%);
+       background-image:radial-gradient(1.5px 1.5px at 20% 30%, #FFE7A6 50%, transparent 51%), radial-gradient(1px 1px at 70% 22%, #FFE7A6 50%, transparent 51%),
+         radial-gradient(1.5px 1.5px at 82% 64%, #FFE7A6 50%, transparent 51%), radial-gradient(1px 1px at 35% 78%, #FFE7A6 50%, transparent 51%),
+         radial-gradient(120% 90% at 30% 20%, var(--c1), var(--c2) 70%); display:grid; place-items:center; }
+  .carte .vis.attente i { width:34%; aspect-ratio:1; background:url(/static/marque/etoile-128.png) center/contain no-repeat; opacity:.9; filter:drop-shadow(0 0 14px rgba(255,201,74,.5)); }
+  .carte b { display:block; font:400 clamp(16px,1.7vw,19px)/1.2 var(--titre); margin:12px 6px 0; }
+  .carte small { display:block; font:700 12px var(--texte); color:var(--encre-2); margin:3px 6px 0; letter-spacing:.3px; }
+  .petites .carte b { font-size:16px; margin-top:9px; }
+  .plus { margin:22px auto 0; display:flex; }
+  .h-occ { margin-top:72px; }
   .etagere { display:grid; grid-template-columns:repeat(4,1fr); gap:28px; margin-top:44px; }
   @media (max-width:1000px) { .etagere { grid-template-columns:repeat(2,1fr); } }
   @media (max-width:760px) { .etagere { grid-template-columns:1fr; gap:28px; max-width:420px; } }
@@ -265,7 +275,7 @@
   .etape h3 { font:400 24px/1.2 var(--titre); margin:0 0 8px; display:flex; gap:12px; align-items:baseline; }
   .etape h3::before { counter-increment:e; content:counter(e); font:800 15px var(--texte); color:var(--encre); background:var(--luciole); width:30px; height:30px; border-radius:50%; display:inline-grid; place-items:center; flex:none; transform:translateY(-3px); }
   .etape p { margin:0; color:var(--encre-2); }
-  .avatars { display:flex; align-items:flex-end; justify-content:center; width:100%; height:100%; padding:18px 8px 0; background:radial-gradient(circle at 50% 75%, #DCE3FA, var(--papier) 70%); }
+  .avatars { display:flex; align-items:flex-end; justify-content:center; width:100%; height:100%; padding:18px 8px 0; background:radial-gradient(circle at 50% 75%, #F3E6CC, var(--papier) 70%); }
   .avatars img { width:36%; height:auto; margin:0 -5%; filter:drop-shadow(0 8px 10px rgba(31,37,87,.25)); }
   .avatars img:nth-child(2) { width:62%; z-index:1; }
   .page-mini { width:72%; aspect-ratio:1; transform:rotate(-3deg); box-shadow:0 18px 30px -12px rgba(31,37,87,.45); border-radius:4px; overflow:hidden; position:relative; }
@@ -335,7 +345,7 @@
   <div class="in wrap">
     <a href="/" class="logo" aria-label="Mon Héros du Mois, accueil"><span class="logo-mark" aria-hidden="true"></span>Mon Héros du Mois</a>
     <nav aria-label="Navigation principale">
-      <a href="#feuilleter">Feuilleter</a><a href="#comment">Comment ça marche</a><a href="#collection">Collection</a><a href="#formules">Formules</a><a href="#questions">Questions</a>
+      <a href="#feuilleter">Feuilleter</a><a href="#comment">Comment ça marche</a><a href="#univers">Univers</a><a href="#collection">Collection</a><a href="#formules">Formules</a><a href="#questions">Questions</a>
     </nav>
     <a class="btn petit" href="/creer">Créer son livre</a>
   </div>
@@ -346,7 +356,7 @@
   <div class="in wrap">
     <div>
       <h1>Le livre où votre enfant est le héros</h1>
-      <p class="intro">Son prénom, son visage, son doudou et ses animaux dans une vraie histoire illustrée, imprimée et reliée. Chaque mois, une nouvelle aventure arrive dans la boîte aux lettres.</p>
+      <p class="intro">Son prénom, son apparence, son doudou et ses animaux dans une vraie histoire illustrée, imprimée et reliée. Chaque mois, une nouvelle aventure arrive dans la boîte aux lettres.</p>
       <p class="prix-appel">À partir de <b>24,90 €</b> le livre, livraison offerte</p>
       <form class="essai" action="/creer" method="get">
         <label for="prenom">Essayez avec son prénom</label>
@@ -387,7 +397,7 @@
 <section class="nuit" id="feuilleter">
   <div class="wrap">
     <h2>Feuilletez nos livres</h2>
-    <p class="sous">Cliquez sur un livre pour l'ouvrir. Le vôtre aura le prénom, le visage et les compagnons de votre enfant.</p>
+    <p class="sous">Cliquez sur un livre pour l'ouvrir. Dans le vôtre, votre enfant, son doudou et ses animaux deviennent les héros de l'aventure.</p>
     <div class="etal" id="etal">
       <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp" alt=""></span><b>Noé</b><span>La poussière d'étoiles</span></button>
       <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp" alt=""><i>Léo<small>et la forêt des petites lumières</small></i></span><b>Léo</b><span>La forêt des petites lumières</span></button>
@@ -435,7 +445,7 @@
   </div></div>
 </section>
 
-<section class="bloc collection" id="collection">
+<section class="bloc etoiles-fines collection" id="collection">
   <div class="wrap coll">
     <div>
       <h2>Une collection qui grandit avec lui</h2>
@@ -451,17 +461,17 @@
   </div>
 </section>
 
-<section class="bloc couvs" id="fetes">
+<section class="bloc etoiles-fines mondes" id="univers">
   <div class="wrap">
-    <div class="univ">
-      <div class="univ-couv"><img src="/static/vitrine/photo_07.webp" alt="Le livre de Léo dans sa boîte cadeau, avec un ruban doré" loading="lazy"></div>
-      <div>
-        <h2>Un univers différent chaque mois, et un livre pour chaque fête</h2>
-        <p class="sous">Son anniversaire, Noël, l'Aïd, Hanoukka, Diwali… Choisissez les fêtes de votre famille : le livre arrive juste avant, avec votre enfant en héros de la fête.</p>
-        <div class="calendrier" id="calendrier"></div>
-        <p class="univ-liste" id="univListe"></p>
-      </div>
-    </div>
+    <h2>Dans quel monde partira votre enfant ?</h2>
+    <p class="sous">Un univers différent chaque mois. Choisissez celui de son premier livre : vous le retrouverez déjà sélectionné dans la création.</p>
+    <ul class="cartes" id="cartesUnivers" aria-label="Les univers"></ul>
+    <button type="button" class="btn ghost plus" id="plusUnivers" aria-expanded="false" aria-controls="cartesUnivers">Voir tous les univers</button>
+
+    <h2 id="fetes" class="h-occ">Une occasion spéciale</h2>
+    <p class="sous">Son anniversaire ou une fête de votre famille : le livre arrive juste avant, avec votre enfant en héros de la fête.</p>
+    <ul class="cartes petites" id="cartesFetes" aria-label="Les fêtes et occasions"></ul>
+    <button type="button" class="btn ghost plus" id="plusFetes" aria-expanded="false" aria-controls="cartesFetes">Voir toutes les occasions</button>
   </div>
 </section>
 
@@ -496,16 +506,16 @@
     <div>
       <h2>Ce qu'il y a dans chaque livre</h2>
       <ul class="points">
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span><div><b>Votre enfant, reconnaissable sur chaque page</b><span>Le même visage, la même coiffure et la même tenue du début à la fin.</span></div></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span><div><b>Votre enfant, héros de chaque page</b><span>Son prénom, sa coiffure, ses couleurs et sa tenue guident les illustrations, du début à la fin.</span></div></li>
         <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4c-2 3-2 6 0 8M17 4c2 3 2 6 0 8"/><circle cx="12" cy="14" r="6"/></svg></span><div><b>Son doudou et ses animaux</b><span>Ils l'accompagnent dans l'histoire, avec leur nom et leurs couleurs.</span></div></li>
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM8 7h6M8 11h6"/></svg></span><div><b>18 pages illustrées</b><span>Une histoire courte à lire à voix haute, pensée pour les 3 à 8 ans.</span></div></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM8 7h6M8 11h6"/></svg></span><div><b>20 pages, dont 18 pages d’histoire illustrées</b><span>Une histoire à lire à voix haute, pensée pour les 3 à 8 ans, avec la couverture et la quatrième.</span></div></li>
         <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></span><div><b>Un vrai livre relié</b><span>Couverture rigide, format carré, et son numéro sur la tranche pour la collection.</span></div></li>
       </ul>
     </div>
   </div>
 </section>
 
-<section class="bloc" id="formules">
+<section class="bloc etoiles-fines" id="formules">
   <div class="wrap">
     <h2>Une aventure par mois, ou un livre pour chaque fête</h2>
     <p class="sous">Livraison offerte en France, Belgique, Luxembourg, Suisse et Monaco.</p>
@@ -514,7 +524,7 @@
         <h3>Un livre</h3>
         <p class="sous">Pour une première fois ou un cadeau.</p>
         <div class="prix">34,90 €</div>
-        <ul><li>Un album relié de 24 pages</li><li>L'univers ou la fête de votre choix</li><li>Livré chez vous</li></ul>
+        <ul><li>Un album relié de 20 pages, dont 18 pages d’histoire illustrées</li><li>L'univers ou la fête de votre choix</li><li>Livré chez vous</li></ul>
         <a class="btn clair" href="/creer?formule=livre">Créer ce livre</a>
       </div>
       <div class="formule phare">
@@ -544,12 +554,12 @@
   </div>
 </section>
 
-<section class="bloc" id="questions">
+<section class="bloc etoiles-fines" id="questions">
   <div class="wrap">
     <h2 style="text-align:center;margin-left:auto;margin-right:auto">Vos questions</h2>
     <div class="faq">
       <details><summary>Quand vais-je recevoir le livre ?</summary><p>Le livre est créé juste après votre commande, puis relu avant d'être imprimé. Comptez 7 à 15 jours ouvrés pour le recevoir.</p></details>
-      <details><summary>Pour quel âge ?</summary><p>Les histoires sont écrites pour être lues à voix haute aux enfants de 3 à 8 ans. Les phrases sont courtes et chaque page tient en une illustration.</p></details>
+      <details><summary>Pour quel âge ?</summary><p>Les histoires sont écrites pour être lues à voix haute aux enfants de 3 à 8 ans. Les phrases sont courtes et chaque livre compte 20 pages, dont 18 pages d’histoire illustrées.</p></details>
       <details><summary>Comment sont créés le texte et les illustrations ?</summary><p>Avec l'aide de l'intelligence artificielle, à partir de l'avatar et du thème que vous choisissez. Chaque livre est ensuite relu par nous avant l'impression : si une page ne va pas, nous la refaisons.</p></details>
       <details><summary>Puis-je arrêter l'abonnement ?</summary><p>Oui, à tout moment et sans frais. Les livres déjà payés vous sont envoyés normalement.</p></details>
       <details><summary>Que deviennent les informations sur mon enfant ?</summary><p>Elles servent uniquement à créer ses livres. Nous ne les partageons pas et nous les effaçons après la livraison du dernier livre.</p></details>
@@ -622,7 +632,7 @@
   }
   const LIVRES = {
     leo: {
-      sous: '« Léo et la forêt des petites lumières », une histoire sur la peur du noir. Le vôtre aura le prénom, le visage et les compagnons de votre enfant.',
+      sous: '« Léo et la forêt des petites lumières », une histoire sur la peur du noir. Dans le vôtre, votre enfant, son doudou et ses animaux deviennent les héros de l\'aventure.',
       n: LEO.length, img: i => V + `leo_${pad(i)}.webp`, mini: i => V + `leo_${pad(i)}_s.webp`,
       couv: `<div class="face recto couv"><img src="${V}leo_00.webp" alt="Couverture du livre de Léo"><div class="tc"><b>Léo</b><span>et la forêt des petites lumières</span></div></div>`,
       gauche: i => `<img src="${V}leo_${pad(i)}.webp" alt="" loading="lazy">`,
@@ -732,13 +742,36 @@
 
   /* univers et fêtes (même liste que l'éditeur) */
   fetch('/api/univers').then(r => r.json()).then(l => {
-    const MOIS = { anniversaire: 'Le jour J', galette: 'Janvier', nouvelan_chinois: 'Janv. – févr.', carnaval: 'Février', ramadan: 'Selon l\'année',
-                   aid: 'Selon l\'année', paques: 'Mars – avril', halloween: 'Octobre', diwali: 'Oct. – nov.', hanoukka: 'Décembre', noel: 'Décembre' };
-    const ordre = ['anniversaire', 'galette', 'nouvelan_chinois', 'carnaval', 'ramadan', 'aid', 'paques', 'halloween', 'diwali', 'hanoukka', 'noel'];
-    const f = l.filter(u => u.fete).sort((a, b) => ordre.indexOf(a.cle) - ordre.indexOf(b.cle));
-    $('calendrier').innerHTML = f.map(u => `<div class="${u.cle === 'anniversaire' ? 'moi' : ''}"><small>${esc(MOIS[u.cle] || '')}</small><b>${esc(u.puce)}</b></div>`).join('');
-    const un = l.filter(u => !u.fete).map(u => u.nom.replace(/^(Une?|Les?|La|L')\s?/, '').replace(/^./, c => c.toLowerCase()));
-    $('univListe').innerHTML = `<b>Et ${un.length} univers pour les autres mois :</b> ` + esc(un.join(', ')) + '.';
+    const MOIS = { anniversaire: 'Le jour J', galette: 'Janvier', nouvelan_chinois: 'Janvier – février', carnaval: 'Février', ramadan: 'Selon l\'année',
+                   aid: 'Selon l\'année', paques: 'Mars – avril', halloween: 'Octobre', diwali: 'Octobre – novembre', hanoukka: 'Décembre', noel: 'Décembre' };
+    const ordreU = ['foret', 'espace', 'mer', 'dinosaure', 'chateau', 'pirates'];
+    const ordreF = ['anniversaire', 'noel', 'halloween', 'paques', 'ramadan', 'aid', 'galette', 'carnaval', 'nouvelan_chinois', 'hanoukka', 'diwali'];
+    const TEINTES = ['#2E5A3C,#0F2A1F', '#2A2F6E,#0E1238', '#1D6A86,#0A2F45', '#6E7A2E,#2A3412', '#7A3048,#2E0F1C', '#3A4A8C,#141A3E', '#6B4527,#2A170B'];
+    const rang = (o, c) => { const i = o.indexOf(c); return i < 0 ? 99 : i; };
+    const carte = (u, i, petite, cache) => {
+      const [c1, c2] = TEINTES[i % TEINTES.length].split(',');
+      const href = u.fete ? `/creer?fete=${u.cle}` : `/creer?univers=${u.cle}`;
+      const vis = u.img ? `<span class="vis"><img src="${u.img}" alt="" loading="lazy" width="520" height="520"></span>`
+                        : `<span class="vis attente" style="--c1:${c1};--c2:${c2}"><i></i></span>`;
+      return `<li${cache ? ' hidden' : ''}><a class="carte" href="${href}" aria-label="Créer un livre : ${esc(u.court)}">${vis}<b>${esc(u.court)}</b>` +
+             (u.fete ? `<small>${esc(MOIS[u.cle] || '')}</small>` : '') + `</a></li>`;
+    };
+    const un = l.filter(u => !u.fete).sort((a, b) => rang(ordreU, a.cle) - rang(ordreU, b.cle) || (!!b.img - !!a.img));
+    const fe = l.filter(u => u.fete).sort((a, b) => rang(ordreF, a.cle) - rang(ordreF, b.cle));
+    const NU = 6, NF = matchMedia('(max-width:640px)').matches ? 4 : 6;
+    $('cartesUnivers').innerHTML = un.map((u, i) => carte(u, i, false, i >= NU)).join('');
+    $('cartesFetes').innerHTML = fe.map((u, i) => carte(u, i + 3, true, i >= NF)).join('');
+    const pli = (btn, ul, n, plus, moins) => {
+      btn.onclick = () => {
+        const ouvert = btn.getAttribute('aria-expanded') !== 'true';
+        [...ul.children].forEach((li, i) => { if (i >= n) li.hidden = !ouvert; });
+        btn.setAttribute('aria-expanded', ouvert); btn.textContent = ouvert ? moins : plus;
+        if (ouvert) ul.children[n] && ul.children[n].querySelector('a').focus({ preventScroll: true });
+        else ul.scrollIntoView({ behavior: calme ? 'auto' : 'smooth', block: 'start' });
+      };
+    };
+    pli($('plusUnivers'), $('cartesUnivers'), NU, 'Voir tous les univers', 'Réduire la liste');
+    pli($('plusFetes'), $('cartesFetes'), NF, 'Voir toutes les occasions', 'Réduire la liste');
   }).catch(() => {});
 
   /* avis : uniquement de vrais avis clients (static/avis.json) */
