@@ -117,10 +117,18 @@
   .miniatures img { width:100%; height:100%; object-fit:cover; display:block; }
   .nuit .note { text-align:center; color:#AEB4E0; font-size:14px; margin-top:20px; }
 
+  .galerie { padding-bottom:60px; overflow:hidden; }
+  .defile { overflow:hidden; padding:40px 0 20px; -webkit-mask:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+  .piste { display:flex; gap:18px; width:max-content; animation:defile 70s linear infinite; }
+  .defile:hover .piste { animation-play-state:paused; }
+  @keyframes defile { to { transform:translateX(calc(-50% - 9px)); } }
+  .piste img { flex:none; width:clamp(220px, 24vw, 320px); aspect-ratio:4/5; object-fit:cover; border-radius:20px; box-shadow:0 26px 40px -24px rgba(31,37,87,.55); }
+  .piste img:nth-child(even) { margin-top:34px; }
+  @media (prefers-reduced-motion: reduce) { .piste { animation:none; } .defile { overflow-x:auto; } }
   .couvs { padding-bottom:20px; }
   .univ { display:grid; grid-template-columns:.8fr 1.2fr; gap:56px; align-items:center; }
   @media (max-width:860px) { .univ { grid-template-columns:1fr; gap:32px; } .univ-couv { max-width:240px; margin:0 auto; } }
-  .univ-couv img { width:100%; aspect-ratio:1; object-fit:cover; display:block; border-radius:3px 8px 8px 3px; box-shadow:-7px 0 0 #1B2A55, 0 30px 50px -24px rgba(31,37,87,.6); transform:rotate(-2deg); }
+  .univ-couv img { width:100%; aspect-ratio:4/5; object-fit:cover; display:block; border-radius:22px; box-shadow:0 30px 50px -24px rgba(31,37,87,.6); }
   .univ-t { font:800 14px var(--texte); text-transform:uppercase; letter-spacing:1.2px; color:var(--encre-2); margin:28px 0 10px; }
   .puces { display:flex; flex-wrap:wrap; gap:8px; }
   .puces span { background:var(--papier); border:1px solid var(--trait); border-radius:999px; padding:8px 15px; font-weight:700; font-size:15px; }
@@ -212,6 +220,7 @@
   .page-mini img { width:100%; height:100%; object-fit:cover; display:block; }
   .page-mini p { position:absolute; left:0; right:0; bottom:0; margin:0; padding:30px 14px 12px; color:#FFF6DC; font:400 13px/1.4 Georgia, serif;
                  background:linear-gradient(transparent, rgba(16,22,47,.85)); }
+  .etape .vis.photo img { width:100%; height:100%; object-fit:cover; object-position:center 40%; display:block; }
   .colis { width:58%; aspect-ratio:1; position:relative; transform:rotate(4deg); }
   .colis img { width:100%; height:100%; object-fit:cover; border-radius:3px 6px 6px 3px; box-shadow:-6px 0 0 #1B2A55, 0 22px 30px -12px rgba(31,37,87,.5); }
   .colis em { position:absolute; left:50%; top:9%; transform:translateX(-50%); width:86%; text-align:center; font:400 21px/1.05 var(--titre); color:#FFF6DC; font-style:normal; text-shadow:0 2px 10px rgba(0,0,0,.6); }
@@ -352,10 +361,35 @@
   </div>
 </section>
 
+<section class="bloc galerie">
+  <div class="wrap">
+    <h2>Un vrai livre, à lire ensemble</h2>
+    <p class="sous">Couverture rigide, format carré 21,6 cm : un album qu'on garde, qu'on relit et qu'on se passe entre frères et sœurs.</p>
+  </div>
+  <div class="defile" aria-label="Photos des livres"><div class="piste">
+      <img src="/static/vitrine/photo_01.webp" alt="Les livres de Mila, Noé, Léo et Jade" loading="lazy">
+      <img src="/static/vitrine/photo_03.webp" alt="Une maman et sa fille lisent le livre de Mila" loading="lazy">
+      <img src="/static/vitrine/photo_06.webp" alt="Un enfant tient le livre de Noé" loading="lazy">
+      <img src="/static/vitrine/photo_04.webp" alt="Le livre de Mila tenu à deux mains" loading="lazy">
+      <img src="/static/vitrine/photo_08.webp" alt="Le livre de Noé ouvert le soir sous la couette" loading="lazy">
+      <img src="/static/vitrine/photo_10.webp" alt="Les quatre livres sur un présentoir" loading="lazy">
+      <img src="/static/vitrine/photo_05.webp" alt="Le livre de Mila ouvert sur le sable" loading="lazy">
+      <img src="/static/vitrine/photo_09.webp" alt="Le livre de Noé sur le lit, à côté d'un ours en peluche" loading="lazy">
+      <img src="/static/vitrine/photo_01.webp" alt="" loading="lazy" aria-hidden="true">
+      <img src="/static/vitrine/photo_03.webp" alt="" loading="lazy" aria-hidden="true">
+      <img src="/static/vitrine/photo_06.webp" alt="" loading="lazy" aria-hidden="true">
+      <img src="/static/vitrine/photo_04.webp" alt="" loading="lazy" aria-hidden="true">
+      <img src="/static/vitrine/photo_08.webp" alt="" loading="lazy" aria-hidden="true">
+      <img src="/static/vitrine/photo_10.webp" alt="" loading="lazy" aria-hidden="true">
+      <img src="/static/vitrine/photo_05.webp" alt="" loading="lazy" aria-hidden="true">
+      <img src="/static/vitrine/photo_09.webp" alt="" loading="lazy" aria-hidden="true">
+  </div></div>
+</section>
+
 <section class="bloc couvs" id="fetes">
   <div class="wrap">
     <div class="univ">
-      <div class="univ-couv"><img src="/static/vitrine/couv_jade.webp" alt="Couverture : Jade et la vallée des dinosaures" loading="lazy"></div>
+      <div class="univ-couv"><img src="/static/vitrine/photo_02.webp" alt="Le livre de Jade et la vallée des dinosaures posé sur une table" loading="lazy"></div>
       <div>
         <h2>Un univers différent chaque mois, et un livre pour chaque fête</h2>
         <p class="sous">Son anniversaire, Noël, l'Aïd, Hanoukka, Diwali… Choisissez les fêtes de votre famille : le livre arrive juste avant, avec votre enfant en héros de la fête.</p>
@@ -383,7 +417,7 @@
         <p>Peur du noir, rentrée, arrivée d'un petit frère, confiance en soi : l'histoire l'aide avec ce qu'il vit en ce moment.</p>
       </div>
       <div class="etape">
-        <div class="vis"><div class="colis"><img src="/static/vitrine/leo_00_s.webp" alt=""><em>Votre héros</em></div></div>
+        <div class="vis photo"><img src="/static/vitrine/photo_07.webp" alt="Le livre de Léo dans sa boîte, avec un ruban doré" loading="lazy"></div>
         <h3>Recevez le livre relié</h3>
         <p>Nous écrivons, illustrons et relisons chaque livre avant de l'imprimer. Il arrive chez vous, prêt à être lu le soir même.</p>
       </div>
