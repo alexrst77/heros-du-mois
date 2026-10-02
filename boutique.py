@@ -103,8 +103,14 @@ def order_create():
             form["serie_total"] = str(k["duree"])
     if formule == "fetes":
         form["serie_total"] = "6"
+    nb_mois = 12 if formule == "fetes" else int(form.get("serie_total") or 0) if formule == "mensuel" else 0
+    une_fois = bool(c.get("une_fois")) and nb_mois > 0          # 12 mensualités (fêtes) ou abonnement offert : tout payer d'un coup
+    if une_fois:
+        form["paye_une_fois"] = "1"
     if "anniversaire" in fetes and not re.match(r"^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", form.get("anniversaire") or ""):
-        return jsonify(erreur="Indiquez la date d'anniversaire de l'enfant."), 400
+        if formule == "fetes":
+            return jsonify(erreur="Indiquez la date d'anniversaire de l'enfant, ou choisissez une autre fête."), 400
+        fetes.remove("anniversaire"); form["fetes"] = ",".join(fetes)         # date facultative : pas de livre d'anniversaire
 
     oid = uuid.uuid4().hex[:12]
     folder = STORE / oid; folder.mkdir(parents=True)
@@ -113,11 +119,11 @@ def order_create():
     (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {k: p.name for k, p in guides.items()},
                                                    "apercus": {k: p.name for k, p in previews.items()}}, ensure_ascii=False), encoding="utf-8")
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
-              montant=paiement.FORMULES[formule]["prix"], origine=oid, numero=int(form.get("numero") or 1) if str(form.get("numero", "1")).isdigit() else 1)
+              montant=paiement.FORMULES[formule]["prix"] * (nb_mois if une_fois else 1), origine=oid, numero=int(form.get("numero") or 1) if str(form.get("numero", "1")).isdigit() else 1)
     if not paiement.configured():
         return jsonify(id=oid, url=f"/creer?commande={oid}&test=1")
     try:
-        sid, url = paiement.checkout(oid, formule, email, base_url())
+        sid, url = paiement.checkout(oid, formule, email, base_url(), mois=nb_mois if une_fois else None)
     except paiement.StripeError as e:
         db.update(oid, statut="erreur", erreur=str(e))
         return jsonify(erreur=str(e)), 502
@@ -150,7 +156,7 @@ def confirm_paid(oid, stripe_sub=None):
         return True
     if o["formule"] != "livre":
         sid = uuid.uuid4().hex[:12]
-        monthly_by_stripe = o["formule"] == "mensuel" and paiement.configured()
+        monthly_by_stripe = o["formule"] == "mensuel" and paiement.configured() and o.get("stripe_sub") is not None   # payé en une fois : pas d'abonnement Stripe, le planificateur envoie chaque mois
         total = f["livres"]
         try:
             total = int(load_book(oid)[0].get("serie_total") or 0) or total      # abonnement offert : 6 ou 12 livres
@@ -541,3 +547,55 @@ def admin_action(oid, action):
 @bp.get("/cgv")
 def cgv():
     return send_file(A.ROOT / "static" / "cgv.html")
+
+
+# ---------------------------------------------------------------- formulaire de contact du site
+CONTACT = os.getenv("CONTACT_EMAIL", "monherosdumois@gmail.com")
+SUJETS = {"question": "Une question", "commande": "Ma commande", "cadeau": "Offrir un livre", "autre": "Autre"}
+
+
+def send_mail(subject, body, reply_to=None):
+    """Envoi par Gmail (SMTP) si SMTP_PASSWORD (mot de passe d'application Google) est renseigné ; sinon rien (le message reste dans l'admin)."""
+    pw = os.getenv("SMTP_PASSWORD")
+    if not pw:
+        return False
+    import smtplib
+    from email.message import EmailMessage
+    user = os.getenv("SMTP_USER", CONTACT)
+    m = EmailMessage(); m["Subject"] = subject; m["From"] = user; m["To"] = CONTACT
+    if reply_to: m["Reply-To"] = reply_to
+    m.set_content(body)
+    with smtplib.SMTP(os.getenv("SMTP_HOST", "smtp.gmail.com"), int(os.getenv("SMTP_PORT", "587")), timeout=20) as s:
+        s.starttls(); s.login(user, pw); s.send_message(m)
+    return True
+
+
+@bp.post("/api/contact")
+def contact():
+    d = request.get_json(force=True, silent=True) or {}
+    if d.get("site"):                                     # champ piège invisible : robot
+        return jsonify(ok=True)
+    clean = lambda v, n: re.sub(r"[ \t]+", " ", str(v or "")).strip()[:n]
+    nom, email, msg = clean(d.get("nom"), 80), clean(d.get("email"), 190), clean(d.get("message"), 3000)
+    sujet = SUJETS.get(d.get("sujet"), SUJETS["question"])
+    if not EMAIL.match(email):
+        return jsonify(erreur="Adresse e-mail invalide."), 400
+    if len(msg) < 5:
+        return jsonify(erreur="Écrivez votre message."), 400
+    if db.messages_recent(email, time.time() - 3600) >= 5:
+        return jsonify(erreur="Trop de messages envoyés, réessayez dans une heure."), 429
+    mid = db.message_add(nom, email, sujet, msg)
+    try:
+        if send_mail(f"[Site] {sujet} – {nom or email}", f"De : {nom} <{email}>\nSujet : {sujet}\n\n{msg}", reply_to=email):
+            db.message_update(mid, envoye=1)
+    except Exception:
+        traceback.print_exc()
+    log(f"message de contact n°{mid} ({sujet})")
+    return jsonify(ok=True)
+
+
+@bp.get("/admin/api/messages")
+def admin_messages():
+    if not admin_ok():
+        abort(403)
+    return jsonify(messages=db.messages(), envoi=bool(os.getenv("SMTP_PASSWORD")))

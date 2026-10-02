@@ -16,6 +16,8 @@ create table if not exists commandes (
   montant integer, stripe_session text, stripe_sub text, abonnement_id text, origine text, numero integer,
   job_id text, pdf text, titre text, jeton text, lulu_id text, lulu_statut text, lulu_cout text,
   suivi text, erreur text, controle text);
+create table if not exists messages (
+  id integer primary key autoincrement, cree real, nom text, email text, sujet text, message text, envoye integer default 0, lu integer default 0);
 create table if not exists abonnements (
   id text primary key, cree real, commande_origine text, formule text, statut text, livres_restants integer,
   prochain real, stripe_sub text, numero integer, email text);
@@ -127,3 +129,24 @@ def due_subs(now=None):
         return [_row(r) for r in c.execute(
             "select * from abonnements where statut='actif' and prochain is not null and prochain<=? "
             "and (livres_restants is null or livres_restants>0)", (now,))]
+
+
+def message_add(nom, email, sujet, message):
+    with _lock, _db() as c:
+        cur = c.execute("insert into messages (cree, nom, email, sujet, message) values (?,?,?,?,?)", (time.time(), nom, email, sujet, message))
+        return cur.lastrowid
+
+
+def message_update(mid, **kw):
+    with _lock, _db() as c:
+        c.execute(f"update messages set {','.join(k + '=?' for k in kw)} where id=?", list(kw.values()) + [mid])
+
+
+def messages(limit=100):
+    with _db() as c:
+        return [dict(r) for r in c.execute("select * from messages order by cree desc limit ?", (limit,))]
+
+
+def messages_recent(email, since):
+    with _db() as c:
+        return c.execute("select count(*) from messages where email=? and cree>?", (email, since)).fetchone()[0]

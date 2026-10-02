@@ -890,13 +890,13 @@ def recolor_targets(kind, cfg):
             t["tenue"] = cfg["tenue"]; t["B"] = col("enfant", "couleur_tenue")
         elif cfg.get("couleur_tenue") != base["couleur_tenue"]: t["B"] = col("enfant", "couleur_tenue")
     elif kind == "doudou":
-        if cfg.get("couleur") != base["couleur"]: t["R"] = col("doudou", "couleur")
+        if cfg.get("couleur") != base["couleur"]: t["R"] = col("doudou", "couleur"); t["dye"] = True
         if cfg.get("accessoire") == "noeud" and cfg.get("couleur_accessoire") != base["couleur_accessoire"]:
             t["B"] = col("doudou", "couleur_accessoire")
         if cfg.get("accessoire") == "echarpe": t["A"] = col("doudou", "couleur_accessoire")
     else:
         main = col("animal", "couleur")
-        if cfg.get("couleur") != base.get("couleur"): t["R"] = main
+        if cfg.get("couleur") != base.get("couleur"): t["R"] = main; t["dye"] = True
         if cfg.get("motif") == "uni" and cfg.get("type") != "oiseau": t["G"] = _shade(main, .2)
         elif cfg.get("couleur2") and cfg.get("couleur2") != base.get("couleur2"): t["G"] = col("animal", "couleur2")
         if cfg.get("motif") in ("taches", "raye", "masque") and cfg.get("type") != "oiseau":

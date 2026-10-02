@@ -59,6 +59,18 @@ def shift_zone(rgb, w, base, target):
     return r * (1 - w) + r2 * w, g * (1 - w) + g2 * w, b * (1 - w) + b2 * w
 
 
+def dye(rgb, w, base, target):
+    """Tissu des doudous : teinture réelle (couleur choisie atteinte), grain et modelé gardés. Même formule que avatar.js (dye)."""
+    r, g, b = rgb
+    hb, sb, lb = [float(v) for v in rgb2hsl(*[np.array(v / 255) for v in base])]
+    ht, st, lt = [float(v) for v in rgb2hsl(*hexrgb(target))]
+    h, s, l = rgb2hsl(r, g, b)
+    dh = ((h - hb + 1.5) % 1) - .5
+    l2 = np.where(l <= lb, l * lt / max(lb, 1e-3), np.minimum(.97, lt + (l - lb) * .8 * (1 - lt) / max(1 - lb, 1e-3)))
+    r2, g2, b2 = hsl2rgb(ht + dh * .06, np.minimum(1, st * (.88 + .12 * np.minimum(2, s / max(sb, .05)))), l2)
+    return r * (1 - w) + r2 * w, g * (1 - w) + g2 * w, b * (1 - w) + b2 * w
+
+
 def iris(rgb, w, target):
     r, g, b = rgb
     ht, st, lt = [float(v) for v in rgb2hsl(*hexrgb(target))]
@@ -183,7 +195,7 @@ def paint(name, t):
     rgb = (px[..., 0], px[..., 1], px[..., 2])
     for i, k in enumerate("RG"):
         if t.get(k) and k in st:
-            rgb = shift_zone(rgb, M[..., i], st[k], t[k])
+            rgb = dye(rgb, M[..., i], st[k], t[k]) if (t.get("dye") and k == "R") else shift_zone(rgb, M[..., i], st[k], t[k])
     if t.get("motif") and t.get("M") and "R" in st:       # motif des animaux, dans la couleur 2
         wm = motif_weight(t["motif"], st, size) * M[..., 0] * (1 - M[..., 1])
         rgb = shift_zone(rgb, wm, st["R"], t["M"])

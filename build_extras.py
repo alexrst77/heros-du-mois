@@ -67,7 +67,21 @@ def eye_mask(n):
     Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8)).save(AV + f"{n}.eyes.png")
 
 
+def bird_beak():
+    """Oiseau : le bec et les pattes (orangés) ne prennent pas la couleur du plumage."""
+    n = "animal-oiseau"
+    hsv = np.asarray(Image.open(AV + f"{n}.webp").convert("RGB").convert("HSV")).astype(float)
+    h, s = hsv[..., 0] * 360 / 255, hsv[..., 1] / 255
+    keep = ~((h < 28) & (s > .4))
+    keep = nd.gaussian_filter(nd.binary_erosion(keep, iterations=1).astype(float), .8)
+    m = np.array(Image.open(AV + f"{n}.mask.png").convert("RGB"))
+    for ch in (0, 1):
+        m[..., ch] = (m[..., ch] * keep).astype(np.uint8)
+    Image.fromarray(m).save(AV + f"{n}.mask.png")
+
+
 if __name__ == "__main__":
+    bird_beak()
     st = json.load(open(AV + "masks.json"))
     for n in DOUDOUS:
         ech = nobow(n)

@@ -75,8 +75,6 @@ def _cover_title(c, t):
     color = t.get("color") or '#FFF1CF'
     c.setFillColor(HexColor('#EAD49D')); c.setFont('Story', 11)
     kick = "   ".join((t.get("kicker") or "MON HÉROS DU MOIS").upper().split(" "))
-    if t.get("numero"):                       # collection : chaque livre porte son numéro
-        kick += f"   •   N° {int(t['numero'])}"
     c.drawCentredString(S / 2, S - 40, kick)
     lines = [str(x) for x in t["lines"] if str(x).strip()]
     y = S - 58
@@ -95,7 +93,7 @@ def _serie(c, t):
     """Bas de couverture : où en est la série (« Livre 1 sur 6 » + points + ce qui reste à recevoir). Utile pour un cadeau."""
     se = t.get("serie") or {}
     n, total, f = int(t.get("numero") or 1), se.get("total"), se.get("formule")
-    if not total and f != "mensuel":
+    if not total:                              # seulement quand la série a une fin connue (cadeau, livres de fête)
         return
     c.drawImage(ImageReader(_veil('#0B1530')), 0, 0, S, 150, mask='auto')
     pill = f"LIVRE {n} SUR {total}" if total else f"AVENTURE N° {n}"

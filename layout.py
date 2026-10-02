@@ -733,6 +733,11 @@ def _build_cover(story, cover_img, back_amb, out_path, width, height):
             c.saveState(); c.translate(trim + m + spine / 2 + 3, height / 2); c.rotate(-90)
             c.setFont("Serif-Bold", min(10, spine * 0.45)); c.setFillColorRGB(*art.TITLE_WARM)
             c.drawCentredString(0, 0, " ".join(story["titre"])); c.restoreState()
+        num = str(story.get("numero") or "").lstrip("0")
+        if num and spine >= 12:                  # collection : le numéro du livre en bas de la tranche (les dos alignés se suivent)
+            cx, cy, r = trim + m + spine / 2, m + 34, min(spine * 0.42, 11)
+            c.setFillColorRGB(0.95, 0.76, 0.31); c.circle(cx, cy, r, stroke=0, fill=1)
+            c.setFillColorRGB(0.10, 0.12, 0.29); c.setFont("Serif-Bold", r * 1.05); c.drawCentredString(cx, cy - r * 0.36, num)
     c.showPage(); c.save()
     set_mode("ecran")
     return dict(largeur=round(width, 2), hauteur=round(height, 2), tranche=round(spine, 2), marge=round(m, 2),

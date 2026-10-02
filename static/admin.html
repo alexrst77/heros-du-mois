@@ -31,6 +31,8 @@
   <div id="list">Chargement…</div>
   <h2>Abonnements</h2>
   <div id="subs"></div>
+  <h2>Messages du site</h2>
+  <div id="msgs"></div>
 </div>
 <script>
 const code = new URLSearchParams(location.search).get('code') || '';
@@ -84,6 +86,10 @@ async function load() {
       <div>${btns.map(b => `<button class="${b[2] || ''}" onclick="act('${o.id}','${b[0]}',this)">${b[1]}</button>`).join('')}</div>
       <div class="msg"></div></div>`;
   }).join('') : '<p class="muted">Aucune commande pour l\'instant.</p>';
+  fetch('/admin/api/messages', { headers: H }).then(r => r.json()).then(m => {
+    document.getElementById('msgs').innerHTML = (m.envoi ? '' : '<p class="muted">Envoi par e-mail non configuré (SMTP_PASSWORD) : les messages arrivent seulement ici.</p>') +
+      (m.messages.length ? m.messages.map(x => `<div class="card"><b>${esc(x.sujet)}</b> · ${esc(x.nom || '')} · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a> · ${date(x.cree)}<p style="white-space:pre-wrap;margin:8px 0 0">${esc(x.message)}</p></div>`).join('') : '<p class="muted">Aucun message.</p>');
+  }).catch(() => {});
   document.getElementById('subs').innerHTML = d.abonnements.length ? d.abonnements.map(s => `<div class="card"><b>${esc(s.formule)}</b> · ${esc(s.statut)} · ${esc(s.email)} · dernier livre n°${s.numero}${s.livres_restants != null ? ' · ' + s.livres_restants + ' livre(s) restant(s)' : ''}${s.prochain ? ' · prochain le ' + date(s.prochain) : s.statut === 'actif' ? ' · prochain à la prochaine facture Stripe' : ''}</div>`).join('') : '<p class="muted">Aucun abonnement.</p>';
 }
 load(); setInterval(load, 30000);

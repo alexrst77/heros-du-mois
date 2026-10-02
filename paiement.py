@@ -53,8 +53,11 @@ def _api(method, path, data=None):
         raise StripeError(f"Stripe : {msg}")
 
 
-def checkout(order_id, formule, email, base_url):
-    f = FORMULES[formule]
+def checkout(order_id, formule, email, base_url, mois=None):
+    """mois : formule mensuelle payée en une fois (12 mensualités des fêtes, abonnement offert de 6 ou 12 mois)."""
+    f = dict(FORMULES[formule])
+    if mois:
+        f.update(prix=f["prix"] * mois, mode="payment", nom=f["nom"] + f" – {mois} mois payés en une fois")
     price = {"currency": "eur", "unit_amount": f["prix"], "product_data": {"name": "Mon Héros du Mois – " + f["nom"]}}
     if f["mode"] == "subscription":
         price["recurring"] = {"interval": "month"}

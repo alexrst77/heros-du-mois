@@ -215,10 +215,10 @@
   async function pixels(name) {
     if (imgs.has(name)) return imgs.get(name);
     const p = (async () => {
-      if (!MST) MST = await (await fetch('/static/avatars/masks.json?v=7')).json();
+      if (!MST) MST = await (await fetch('/static/avatars/masks.json?v=8')).json();
       const st = MST[name] || {};
-      const [a, m, e, sh] = await Promise.all([loadImg(`/static/avatars/${name}.webp`), loadImg(`/static/avatars/${name}.mask.png?v=7`),
-        (st.eyes || st.E) ? loadImg(`/static/avatars/${name}.eyes.png?v=7`).catch(() => null) : null,
+      const [a, m, e, sh] = await Promise.all([loadImg(`/static/avatars/${name}.webp`), loadImg(`/static/avatars/${name}.mask.png?v=8`),
+        (st.eyes || st.E) ? loadImg(`/static/avatars/${name}.eyes.png?v=8`).catch(() => null) : null,
         st.tenue ? loadImg(`/static/avatars/${name}.shirt.png?v=6`).catch(() => null) : null]);
       const c = document.createElement('canvas'); c.width = a.width; c.height = a.height;
       const x = c.getContext('2d', { willReadFrequently: true });
@@ -248,7 +248,14 @@
   function zoneOf(base, target) {
     const [hb, sb, lb] = rgb2hsl(...base.map(v => v / 255)), [ht, stt, lt] = rgb2hsl(...hex(target));
     const ks = stt / Math.max(sb, .05);
-    return { dh: ht - hb, ks: lt > lb ? Math.min(1, ks) : ks, lb, lt };
+    return { dh: ht - hb, ks: lt > lb ? Math.min(1, ks) : ks, lb, lt, ht, stt, sb, hb };
+  }
+  /* tissu des doudous : on teint vraiment (la couleur choisie est atteinte, même plus claire ou plus saturée que le modèle),
+     en gardant le grain et le modelé. Même formule que avatar_paint.py (dye). */
+  function dye(h, s, l, z) {
+    const dh = ((h - z.hb + 1.5) % 1) - .5;
+    const l2 = l <= z.lb ? l * z.lt / Math.max(z.lb, 1e-3) : Math.min(.97, z.lt + (l - z.lb) * .8 * (1 - z.lt) / Math.max(1 - z.lb, 1e-3));
+    return hsl2rgb(z.ht + dh * .06, Math.min(1, z.stt * (.88 + .12 * Math.min(2, s / Math.max(z.sb, .05)))), l2);
   }
   const WHITE = '#F4F0E6';
   function tenueAt(kind, X, Y, g, k, main, white) {     // couleur du vêtement en (X, Y) et détail peint (-1 sombre, +1 clair)
@@ -339,7 +346,7 @@
         for (const [z, i] of [[zR, 0], [zG, 1]]) {
           const w = M[p + i] / 255; if (!z || w < .01) continue;
           const [h, s, l] = rgb2hsl(r, g, b);
-          mix(w, hsl2rgb(h + z.dh, Math.min(1, s * z.ks), lightMap(l, z.lb, z.lt)));
+          mix(w, targets.dye && i === 0 ? dye(h, s, l, z) : hsl2rgb(h + z.dh, Math.min(1, s * z.ks), lightMap(l, z.lb, z.lt)));
         }
         if (zM) { const n = p / 4, X = n % P.w, Y = (n - X) / P.w, w = motifW(targets.motif, st, X, Y, k) * (M[p] / 255) * (1 - M[p + 1] / 255);
           if (w > .01) { const [h, s, l] = rgb2hsl(r, g, b); mix(w, hsl2rgb(h + zM.dh, Math.min(1, s * zM.ks), lightMap(l, zM.lb, zM.lt))); } }
@@ -364,13 +371,19 @@
       if (targets.C && st.collier) band(px, P.w, P.h, st.collier, k, targets.C, 'collier');
       const c = document.createElement('canvas'); c.width = P.w; c.height = P.h; const x = c.getContext('2d'); x.putImageData(d, 0, 0);
       const E = st.eyes;
-      if (E && (targets.freckles || targets.glasses)) overlays(x, E, targets);
+      if (E && (targets.freckles || targets.glasses)) {
+        const sk = document.createElement('canvas'); sk.width = P.w; sk.height = P.h;     // peau : les branches s'arrêtent aux cheveux
+        const sx = sk.getContext('2d'), sd = sx.createImageData(P.w, P.h);
+        for (let p = 0; p < sd.data.length; p += 4) sd.data[p + 3] = Math.min(255, M[p + 1] * 1.6);
+        sx.putImageData(sd, 0, 0);
+        overlays(x, E, targets, sk);
+      }
       return c.toDataURL('image/png');
     })();
     outs.set(key, job); return job;
   }
 
-  function overlays(x, E, t) {
+  function overlays(x, E, t, skin) {
     const [[x1, y1], [x2, y2]] = E, d = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1);
     let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     if (t.freckles) {                      // taches de rousseur : pommettes et arête du nez
@@ -388,15 +401,20 @@
     if (t.glasses) {                       // lunettes peintes : ombre, monture, reflet
       const r = d * .43, col = t.glasses.color, round = t.glasses.type === 'rondes';
       const lens = (dx) => { x.beginPath(); if (round) x.arc(dx, 0, r, 0, 7); else x.roundRect(dx - r * 1.08, -r * .78, r * 2.16, r * 1.56, r * .38); };
+      // branches : dessinées sur un calque à part, gardées seulement sur la peau (elles passent sous les cheveux, jamais hors de la tête)
+      const tl = document.createElement('canvas'); tl.width = x.canvas.width; tl.height = x.canvas.height; const y = tl.getContext('2d');
+      const place = c => { c.translate((x1 + x2) / 2, (y1 + y2) / 2 + d * .02); c.rotate(ang); };
       const frame = (stroke, lw, oy) => {
         x.save(); x.translate(0, oy); x.strokeStyle = stroke; x.lineWidth = lw; x.lineCap = 'round';
         lens(-d / 2); x.stroke(); lens(d / 2); x.stroke();
         x.beginPath(); x.moveTo(-d / 2 + r * (round ? .98 : 1.08), -r * .12); x.quadraticCurveTo(0, -r * .5, d / 2 - r * (round ? .98 : 1.08), -r * .12); x.stroke();
-        x.beginPath(); x.moveTo(-d / 2 - r * (round ? 1 : 1.08), -r * .2); x.lineTo(-d / 2 - r * 1.75, -r * .42); x.stroke();
-        x.beginPath(); x.moveTo(d / 2 + r * (round ? 1 : 1.08), -r * .2); x.lineTo(d / 2 + r * 1.75, -r * .42); x.stroke();
         x.restore();
+        y.save(); place(y); y.translate(0, oy); y.strokeStyle = stroke; y.lineWidth = lw; y.lineCap = 'round';
+        y.beginPath(); y.moveTo(-d / 2 - r * (round ? 1 : 1.08), -r * .2); y.lineTo(-d / 2 - r * 1.6, -r * .3); y.stroke();
+        y.beginPath(); y.moveTo(d / 2 + r * (round ? 1 : 1.08), -r * .2); y.lineTo(d / 2 + r * 1.6, -r * .3); y.stroke();
+        y.restore();
       };
-      x.save(); x.translate((x1 + x2) / 2, (y1 + y2) / 2 + d * .02); x.rotate(ang);
+      x.save(); place(x);
       x.fillStyle = 'rgba(255,255,255,.13)'; lens(-d / 2); x.fill(); lens(d / 2); x.fill();
       x.save(); x.filter = 'blur(2px)'; frame('rgba(40,20,10,.35)', r * .2, r * .08); x.restore();
       frame(col, r * .16, 0);
@@ -404,6 +422,8 @@
       x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = r * .07; x.lineCap = 'round';
       [-d / 2, d / 2].forEach(cx => { x.beginPath(); x.arc(cx, 0, r * .62, Math.PI * 1.1, Math.PI * 1.35); x.stroke(); });
       x.restore();
+      if (skin) { y.globalCompositeOperation = 'destination-in'; y.drawImage(skin, 0, 0); }
+      x.drawImage(tl, 0, 0);
     }
   }
 

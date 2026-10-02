@@ -96,6 +96,7 @@
   .err { color:var(--erreur); font-weight:700; font-size:15px; min-height:20px; margin:0 22px 6px; }
   .hint { font-size:14px; color:var(--encre-2); margin:6px 0 0; }
   .kdo { background:#FFF7E0; border:1px solid #F3DFA2; border-radius:14px; padding:14px 16px 4px; margin:0 0 18px; }
+  .unefois { margin:-2px 0 14px; font-size:14px; } .unefois small { color:var(--encre-2); font-weight:600; }
   .delai { background:#EEF6F1; border:1px solid #CFE5D8; border-radius:14px; padding:12px 16px; margin:4px 0 18px; display:grid; gap:2px; }
   .delai b { color:var(--mousse); } .delai span { font-size:14px; color:var(--encre-2); }
   .check { display:flex; gap:10px; align-items:flex-start; font-size:15px; color:var(--encre-2); }
@@ -195,7 +196,7 @@
     doudou: { actif: true, nom: '', type: 'lapin', couleur: 'bleu', accessoire: 'noeud', couleur_accessoire: 'rouge' },
     animaux: [],
     histoire: { theme: THEMES[0], univers: UNIVERS[0], fetes: ['anniversaire', 'noel'], heros_livre: 'enfant', passions: '', precision: '', numero: '01', code: '', demo: false },
-    commande: { formule: 'mensuel', email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
+    commande: { formule: 'mensuel', email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
   };
   let S;
   try { S = JSON.parse(localStorage.getItem('heros-avatar')) || null; } catch (_) { S = null; }
@@ -204,6 +205,7 @@
   const TEST = new URLSearchParams(location.search).has('test');   // options d'essai (mode démo) : adresse ?test seulement
   if (!TEST) S.histoire.demo = false;
   if (!Array.isArray(S.histoire.fetes)) S.histoire.fetes = ['anniversaire', 'noel'];
+  if (['sweat', 'robe'].includes(S.enfant.tenue)) S.enfant.tenue = 'tshirt';
   const save = () => { try { localStorage.setItem('heros-avatar', JSON.stringify(S)); } catch (_) {} };
   const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -241,12 +243,12 @@
       if (cfg.taches === 'oui') t.freckles = Avatar.shade(colorOf(OPT.enfant.peau, cfg.peau), -.42);
       if (cfg.lunettes !== 'aucune') t.glasses = { type: cfg.lunettes, color: colorOf(OPT.enfant.couleur_lunettes, cfg.couleur_lunettes) };
     } else if (kind === 'doudou') {
-      if (cfg.couleur !== b.couleur) t.R = colorOf(OPT.doudou.couleur, cfg.couleur);
+      if (cfg.couleur !== b.couleur) { t.R = colorOf(OPT.doudou.couleur, cfg.couleur); t.dye = true; }
       if (cfg.accessoire === 'noeud' && cfg.couleur_accessoire !== b.couleur_accessoire) t.B = colorOf(OPT.doudou.couleur_accessoire, cfg.couleur_accessoire);
       if (cfg.accessoire === 'echarpe') t.A = colorOf(OPT.doudou.couleur_accessoire, cfg.couleur_accessoire);
     } else {
       const main = colorOf(OPT.animal.couleur, cfg.couleur);
-      if (cfg.couleur !== b.couleur) t.R = main;
+      if (cfg.couleur !== b.couleur) { t.R = main; t.dye = true; }
       if (cfg.motif === 'uni' && cfg.type !== 'oiseau') t.G = Avatar.shade(main, .2);
       else if (cfg.couleur2 !== b.couleur2) t.G = colorOf(OPT.animal.couleur2, cfg.couleur2);
       if (['taches', 'raye', 'masque'].includes(cfg.motif) && cfg.type !== 'oiseau') { t.motif = cfg.motif; t.M = colorOf(OPT.animal.couleur2, cfg.couleur2); }
@@ -257,6 +259,9 @@
   }
   function bookOnly(kind, cfg) { return []; }      // tout ce qui se choisit se voit en direct dans l'aperçu
   const SHOWN = new Map(), OUVERT = {};
+  const RETIREES = ['sweat', 'robe'];      // tenues retirées : rendu pas assez propre en portrait
+  const COIF = { garcon: ['court', 'bataille', 'boucle', 'afro', 'rase'],
+                 fille: ['long', 'longboucle', 'carre', 'couettes', 'queue', 'tresses', 'chignon', 'afro', 'boucle'] };
   function herosChoix() {          // qui est le héros du livre : l'enfant, son doudou ou un de ses animaux
     const l = [['enfant', (S.enfant.prenom || 'Mon enfant').trim() + ' (l\'enfant)']];
     if (S.doudou.actif) l.push(['doudou', (S.doudou.nom || 'Le doudou').trim() + ' (le doudou)']);
@@ -333,15 +338,15 @@
     return `<div class="row2">${G('Prénom *', `<input type="text" data-in="prenom" maxlength="20" placeholder="Léo" value="${esc(e.prenom)}">`)}
       ${G('Âge *', `<select data-in="age">${[3, 4, 5, 6, 7, 8].map(a => `<option ${e.age == a ? 'selected' : ''}>${a}</option>`).join('')}</select>`)}</div>` +
       G('Son anniversaire', `<div class="row2" style="gap:0 10px"><select data-in="anniv_j" aria-label="Jour"><option value="">Jour</option>${Array.from({ length: 31 }, (_, i) => `<option ${e.anniv_j == i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>` +
-        `<select data-in="anniv_m" aria-label="Mois"><option value="">Mois</option>${MOIS.map((m, i) => `<option value="${i + 1}" ${e.anniv_m == i + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select></div>`, 'pour son livre d\'anniversaire') +
+        `<select data-in="anniv_m" aria-label="Mois"><option value="">Mois</option>${MOIS.map((m, i) => `<option value="${i + 1}" ${e.anniv_m == i + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select></div>`, 'facultatif · pour son livre d\'anniversaire') +
       G("C'est", chips(e, 'genre', O.genre)) +
       G('Teint', swatches(e, 'peau', O.peau), sel(O.peau, e.peau)) +
-      G('Coiffure', thumbs(e, 'coiffure', O.coiffure, id => `<img src="/static/avatars/${Avatar.pick(O.coiffure, id).img}.webp" alt="" loading="lazy">`), sel(O.coiffure, e.coiffure)) +
+      G('Coiffure', thumbs(e, 'coiffure', O.coiffure.filter(c => COIF[e.genre].includes(c.id)), id => `<img src="/static/avatars/${Avatar.pick(O.coiffure, id).img}.webp" alt="" loading="lazy">`), sel(O.coiffure, e.coiffure)) +
       G('Couleur des cheveux', swatches(e, 'couleur_cheveux', O.couleur_cheveux), sel(O.couleur_cheveux, e.couleur_cheveux)) +
       G('Yeux', swatches(e, 'yeux', O.yeux), sel(O.yeux, e.yeux)) +
       G('Lunettes', chips(e, 'lunettes', O.lunettes) + (e.lunettes !== 'aucune' ? `<div style="margin-top:10px">${swatches(e, 'couleur_lunettes', O.couleur_lunettes)}</div>` : '')) +
       G('Taches de rousseur', chips(e, 'taches', O.taches)) +
-      G('Tenue', chips(e, 'tenue', O.tenue)) +
+      G('Tenue', chips(e, 'tenue', O.tenue.filter(t => !RETIREES.includes(t.id)))) +
       G('Couleur de la tenue', swatches(e, 'couleur_tenue', O.couleur_tenue), sel(O.couleur_tenue, e.couleur_tenue)) +
       `<p class="hint">Aucune photo n'est demandée : l'avatar sert de modèle aux illustrations.</p>`;
   }
@@ -385,6 +390,8 @@
       (TEST ? `<div class="row2">${G("N° d'aventure", `<input type="text" data-in="numero" maxlength="3" value="${esc(h.numero)}">`)}${G("Code d'accès", `<input type="text" data-in="code" placeholder="si demandé" value="${esc(h.code)}">`)}</div>` +
       `<label class="check"><input type="checkbox" data-chk="demo" ${h.demo ? 'checked' : ''}> Mode démo : tester sans appel API (livre d'exemple)</label>` : '');
   }
+  const nbMois = () => S.commande.formule === 'fetes' ? 12 : (S.commande.formule === 'mensuel' && S.commande.cadeau) ? +S.commande.cadeau_duree : 0;
+  const prixTotal = () => ((S.commande.formule === 'fetes' ? 12.45 : 29.90) * nbMois()).toFixed(2).replace('.', ',') + ' €';
   function delai() {               // 7 à 15 jours ouvrés (conditions de vente)
     const plus = n => { const d = new Date(); while (n > 0) { d.setDate(d.getDate() + 1); if (d.getDay() % 6) n--; } return d; };
     const f = d => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
@@ -394,6 +401,8 @@
     const c = S.commande, inp = (k, ph, extra) => `<input type="text" data-in="${k}" value="${esc(c[k])}" placeholder="${ph}" ${extra || ''}>`;
     return `<div class="plans">` + PLANS.map(p => `<button type="button" class="plan ${c.formule === p.id ? 'on' : ''}" data-k="formule" data-v="${p.id}">
         <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>` +
+      (nbMois() ? `<label class="check unefois"><input type="checkbox" data-chk="une_fois" ${c.une_fois ? 'checked' : ''}><span>Payer en une fois` +
+        (c.une_fois ? ` <small>· ${prixTotal()} au lieu de ${nbMois()} × ${c.formule === 'fetes' ? '12,45' : '29,90'} €</small>` : '') + `</span></label>` : '') +
       `<div class="delai"><b>${c.formule === 'fetes' ? 'Chaque livre arrive avant sa fête' : 'Livraison estimée : ' + delai()}</b>` +
       `<span>${c.formule === 'fetes' ? "Il est créé environ 5 semaines avant la fête, relu, imprimé puis expédié. Livraison offerte." :
         "Création et relecture du livre, impression, puis expédition : 7 à 15 jours ouvrés. Livraison offerte" + (c.formule === 'mensuel' ? ", puis un nouveau livre chaque mois." : ".")}</span></div>` +
@@ -419,7 +428,7 @@
     $('body').innerHTML = { enfant: panelEnfant, doudou: panelDoudou, animaux: panelAnimaux, histoire: panelHistoire, commande: panelCommande }[tab]();
     $('prev').style.visibility = tab === 'enfant' ? 'hidden' : 'visible';
     const plan = PLANS.find(p => p.id === S.commande.formule) || PLANS[0];
-    $('next').textContent = tab === 'commande' ? `Payer ${plan.px}` : (tab === 'histoire' && S.histoire.demo) ? 'Créer le livre démo' : 'Suivant';
+    $('next').textContent = tab === 'commande' ? `Payer ${S.commande.une_fois && nbMois() ? prixTotal() : plan.px}` : (tab === 'histoire' && S.histoire.demo) ? 'Créer le livre démo' : 'Suivant';
     renderStage(); save();
   }
 
@@ -433,6 +442,7 @@
     if (b.dataset.pet !== undefined && b.closest('.pets')) { pet = +b.dataset.pet; return render(); }
     if (b.dataset.k) {
       const o = target(); o[b.dataset.k] = b.dataset.v;
+      if (tab === 'enfant' && b.dataset.k === 'genre' && !COIF[o.genre].includes(o.coiffure)) o.coiffure = COIF[o.genre][0];
       if (tab === 'animaux' && b.dataset.k === 'type') {      // on ne remplace que les réglages que le parent n'a pas encore touchés
         const base = OPT.modeles.animal[o.type]; o._choisi = o._choisi || [];
         Object.keys(base).forEach(k => { if (!o._choisi.includes(k)) o[k] = base[k]; });
@@ -487,7 +497,10 @@
   async function submit() {
     if (!S.enfant.prenom.trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez le prénom de l'enfant."; return; }
     if (S.commande.formule === 'fetes' && S.histoire.fetes.length !== 6) { tab = 'histoire'; render(); $('err').textContent = `Choisissez 6 fêtes pour la formule « 6 livres de fête » (${S.histoire.fetes.length} pour l'instant).`; return; }
-    if (S.histoire.fetes.includes('anniversaire') && !anniv()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez la date d'anniversaire de l'enfant (jour et mois) pour son livre d'anniversaire."; return; }
+    if (S.histoire.fetes.includes('anniversaire') && !anniv()) {       // date facultative : sans elle, pas de livre d'anniversaire
+      if (S.commande.formule === 'fetes') { tab = 'enfant'; render(); $('err').textContent = "Pour le livre d'anniversaire, indiquez sa date (jour et mois), ou choisissez une autre fête."; return; }
+      S.histoire.fetes = S.histoire.fetes.filter(f => f !== 'anniversaire');
+    }
     const h = S.histoire, e = S.enfant;
     const payload = {
       prenom: e.prenom.trim(), age: e.age, genre: e.genre, theme: h.theme, univers: h.univers, fetes: h.fetes.join(','), anniversaire: anniv(), heros_livre: (herosChoix(), h.heros_livre), passions: h.passions,
@@ -506,6 +519,7 @@
       if (!c.cgv) { $('err').textContent = 'Cochez la case des conditions de vente.'; return; }
       if (c.cadeau && !c.cadeau_de.trim()) { $('err').textContent = 'Indiquez de la part de qui est le cadeau.'; return; }
       payload.commande = { formule: c.formule, email: c.email.trim(), cgv: true,
+        une_fois: !!(c.une_fois && nbMois()),
         cadeau: { actif: !!c.cadeau, de: c.cadeau_de, message: c.cadeau_message, duree: c.cadeau_duree },
         adresse: { nom: c.nom, adresse1: c.adresse1, adresse2: c.adresse2, code_postal: c.code_postal, ville: c.ville, pays: c.pays, telephone: c.telephone } };
     }
@@ -598,7 +612,7 @@
         $('etape').innerHTML = (o.formule === 'fetes'
           ? `Chaque livre de fête de <b>${pn}</b> sera créé environ 5 semaines avant sa fête, relu, puis expédié pour arriver à temps.`
           : `Nous créons maintenant le livre de <b>${pn}</b>. Chaque livre est relu avant l'impression, puis expédié chez vous : livraison estimée ${delai()}.`) +
-          `<br><span class="hint">Une question : <a href="mailto:monherosdumois@gmail.com">monherosdumois@gmail.com</a> · Commande n° ${esc(id)}${o.formule === 'mensuel' ? ' · un nouveau livre chaque mois' : o.formule === 'fetes' ? ' · 6 livres de fête, 12 mensualités' : ''}</span>`;
+          `<br><span class="hint">Une question : <a href="/#contact">écrivez-nous</a> · Commande n° ${esc(id)}${o.formule === 'mensuel' ? ' · un nouveau livre chaque mois' : o.formule === 'fetes' ? ' · 6 livres de fête, 12 mensualités' : ''}</span>`;
         $('duree').style.display = 'none';
         document.querySelector('#suivi .kicker').textContent = 'Commande confirmée';
         $('fini').style.display = 'block'; $('dl').style.display = 'none';

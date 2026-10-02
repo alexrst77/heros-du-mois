@@ -126,20 +126,30 @@
   .piste img:nth-child(even) { margin-top:34px; }
   @media (prefers-reduced-motion: reduce) { .piste { animation:none; } .defile { overflow-x:auto; } }
   .couvs { padding-bottom:20px; }
-  .contact { text-align:center; margin:30px 0 0; color:var(--encre-2); font-weight:600; } .contact a { font-weight:800; }
+  .contact { max-width:640px; margin:48px auto 0; background:var(--papier); border:1px solid var(--trait); border-radius:22px; padding:26px 26px 18px; display:grid; gap:14px; }
+  .contact h3 { font:400 26px/1.2 var(--titre); margin:0; } .contact .sous { margin:-8px 0 4px; font-size:16px; }
+  .contact .cg { display:grid; grid-template-columns:1fr 1fr; gap:14px; } @media (max-width:560px) { .contact .cg { grid-template-columns:1fr; } }
+  .contact label { display:grid; gap:6px; font-weight:800; font-size:14px; color:var(--encre); }
+  .contact input, .contact select, .contact textarea { width:100%; padding:12px 14px; border-radius:12px; border:2px solid var(--trait); background:#fff; font:600 16px var(--texte); color:var(--encre); }
+  .contact textarea { resize:vertical; } .contact .piege { position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+  .contact .btn { justify-self:start; } .contact .retour { margin:0; font-weight:700; min-height:1.4em; }
   .collection { background:linear-gradient(180deg, var(--ciel), #E4E9F8); }
   .coll { display:grid; grid-template-columns:1fr 1.1fr; gap:56px; align-items:center; }
   @media (max-width:860px) { .coll { grid-template-columns:1fr; gap:32px; } }
   .jalons { list-style:none; padding:0; margin:26px 0 0; display:grid; gap:12px; }
   .jalons li { display:flex; gap:14px; align-items:center; font-weight:700; color:var(--encre-2); }
   .jalons b { flex:none; min-width:62px; text-align:center; background:var(--luciole); color:var(--encre); border-radius:999px; padding:5px 10px; font-size:14px; }
-  .etagere-coll { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; padding:26px; border-radius:22px; background:#FFFDF8; border:1px solid var(--trait);
-                  box-shadow:0 30px 60px -36px rgba(31,37,87,.45); }
-  .dos-livre { position:relative; aspect-ratio:1; border-radius:3px 7px 7px 3px; overflow:hidden; box-shadow:-5px 0 0 var(--c, #1B2A55), 0 16px 26px -14px rgba(31,37,87,.6); }
-  .dos-livre img { width:100%; height:100%; object-fit:cover; display:block; }
-  .dos-livre span { position:absolute; left:8px; bottom:8px; background:rgba(26,31,74,.82); color:#FFF6DC; font:800 12px var(--texte); padding:3px 8px; border-radius:999px; }
-  .dos-livre.vide { background:repeating-linear-gradient(135deg, #F1F3FB 0 10px, #E8ECF8 10px 20px); box-shadow:none; border:2px dashed #C9D0EA; display:grid; place-items:center; }
-  .dos-livre.vide span { position:static; background:none; color:#8C93B8; font-size:15px; }
+  .etagere-coll { padding:34px 28px 0; border-radius:22px; background:linear-gradient(180deg,#FFFDF8,#F3EEE3); border:1px solid var(--trait);
+                  box-shadow:0 30px 60px -36px rgba(31,37,87,.45); overflow:hidden; }
+  .rangee { display:flex; align-items:flex-end; gap:5px; height:280px; padding:0 6px; }
+  .tr { position:relative; flex:1; max-width:46px; height:var(--h, 92%); background:linear-gradient(90deg, rgba(0,0,0,.25), rgba(255,255,255,.12) 18%, rgba(0,0,0,0) 40%, rgba(0,0,0,.2)), var(--c);
+        border-radius:3px 3px 1px 1px; box-shadow:0 2px 0 rgba(0,0,0,.12); display:flex; flex-direction:column; align-items:center; }
+  .tr .t { writing-mode:vertical-rl; transform:rotate(180deg); color:#FFF1CF; font:400 12px/1 var(--titre); margin:14px 0 auto; white-space:nowrap; overflow:hidden; max-height:72%; letter-spacing:.2px; }
+  .tr b { width:26px; height:26px; border-radius:50%; background:#F2C14E; color:#1A1F4A; font:800 13px/26px var(--texte); text-align:center; margin:0 0 12px; flex:none; }
+  .tr.vide { background:none; border:2px dashed #C9D0EA; height:86%; box-shadow:none; justify-content:flex-end; }
+  .tr.vide b { background:none; color:#A3AACB; border:2px dashed #C9D0EA; line-height:22px; }
+  .planche { height:16px; margin:0 -28px; background:linear-gradient(180deg,#C9A27A,#A57E58); box-shadow:0 6px 12px -6px rgba(0,0,0,.4); }
+  @media (max-width:520px) { .rangee { height:220px; gap:3px; } .tr .t { font-size:10px; } .tr b { width:22px; height:22px; line-height:22px; font-size:11px; } }
   .univ { display:grid; grid-template-columns:.8fr 1.2fr; gap:56px; align-items:center; }
   @media (max-width:860px) { .univ { grid-template-columns:1fr; gap:32px; } .univ-couv { max-width:240px; margin:0 auto; } }
   .univ-couv img { width:100%; aspect-ratio:4/5; object-fit:cover; display:block; border-radius:22px; box-shadow:0 30px 50px -24px rgba(31,37,87,.6); }
@@ -422,7 +432,7 @@
   <div class="wrap coll">
     <div>
       <h2>Une collection qui grandit avec lui</h2>
-      <p class="sous">Chaque livre porte son numéro sur la couverture. Mois après mois, son étagère se remplit d'aventures dont il est le héros, et il guette déjà la suivante.</p>
+      <p class="sous">Chaque livre porte son numéro sur la tranche. Mois après mois, les dos s'alignent sur son étagère, et il guette déjà le suivant.</p>
       <ul class="jalons">
         <li><b>N° 1</b> Sa première aventure, à son prénom</li>
         <li><b>N° 6</b> Une demi-étagère d'histoires rien qu'à lui</li>
@@ -430,12 +440,8 @@
       </ul>
     </div>
     <div class="etagere-coll" aria-hidden="true">
-      <div class="dos-livre" style="--c:#2F5A3A"><img src="/static/vitrine/leo_00_s.webp" alt=""><span>N° 1</span></div>
-      <div class="dos-livre" style="--c:#2A2F6E"><img src="/static/vitrine/noe_00_s.webp" alt=""><span>N° 2</span></div>
-      <div class="dos-livre" style="--c:#1E6E8C"><img src="/static/vitrine/mila_00_s.webp" alt=""><span>N° 3</span></div>
-      <div class="dos-livre" style="--c:#6E8C3A"><img src="/static/vitrine/jade_page.webp" alt=""><span>N° 4</span></div>
-      <div class="dos-livre vide"><span>N° 5</span></div>
-      <div class="dos-livre vide"><span>N° 6</span></div>
+      <div class="rangee"><div class="tr" style="--c:#2F5A3A;--h:92%"><span class="t">Léo et la forêt des petites lumières</span><b>1</b></div><div class="tr" style="--c:#2A2F6E;--h:88%"><span class="t">Noé et la poussière d’étoiles</span><b>2</b></div><div class="tr" style="--c:#1E6E8C;--h:84%"><span class="t">Mila et le secret de l’océan</span><b>3</b></div><div class="tr" style="--c:#5E7A2E;--h:92%"><span class="t">Jade et la vallée des dinosaures</span><b>4</b></div><div class="tr" style="--c:#8C3A52;--h:88%"><span class="t">Lina et la magie de Noël</span><b>5</b></div><div class="tr" style="--c:#3A4A8C;--h:84%"><span class="t">Sacha et l’île aux pirates</span><b>6</b></div><div class="tr" style="--c:#6E4A2A;--h:92%"><span class="t">Inès et le cirque des étoiles</span><b>7</b></div><div class="tr vide"><b>8</b></div><div class="tr vide"><b>9</b></div><div class="tr vide"><b>10</b></div></div>
+      <div class="planche"></div>
     </div>
   </div>
 </section>
@@ -490,7 +496,7 @@
         <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span><div><b>Votre enfant, reconnaissable sur chaque page</b><span>Le même visage, la même coiffure et la même tenue du début à la fin.</span></div></li>
         <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4c-2 3-2 6 0 8M17 4c2 3 2 6 0 8"/><circle cx="12" cy="14" r="6"/></svg></span><div><b>Son doudou et ses animaux</b><span>Ils l'accompagnent dans l'histoire, avec leur nom et leurs couleurs.</span></div></li>
         <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM8 7h6M8 11h6"/></svg></span><div><b>18 pages illustrées</b><span>Une histoire courte à lire à voix haute, pensée pour les 3 à 8 ans.</span></div></li>
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg></span><div><b>Un jeu et des questions à la fin</b><span>Pour parler de l'histoire ensemble et prolonger le moment.</span></div></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></span><div><b>Un vrai livre relié</b><span>Couverture rigide, format carré, et son numéro sur la tranche pour la collection.</span></div></li>
       </ul>
     </div>
   </div>
@@ -544,10 +550,22 @@
       <details><summary>Comment sont créés le texte et les illustrations ?</summary><p>Avec l'aide de l'intelligence artificielle, à partir de l'avatar et du thème que vous choisissez. Chaque livre est ensuite relu par nous avant l'impression : si une page ne va pas, nous la refaisons.</p></details>
       <details><summary>Puis-je arrêter l'abonnement ?</summary><p>Oui, à tout moment et sans frais. Les livres déjà payés vous sont envoyés normalement.</p></details>
       <details><summary>Que deviennent les informations sur mon enfant ?</summary><p>Elles servent uniquement à créer ses livres. Nous ne les partageons pas et nous les effaçons après la livraison du dernier livre.</p></details>
-      <details><summary>Le livre arrive abîmé, que se passe-t-il ?</summary><p>Envoyez-nous une photo dans les 30 jours à <a href="mailto:monherosdumois@gmail.com">monherosdumois@gmail.com</a> : nous le réimprimons sans frais.</p></details>
+      <details><summary>Le livre arrive abîmé, que se passe-t-il ?</summary><p>Envoyez-nous une photo dans les 30 jours via le formulaire ci-dessous : nous le réimprimons sans frais.</p></details>
       <details><summary>Je veux l'offrir, comment faire ?</summary><p>Cochez « C'est pour offrir » à la commande : votre petit mot est imprimé au dos du livre. Pour un abonnement offert (6 ou 12 mois), le bas de la couverture indique « Livre 1 sur 6 » et les aventures qui restent à recevoir.</p></details>
     </div>
-    <p class="contact" id="contact">Une question ? Écrivez-nous à <a href="mailto:monherosdumois@gmail.com">monherosdumois@gmail.com</a>, nous répondons sous 48 h.</p>
+    <form class="contact" id="contact" novalidate>
+      <h3>Une question ? Écrivez-nous</h3>
+      <p class="sous">Nous vous répondons par e-mail sous 48 h.</p>
+      <div class="cg">
+        <label>Votre prénom<input name="nom" maxlength="80" autocomplete="given-name"></label>
+        <label>Votre e-mail *<input name="email" type="email" maxlength="190" required autocomplete="email"></label>
+      </div>
+      <label>Sujet<select name="sujet"><option value="question">Une question</option><option value="commande">Ma commande</option><option value="cadeau">Offrir un livre</option><option value="autre">Autre</option></select></label>
+      <label>Message *<textarea name="message" rows="5" maxlength="3000" required></textarea></label>
+      <input name="site" tabindex="-1" autocomplete="off" class="piege" aria-hidden="true">
+      <button class="btn" type="submit">Envoyer le message</button>
+      <p class="retour" id="contactRetour" role="status"></p>
+    </form>
   </div>
 </section>
 
@@ -566,7 +584,7 @@
   <div class="in wrap">
     <a href="/" aria-label="Mon Héros du Mois, accueil"><img src="/static/marque/logo-480.webp" alt="Mon Héros du Mois" class="logo-full" width="140" height="139" style="width:140px;margin:0" loading="lazy"></a>
     <a href="/cgv">Conditions de vente</a>
-    <a href="mailto:monherosdumois@gmail.com">Contact : monherosdumois@gmail.com</a>
+    <a href="#contact">Nous contacter</a>
     <span>Paiement sécurisé par Stripe</span>
   </div>
 </footer>
@@ -693,6 +711,21 @@
     requestAnimationFrame(() => $('flip').scrollIntoView({ behavior: calme ? 'auto' : 'smooth', block: 'center' }));
     if (kk === 0) setTimeout(() => tourner(1), calme ? 0 : 750);
   };
+
+  /* formulaire de contact */
+  $('contact').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target, d = Object.fromEntries(new FormData(f)), out = $('contactRetour'), btn = f.querySelector('button');
+    if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(d.email || '')) { out.style.color = 'var(--erreur)'; out.textContent = 'Indiquez votre adresse e-mail.'; return; }
+    if ((d.message || '').trim().length < 5) { out.style.color = 'var(--erreur)'; out.textContent = 'Écrivez votre message.'; return; }
+    btn.disabled = true; out.style.color = 'var(--encre-2)'; out.textContent = 'Envoi…';
+    try {
+      const r = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.erreur || 'Erreur');
+      f.reset(); out.style.color = 'var(--mousse)'; out.textContent = 'Merci, votre message est bien envoyé. Nous vous répondons très vite.';
+    } catch (err) { out.style.color = 'var(--erreur)'; out.textContent = err.message || "L'envoi n'a pas marché, réessayez."; }
+    btn.disabled = false;
+  });
 
   /* univers et fêtes (même liste que l'éditeur) */
   fetch('/api/univers').then(r => r.json()).then(l => {
