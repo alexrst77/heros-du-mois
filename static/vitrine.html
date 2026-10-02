@@ -27,6 +27,8 @@
   .essai input { flex:1; min-width:0; font:600 18px var(--texte); padding:13px 14px; border-radius:12px; border:2px solid var(--trait); background:#fff; color:var(--encre); }
   .essai input:focus { outline:none; border-color:var(--encre); }
   @media (max-width:480px) { .essai .row { flex-direction:column; } }
+  .prix-appel { margin:-8px 0 22px; font-size:17px; color:var(--encre-2); }
+  .prix-appel b { font:800 24px var(--texte); color:var(--encre); letter-spacing:-.3px; background:linear-gradient(transparent 62%, rgba(255,201,74,.55) 62%); padding:0 2px; }
   .rassure { display:flex; flex-wrap:wrap; gap:8px 22px; margin:22px 0 0; padding:0; list-style:none; font-size:15px; color:var(--encre-2); }
   .rassure li { display:flex; align-items:center; gap:8px; }
   .rassure svg { width:18px; height:18px; flex:none; color:var(--mousse); }
@@ -173,6 +175,7 @@
     <div>
       <h1>Le livre où votre enfant est le héros</h1>
       <p class="intro">Son prénom, son visage, son doudou et ses animaux dans une vraie histoire illustrée, imprimée et reliée. Chaque mois, une nouvelle aventure arrive dans la boîte aux lettres.</p>
+      <p class="prix-appel">À partir de <b>24,92 €</b> le livre, livraison offerte</p>
       <form class="essai" action="/creer" method="get">
         <label for="prenom">Essayez avec son prénom</label>
         <div class="row">
@@ -262,7 +265,7 @@
 <section class="bloc" id="formules">
   <div class="wrap">
     <h2>Une aventure par mois, ou un seul livre</h2>
-    <p class="sous">Livraison offerte en France, Belgique, Luxembourg, Suisse et Monaco.</p>
+    <p class="sous">À partir de 24,92 € le livre avec l'année. Livraison offerte en France, Belgique, Luxembourg, Suisse et Monaco.</p>
     <div class="formules">
       <div class="formule">
         <h3>Un livre</h3>
