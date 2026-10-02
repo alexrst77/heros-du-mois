@@ -139,33 +139,8 @@
   .jalons { list-style:none; padding:0; margin:26px 0 0; display:grid; gap:12px; }
   .jalons li { display:flex; gap:14px; align-items:center; font-weight:700; color:var(--encre-2); }
   .jalons b { flex:none; min-width:62px; text-align:center; background:var(--luciole); color:var(--encre); border-radius:999px; padding:5px 10px; font-size:14px; }
-  .etagere-coll { position:relative; padding:40px 26px 0; border-radius:22px; overflow:hidden; border:1px solid var(--trait);
-                  background:radial-gradient(120% 80% at 70% 0%, #FFF6E2 0%, #F4ECDD 55%, #EADFCB 100%); box-shadow:0 30px 60px -36px rgba(31,37,87,.45); }
-  .rangee { display:flex; align-items:flex-end; height:290px; padding:0 4px; }
-  .tr { position:relative; flex:none; width:var(--w); padding-bottom:64px; height:var(--h); margin-right:3px; border-radius:4px 4px 2px 2px;
-        background:linear-gradient(90deg, rgba(0,0,0,.32) 0, rgba(255,255,255,.16) 12%, rgba(255,255,255,.04) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,.28) 100%), var(--c);
-        box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), 2px 0 3px rgba(0,0,0,.18); display:flex; flex-direction:column; align-items:center; color:#FFF1CF; }
-  .tr::before, .tr::after { content:""; position:absolute; left:0; right:0; height:3px; background:linear-gradient(90deg,#B8913F,#F2D27A 45%,#B8913F); }
-  .tr::before { top:16px; } .tr::after { bottom:56px; }
-  .tr .etoile { width:18px; height:18px; margin-top:26px; margin-bottom:8px; background:url(/static/marque/etoile-128.png) center/contain no-repeat; filter:drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
-  .tr .pr { writing-mode:vertical-rl; transform:rotate(180deg); font:400 20px/1 var(--titre); margin:auto 0; letter-spacing:.3px; text-shadow:0 1px 2px rgba(0,0,0,.35); }
-  .tr .th { writing-mode:vertical-rl; transform:rotate(180deg); font:700 10px/1 var(--texte); letter-spacing:1.4px; text-transform:uppercase; color:#F2D27A; opacity:.9; margin-bottom:auto; }
-  .tr .num { position:absolute; bottom:18px; width:26px; height:26px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #FFE39A, #E8B547 70%);
-             color:#1A1F4A; font:800 13px/26px var(--texte); text-align:center; box-shadow:0 1px 2px rgba(0,0,0,.35); }
-  .face-out { flex:none; width:118px; aspect-ratio:1; margin:0 10px 0 6px; transform:rotate(-7deg); transform-origin:bottom left; align-self:flex-end;
-              border-radius:3px 7px 7px 3px; overflow:hidden; box-shadow:-5px 0 0 #1D6A86, 0 18px 28px -14px rgba(0,0,0,.55); }
-  .face-out img { width:100%; height:100%; object-fit:cover; display:block; }
-  .a-venir { flex:none; width:44px; height:88%; margin-left:auto; border-radius:4px; border:2px dashed rgba(140,110,70,.35); display:flex; flex-direction:column;
-             align-items:center; justify-content:flex-end; padding-bottom:14px; gap:6px; color:#9C8565; text-align:center; }
-  .a-venir span { width:26px; height:26px; border-radius:50%; border:2px dashed rgba(140,110,70,.5); font:800 12px/22px var(--texte); }
-  .a-venir small { font:700 10px/1.2 var(--texte); }
-  .planche { position:relative; height:22px; margin:0 -26px; background:linear-gradient(180deg,#D9B98E 0,#C49A6C 30%,#9E7650 100%);
-             box-shadow:0 10px 18px -8px rgba(60,40,20,.45); }
-  .planche::before { content:""; position:absolute; left:0; right:0; top:0; height:4px; background:rgba(255,255,255,.25); }
-  @media (max-width:560px) { .etagere-coll { padding:30px 14px 0; } .planche { margin:0 -14px; } .rangee { height:220px; }
-    .tr { width:calc(var(--w) * .62); margin-right:2px; padding-bottom:44px; } .tr .pr { font-size:14px; } .tr .etoile { width:12px; height:12px; margin-top:20px; }
-    .tr .num { width:18px; height:18px; font-size:10px; line-height:18px; bottom:12px; } .tr::before { top:12px; } .tr::after { bottom:38px; }
-    .face-out { width:72px; margin:0 2px 0 4px; } .a-venir { display:none; } }
+  .etagere-coll { border-radius:22px; overflow:hidden; box-shadow:0 30px 60px -30px rgba(31,37,87,.55); }
+  .etagere-coll img { display:block; width:100%; height:auto; }
   .univ { display:grid; grid-template-columns:.8fr 1.2fr; gap:56px; align-items:center; }
   @media (max-width:860px) { .univ { grid-template-columns:1fr; gap:32px; } .univ-couv { max-width:240px; margin:0 auto; } }
   .univ-couv img { width:100%; aspect-ratio:4/5; object-fit:cover; display:block; border-radius:22px; box-shadow:0 30px 50px -24px rgba(31,37,87,.6); }
@@ -259,8 +234,6 @@
   @media (max-width:760px) {
     .flip { margin-top:28px; perspective:1400px; } .ouvrir { margin-top:16px; font-size:15px; }
     .livre-o.ferme { transform:translateX(-25%) scale(1); }
-    .face .bande p, .face .bande .folio { visibility:hidden; }          /* texte trop petit dans la page : lu juste en dessous */
-    .face .bande { padding:0; height:16%; }
     .lecture:not([hidden]) { display:block; margin:18px auto 0; max-width:560px; background:var(--papier); color:#2B2622; border-radius:14px;
                padding:16px 18px; font:400 16px/1.55 Georgia, "Iowan Old Style", serif; box-shadow:0 18px 40px -24px rgba(0,0,0,.6); }
     .lecture h3 { font:400 20px/1.2 var(--titre); color:var(--encre); margin:0 0 8px; } .lecture p { margin:0 0 .6em; white-space:pre-line; }
@@ -455,12 +428,8 @@
         <li><b>N° 12</b> Une année entière de héros</li>
       </ul>
     </div>
-    <div class="etagere-coll" aria-hidden="true">
-      <div class="rangee"><div class="tr" style="--c:#2E5A3C;--w:50px;--h:96%"><i class="etoile"></i><b class="pr">Léo</b><b class="num">1</b></div><div class="tr" style="--c:#262C6B;--w:45px;--h:90%"><i class="etoile"></i><b class="pr">Noé</b><b class="num">2</b></div><div class="tr" style="--c:#1D6A86;--w:48px;--h:94%"><i class="etoile"></i><b class="pr">Mila</b><b class="num">3</b></div><div class="tr" style="--c:#5B7530;--w:44px;--h:88%"><i class="etoile"></i><b class="pr">Jade</b><b class="num">4</b></div><div class="tr" style="--c:#8A2F45;--w:51px;--h:97%"><i class="etoile"></i><b class="pr">Lina</b><b class="num">5</b></div><div class="tr" style="--c:#33438A;--w:45px;--h:91%"><i class="etoile"></i><b class="pr">Sacha</b><b class="num">6</b></div><div class="tr" style="--c:#6B4527;--w:47px;--h:93%"><i class="etoile"></i><b class="pr">Inès</b><b class="num">7</b></div>
-        <div class="face-out"><img src="/static/vitrine/mila_00_s.webp" alt=""></div>
-      </div>
-      <div class="planche"></div>
-    </div>
+    <div class="etagere-coll"><img src="/static/vitrine/etagere.webp" srcset="/static/vitrine/etagere_m.webp 900w, /static/vitrine/etagere.webp 1536w" sizes="(max-width:860px) 100vw, 600px"
+      alt="La collection de Mila : sept livres numérotés sur la tranche et Mila et le secret de l'océan posé de face" loading="lazy" width="1536" height="1024"></div>
   </div>
 </section>
 
