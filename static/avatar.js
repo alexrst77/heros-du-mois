@@ -215,10 +215,10 @@
   async function pixels(name) {
     if (imgs.has(name)) return imgs.get(name);
     const p = (async () => {
-      if (!MST) MST = await (await fetch('/static/avatars/masks.json?v=6')).json();
+      if (!MST) MST = await (await fetch('/static/avatars/masks.json?v=7')).json();
       const st = MST[name] || {};
-      const [a, m, e, sh] = await Promise.all([loadImg(`/static/avatars/${name}.webp`), loadImg(`/static/avatars/${name}.mask.png?v=6`),
-        st.eyes ? loadImg(`/static/avatars/${name}.eyes.png?v=6`).catch(() => null) : null,
+      const [a, m, e, sh] = await Promise.all([loadImg(`/static/avatars/${name}.webp`), loadImg(`/static/avatars/${name}.mask.png?v=7`),
+        (st.eyes || st.E) ? loadImg(`/static/avatars/${name}.eyes.png?v=7`).catch(() => null) : null,
         st.tenue ? loadImg(`/static/avatars/${name}.shirt.png?v=6`).catch(() => null) : null]);
       const c = document.createElement('canvas'); c.width = a.width; c.height = a.height;
       const x = c.getContext('2d', { willReadFrequently: true });
@@ -272,12 +272,62 @@
     }
     return [main, 0];
   }
+  /* motif des animaux, collier, écharpe : mêmes formules que avatar_paint.py */
+  const smooth = (a, b, v) => { const x = Math.min(1, Math.max(0, (v - a) / (b - a))); return x * x * (3 - 2 * x); };
+  function motifW(kind, st, X, Y, k) {
+    const x = X / k, y = Y / k;
+    if (kind === 'taches') return smooth(.55, .85, Math.sin(x * .045 + 1.3) * Math.sin(y * .052 + .4) + .5 * Math.sin(x * .09 - y * .07 + 2.1));
+    if (kind === 'raye') return smooth(.5, .95, Math.sin(y * .16 + 1.2 * Math.sin(x * .035) + x * .04)) * .85;
+    if (kind === 'masque' && st.yeux) return 1 - smooth(.8, 1.15, Math.min(...st.yeux.map(([ex, ey]) => Math.hypot((x - ex) / 30, (y - ey) / 26))));
+    return 0;
+  }
+  function quad(g, k, n = 32) {
+    const out = [];
+    for (let i = 0; i < n; i++) { const u = i / (n - 1), a = (1 - u) ** 2, b = 2 * (1 - u) * u, c = u * u;
+      out.push([(a * g.p0[0] + b * g.c[0] + c * g.p1[0]) * k, (a * g.p0[1] + b * g.c[1] + c * g.p1[1]) * k]); }
+    return out;
+  }
+  function band(px, W, H, g, k, color, style) {
+    const pts = quad(g, k), hw = g.hw * k, [ht, stt, lt] = rgb2hsl(...hex(color));
+    const segs = [], cum = [0];
+    for (let i = 0; i < pts.length - 1; i++) { const sx = pts[i + 1][0] - pts[i][0], sy = pts[i + 1][1] - pts[i][1], L2 = sx * sx + sy * sy;
+      segs.push([pts[i][0], pts[i][1], sx, sy, Math.max(L2, 1e-6), Math.sqrt(L2)]); cum.push(cum[i] + Math.sqrt(L2)); }
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const x0 = Math.max(0, Math.floor(Math.min(...xs) - hw - 2)), x1 = Math.min(W, Math.ceil(Math.max(...xs) + hw + 2));
+    const y0 = Math.max(0, Math.floor(Math.min(...ys) - hw - 2)), y1 = Math.min(H, Math.ceil(Math.max(...ys) + hw + 2));
+    for (let Y = y0; Y < y1; Y++) for (let X = x0; X < x1; X++) {
+      const p = (Y * W + X) * 4; if (px[p + 3] <= 127) continue;
+      let best = 1e9, bj = 0, bt = 0, bpx = 0, bpy = 0;
+      for (let j = 0; j < segs.length; j++) {
+        const [ax, ay, sx, sy, L2] = segs[j], qx = X - ax, qy = Y - ay, t = Math.min(1, Math.max(0, (qx * sx + qy * sy) / L2));
+        const d = Math.hypot(qx - t * sx, qy - t * sy); if (d < best) { best = d; bj = j; bt = t; bpx = qx; bpy = qy; }
+      }
+      const w = Math.min(1, Math.max(0, hw - best + .5)); if (w <= 0) continue;
+      const cross = segs[bj][2] * bpy - segs[bj][3] * bpx, along = cum[bj] + bt * segs[bj][5];
+      const v = Math.min(1, Math.max(0, (Math.sign(cross) * best / hw + 1) / 2));
+      const r = px[p] / 255, gg = px[p + 1] / 255, b = px[p + 2] / 255, lo = (Math.max(r, gg, b) + Math.min(r, gg, b)) / 2;
+      let l = style === 'echarpe' ? lt * (1.1 - .35 * (2 * v - 1) ** 2) * (.85 + .3 * lo) * (.93 + .07 * Math.sin(along / (6 * k) * 6.2832))
+                                  : lt * (1.12 - .3 * v) * (.8 + .4 * lo);
+      const c = hsl2rgb(ht, stt, Math.min(.95, Math.max(0, l)));
+      px[p] = (r * (1 - w) + c[0] * w) * 255; px[p + 1] = (gg * (1 - w) + c[1] * w) * 255; px[p + 2] = (b * (1 - w) + c[2] * w) * 255;
+    }
+    if (style === 'collier') {                                   // petite médaille dorée
+      const mid = pts[pts.length >> 1], cx = mid[0], cy = mid[1] + hw + 4 * k, rad = 5.5 * k;
+      for (let Y = Math.max(0, Math.floor(cy - rad - 2)); Y < Math.min(H, cy + rad + 2); Y++) for (let X = Math.max(0, Math.floor(cx - rad - 2)); X < Math.min(W, cx + rad + 2); X++) {
+        const p = (Y * W + X) * 4, dd = Math.hypot(X - cx, Y - cy), w = Math.min(1, Math.max(0, rad - dd + .5)); if (w <= 0) continue;
+        const l = .55 * (1.15 - .5 * dd / rad) + .25 * Math.exp(-((X - cx + rad * .35) ** 2 + (Y - cy + rad * .35) ** 2) / (rad * .3) ** 2);
+        const c = hsl2rgb(43 / 360, .72, Math.min(.95, Math.max(0, l)));
+        for (let i = 0; i < 3; i++) px[p + i] = px[p + i] * (1 - w) + c[i] * 255 * w;
+      }
+    }
+  }
   async function recolor(name, targets) {
     const key = name + JSON.stringify(targets);
     if (outs.has(key)) return outs.get(key);
     const job = (async () => {
       const P = await pixels(name), st = MST[name] || {}, d = new ImageData(new Uint8ClampedArray(P.base.data), P.w, P.h), px = d.data, M = P.mask;
       const zR = targets.R && st.R ? zoneOf(st.R, targets.R) : null, zG = targets.G && st.G ? zoneOf(st.G, targets.G) : null;
+      const zM = targets.motif && targets.M && st.R ? zoneOf(st.R, targets.M) : null;
       const zE = targets.E && P.eyes ? rgb2hsl(...hex(targets.E)) : null;
       const kind = targets.tenue || 'pyjama', plain = kind !== 'pyjama' && P.shirt && st.tenue;
       const zB = !plain && targets.B && st.B ? zoneOf(st.B, targets.B) : null;
@@ -291,6 +341,8 @@
           const [h, s, l] = rgb2hsl(r, g, b);
           mix(w, hsl2rgb(h + z.dh, Math.min(1, s * z.ks), lightMap(l, z.lb, z.lt)));
         }
+        if (zM) { const n = p / 4, X = n % P.w, Y = (n - X) / P.w, w = motifW(targets.motif, st, X, Y, k) * (M[p] / 255) * (1 - M[p + 1] / 255);
+          if (w > .01) { const [h, s, l] = rgb2hsl(r, g, b); mix(w, hsl2rgb(h + zM.dh, Math.min(1, s * zM.ks), lightMap(l, zM.lb, zM.lt))); } }
         if (zE) { const w = P.eyes[p] / 255; if (w > .01) { const [, , l] = rgb2hsl(r, g, b);
           mix(w, hsl2rgb(zE[0], Math.min(1, zE[1] * 1.2) * Math.min(1, Math.max(0, (l - 0.06) / 0.22)), lightMap(l, 0.33, Math.min(zE[2], .55)))); } }
         const wB = M[p + 2] / 255;
@@ -308,6 +360,8 @@
         }
         px[p] = r * 255; px[p + 1] = g * 255; px[p + 2] = b * 255;
       }
+      if (targets.A && st.echarpe) { band(px, P.w, P.h, st.echarpe.tail, k, targets.A, 'echarpe'); band(px, P.w, P.h, st.echarpe, k, targets.A, 'echarpe'); }
+      if (targets.C && st.collier) band(px, P.w, P.h, st.collier, k, targets.C, 'collier');
       const c = document.createElement('canvas'); c.width = P.w; c.height = P.h; const x = c.getContext('2d'); x.putImageData(d, 0, 0);
       const E = st.eyes;
       if (E && (targets.freckles || targets.glasses)) overlays(x, E, targets);

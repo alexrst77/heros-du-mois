@@ -1,0 +1,22 @@
+Use case: illustration-story.
+Create ONE full-bleed panoramic illustration, width exactly twice its height, for two facing square pages of a premium French children's picture book.
+
+REFERENCE ROLES
+STYLE references: preserve premium richly textured hand-painted gouache and fine coloured-pencil craft, nuanced facial expressions, dimensional magical light, detailed layered scenery, tactile surfaces and depth.
+IDENTITY references: preserve the configured child's exact face, age, skin, eyes, hair, glasses, clothing, and each configured pet and plush toy. These identity references override people appearing in style-only examples. Never copy Mila or Noé into a different child's book.
+
+CHARACTER BIBLE
+{{character_bible_for_present_characters}}
+
+SCENE
+{{scene_action_and_location}}
+Left half: {{left_composition}}
+Right half: {{right_composition}}
+Palette and lighting: {{palette_and_lighting}}
+Required visible story details: {{required_details}}
+
+COMPOSITION
+Centre seam at x=50%. No face, pet head, important accessory or essential action in x=44–56%. Keep key subjects in the middle and upper area. Reserve roughly the bottom third of each half for quiet low-detail painted ground, water, mist or room surfaces so typeset prose can be added later. Continue the painting organically into this area, no blank rectangle.
+One coherent scene unless the storyboard explicitly asks for two sequential moments. Do not duplicate the protagonist or companions unintentionally. Vary camera distance, poses and scenery across the book while preserving identity.
+
+No writing, letters, captions, page numbers, watermark, typography, frame, collage panels or photo-on-background effect. No flat vector, plastic 3D style or uniform yellow filter. All text will be typeset separately.

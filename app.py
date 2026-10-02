@@ -16,7 +16,7 @@ try:  # charge le fichier .env s'il existe
 except FileNotFoundError:
     pass
 
-import layout, generator  # noqa: E402  (après le chargement du .env)
+import layout, generator, procede  # noqa: E402  (après le chargement du .env)
 
 DATA = Path(os.getenv("DATA_DIR") or ROOT)                  # en ligne : le disque permanent (ex. /data)
 OUT = DATA / "output"; OUT.mkdir(parents=True, exist_ok=True)
@@ -29,7 +29,7 @@ app = Flask(__name__, static_folder=str(ROOT / "static"))
 
 REQUIRED = ["prenom", "age"]
 FIELDS = ["prenom", "age", "genre", "cheveux", "yeux", "peau", "lunettes", "tenue", "doudou_nom", "doudou_type",
-          "doudou_desc", "animal", "passions", "univers", "fetes", "anniversaire", "theme", "precision", "numero", "demo", "code"]
+          "doudou_desc", "animal", "passions", "univers", "fetes", "anniversaire", "heros_livre", "theme", "precision", "numero", "demo", "code"]
 PUBLIC = re.compile(r"^(portrait_[a-z0-9_]+\.png|image_\d\d\.png|apercu\.pdf|controle\.json)$")
 
 
@@ -130,6 +130,18 @@ def run(job_id, form, refs):
     if essai == "brouillon":
         generator.MODE.set(generator.BROUILLON)
     try:
+        if os.getenv("PROCEDE", "kit") == "kit":       # procédé des livres Mila et Noé (kit) : voir procede.py
+            if form.get("demo") or not os.getenv("OPENAI_API_KEY"):
+                res = procede.demo(folder, progress)
+            else:
+                cfg = generator.build_config(form); save("config.json", cfg)
+                res = procede.run(form, cfg, refs, folder, job, progress, essai=essai)
+            if essai == "apercu":
+                res["titre"] = "[aperçu] " + res["titre"]
+            job.update(etat="termine", progression=100, etape="Livre prêt" if res["phase"] == "ready" else "À relire : écarts signalés",
+                       pdf=res["pdf"], titre=res["titre"], controle=res["controle"], mineurs=res["mineurs"], pages=res["pages"],
+                       cout=round(meter["dollars"], 2), format="kit")
+            return
         portraits_pdf = None
         if form.get("demo") or not os.getenv("OPENAI_API_KEY"):
             progress("Mode démo : livre d'exemple, sans appel API", 20)
@@ -224,7 +236,7 @@ def run(job_id, form, refs):
                    mineurs=qa.get("mineurs", []), pages=qa["pages"], cout=qa["cout_openai"]["dollars"])
     except Exception as e:
         traceback.print_exc()
-        job.update(etat="erreur", erreur=str(e)[:400], cout=round(meter["dollars"], 2))
+        job.update(etat="erreur", erreur=str(e)[:600], cout=round(meter["dollars"], 2), phase="failed" if not job.get("phase") == "needs_review" else "needs_review")
 
 
 @app.get("/")
@@ -250,6 +262,10 @@ def parse_book(data):
     if data.get("avatar"):
         form["avatar"] = generator.sanitize_avatar(data["avatar"], generator._name(form["prenom"]) or form["prenom"][:20], form["age"])
         form["genre"] = form["avatar"]["enfant"]["genre"]
+    hl = form.get("heros_livre") or "enfant"             # héros du livre : l'enfant, son doudou ou un de ses animaux
+    av = form.get("avatar") or {}
+    ok = ["enfant"] + (["doudou"] if av.get("doudou") else []) + [f"animal_{i + 1}" for i in range(len(av.get("animaux") or []))]
+    form["heros_livre"] = hl if hl in ok else "enfant"
     return form, None
 
 

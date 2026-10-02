@@ -126,6 +126,20 @@
   .piste img:nth-child(even) { margin-top:34px; }
   @media (prefers-reduced-motion: reduce) { .piste { animation:none; } .defile { overflow-x:auto; } }
   .couvs { padding-bottom:20px; }
+  .contact { text-align:center; margin:30px 0 0; color:var(--encre-2); font-weight:600; } .contact a { font-weight:800; }
+  .collection { background:linear-gradient(180deg, var(--ciel), #E4E9F8); }
+  .coll { display:grid; grid-template-columns:1fr 1.1fr; gap:56px; align-items:center; }
+  @media (max-width:860px) { .coll { grid-template-columns:1fr; gap:32px; } }
+  .jalons { list-style:none; padding:0; margin:26px 0 0; display:grid; gap:12px; }
+  .jalons li { display:flex; gap:14px; align-items:center; font-weight:700; color:var(--encre-2); }
+  .jalons b { flex:none; min-width:62px; text-align:center; background:var(--luciole); color:var(--encre); border-radius:999px; padding:5px 10px; font-size:14px; }
+  .etagere-coll { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; padding:26px; border-radius:22px; background:#FFFDF8; border:1px solid var(--trait);
+                  box-shadow:0 30px 60px -36px rgba(31,37,87,.45); }
+  .dos-livre { position:relative; aspect-ratio:1; border-radius:3px 7px 7px 3px; overflow:hidden; box-shadow:-5px 0 0 var(--c, #1B2A55), 0 16px 26px -14px rgba(31,37,87,.6); }
+  .dos-livre img { width:100%; height:100%; object-fit:cover; display:block; }
+  .dos-livre span { position:absolute; left:8px; bottom:8px; background:rgba(26,31,74,.82); color:#FFF6DC; font:800 12px var(--texte); padding:3px 8px; border-radius:999px; }
+  .dos-livre.vide { background:repeating-linear-gradient(135deg, #F1F3FB 0 10px, #E8ECF8 10px 20px); box-shadow:none; border:2px dashed #C9D0EA; display:grid; place-items:center; }
+  .dos-livre.vide span { position:static; background:none; color:#8C93B8; font-size:15px; }
   .univ { display:grid; grid-template-columns:.8fr 1.2fr; gap:56px; align-items:center; }
   @media (max-width:860px) { .univ { grid-template-columns:1fr; gap:32px; } .univ-couv { max-width:240px; margin:0 auto; } }
   .univ-couv img { width:100%; aspect-ratio:4/5; object-fit:cover; display:block; border-radius:22px; box-shadow:0 30px 50px -24px rgba(31,37,87,.6); }
@@ -215,7 +229,16 @@
   .mono .face .bande .folio { font-size:3cqw; margin-top:1.5cqw; }
   .mono .face.couv .tc b { font-size:12cqw; } .mono .face.couv .tc span { font-size:5cqw; margin-top:1.2cqw; }
   .mono .face.dos { padding:10cqw; } .mono .face.dos h3 { font-size:6.5cqw; margin-bottom:4cqw; } .mono .face.dos p { font-size:4.2cqw; margin-bottom:2cqw; }
-  @media (max-width:760px) { .flip { margin-top:28px; } .ouvrir { margin-top:18px; font-size:15px; } }
+  .lecture { display:none; }
+  @media (max-width:760px) {
+    .flip { margin-top:28px; perspective:1400px; } .ouvrir { margin-top:16px; font-size:15px; }
+    .livre-o.ferme { transform:translateX(-25%) scale(1); }
+    .face .bande p, .face .bande .folio { visibility:hidden; }          /* texte trop petit dans la page : lu juste en dessous */
+    .face .bande { padding:0; height:16%; }
+    .lecture:not([hidden]) { display:block; margin:18px auto 0; max-width:560px; background:var(--papier); color:#2B2622; border-radius:14px;
+               padding:16px 18px; font:400 16px/1.55 Georgia, "Iowan Old Style", serif; box-shadow:0 18px 40px -24px rgba(0,0,0,.6); }
+    .lecture h3 { font:400 20px/1.2 var(--titre); color:var(--encre); margin:0 0 8px; } .lecture p { margin:0 0 .6em; white-space:pre-line; }
+  }
   @media (prefers-reduced-motion: reduce) { .feuille, .livre-o { transition:none; } }
   /* ------------------------------------------------ étapes */
   .etapes { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; margin-top:44px; counter-reset:e; }
@@ -295,7 +318,7 @@
   <div class="in wrap">
     <a href="/" class="logo" aria-label="Mon Héros du Mois, accueil"><span class="logo-mark" aria-hidden="true"></span>Mon Héros du Mois</a>
     <nav aria-label="Navigation principale">
-      <a href="#feuilleter">Feuilleter</a><a href="#comment">Comment ça marche</a><a href="#formules">Formules</a><a href="#questions">Questions</a>
+      <a href="#feuilleter">Feuilleter</a><a href="#comment">Comment ça marche</a><a href="#collection">Collection</a><a href="#formules">Formules</a><a href="#questions">Questions</a>
     </nav>
     <a class="btn petit" href="/creer">Créer son livre</a>
   </div>
@@ -359,6 +382,7 @@
       <div class="livre-o ferme" id="livreO" tabindex="0" aria-label="Livre à feuilleter"></div>
       <span class="ouvrir" id="ouvrir">Cliquez pour ouvrir le livre</span>
     </div>
+    <div class="lecture" id="lecture" hidden></div>
     <div class="tourne">
       <button type="button" id="prev" aria-label="Page précédente"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
       <span id="compteur" aria-live="polite">Couverture</span>
@@ -392,6 +416,28 @@
       <img src="/static/vitrine/photo_05.webp" alt="" loading="lazy" aria-hidden="true">
       <img src="/static/vitrine/photo_09.webp" alt="" loading="lazy" aria-hidden="true">
   </div></div>
+</section>
+
+<section class="bloc collection" id="collection">
+  <div class="wrap coll">
+    <div>
+      <h2>Une collection qui grandit avec lui</h2>
+      <p class="sous">Chaque livre porte son numéro sur la couverture. Mois après mois, son étagère se remplit d'aventures dont il est le héros, et il guette déjà la suivante.</p>
+      <ul class="jalons">
+        <li><b>N° 1</b> Sa première aventure, à son prénom</li>
+        <li><b>N° 6</b> Une demi-étagère d'histoires rien qu'à lui</li>
+        <li><b>N° 12</b> Une année entière de héros</li>
+      </ul>
+    </div>
+    <div class="etagere-coll" aria-hidden="true">
+      <div class="dos-livre" style="--c:#2F5A3A"><img src="/static/vitrine/leo_00_s.webp" alt=""><span>N° 1</span></div>
+      <div class="dos-livre" style="--c:#2A2F6E"><img src="/static/vitrine/noe_00_s.webp" alt=""><span>N° 2</span></div>
+      <div class="dos-livre" style="--c:#1E6E8C"><img src="/static/vitrine/mila_00_s.webp" alt=""><span>N° 3</span></div>
+      <div class="dos-livre" style="--c:#6E8C3A"><img src="/static/vitrine/jade_page.webp" alt=""><span>N° 4</span></div>
+      <div class="dos-livre vide"><span>N° 5</span></div>
+      <div class="dos-livre vide"><span>N° 6</span></div>
+    </div>
+  </div>
 </section>
 
 <section class="bloc couvs" id="fetes">
@@ -467,7 +513,7 @@
         <h3>Un livre chaque mois</h3>
         <p class="sous">Le même héros, une nouvelle aventure.</p>
         <div class="prix">29,90 € <small>/ mois</small></div>
-        <ul><li>Un nouvel univers chaque mois</li><li>Le livre de son anniversaire et de vos fêtes au bon moment</li><li>Sans engagement, arrêt en un clic</li></ul>
+        <ul><li>Un nouvel univers chaque mois</li><li>Le livre de son anniversaire et de vos fêtes au bon moment</li><li>Sans engagement, arrêt en un clic</li><li>À offrir : 6 ou 12 mois, avec votre petit mot imprimé</li></ul>
         <a class="btn" href="/creer?formule=mensuel">Commencer l'abonnement</a>
       </div>
       <div class="formule">
@@ -498,8 +544,10 @@
       <details><summary>Comment sont créés le texte et les illustrations ?</summary><p>Avec l'aide de l'intelligence artificielle, à partir de l'avatar et du thème que vous choisissez. Chaque livre est ensuite relu par nous avant l'impression : si une page ne va pas, nous la refaisons.</p></details>
       <details><summary>Puis-je arrêter l'abonnement ?</summary><p>Oui, à tout moment et sans frais. Les livres déjà payés vous sont envoyés normalement.</p></details>
       <details><summary>Que deviennent les informations sur mon enfant ?</summary><p>Elles servent uniquement à créer ses livres. Nous ne les partageons pas et nous les effaçons après la livraison du dernier livre.</p></details>
-      <details><summary>Le livre arrive abîmé, que se passe-t-il ?</summary><p>Envoyez-nous une photo dans les 30 jours : nous le réimprimons sans frais.</p></details>
+      <details><summary>Le livre arrive abîmé, que se passe-t-il ?</summary><p>Envoyez-nous une photo dans les 30 jours à <a href="mailto:monherosdumois@gmail.com">monherosdumois@gmail.com</a> : nous le réimprimons sans frais.</p></details>
+      <details><summary>Je veux l'offrir, comment faire ?</summary><p>Cochez « C'est pour offrir » à la commande : votre petit mot est imprimé au dos du livre. Pour un abonnement offert (6 ou 12 mois), le bas de la couverture indique « Livre 1 sur 6 » et les aventures qui restent à recevoir.</p></details>
     </div>
+    <p class="contact" id="contact">Une question ? Écrivez-nous à <a href="mailto:monherosdumois@gmail.com">monherosdumois@gmail.com</a>, nous répondons sous 48 h.</p>
   </div>
 </section>
 
@@ -518,6 +566,7 @@
   <div class="in wrap">
     <a href="/" aria-label="Mon Héros du Mois, accueil"><img src="/static/marque/logo-480.webp" alt="Mon Héros du Mois" class="logo-full" width="140" height="139" style="width:140px;margin:0" loading="lazy"></a>
     <a href="/cgv">Conditions de vente</a>
+    <a href="mailto:monherosdumois@gmail.com">Contact : monherosdumois@gmail.com</a>
     <span>Paiement sécurisé par Stripe</span>
   </div>
 </footer>
@@ -547,6 +596,7 @@
       couv: `<div class="face recto couv"><img src="${im(0)}" alt="${alt}"></div>`,
       gauche: i => demi(i, 'g', 2 * i - 1),
       droite: i => ({ cls: 'mi' + (sombre ? ' sombre' : ''), html: demi(i, 'd', 2 * i) }), sombre,
+      lire: i => `<p>${esc(T[2 * i - 2])}</p><p>${esc(T[2 * i - 1])}</p>`,
       tel: i => ({ pano: true, img: im(i), html: `<p>${esc(T[2 * i - 2])}</p><p>${esc(T[2 * i - 1])}</p><span class="folio">${2 * i - 1}–${2 * i}</span>` }) };
   }
   const LIVRES = {
@@ -557,6 +607,7 @@
       gauche: i => `<img src="${V}leo_${pad(i)}.webp" alt="" loading="lazy">`,
       droite: i => ({ cls: 'texte', html: ptxt(LEO[i - 1].t, LEO[i - 1].a.concat(LEO[i - 1].b), i) }),
       dos: `<h3>La nuit est grande.<br>Les petits courages aussi.</h3><p>Une ombre, une luciole et un lapin en tissu…</p><p>Léo découvre qu'on peut avoir peur, demander de l'aide et avancer à son rythme.</p><p class="q">Et toi, qu'est-ce qui te rassure le soir ?</p>`,
+      lire: i => `<h3>${esc(LEO[i - 1].t)}</h3>` + LEO[i - 1].a.concat(LEO[i - 1].b).map(x => `<p>${esc(x)}</p>`).join(''),
       tel: i => ({ pano: false, img: V + `leo_${pad(i)}.webp`, html: ptxt(LEO[i - 1].t, LEO[i - 1].a.concat(LEO[i - 1].b), i) })
     },
     mila: livrePdf('mila', MILA, '« Mila et le secret de l\u2019océan », une aventure sous la mer sur l\u2019entraide et le courage.',
@@ -568,9 +619,9 @@
   let L, N, F, feuilles = [], kk = 0, p = 0;
   const zs = () => feuilles.forEach((f, j) => { f.style.zIndex = j < kk ? j + 1 : F - j + 1; });
   /* grand écran : livre ouvert sur deux pages ; téléphone (mono) : le même livre, une page à la fois, qu'on tourne */
-  let mono = !grand.matches, cur = null;
+  let mono = false, cur = null;      // téléphone aussi : le livre ouvert sur ses deux pages (les images se répondent)
   function charger(id) {
-    L = LIVRES[id]; N = L.n; cur = id; mono = !grand.matches;
+    L = LIVRES[id]; N = L.n; cur = id;
     const verso = (cls, html) => `<div class="face ${mono ? 'recto' : 'verso'} ${cls}">${html}</div>`;
     const pg = L.pdf ? ' mi' + (L.sombre ? ' sombre' : '') : '';
     let html = '<div class="ombre-livre"></div>';
@@ -588,7 +639,7 @@
     livre.innerHTML = html; livre.classList.toggle('mono', mono);
     feuilles = [...livre.querySelectorAll('.feuille')]; F = feuilles.length; kk = 0;
     livre.classList.add('ferme'); livre.classList.remove('fin'); $('ouvrir').classList.remove('cache');
-    $('ouvrir').textContent = mono ? 'Touchez le livre pour tourner les pages' : 'Cliquez pour ouvrir le livre';
+    $('ouvrir').textContent = grand.matches ? 'Cliquez pour ouvrir le livre' : 'Touchez ou glissez pour tourner les pages';
     livre.setAttribute('aria-label', 'Livre : cliquez sur une page pour la tourner');
     $('sousLivre').textContent = L.sous;
     minis.innerHTML = Array.from({ length: N }, (_, i) => `<button type="button" data-p="${i}" aria-label="Aller à la double page ${i + 1}"><img src="${L.mini(i + 1)}" alt="" loading="lazy"></button>`).join('');
@@ -611,6 +662,7 @@
   }
   livre.addEventListener('click', e => {
     if (mono) { const r = livre.getBoundingClientRect(); return tourner(kk + (e.clientX - r.left < r.width * .3 ? -1 : 1)); }
+    if (Date.now() - (tourner.swipe || 0) < 400) return;
     const f = e.target.closest('.feuille'); if (!f) return; const j = feuilles.indexOf(f); tourner(f.classList.contains('tournee') ? j : j + 1);
   });
   livre.addEventListener('keydown', e => { if (e.key === 'ArrowRight') tourner(kk + 1); if (e.key === 'ArrowLeft') tourner(kk - 1); });
@@ -618,10 +670,12 @@
   livre.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
   livre.addEventListener('touchend', e => {
     if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null;
-    if (Math.abs(dx) > 40) { e.preventDefault(); tourner(kk + (dx < 0 ? 1 : -1)); }
+    if (Math.abs(dx) > 40) { e.preventDefault(); tourner.swipe = Date.now(); tourner(kk + (dx < 0 ? 1 : -1)); }
   });
   function etat() {
     if (!L) return;
+    const lec = $('lecture');
+    if (kk >= 1 && kk <= N) { lec.innerHTML = L.lire(kk); lec.hidden = false; } else lec.hidden = true;
     const sp = mono ? Math.ceil(kk / 2) - 1 : kk - 1;          // double page affichée (miniatures)
     $('compteur').textContent = kk === 0 ? 'Couverture' : kk === MAX() ? 'Fin' : mono ? `Page ${kk} sur ${2 * N}` : `Page ${kk} sur ${N}`;
     $('prev').disabled = kk === 0; $('next').disabled = kk === MAX();
@@ -630,7 +684,7 @@
   $('prev').onclick = () => tourner(kk - 1);
   $('next').onclick = () => tourner(kk + 1);
   minis.onclick = e => { const b = e.target.closest('button'); if (!b) return; tourner(mono ? 2 * +b.dataset.p + 1 : +b.dataset.p + 1); };
-  grand.addEventListener('change', () => { if (cur) charger(cur); });
+  grand.addEventListener('change', etat);
   /* étal : un clic ouvre le livre et le centre à l'écran */
   $('etal').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;

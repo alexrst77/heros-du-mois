@@ -175,6 +175,8 @@ def sanitize_avatar(av, prenom, age, problems=None):
     for i, a in enumerate((av.get("animaux") or [])[:3]):
         if isinstance(a, dict):
             x = _pick("animal", a, f"animal {i + 1}", problems)
+            if x["type"] in ("chien", "lapin"):          # les oreilles suivent le modèle peint de l'aperçu (pas encore de variante)
+                x["oreilles"] = OPTIONS["modeles"]["animal"][x["type"]]["oreilles"]
             x["nom"] = _name(a.get("nom"))
             if not x["nom"]:
                 problems.append(f"animal {i + 1} : nom non renseigné")
@@ -889,26 +891,37 @@ def recolor_targets(kind, cfg):
         elif cfg.get("couleur_tenue") != base["couleur_tenue"]: t["B"] = col("enfant", "couleur_tenue")
     elif kind == "doudou":
         if cfg.get("couleur") != base["couleur"]: t["R"] = col("doudou", "couleur")
-        if cfg.get("accessoire") != "aucun" and cfg.get("couleur_accessoire") != base["couleur_accessoire"]:
+        if cfg.get("accessoire") == "noeud" and cfg.get("couleur_accessoire") != base["couleur_accessoire"]:
             t["B"] = col("doudou", "couleur_accessoire")
+        if cfg.get("accessoire") == "echarpe": t["A"] = col("doudou", "couleur_accessoire")
     else:
         main = col("animal", "couleur")
         if cfg.get("couleur") != base.get("couleur"): t["R"] = main
         if cfg.get("motif") == "uni" and cfg.get("type") != "oiseau": t["G"] = _shade(main, .2)
         elif cfg.get("couleur2") and cfg.get("couleur2") != base.get("couleur2"): t["G"] = col("animal", "couleur2")
+        if cfg.get("motif") in ("taches", "raye", "masque") and cfg.get("type") != "oiseau":
+            t["motif"] = cfg["motif"]; t["M"] = col("animal", "couleur2")
+        if cfg.get("yeux") and cfg.get("yeux") != base.get("yeux"): t["E"] = col("animal", "yeux")
+        if cfg.get("collier") not in (None, "aucun") and cfg.get("type") != "oiseau": t["C"] = col("animal", "collier")
     return {k: v for k, v in t.items() if v}
+
+
+def paint_name(kind, cfg):
+    """Modèle peint de l'éditeur (même choix que static/index.html : doudou sans nœud pour « aucun » et « écharpe »)."""
+    n = model_file(kind, cfg).stem
+    return n + "-nu" if kind == "doudou" and cfg.get("accessoire") != "noeud" else n
 
 
 def recolor_model(kind, cfg):
     """Modèle peint du pack recoloré selon la configuration (fond crème), mis en cache. None si impossible."""
     import hashlib
     try:
-        name = model_file(kind, cfg).stem
+        name = paint_name(kind, cfg)
         t = recolor_targets(kind, cfg)
-        out = CACHE / f"base_{hashlib.sha1(json.dumps([name, t, 'v6'], sort_keys=True).encode()).hexdigest()[:16]}.png"
+        out = CACHE / f"base_{hashlib.sha1(json.dumps([name, t, 'v7'], sort_keys=True).encode()).hexdigest()[:16]}.png"
         if out.exists():
             return out
-        if kind == "enfant":                                     # même calcul que l'aperçu du navigateur
+        if True:                                                 # même calcul que l'aperçu du navigateur (static/avatar.js)
             import avatar_paint
             fg = avatar_paint.paint(name, t)
             bg = Image.new("RGB", fg.size, (246, 238, 222)); bg.paste(fg, (0, 0), fg); bg.save(out)

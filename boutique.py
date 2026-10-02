@@ -92,6 +92,17 @@ def order_create():
     form["fetes"] = ",".join(fetes)
     if formule == "fetes" and len(fetes) != 6:
         return jsonify(erreur="Choisissez 6 fêtes pour la formule « 6 livres de fête »."), 400
+    k = c.get("cadeau") if isinstance(c.get("cadeau"), dict) else None   # livre offert : de la part de, petit mot, durée
+    form["formule"] = formule
+    if k and k.get("actif"):
+        clean = lambda v, n: re.sub(r"\s+", " ", str(v or "")).strip()[:n]
+        form["cadeau_de"], form["cadeau_message"] = clean(k.get("de"), 40), clean(k.get("message"), 160)
+        if formule == "mensuel":
+            if str(k.get("duree")) not in ("6", "12"):
+                return jsonify(erreur="Choisissez la durée offerte : 6 ou 12 mois."), 400
+            form["serie_total"] = str(k["duree"])
+    if formule == "fetes":
+        form["serie_total"] = "6"
     if "anniversaire" in fetes and not re.match(r"^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", form.get("anniversaire") or ""):
         return jsonify(erreur="Indiquez la date d'anniversaire de l'enfant."), 400
 
@@ -140,8 +151,13 @@ def confirm_paid(oid, stripe_sub=None):
     if o["formule"] != "livre":
         sid = uuid.uuid4().hex[:12]
         monthly_by_stripe = o["formule"] == "mensuel" and paiement.configured()
+        total = f["livres"]
+        try:
+            total = int(load_book(oid)[0].get("serie_total") or 0) or total      # abonnement offert : 6 ou 12 livres
+        except Exception:
+            pass
         db.sub_create(id=sid, commande_origine=oid, formule=o["formule"], statut="actif", email=o["email"],
-                      livres_restants=(f["livres"] - 1) if f["livres"] else None, numero=o["numero"],
+                      livres_restants=(total - 1) if total else None, numero=o["numero"],
                       prochain=None if monthly_by_stripe else time.time() + MOIS, stripe_sub=stripe_sub)
         db.update(oid, abonnement_id=sid)
     start_book(oid, auto=True)        # le client a fini : la création se fait de notre côté, sans validation de sa part
@@ -287,6 +303,11 @@ def next_book(s, univers=None):
                   prochain=(time.time() + MOIS) if s["prochain"] is not None and (left is None or left > 0) else None,
                   statut="termine" if left == 0 else s["statut"])
     log(f"abonnement {s['id']} : livre n°{n} (commande {oid}){' – ' + univers if univers else ''}")
+    if left == 0 and s["formule"] == "mensuel" and s.get("stripe_sub") and paiement.configured():
+        try:                                       # abonnement offert : dernier livre lancé, plus aucun prélèvement
+            paiement.stop_after_period(s["stripe_sub"])
+        except Exception:
+            traceback.print_exc()
     start_book(oid, auto=True)
     return oid
 
@@ -323,6 +344,8 @@ def build_cover(oid):
     """Couverture Lulu en une pièce (4e | tranche | 1re) aux dimensions données par Lulu pour 24 pages."""
     o = db.get(oid)
     folder = A.OUT / o["job_id"]
+    if (folder / "livre.json").exists() and not (folder / "histoire.json").exists():
+        raise RuntimeError("Livre au format du kit (lecture 210 mm) : la couverture Lulu n'est pas encore branchée pour ce format.")
     story = json.loads((folder / "histoire.json").read_text(encoding="utf-8")) if (folder / "histoire.json").exists() else None
     if story is None:
         raise RuntimeError("histoire.json introuvable : livre démo ?")
@@ -353,7 +376,8 @@ def send_to_print(oid):
         raise RuntimeError("Lulu doit télécharger les PDF : renseigne PUBLIC_URL (adresse https publique du site).")
     folder = A.OUT / o["job_id"]
     if not (folder / "impression_interieur.pdf").exists():
-        raise RuntimeError("impression_interieur.pdf introuvable")
+        raise RuntimeError("Pas de fichier d'impression : un livre au format du kit (lecture 210 mm) n'est pas encore prêt pour Lulu "
+                           "(gabarit, fond perdu et nombre de pages à brancher)." if (folder / "livre.json").exists() else "impression_interieur.pdf introuvable")
     build_cover(oid)
     jeton = o["jeton"] or secrets.token_urlsafe(24)
     db.update(oid, jeton=jeton)
@@ -416,7 +440,8 @@ def admin_list():
         r.pop("jeton", None)
         r["fichiers"] = sorted([p.name for p in (A.OUT / (r["job_id"] or "_")).glob("*.pdf") if p.name != "apercu.pdf" or r["pdf"] == "apercu.pdf"],
                                key=lambda n: n.startswith("impression_")) + \
-                        (["controle.json"] if (A.OUT / (r["job_id"] or "_") / "controle.json").exists() else [])
+                        (["controle.json"] if (A.OUT / (r["job_id"] or "_") / "controle.json").exists() else []) + \
+                        sorted(p.name for p in (A.OUT / (r["job_id"] or "_")).glob("planche_contact_*.jpg"))
     return jsonify(commandes=rows, abonnements=db.subs(),
                    config={"stripe": "live" if paiement.live() else "test" if paiement.configured() else "simulé",
                            "lulu": lulu.env() if lulu.configured() else "non configuré", "pod": lulu.POD_PACKAGE,
@@ -429,7 +454,7 @@ def admin_file(oid, name):
     if not admin_ok():
         abort(403)
     o = db.get(oid) or abort(404)
-    if not re.match(r"^[\w\-. ]+\.(pdf|json|png)$", name) or "/" in name:
+    if not re.match(r"^[\w\-. ]+\.(pdf|json|png|jpg)$", name) or "/" in name:
         abort(404)
     p = A.OUT / (o["job_id"] or "_") / name
     return send_file(p) if p.exists() else abort(404)
@@ -447,9 +472,9 @@ def admin_archive(oid):
         abort(404)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
-        for p in sorted(folder.iterdir()):
+        for p in sorted(folder.rglob("*")):                 # dont prompts/ et rendu/ (pages rendues, planches contact)
             if p.is_file() and not p.name.startswith("impression_"):
-                z.write(p, f"livre_{oid}/{p.name}")
+                z.write(p, f"livre_{oid}/{p.relative_to(folder)}")
         for p in (STORE / o["origine"]).glob("*"):
             z.write(p, f"livre_{oid}/commande/{p.name}")
     buf.seek(0)

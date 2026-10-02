@@ -67,3 +67,21 @@ Chaque image générée passe par une correction de la dominante jaune-orangée 
 ## Coût et durée
 Un livre = 2 à 4 appels texte + 13 images (planche, couverture, 9 scènes, 2 décors), plus les éventuels « redessiner ». En qualité `high`, compte environ 2,5 à 3 € par livre, et environ 4 à 5 fois moins en `medium`. Vérifie les tarifs à jour sur platform.openai.com. Durée : 5 à 8 minutes hors validations.
 `AUTO_VALIDATE=1` dans `.env` enchaîne tout sans les étapes de validation.
+
+## Procédé des livres Mila et Noé (kit) — actif par défaut (`PROCEDE=kit`)
+
+- `moteur_livre.py` : le moteur PDF du kit, porté sans changer un calcul (20 pages carrées 210 mm, panoramas 2:1 coupés à 50 %,
+  DejaVu Serif 14,8/21 pt, fondu de 225 pt, texte à 43 pt du bas, 147 pt maximum). Test sans API :
+  `python3 moteur_livre.py kit/noe-demo.json --output test/Noe.pdf` (20 pages, identique au PDF Noé d'origine).
+- `procede.py` : instantané de la commande (version + empreinte) → fiches des personnages (« aucun » explicite) → portraits
+  d'identité contrôlés (2 corrections max) + fiche de groupe → storyboard JSON (9 doubles pages, textes vérifiés avec la police du
+  moteur AVANT les images) → couverture sans texte (titre composé dans le PDF) → panorama pilote → 8 panoramas → contrôles →
+  assemblage → rendu contrôlé (pages en images, planches contact). États : queued, references, storyboard, illustrating,
+  reviewing, assembling, ready, needs_review, failed.
+- Chaque appel image envoie les fichiers (couverture personnalisée, fiche de groupe, portraits des présents, 1 référence de STYLE
+  Mila/Noé) ; tout est tracé dans `references_transmises.jsonl` (rôle, empreinte, taille demandée/reçue, modèle, prompt).
+- Variables : `OPENAI_IMAGE_MODEL` (ou `OPENAI_PANO_MODEL`) doit gérer les tailles libres (gpt-image-2…), sinon la fabrication
+  s'arrête avant toute dépense ; `OPENAI_PANO_SIZE` (2048x1024), `OPENAI_COVER_SIZE` (1024x1024), `KIT_CORRECTIONS` (2).
+  `PROCEDE=ancien` remet l'ancienne chaîne (24 pages, fichiers Lulu).
+- Pas encore branché pour ce format : fichiers d'impression Lulu (gabarit, fond perdu, nombre de pages) ; l'impression est refusée.
+- Tests : `python3 tests/test_procede.py` (commande → PDF depuis le site, OpenAI simulé).
