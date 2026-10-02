@@ -52,6 +52,10 @@
   .h-face { box-shadow:inset 6px 0 10px -4px rgba(0,0,0,.45), inset -1px 0 0 rgba(255,255,255,.25); }
   .h-face img, .h-r img { width:100%; height:100%; object-fit:cover; display:block; }
   .h-face::after { content:""; position:absolute; inset:0; background:linear-gradient(105deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,.08) 100%); }
+  /* bord doré des couvertures (comme les livres de l'étagère) */
+  .h-face::before, .etal .cv::after, .face.couv::before { content:""; position:absolute; inset:3.2%; border:2px solid rgba(232,196,110,.9); border-radius:4px; z-index:2; pointer-events:none;
+      box-shadow:0 0 0 1px rgba(120,80,20,.35), inset 0 0 0 1px rgba(120,80,20,.35), inset 0 0 0 5px rgba(232,196,110,.18); }
+  .h-face::before { inset:4% 4% 4% 6%; }
   .h-r { background:#FBF8F0; border-radius:2px 6px 6px 2px; }
   .h-r::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,.25), rgba(0,0,0,0) 12%); }
   .h-v { transform:rotateY(180deg); background:repeating-linear-gradient(180deg, transparent 0 22px, rgba(43,38,34,.09) 22px 25px) 18% 30% / 64% 46% no-repeat, #FBF8F0; border-radius:6px 2px 2px 6px; }
@@ -62,7 +66,12 @@
   .h-v.garde em { font:600 calc(var(--w) * .036)/1.4 var(--texte); font-style:normal; color:#9A928A; margin-top:16%; }
   /* animation d'accueil : le livre arrive, s'ouvre, les pages défilent, il se referme */
   .h-fin { position:absolute; inset:2% 1% 2% 0; transform:translateZ(2px); overflow:hidden; border-radius:2px 6px 6px 2px; background:#FBF8F0; }
-  .h-fin img { width:100%; height:100%; object-fit:cover; display:block; }
+  .h-fin img, .h-pg img { width:100%; height:100%; object-fit:cover; display:block; }
+  .h-fin, .h-r, .h-pg { background:#171B3A; }
+  .h-txt { position:absolute; left:0; right:0; bottom:0; padding:calc(var(--w) * .07) calc(var(--w) * .07) calc(var(--w) * .035); color:#FFF7E8;
+           font:400 calc(var(--w) * .024)/1.45 Georgia, serif; background:linear-gradient(180deg, rgba(23,27,58,0), rgba(23,27,58,.94) 38%, #171B3A); }
+  .h-txt em { display:block; text-align:center; font-style:normal; font-size:.8em; opacity:.7; margin-top:.5em; }
+  .h-pg { background:#171B3A !important; }
   .anim .livre { animation:arrive 4.8s cubic-bezier(.4,.1,.3,1) backwards; }
   .anim .h-couv { animation:couv 3.4s cubic-bezier(.45,.05,.35,1) 1.2s backwards; }
   .anim .h-flt { animation:feuillet 3.2s cubic-bezier(.45,.05,.35,1) calc(1.5s + var(--d) * 160ms) backwards; }
@@ -81,7 +90,7 @@
                 text-shadow:0 2px 14px rgba(10,20,40,.75), 0 1px 2px rgba(10,20,40,.6); }
   .titre-couv b { display:block; font:400 calc(var(--w) * .12)/1 var(--titre); transition:opacity .35s; }
   .titre-couv span { display:block; font:400 calc(var(--w) * .058)/1.2 var(--titre); margin-top:6px; }
-  .tranche { position:absolute; left:0; top:0; bottom:0; width:28px; background:linear-gradient(90deg,#1B2A55,#2C3C78 60%,#1B2A55);
+  .tranche { position:absolute; left:0; top:0; bottom:0; width:28px; background:linear-gradient(180deg, transparent 6%, #E8C46E 6%, #E8C46E 7.2%, transparent 7.2%, transparent 92.8%, #E8C46E 92.8%, #E8C46E 94%, transparent 94%), linear-gradient(90deg,#1B2A55,#2C3C78 60%,#1B2A55);
              transform-origin:left; transform:rotateY(-90deg) translateX(-14px); border-radius:3px 0 0 3px; }
   .pages { position:absolute; right:0; top:2%; bottom:2%; width:26px; transform-origin:right;
            transform:rotateY(90deg) translateX(13px); background:repeating-linear-gradient(90deg,#FBF8F0 0 2px,#E9E3D3 2px 3px); }
@@ -191,7 +200,7 @@
   .etal button { appearance:none; background:none; border:0; padding:0; color:#fff; cursor:pointer; text-align:center; font:inherit; transition:transform .35s, opacity .35s; }
   .etal img, .etal .cv { display:block; width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px 8px 8px 3px; position:relative; overflow:hidden;
                          box-shadow:-7px 0 0 #2C3C78, 0 30px 50px -22px rgba(0,0,0,.8); transition:transform .35s, box-shadow .35s; }
-  .etal .cv img { box-shadow:none; border-radius:0; }
+  .etal .cv img { box-shadow:none; border-radius:0; transform:none !important; }
   .etal .cv i { position:absolute; left:0; right:0; top:7%; font:400 clamp(20px,4vw,44px)/1 var(--titre); font-style:normal; color:#FFF6DC; text-shadow:0 2px 14px rgba(10,20,40,.75); }
   .etal .cv small { display:block; font-size:.42em; margin-top:6px; padding:0 10%; line-height:1.2; }
   .etal button:hover img, .etal button:hover .cv { transform:translateY(-8px) rotateY(-8deg); }
@@ -350,11 +359,11 @@
       <div class="ombre"></div>
       <div class="livre">
         <div class="dos"></div><div class="tranche"></div><div class="pages"></div>
-        <div class="h-fin"><img src="/static/vitrine/noe_05_d.webp" alt=""></div>
-        <div class="h-flt" style="--z:4px;--d:3"><i class="h-r"><img src="/static/vitrine/noe_04_d.webp" alt=""></i><i class="h-v"></i></div>
-        <div class="h-flt" style="--z:6px;--d:2"><i class="h-r"><img src="/static/vitrine/noe_03_d.webp" alt=""></i><i class="h-v"></i></div>
-        <div class="h-flt" style="--z:8px;--d:1"><i class="h-r"><img src="/static/vitrine/noe_02_d.webp" alt=""></i><i class="h-v"></i></div>
-        <div class="h-flt" style="--z:10px;--d:0"><i class="h-r"><img src="/static/vitrine/noe_01_d.webp" alt=""></i><i class="h-v"></i></div>
+        <div class="h-fin"><img src="/static/vitrine/noe_05_d.webp" alt=""><span class="h-txt">Une mélodie circule de cristal en cristal, puis s’éloigne vers une montagne en croissant. « Tu entends ? » souffle Noé. Luma se remet à briller. « C’est la chanson des comètes ! Elles connaissent tous les chemins du ciel. »<em>10</em></span></div>
+        <div class="h-flt" style="--z:4px;--d:3"><i class="h-r"><img src="/static/vitrine/noe_04_d.webp" alt=""><span class="h-txt">Luma laisse tomber quelques grains de lumière pour tracer un chemin. Mais un souffle les emporte aussitôt. Noé les regarde filer entre les rochers. « Attends… Ils vont peut-être quelque part. Suivons-les doucement. »<em>8</em></span></i><i class="h-v h-pg"><img src="/static/vitrine/noe_05_g.webp" alt=""><span class="h-txt">Les grains les conduisent dans une vallée de cristaux. Ting… ting… Chaque cristal chante une note légère. Noé s’accroupit pour mieux écouter. Son ours dépasse de son sac, comme s’il écoutait lui aussi. Luma cesse un instant de trembler.<em>9</em></span></i></div>
+        <div class="h-flt" style="--z:6px;--d:2"><i class="h-r"><img src="/static/vitrine/noe_03_d.webp" alt=""><span class="h-txt">Noé regarde le ciel, puis ses petites bottes. « Je ne sais pas voler aussi haut… » Luma baisse ses pointes. Il se rapproche d’elle. « Mais je peux chercher avec toi. Nous n’avons pas besoin de tout savoir pour commencer. »<em>6</em></span></i><i class="h-v h-pg"><img src="/static/vitrine/noe_04_g.webp" alt=""><span class="h-txt">Noé grimpe sur une butte et lève le bras. Encore un peu… juste un peu ! Le cerf-volant reste bien trop loin. Il redescend en faisant un petit bond. « Bon. Il nous faut une autre idée ! »<em>7</em></span></i></div>
+        <div class="h-flt" style="--z:8px;--d:1"><i class="h-r"><img src="/static/vitrine/noe_02_d.webp" alt=""><span class="h-txt">Un pas, puis un autre… Noé avance dans la nuit comme sur un tapis moelleux. Au bout du sentier, une petite lune argentée les attend. Tout autour flottent des nuages violets. « C’est encore plus beau que dans mes rêves ! »<em>4</em></span></i><i class="h-v h-pg"><img src="/static/vitrine/noe_03_g.webp" alt=""><span class="h-txt">Sur la lune, Luma montre un dessin d’étoiles très haut dans le ciel. On dirait un cerf-volant ! Mais un coin est tout sombre. « C’est ma place, murmure-t-elle. Sans moi, mes amies ne peuvent plus terminer notre dessin. »<em>5</em></span></i></div>
+        <div class="h-flt" style="--z:10px;--d:0"><i class="h-r"><img src="/static/vitrine/noe_01_d.webp" alt=""><span class="h-txt">C’est une petite étoile, pas plus grande qu’une pomme. « Je m’appelle Luma. J’ai glissé de mon coin de ciel et je ne retrouve plus le chemin. » Noé soulève son ours. « Alors, nous allons t’aider tous les deux ! »<em>2</em></span></i><i class="h-v h-pg"><img src="/static/vitrine/noe_02_g.webp" alt=""><span class="h-txt">Luma secoue une pointe. Une poussière brillante tourbillonne autour de Noé : le voilà dans une combinaison, avec un casque tout rond ! Il installe son ours sur son sac. Devant la fenêtre, un sentier de lumière se déroule.<em>3</em></span></i></div>
         <div class="h-couv">
           <div class="h-face">
             <img src="/static/vitrine/noe_00.webp" alt="">
@@ -371,9 +380,9 @@
     <h2>Feuilletez nos livres</h2>
     <p class="sous">Cliquez sur un livre pour l'ouvrir. Le vôtre aura le prénom, le visage et les compagnons de votre enfant.</p>
     <div class="etal" id="etal">
-      <button type="button" data-l="noe"><img src="/static/vitrine/noe_00.webp" alt=""><b>Noé</b><span>La poussière d'étoiles</span></button>
+      <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp" alt=""></span><b>Noé</b><span>La poussière d'étoiles</span></button>
       <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp" alt=""><i>Léo<small>et la forêt des petites lumières</small></i></span><b>Léo</b><span>La forêt des petites lumières</span></button>
-      <button type="button" data-l="mila"><img src="/static/vitrine/mila_00.webp" alt=""><b>Mila</b><span>Le secret de l'océan</span></button>
+      <button type="button" data-l="mila"><span class="cv"><img src="/static/vitrine/mila_00.webp" alt=""></span><b>Mila</b><span>Le secret de l'océan</span></button>
     </div>
     <div class="lecteur" id="lecteur" hidden>
     <p class="sous" id="sousLivre"></p>
