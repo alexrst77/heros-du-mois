@@ -219,7 +219,8 @@
     if (kind === 'enfant') {
       if (cfg.couleur_cheveux !== b.couleur_cheveux) t.R = colorOf(OPT.enfant.couleur_cheveux, cfg.couleur_cheveux);
       if (cfg.peau !== b.peau) t.G = colorOf(OPT.enfant.peau, cfg.peau);
-      if (cfg.couleur_tenue !== b.couleur_tenue) t.B = colorOf(OPT.enfant.couleur_tenue, cfg.couleur_tenue);
+      if (cfg.tenue && cfg.tenue !== 'pyjama') { t.tenue = cfg.tenue; t.B = colorOf(OPT.enfant.couleur_tenue, cfg.couleur_tenue); }
+      else if (cfg.couleur_tenue !== b.couleur_tenue) t.B = colorOf(OPT.enfant.couleur_tenue, cfg.couleur_tenue);
       if (cfg.yeux !== b.yeux) t.E = colorOf(OPT.enfant.yeux, cfg.yeux);
       if (cfg.taches === 'oui') t.freckles = Avatar.shade(colorOf(OPT.enfant.peau, cfg.peau), -.42);
       if (cfg.lunettes !== 'aucune') t.glasses = { type: cfg.lunettes, color: colorOf(OPT.enfant.couleur_lunettes, cfg.couleur_lunettes) };
@@ -236,7 +237,7 @@
   }
   function bookOnly(kind, cfg) {
     const b = modelBase(kind, cfg), l = [];
-    if (kind === 'enfant') { if (cfg.tenue !== b.tenue) l.push('le type de tenue'); }
+    if (kind === 'enfant') { }
     else if (kind === 'doudou') { if (cfg.accessoire !== b.accessoire) l.push("l'accessoire"); }
     else {
       if (['taches', 'raye', 'masque'].includes(cfg.motif)) l.push('le motif');
@@ -246,17 +247,20 @@
     }
     return l;
   }
+  const SHOWN = new Map();
   function paintState(kind, cfg) {
     const k = keyOf(kind, cfg); let st = PAINT.get(k);
     if (!st) {
-      st = { url: modelUrl(kind, cfg) }; PAINT.set(k, st);
+      const slot = kind + ':' + modelName(kind, cfg);
+      st = { url: SHOWN.get(slot) || modelUrl(kind, cfg) }; PAINT.set(k, st);   // on garde l'image affichée jusqu'au nouveau rendu (pas de clignotement)
       const t = targetsOf(kind, cfg);
       if (Object.keys(t).length)       // aperçu instantané : on recolore le modèle peint (aucun appel payant)
-        Avatar.recolor(modelName(kind, cfg), t).then(u => { st.url = u; st.recolore = true; renderStage(); }).catch(() => {});
+        Avatar.recolor(modelName(kind, cfg), t).then(u => { st.url = u; st.recolore = true; SHOWN.set(slot, u); renderStage(); }).catch(() => {});
+      else { st.url = modelUrl(kind, cfg); SHOWN.set(slot, st.url); }
     }
     return st;
   }
-  const img = (st, alt) => `<img src="${st.url}" alt="${esc(alt || '')}" loading="lazy">`;
+  const img = (st, alt) => `<img src="${st.url}" alt="${esc(alt || '')}">`;
   function status(which) {
     const rest = bookOnly(kindOf(which), cfgOf(which));
     return rest.length ? `<div class="badge">✓ Aperçu en direct. ${rest.join(', ').replace(/^./, c => c.toUpperCase())} apparaîtr${rest.length > 1 ? 'ont' : 'a'} dans les illustrations du livre.</div>` : '';

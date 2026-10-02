@@ -215,64 +215,101 @@
   async function pixels(name) {
     if (imgs.has(name)) return imgs.get(name);
     const p = (async () => {
-      if (!MST) MST = await (await fetch('/static/avatars/masks.json')).json();
-      const [a, m] = await Promise.all([loadImg(`/static/avatars/${name}.webp`), loadImg(`/static/avatars/${name}.mask.png`)]);
-      const e = (MST[name] || {}).eyes ? await loadImg(`/static/avatars/${name}.eyes.png`).catch(() => null) : null;
+      if (!MST) MST = await (await fetch('/static/avatars/masks.json?v=6')).json();
+      const st = MST[name] || {};
+      const [a, m, e, sh] = await Promise.all([loadImg(`/static/avatars/${name}.webp`), loadImg(`/static/avatars/${name}.mask.png?v=6`),
+        st.eyes ? loadImg(`/static/avatars/${name}.eyes.png?v=6`).catch(() => null) : null,
+        st.tenue ? loadImg(`/static/avatars/${name}.shirt.png?v=6`).catch(() => null) : null]);
       const c = document.createElement('canvas'); c.width = a.width; c.height = a.height;
       const x = c.getContext('2d', { willReadFrequently: true });
-      x.drawImage(m, 0, 0, a.width, a.height); const mask = x.getImageData(0, 0, a.width, a.height).data.slice();
-      let eyes = null;
-      if (e) { x.clearRect(0, 0, a.width, a.height); x.drawImage(e, 0, 0, a.width, a.height); eyes = x.getImageData(0, 0, a.width, a.height).data.slice(); }
+      const grab = im => { x.clearRect(0, 0, a.width, a.height); x.drawImage(im, 0, 0, a.width, a.height); return x.getImageData(0, 0, a.width, a.height).data.slice(); };
+      const mask = grab(m), eyes = e ? grab(e) : null, shirt = sh ? grab(sh) : null;
       x.clearRect(0, 0, a.width, a.height); x.drawImage(a, 0, 0); const base = x.getImageData(0, 0, a.width, a.height);
-      return { w: a.width, h: a.height, mask, eyes, base };
+      return { w: a.width, h: a.height, mask, eyes, shirt, base };
     })();
     imgs.set(name, p); return p;
   }
   function rgb2hsl(r, g, b) {
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
     if (mx !== mn) {
-      const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
-      h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6;
+      const d = mx - mn; s = d / Math.max(1e-6, 1 - Math.abs(2 * l - 1));
+      h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6;
     }
-    return [h, s, l];
+    return [h, Math.min(1, s), l];
   }
-  function hue2(p, q, t) { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < .5) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; }
   function hsl2rgb(h, s, l) {
-    if (!s) return [l, l, l];
-    const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
-    return [hue2(p, q, h + 1 / 3), hue2(p, q, h), hue2(p, q, h - 1 / 3)];
+    const c = (1 - Math.abs(2 * l - 1)) * s, hp = ((h % 1) + 1) % 1 * 6, x = c * (1 - Math.abs(hp % 2 - 1)), m = l - c / 2, i = Math.floor(hp) % 6;
+    const t = [[c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x]][i];
+    return [t[0] + m, t[1] + m, t[2] + m];
   }
   const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+  /* même calcul que avatar_paint.py (serveur) : l'aperçu est exactement la base du livre */
+  const lightMap = (l, lb, lt) => lt <= lb ? l * lt / Math.max(lb, 1e-3) : Math.min(0.96, Math.max(0, Math.min(lt, 0.72) + (l - lb) * 0.8));
+  function zoneOf(base, target) {
+    const [hb, sb, lb] = rgb2hsl(...base.map(v => v / 255)), [ht, stt, lt] = rgb2hsl(...hex(target));
+    const ks = stt / Math.max(sb, .05);
+    return { dh: ht - hb, ks: lt > lb ? Math.min(1, ks) : ks, lb, lt };
+  }
+  const WHITE = '#F4F0E6';
+  function tenueAt(kind, X, Y, g, k, main, white) {     // couleur du vêtement en (X, Y) et détail peint (-1 sombre, +1 clair)
+    const nx = g.neck[0] * k, ny = g.neck[1] * k, hw = g.hw * k, y0 = g.box[1] * k, y1 = g.box[3] * k;
+    if (kind === 'mariniere') { const band = (y1 - y0) / 9.5; return [(((Y - y0) / band) % 2 + 2) % 2 < 1 ? white : main, 0]; }
+    if (kind === 'salopette') {
+      const top = ny + 38 * k, bx = hw + 30 * k;
+      for (const sx of [-1, 1]) if ((X - (nx + sx * bx)) ** 2 + (Y - top - 2 * k) ** 2 < (6 * k) ** 2) return [main, 1];
+      if ((Math.abs(Math.abs(X - nx) - bx) < 12 * k && Y < top + 4 * k) || (Math.abs(X - nx) < 62 * k && Y >= top)) return [main, 0];
+      return [white, 0];
+    }
+    if (kind === 'sweat') {
+      const d = Math.hypot((X - nx) / (hw + 14 * k), (Y - ny + 18 * k) / (46 * k));
+      if (d > 0.8 && d < 1.08 && Y < ny + 30 * k) return [main, -1];
+      for (const sx of [-1, 1]) if (Math.abs(X - (nx + sx * 13 * k)) < 2.6 * k && Y > ny + 4 * k && Y < ny + 52 * k) return [main, 1];
+      return [main, 0];
+    }
+    if (kind === 'robe') {
+      for (const sx of [-1, 1]) { const cx = nx + sx * hw * 0.78, cy = ny - 2 * k; if (((X - cx) / (hw * 1.2)) ** 2 + ((Y - cy) / (30 * k)) ** 2 < 1) return [white, 0]; }
+      return [main, 0];
+    }
+    return [main, 0];
+  }
   async function recolor(name, targets) {
     const key = name + JSON.stringify(targets);
     if (outs.has(key)) return outs.get(key);
     const job = (async () => {
       const P = await pixels(name), st = MST[name] || {}, d = new ImageData(new Uint8ClampedArray(P.base.data), P.w, P.h), px = d.data, M = P.mask;
-      const zones = ['R', 'G', 'B'].map((k, i) => {
-        if (!targets[k] || !st[k]) return null;
-        const [hb, sb, lb] = rgb2hsl(...st[k].map(v => v / 255)), [ht, stt, lt] = rgb2hsl(...hex(targets[k]));
-        return { i, dh: ht - hb, ks: stt / Math.max(sb, .05), lt, lb };
-      }).filter(Boolean);
-      if (targets.E && st.E && P.eyes) {
-        const [hb, sb, lb] = rgb2hsl(...st.E.map(v => v / 255)), [ht, stt, lt] = rgb2hsl(...hex(targets.E));
-        zones.push({ i: 0, eye: true, dh: ht - hb, ks: stt / Math.max(sb, .05), lt: Math.min(lt, .55), lb, ht, st: stt });
-      }
+      const zR = targets.R && st.R ? zoneOf(st.R, targets.R) : null, zG = targets.G && st.G ? zoneOf(st.G, targets.G) : null;
+      const zE = targets.E && P.eyes ? rgb2hsl(...hex(targets.E)) : null;
+      const kind = targets.tenue || 'pyjama', plain = kind !== 'pyjama' && P.shirt && st.tenue;
+      const zB = !plain && targets.B && st.B ? zoneOf(st.B, targets.B) : null;
+      const k = P.w / 480, main = rgb2hsl(...hex(targets.B || '#E9B840')), white = rgb2hsl(...hex(WHITE));
       for (let p = 0; p < px.length; p += 4) {
         if (!px[p + 3]) continue;
         let r = px[p] / 255, g = px[p + 1] / 255, b = px[p + 2] / 255;
-        for (const z of zones) {
-          const w = (z.eye ? P.eyes[p] : M[p + z.i]) / 255; if (w < .01) continue;
-          let [h, s, l] = rgb2hsl(r, g, b);
-          if (z.eye) { h = z.ht; s = Math.min(1, z.st * 1.2) * Math.min(1, Math.max(0, (l - 0.06) / 0.22)); }   // iris : teinte imposée, pupille neutre
-          else { h = (h + z.dh + 1) % 1; s = Math.min(1, s * (z.lt > z.lb ? Math.min(1, z.ks) : z.ks)); }   // éclaircir sans sursaturer
-          l = z.lt <= z.lb ? l * z.lt / Math.max(z.lb, 1e-3) : Math.min(0.96, Math.max(0, Math.min(z.lt, 0.72) + (l - z.lb) * 0.8));   // éclaircir sans aplatir
-          const [r2, g2, b2] = hsl2rgb(h, s, Math.max(0, Math.min(1, l)));
-          r = r * (1 - w) + r2 * w; g = g * (1 - w) + g2 * w; b = b * (1 - w) + b2 * w;
+        const mix = (w, c) => { r = r * (1 - w) + c[0] * w; g = g * (1 - w) + c[1] * w; b = b * (1 - w) + c[2] * w; };
+        for (const [z, i] of [[zR, 0], [zG, 1]]) {
+          const w = M[p + i] / 255; if (!z || w < .01) continue;
+          const [h, s, l] = rgb2hsl(r, g, b);
+          mix(w, hsl2rgb(h + z.dh, Math.min(1, s * z.ks), lightMap(l, z.lb, z.lt)));
+        }
+        if (zE) { const w = P.eyes[p] / 255; if (w > .01) { const [, , l] = rgb2hsl(r, g, b);
+          mix(w, hsl2rgb(zE[0], Math.min(1, zE[1] * 1.2) * Math.min(1, Math.max(0, (l - 0.06) / 0.22)), lightMap(l, 0.33, Math.min(zE[2], .55)))); } }
+        const wB = M[p + 2] / 255;
+        if (wB > .01) {
+          if (plain) {
+            const n = p / 4, X = n % P.w, Y = (n - X) / P.w, lum = P.shirt[p] / 255;
+            const [c, ex] = tenueAt(kind, X, Y, st.tenue, k, main, white);
+            let l = lightMap(lum, st.tenue.lum, c[2]);
+            if (ex > 0) l = Math.min(0.95, l * 0.25 + 0.72); else if (ex < 0) l *= 0.78;
+            mix(wB, hsl2rgb(c[0], c[1], Math.max(0, Math.min(1, l))));
+          } else if (zB) {
+            const [h, s, l] = rgb2hsl(r, g, b);
+            mix(wB, hsl2rgb(h + zB.dh, Math.min(1, s * zB.ks), lightMap(l, zB.lb, zB.lt)));
+          }
         }
         px[p] = r * 255; px[p + 1] = g * 255; px[p + 2] = b * 255;
       }
       const c = document.createElement('canvas'); c.width = P.w; c.height = P.h; const x = c.getContext('2d'); x.putImageData(d, 0, 0);
-      const E = (MST[name] || {}).eyes;
+      const E = st.eyes;
       if (E && (targets.freckles || targets.glasses)) overlays(x, E, targets);
       return c.toDataURL('image/png');
     })();

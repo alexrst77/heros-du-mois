@@ -70,9 +70,23 @@ def child(im):
     yy = np.mgrid[0:SIZE, 0:SIZE][0] / SIZE
     warm = (H < 34) | (H > 335)
     core = A & (H > 32) & (H < 60) & (S > 0.45) & (V > 0.38) & (yy > 0.52)
-    zone = fill_holes(largest(close(core, 15))) & A                     # tout le vêtement (ombres et étoiles comprises)
-    strand = (H > 4) & (H < 31) & (S > 0.35) & (V < 0.72)               # mèches de cheveux posées sur le vêtement
-    shirt = zone & ~strand
+    zone = np.zeros_like(A)                                            # tout le vêtement, y compris les morceaux séparés par les cheveux
+    for c in components(close(core, 15)):
+        if c[0] > 400 and c[2] > 0.66 * SIZE:                          # sous le cou seulement (pas les élastiques des couettes)
+            m = np.zeros_like(A); m[c[3][:, 0], c[3][:, 1]] = True; zone |= fill_holes(m)
+    peau = ((H < 34) | (H > 335)) & (V > 0.55) & (S > 0.12) & (S < 0.8)        # le cou ne doit jamais prendre la couleur du vêtement
+    zone |= (np.asarray(Image.fromarray((zone * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7))) > 127) & ~peau
+    zone |= A & (yy > 0.84)                                            # le bas de l'image n'est que vêtement (et mèches, traitées ensuite)
+    zone &= A
+    strand = zone & (H > 4) & (H < 31) & (S > 0.35) & (V < 0.72)
+    # une mèche posée sur le vêtement est reliée aux cheveux ; un pli ou une couture du vêtement ne l'est pas
+    hair_out = A & ~zone & (((H > 4) & (H < 46)) | (V < 0.35)) & (S > 0.2) & (yy < 0.75)
+    hair_out = np.asarray(Image.fromarray((hair_out * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5))) > 127
+    meche = np.zeros_like(A)
+    for c in components(strand):
+        if hair_out[c[3][:, 0], c[3][:, 1]].any() or c[0] > 900:
+            meche[c[3][:, 0], c[3][:, 1]] = True
+    shirt = zone & ~meche
     # visage : peau claire franche, refermée avec un petit rayon (pour ne pas engloutir les mèches voisines)
     strict = A & ~shirt & warm & (S > 0.1) & (S < 0.62) & (V > 0.86)
     core = fill_holes(largest(close(strict, 5))) & A & ~shirt
@@ -85,6 +99,23 @@ def child(im):
     neck = cand & (yy > 0.55) & (xx > 0.35) & (xx < 0.68)
     for c in components(neck):
         if c[0] > 300: skinreg[c[3][:, 0], c[3][:, 1]] = True
+    # oreilles : zones de peau (même ombrées) reliées au visage, refermées pour inclure le creux de l'oreille
+    far = Image.fromarray((core * 255).astype(np.uint8))
+    for _ in range(12): far = far.filter(ImageFilter.MaxFilter(9))
+    far = np.asarray(far) > 127
+    earc = A & ~shirt & ~core & far & ((H < 30) | (H > 330)) & (V > 0.5) & (S > 0.22) & (S < 0.98)
+    # les oreilles sont sur les côtés du visage, à hauteur des yeux et de la bouche : on ne cherche que là
+    ys, xs = np.nonzero(core)
+    y0, y1 = np.percentile(ys, 30), np.percentile(ys, 85)
+    xx = np.mgrid[0:SIZE, 0:SIZE][1]; yy2 = np.mgrid[0:SIZE, 0:SIZE][0]
+    rows = (yy2 > y0) & (yy2 < y1)
+    left, right = np.percentile(xs, 2), np.percentile(xs, 98)
+    for side in ((xx < left + 26) & rows, (xx > right - 26) & rows):
+        cs = [c for c in components(earc & side) if c[0] > 60]
+        if cs:
+            c = max(cs, key=lambda c: c[0])
+            m = np.zeros_like(A); m[c[3][:, 0], c[3][:, 1]] = True
+            skinreg |= fill_holes(close(m, 7)) & A & ~shirt
     face = fill_holes(skinreg) & A & ~shirt
     feat = face & ~skinreg & (V < 0.6)                                 # yeux, sourcils, bouche : on n'y touche pas
     skin = skinreg & warm & (S > 0.08) & (V > 0.6)
@@ -131,11 +162,43 @@ def find_eyes(z, im):
         pts = c[3]; r = max(pts[:, 1].max() - pts[:, 1].min(), pts[:, 0].max() - pts[:, 0].min()) / 2 + 2
         eyes.append([round(float(c[1]), 1), round(float(c[2]), 1), round(float(r), 1)])
         yy, xx = np.mgrid[0:SIZE, 0:SIZE]
-        disk = (xx - c[1]) ** 2 + (yy - c[2]) ** 2 <= (r * 1.1) ** 2
+        disk = (xx - c[1]) ** 2 + (yy - c[2]) ** 2 <= (r * 1.0) ** 2
         # iris = tout ce qui est brun-orangé dans l'œil (y compris ses reflets clairs) ; ni le blanc, ni la peau, ni la pupille noire
         brun = (H > 5) & (H < 45) & (S > 0.3) & (V > 0.12) & ((V < 0.8) | (S > 0.6))
-        iris |= disk & brun
+        iris |= disk & brun & ~z["G"]
     return eyes, iris
+
+
+def shirt_layers(shirt, im, name):
+    """Pour changer la tenue en direct : luminosité du vêtement SANS les étoiles (ombres et plis gardés),
+    masque des étoiles, et géométrie de l'encolure. Fichier <nom>.shirt.png : R = luminosité, G = étoiles."""
+    H, S, V = hsv(im)
+    L = np.asarray(im.convert("L")).astype(np.float32) / 255
+    from scipy.ndimage import median_filter
+    Lm = median_filter(np.asarray(im.convert("L")).astype(np.float32) / 255, size=15)
+    stars = shirt & (((S < 0.5) & (V > 0.66)) | (np.asarray(im.convert("L")).astype(np.float32) / 255 > Lm + 0.07))
+    stars = np.asarray(Image.fromarray((stars * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5))) > 127
+    keep = (shirt & ~stars).astype(np.float32)
+    num, den = L * keep, keep.copy()
+    for r in (4, 8, 16):                                   # on bouche les étoiles avec la luminosité voisine
+        from scipy.ndimage import gaussian_filter
+        bn, bd = gaussian_filter(num, r), gaussian_filter(den, r)
+        fill = bn / np.maximum(bd, 1e-4)
+        num = np.where(den > 0, num, fill * (bd > 0.02)); den = np.where(den > 0, den, (bd > 0.02).astype(np.float32))
+    plain = np.where(shirt, np.where(stars, num, L), 0)
+    out = np.stack([plain * 255, stars * 255, np.zeros_like(plain)], -1).astype(np.uint8)
+    Image.fromarray(out).save(f"static/avatars/{name}.shirt.png", optimize=True)
+    ys, xs = np.nonzero(shirt)
+    x0, x1, y0, y1 = int(xs.min()), int(xs.max()), int(ys.min()), int(ys.max())
+    top = np.array([ys[xs == x].min() if (xs == x).any() else SIZE for x in range(SIZE)])
+    mid = np.arange(int(x0 + (x1 - x0) * 0.3), int(x0 + (x1 - x0) * 0.7))
+    ref = np.median(top[mid])
+    hole = mid[top[mid] > ref + 0.4 * (top[mid].max() - ref)] if top[mid].max() > ref + 8 else mid[top[mid] >= top[mid].max() - 4]
+    nx = float(hole.mean()); hw = float((hole.max() - hole.min()) / 2 + 6); ny = float(top[hole].max())
+    if ny > 370 or hw < 22 or x1 - x0 < 240:            # cheveux longs sur les épaules : même buste que les autres modèles
+        nx, ny, hw, (x0, y0, x1, y1) = 248.0, 360.0, 30.0, (104, 304, 392, 464)
+    return {"neck": [round(nx, 1), round(ny, 1)], "hw": round(hw, 1), "box": [x0, y0, x1, y1],
+            "lum": round(float(np.median(plain[shirt & ~stars])), 3)}
 
 
 def animal(im):
@@ -176,6 +239,8 @@ def main():
                     zones["R"] &= ~((xx - ex) ** 2 + (yy - ey) ** 2 <= (er * 1.9) ** 2)
                 Image.fromarray((blur(iris.astype(np.float32), 0.8) * 255).astype(np.uint8)).save(f"static/avatars/{name}.eyes.png", optimize=True)
                 zones["E"] = iris
+        if name.startswith("enfant"):
+            extra["tenue"] = shirt_layers(zones["B"], im, name)
         rgb = np.asarray(im.convert("RGB")).astype(np.float32)
         st = {}
         for k, m in zones.items():

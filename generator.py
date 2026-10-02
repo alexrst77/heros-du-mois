@@ -880,7 +880,10 @@ def recolor_targets(kind, cfg):
     if kind == "enfant":
         if cfg.get("couleur_cheveux") != base["couleur_cheveux"]: t["R"] = col("enfant", "couleur_cheveux")
         if cfg.get("peau") != base["peau"]: t["G"] = col("enfant", "peau")
-        if cfg.get("couleur_tenue") != base["couleur_tenue"]: t["B"] = col("enfant", "couleur_tenue")
+        if cfg.get("yeux") != base["yeux"]: t["E"] = col("enfant", "yeux")
+        if cfg.get("tenue") and cfg.get("tenue") != "pyjama":
+            t["tenue"] = cfg["tenue"]; t["B"] = col("enfant", "couleur_tenue")
+        elif cfg.get("couleur_tenue") != base["couleur_tenue"]: t["B"] = col("enfant", "couleur_tenue")
     elif kind == "doudou":
         if cfg.get("couleur") != base["couleur"]: t["R"] = col("doudou", "couleur")
         if cfg.get("accessoire") != "aucun" and cfg.get("couleur_accessoire") != base["couleur_accessoire"]:
@@ -899,8 +902,13 @@ def recolor_model(kind, cfg):
     try:
         name = model_file(kind, cfg).stem
         t = recolor_targets(kind, cfg)
-        out = CACHE / f"base_{hashlib.sha1(json.dumps([name, t], sort_keys=True).encode()).hexdigest()[:16]}.png"
+        out = CACHE / f"base_{hashlib.sha1(json.dumps([name, t, 'v6'], sort_keys=True).encode()).hexdigest()[:16]}.png"
         if out.exists():
+            return out
+        if kind == "enfant":                                     # même calcul que l'aperçu du navigateur
+            import avatar_paint
+            fg = avatar_paint.paint(name, t)
+            bg = Image.new("RGB", fg.size, (246, 238, 222)); bg.paste(fg, (0, 0), fg); bg.save(out)
             return out
         im = Image.open(AV_STATIC / f"{name}.webp").convert("RGBA")
         px = np.asarray(im).astype(np.float32) / 255
