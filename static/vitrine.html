@@ -709,18 +709,29 @@
     if (kk >= 1 && kk <= N) { lec.innerHTML = L.lire(kk); lec.hidden = false; } else lec.hidden = true;
     const sp = mono ? Math.ceil(kk / 2) - 1 : kk - 1;          // double page affichée (miniatures)
     $('compteur').textContent = kk === 0 ? 'Couverture' : kk === MAX() ? 'Fin' : mono ? `Page ${kk} sur ${2 * N}` : `Page ${kk} sur ${N}`;
-    $('prev').disabled = kk === 0; $('next').disabled = kk === MAX();
+    $('prev').disabled = kk === 0; $('next').disabled = false;
+    $('next').setAttribute('aria-label', kk === MAX() ? 'Livre suivant' : 'Page suivante');
     minis.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === sp));
   }
   $('prev').onclick = () => tourner(kk - 1);
-  $('next').onclick = () => tourner(kk + 1);
+  const ordreLivres = () => [...$('etal').querySelectorAll('button')].map(b => b.dataset.l);
+  function ouvrirLivre(id) {                         // nouveau livre (ou le même relu) : toujours depuis la couverture
+    $('etal').classList.add('choisi'); $('etal').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.l === id));
+    $('lecteur').hidden = false; charger(id);
+    requestAnimationFrame(() => $('flip').scrollIntoView({ behavior: calme ? 'auto' : 'smooth', block: 'center' }));
+    setTimeout(() => tourner(1), calme ? 0 : 750);
+  }
+  $('next').onclick = () => {                         // à la fin d'un livre : le livre suivant s'ouvre au début
+    if (kk < MAX()) return tourner(kk + 1);
+    const l = ordreLivres(); ouvrirLivre(l[(l.indexOf(cur) + 1) % l.length]);
+  };
   minis.onclick = e => { const b = e.target.closest('button'); if (!b) return; tourner(mono ? 2 * +b.dataset.p + 1 : +b.dataset.p + 1); };
   grand.addEventListener('change', etat);
   /* étal : un clic ouvre le livre et le centre à l'écran */
   $('etal').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     $('etal').classList.add('choisi'); $('etal').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    if (cur !== b.dataset.l) { $('lecteur').hidden = false; charger(b.dataset.l); }
+    if (cur !== b.dataset.l || kk >= MAX()) return ouvrirLivre(b.dataset.l);
     requestAnimationFrame(() => $('flip').scrollIntoView({ behavior: calme ? 'auto' : 'smooth', block: 'center' }));
     if (kk === 0) setTimeout(() => tourner(1), calme ? 0 : 750);
   };
