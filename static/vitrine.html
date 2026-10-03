@@ -400,7 +400,7 @@
     <p class="sous">Cliquez sur un livre pour l'ouvrir. Dans le vôtre, votre enfant, son doudou et ses animaux deviennent les héros de l'aventure.</p>
     <div class="etal" id="etal">
       <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp" alt=""></span><b>Noé</b><span>La poussière d'étoiles</span></button>
-      <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp" alt=""><i>Léo<small>et la forêt des petites lumières</small></i></span><b>Léo</b><span>La forêt des petites lumières</span></button>
+      <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp" alt=""></span><b>Léo</b><span>La forêt enchantée</span></button>
       <button type="button" data-l="mila"><span class="cv"><img src="/static/vitrine/mila_00.webp" alt=""></span><b>Mila</b><span>Le secret de l'océan</span></button>
     </div>
     <div class="lecteur" id="lecteur" hidden>
@@ -632,9 +632,9 @@
   }
   const LIVRES = {
     leo: {
-      sous: '« Léo et la forêt des petites lumières », une histoire sur la peur du noir. Dans le vôtre, votre enfant, son doudou et ses animaux deviennent les héros de l\'aventure.',
+      sous: '« Léo et la forêt enchantée », une histoire sur la peur du noir. Dans le vôtre, votre enfant, son doudou et ses animaux deviennent les héros de l\'aventure.',
       n: LEO.length, img: i => V + `leo_${pad(i)}.webp`, mini: i => V + `leo_${pad(i)}_s.webp`,
-      couv: `<div class="face recto couv"><img src="${V}leo_00.webp" alt="Couverture du livre de Léo"><div class="tc"><b>Léo</b><span>et la forêt des petites lumières</span></div></div>`,
+      couv: `<div class="face recto couv"><img src="${V}leo_00.webp" alt="Couverture : Léo et la forêt enchantée"></div>`,
       gauche: i => `<img src="${V}leo_${pad(i)}.webp" alt="" loading="lazy">`,
       droite: i => ({ cls: 'texte', html: ptxt(LEO[i - 1].t, LEO[i - 1].a.concat(LEO[i - 1].b), i) }),
       dos: `<h3>La nuit est grande.<br>Les petits courages aussi.</h3><p>Une ombre, une luciole et un lapin en tissu…</p><p>Léo découvre qu'on peut avoir peur, demander de l'aide et avancer à son rythme.</p><p class="q">Et toi, qu'est-ce qui te rassure le soir ?</p>`,
