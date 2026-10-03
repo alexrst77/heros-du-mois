@@ -80,6 +80,32 @@ def bird_beak():
     Image.fromarray(m).save(AV + f"{n}.mask.png")
 
 
+def lisse(n, m):
+    """Enfants : les modèles peints ont des taches de rousseur. Variante « -lisse » (sans taches) pour « Taches : non »."""
+    import cv2
+    im=np.array(Image.open(AV+n+'.webp').convert('RGBA'))
+    rgb=im[...,:3].copy()
+    M=np.array(Image.open(AV+n+'.mask.png').convert('RGB').resize(im.shape[1::-1]))
+    (x1,y1,_),(x2,y2,_)=m[n]['eyes']; cx,cy=(x1+x2)/2,(y1+y2)/2; d=abs(x2-x1)
+    H,W=rgb.shape[:2]; yy,xx=np.mgrid[0:H,0:W]
+    zone=((((xx-cx)/(d*1.15))**2+((yy-(cy+d*.42))/(d*.62))**2)<1)&(M[...,1]>120)
+    m=m
+    lab=cv2.cvtColor(rgb,cv2.COLOR_RGB2LAB).astype(np.float32)
+    L=lab[...,0]; med=cv2.medianBlur(rgb,11); Lm=cv2.cvtColor(med,cv2.COLOR_RGB2LAB)[...,0].astype(np.float32)
+    spot=((Lm-L)>3.5)&zone
+    n_,lab_,st,_=cv2.connectedComponentsWithStats(spot.astype(np.uint8),8)
+    keep=np.zeros(n_,bool)
+    for k in range(1,n_):
+        x,y,w_,h_,a=st[k]
+        keep[k]= a<=14 and max(w_,h_)<=6          # petites taches rondes seulement (jamais la bouche ni le nez)
+    spot=keep[lab_]
+    spot=cv2.dilate(spot.astype(np.uint8),np.ones((3,3),np.uint8),1)
+    w=cv2.GaussianBlur(spot.astype(np.float32),(0,0),1.2)[...,None]*zone[...,None]
+    out=rgb*(1-w)+med*w
+    Image.fromarray(np.dstack([out.astype(np.uint8),im[...,3]])).save(AV+n+'-lisse.webp',quality=92)
+    return out
+
+
 if __name__ == "__main__":
     bird_beak()
     st = json.load(open(AV + "masks.json"))
@@ -93,5 +119,12 @@ if __name__ == "__main__":
         st[n]["E"] = True
         if n in COLLIERS:
             st[n]["collier"] = COLLIERS[n]
+    import shutil
+    for n in [k for k in list(st) if k.startswith("enfant-") and "eyes" in st[k] and not k.endswith("-lisse")]:
+        lisse(n, st)
+        for ext in (".mask.png", ".eyes.png", ".shirt.png"):
+            if Path(AV + n + ext).exists() if False else __import__("os").path.exists(AV + n + ext):
+                shutil.copy(AV + n + ext, AV + n + "-lisse" + ext)
+        st[n + "-lisse"] = dict(st[n])
     json.dump(st, open(AV + "masks.json", "w"), indent=1)
     print("ok")

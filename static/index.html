@@ -231,7 +231,7 @@
   }
   /* recoloration instantanée : quelles zones changer, et ce qui n'est visible qu'après « Peindre » */
   const modelBase = (kind, cfg) => kind === 'animal' ? OPT.modeles.animal[cfg.type] : OPT.modeles[kind];
-  const modelName = (kind, cfg) => kind === 'enfant' ? Avatar.pick(OPT.enfant.coiffure, cfg.coiffure).img
+  const modelName = (kind, cfg) => kind === 'enfant' ? Avatar.pick(OPT.enfant.coiffure, cfg.coiffure).img + (cfg.taches === 'oui' ? '' : '-lisse')   // modèles peints avec taches de rousseur
     : Avatar.pick(OPT[kind].type, cfg.type).img + (kind === 'doudou' && cfg.accessoire !== 'noeud' ? '-nu' : '');   // sans nœud : aucun accessoire ou écharpe
   const colorOf = (list, id) => Avatar.pick(list, id).c;
   function targetsOf(kind, cfg) {
@@ -242,7 +242,6 @@
       if (cfg.tenue && cfg.tenue !== 'pyjama') { t.tenue = cfg.tenue; t.B = colorOf(OPT.enfant.couleur_tenue, cfg.couleur_tenue); }
       else if (cfg.couleur_tenue !== b.couleur_tenue) t.B = colorOf(OPT.enfant.couleur_tenue, cfg.couleur_tenue);
       if (cfg.yeux !== b.yeux) t.E = colorOf(OPT.enfant.yeux, cfg.yeux);
-      if (cfg.taches === 'oui') t.freckles = Avatar.shade(colorOf(OPT.enfant.peau, cfg.peau), -.42);
       if (cfg.lunettes !== 'aucune') t.glasses = { type: cfg.lunettes, color: colorOf(OPT.enfant.couleur_lunettes, cfg.couleur_lunettes) };
     } else if (kind === 'doudou') {
       if (cfg.couleur !== b.couleur) { t.R = colorOf(OPT.doudou.couleur, cfg.couleur); t.dye = true; }

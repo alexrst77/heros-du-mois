@@ -909,6 +909,8 @@ def recolor_targets(kind, cfg):
 def paint_name(kind, cfg):
     """Modèle peint de l'éditeur (même choix que static/index.html : doudou sans nœud pour « aucun » et « écharpe »)."""
     n = model_file(kind, cfg).stem
+    if kind == "enfant":
+        return n if cfg.get("taches") == "oui" else n + "-lisse"     # les modèles peints ont des taches de rousseur
     return n + "-nu" if kind == "doudou" and cfg.get("accessoire") != "noeud" else n
 
 
@@ -918,7 +920,7 @@ def recolor_model(kind, cfg):
     try:
         name = paint_name(kind, cfg)
         t = recolor_targets(kind, cfg)
-        out = CACHE / f"base_{hashlib.sha1(json.dumps([name, t, 'v7'], sort_keys=True).encode()).hexdigest()[:16]}.png"
+        out = CACHE / f"base_{hashlib.sha1(json.dumps([name, t, 'v8'], sort_keys=True).encode()).hexdigest()[:16]}.png"
         if out.exists():
             return out
         if True:                                                 # même calcul que l'aperçu du navigateur (static/avatar.js)

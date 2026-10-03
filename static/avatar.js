@@ -215,10 +215,10 @@
   async function pixels(name) {
     if (imgs.has(name)) return imgs.get(name);
     const p = (async () => {
-      if (!MST) MST = await (await fetch('/static/avatars/masks.json?v=8')).json();
+      if (!MST) MST = await (await fetch('/static/avatars/masks.json?v=9')).json();
       const st = MST[name] || {};
-      const [a, m, e, sh] = await Promise.all([loadImg(`/static/avatars/${name}.webp`), loadImg(`/static/avatars/${name}.mask.png?v=8`),
-        (st.eyes || st.E) ? loadImg(`/static/avatars/${name}.eyes.png?v=8`).catch(() => null) : null,
+      const [a, m, e, sh] = await Promise.all([loadImg(`/static/avatars/${name}.webp`), loadImg(`/static/avatars/${name}.mask.png?v=9`),
+        (st.eyes || st.E) ? loadImg(`/static/avatars/${name}.eyes.png?v=9`).catch(() => null) : null,
         st.tenue ? loadImg(`/static/avatars/${name}.shirt.png?v=6`).catch(() => null) : null]);
       const c = document.createElement('canvas'); c.width = a.width; c.height = a.height;
       const x = c.getContext('2d', { willReadFrequently: true });
