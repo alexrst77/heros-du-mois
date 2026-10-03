@@ -398,32 +398,48 @@
       });
       x.restore();
     }
-    if (t.glasses) {                       // lunettes peintes : ombre, monture, reflet
-      const r = d * .43, col = t.glasses.color, round = t.glasses.type === 'rondes';
-      const lens = (dx) => { x.beginPath(); if (round) x.arc(dx, 0, r, 0, 7); else x.roundRect(dx - r * 1.08, -r * .78, r * 2.16, r * 1.56, r * .38); };
-      // branches : dessinées sur un calque à part, gardées seulement sur la peau (elles passent sous les cheveux, jamais hors de la tête)
-      const tl = document.createElement('canvas'); tl.width = x.canvas.width; tl.height = x.canvas.height; const y = tl.getContext('2d');
-      const place = c => { c.translate((x1 + x2) / 2, (y1 + y2) / 2 + d * .02); c.rotate(ang); };
-      const frame = (stroke, lw, oy) => {
-        x.save(); x.translate(0, oy); x.strokeStyle = stroke; x.lineWidth = lw; x.lineCap = 'round';
-        lens(-d / 2); x.stroke(); lens(d / 2); x.stroke();
-        x.beginPath(); x.moveTo(-d / 2 + r * (round ? .98 : 1.08), -r * .12); x.quadraticCurveTo(0, -r * .5, d / 2 - r * (round ? .98 : 1.08), -r * .12); x.stroke();
-        x.restore();
-        y.save(); place(y); y.translate(0, oy); y.strokeStyle = stroke; y.lineWidth = lw; y.lineCap = 'round';
-        y.beginPath(); y.moveTo(-d / 2 - r * (round ? 1 : 1.08), -r * .2); y.lineTo(-d / 2 - r * 1.6, -r * .3); y.stroke();
-        y.beginPath(); y.moveTo(d / 2 + r * (round ? 1 : 1.08), -r * .2); y.lineTo(d / 2 + r * 1.6, -r * .3); y.stroke();
-        y.restore();
+    if (t.glasses) {                       // lunettes : taille d'après les yeux, vue de 3/4 (verre éloigné plus étroit), pont sur le nez
+      const eR = ((E[0][2] || d * .21) + (E[1][2] || d * .21)) / 2;
+      const r = Math.min(d * .36, eR * 1.62), col = t.glasses.color, round = t.glasses.type === 'rondes';
+      const L = [{ cx: -d / 2, k: 1 }, { cx: d / 2, k: .9 }];          // l'œil droit (image) est plus loin : verre un peu plus étroit
+      const path = (c, o, grow = 0) => {
+        const rx = (r + grow) * o.k, ry = r + grow;
+        c.beginPath();
+        if (round) c.ellipse(o.cx, 0, rx, ry * .98, 0, 0, 7);
+        else c.roundRect(o.cx - rx * 1.06, -ry * .8, rx * 2.12, ry * 1.58, ry * .42);
       };
-      x.save(); place(x);
-      x.fillStyle = 'rgba(255,255,255,.13)'; lens(-d / 2); x.fill(); lens(d / 2); x.fill();
-      x.save(); x.filter = 'blur(2px)'; frame('rgba(40,20,10,.35)', r * .2, r * .08); x.restore();
-      frame(col, r * .16, 0);
-      frame(shade(col, .45), r * .05, -r * .045);
-      x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = r * .07; x.lineCap = 'round';
-      [-d / 2, d / 2].forEach(cx => { x.beginPath(); x.arc(cx, 0, r * .62, Math.PI * 1.1, Math.PI * 1.35); x.stroke(); });
-      x.restore();
+      const edge = o => o.cx + (o.cx < 0 ? 1 : -1) * r * o.k * (round ? 1 : 1.06);   // bord intérieur, côté nez
+      const outer = o => o.cx + (o.cx < 0 ? -1 : 1) * r * o.k * (round ? 1 : 1.06);
+      const lw = Math.max(1.8, r * .13);
+      const tl = document.createElement('canvas'); tl.width = x.canvas.width; tl.height = x.canvas.height; const y = tl.getContext('2d');
+      const place = c => { c.translate((x1 + x2) / 2, (y1 + y2) / 2 + d * .03); c.rotate(ang); };
+      const monture = (c, stroke, w, oy) => {
+        c.save(); c.translate(0, oy); c.strokeStyle = stroke; c.lineWidth = w; c.lineCap = 'round';
+        L.forEach(o => { path(c, o); c.stroke(); });
+        c.beginPath(); c.moveTo(edge(L[0]), -r * .18); c.quadraticCurveTo(0, -r * .42, edge(L[1]), -r * .18); c.stroke();   // pont
+        c.restore();
+      };
+      // branches : vers les oreilles, seulement sur la peau (elles passent sous les cheveux)
+      y.save(); place(y); y.lineCap = 'round';
+      [[L[0], -1, 1.15], [L[1], 1, .55]].forEach(([o, sg, len]) => {
+        y.strokeStyle = shade(col, -.25); y.lineWidth = lw * .9;
+        y.beginPath(); y.moveTo(outer(o), -r * .32); y.lineTo(outer(o) + sg * r * len, -r * .2); y.stroke();
+      });
+      y.restore();
       if (skin) { y.globalCompositeOperation = 'destination-in'; y.drawImage(skin, 0, 0); }
       x.drawImage(tl, 0, 0);
+      x.save(); place(x);
+      // verre : très léger, un peu plus clair en haut
+      L.forEach(o => { path(x, o); const gr = x.createLinearGradient(0, -r, 0, r);
+        gr.addColorStop(0, 'rgba(255,255,255,.16)'); gr.addColorStop(.55, 'rgba(255,255,255,.04)'); gr.addColorStop(1, 'rgba(200,220,255,.06)');
+        x.fillStyle = gr; x.fill(); });
+      x.save(); x.filter = 'blur(1.6px)'; monture(x, 'rgba(60,30,20,.28)', lw * 1.1, r * .09); x.restore();   // ombre portée sur la peau
+      monture(x, shade(col, -.18), lw, 0);                                                              // monture
+      x.save(); x.globalAlpha = .55; monture(x, shade(col, .35), lw * .35, -lw * .28); x.restore();      // lumière sur le dessus
+      // reflet discret sur chaque verre
+      x.strokeStyle = 'rgba(255,255,255,.45)'; x.lineWidth = Math.max(1, r * .05); x.lineCap = 'round';
+      L.forEach(o => { x.beginPath(); x.ellipse(o.cx, 0, r * o.k * .66, r * .66, 0, Math.PI * 1.12, Math.PI * 1.32); x.stroke(); });
+      x.restore();
     }
   }
 
