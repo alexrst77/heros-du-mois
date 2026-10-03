@@ -52,10 +52,6 @@
   .h-face { box-shadow:inset 6px 0 10px -4px rgba(0,0,0,.45), inset -1px 0 0 rgba(255,255,255,.25); }
   .h-face img, .h-r img { width:100%; height:100%; object-fit:cover; display:block; }
   .h-face::after { content:""; position:absolute; inset:0; background:linear-gradient(105deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,.08) 100%); }
-  /* bord doré des couvertures (comme les livres de l'étagère) */
-  .h-face::before, .etal .cv::after, .face.couv::before { content:""; position:absolute; inset:3.2%; border:2px solid rgba(232,196,110,.9); border-radius:4px; z-index:2; pointer-events:none;
-      box-shadow:0 0 0 1px rgba(120,80,20,.35), inset 0 0 0 1px rgba(120,80,20,.35), inset 0 0 0 5px rgba(232,196,110,.18); }
-  .h-face::before { inset:4% 4% 4% 6%; }
   .h-r { background:#FBF8F0; border-radius:2px 6px 6px 2px; }
   .h-r::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg, rgba(0,0,0,.25), rgba(0,0,0,0) 12%); }
   .h-v { transform:rotateY(180deg); background:repeating-linear-gradient(180deg, transparent 0 22px, rgba(43,38,34,.09) 22px 25px) 18% 30% / 64% 46% no-repeat, #FBF8F0; border-radius:6px 2px 2px 6px; }
@@ -165,7 +161,6 @@
   .carte .vis { position:relative; display:block; aspect-ratio:1; border-radius:12px; overflow:hidden; background:#1A1F4A; }
   .carte .vis img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .5s; }
   .carte:hover .vis img { transform:scale(1.04); }
-  .carte .vis::after { content:""; position:absolute; inset:6px; border:1.5px solid rgba(232,196,110,.85); border-radius:8px; pointer-events:none; }
   .carte .vis.attente { background:radial-gradient(120% 90% at 30% 20%, var(--c1), var(--c2) 70%);
        background-image:radial-gradient(1.5px 1.5px at 20% 30%, #FFE7A6 50%, transparent 51%), radial-gradient(1px 1px at 70% 22%, #FFE7A6 50%, transparent 51%),
          radial-gradient(1.5px 1.5px at 82% 64%, #FFE7A6 50%, transparent 51%), radial-gradient(1px 1px at 35% 78%, #FFE7A6 50%, transparent 51%),
