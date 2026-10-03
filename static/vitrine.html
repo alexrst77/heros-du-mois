@@ -153,10 +153,10 @@
   .etagere-coll { border-radius:22px; overflow:hidden; box-shadow:0 30px 60px -30px rgba(31,37,87,.55); }
   .etagere-coll img { display:block; width:100%; height:auto; }
   .mondes { position:relative; }
-  .cartes { list-style:none; padding:0; margin:34px 0 0; display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:18px; }
+  .cartes { list-style:none; padding:0; margin:30px 0 0; display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:14px; }
   .cartes.petites { grid-template-columns:repeat(6, minmax(0, 1fr)); gap:14px; }
-  @media (max-width:980px) { .cartes { grid-template-columns:repeat(3, minmax(0, 1fr)); } .cartes.petites { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
-  @media (max-width:640px) { .cartes, .cartes.petites { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; } }
+  @media (max-width:980px) { .cartes, .cartes.petites { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
+  @media (max-width:640px) { .cartes, .cartes.petites { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; } .carte { padding:5px 5px 8px; border-radius:14px; } .carte b, .petites .carte b { font-size:13px; margin:7px 3px 0; } .carte small { font-size:10px; margin:2px 3px 0; } }
   .cartes li[hidden] { display:none; }
   .carte { display:block; text-decoration:none; color:var(--encre); border-radius:18px; background:var(--papier); padding:8px 8px 12px;
            box-shadow:0 1px 0 rgba(120,90,40,.08), 0 18px 34px -24px rgba(31,37,87,.55); transition:transform .25s, box-shadow .25s; position:relative; }
@@ -171,9 +171,9 @@
          radial-gradient(1.5px 1.5px at 82% 64%, #FFE7A6 50%, transparent 51%), radial-gradient(1px 1px at 35% 78%, #FFE7A6 50%, transparent 51%),
          radial-gradient(120% 90% at 30% 20%, var(--c1), var(--c2) 70%); display:grid; place-items:center; }
   .carte .vis.attente i { width:34%; aspect-ratio:1; background:url(/static/marque/etoile-128.png) center/contain no-repeat; opacity:.9; filter:drop-shadow(0 0 14px rgba(255,201,74,.5)); }
-  .carte b { display:block; font:400 clamp(16px,1.7vw,19px)/1.2 var(--titre); margin:12px 6px 0; }
+  .carte b { display:block; font:400 15px/1.2 var(--titre); margin:10px 5px 0; }
   .carte small { display:block; font:700 12px var(--texte); color:var(--encre-2); margin:3px 6px 0; letter-spacing:.3px; }
-  .petites .carte b { font-size:16px; margin-top:9px; }
+  .petites .carte b { font-size:15px; }
   .plus { margin:22px auto 0; display:flex; }
   .h-occ { margin-top:72px; }
   .etagere { display:grid; grid-template-columns:repeat(4,1fr); gap:28px; margin-top:44px; }
@@ -758,7 +758,7 @@
     };
     const un = l.filter(u => !u.fete).sort((a, b) => rang(ordreU, a.cle) - rang(ordreU, b.cle) || (!!b.img - !!a.img));
     const fe = l.filter(u => u.fete).sort((a, b) => rang(ordreF, a.cle) - rang(ordreF, b.cle));
-    const NU = 6, NF = matchMedia('(max-width:640px)').matches ? 4 : 6;
+    const NU = 6, NF = 6;
     $('cartesUnivers').innerHTML = un.map((u, i) => carte(u, i, false, i >= NU)).join('');
     $('cartesFetes').innerHTML = fe.map((u, i) => carte(u, i + 3, true, i >= NF)).join('');
     const pli = (btn, ul, n, plus, moins) => {
