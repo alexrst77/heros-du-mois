@@ -187,7 +187,7 @@
     { id: 'mensuel', nom: 'Un livre chaque mois', txt: 'Une nouvelle aventure chaque mois, sans engagement', px: '29,90 €/mois', tag: 'Le plus choisi' },
     { id: 'fetes', nom: 'Les 6 livres de fête', txt: 'Un livre avant chacune de vos 6 fêtes (anniversaire, Noël…), payé en 12 mensualités', px: '12,45 €/mois' },
     { id: 'livre', nom: 'Ce livre seulement', txt: 'Un livre relié, livré chez vous', px: '34,90 €' }];
-  const THEMES = ["La peur du noir", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Apprendre à partager", "Oser se faire des amis", "La confiance en soi", "Gérer la colère", "Un déménagement", "Une aventure pour rire"];
+  const THEMES = ["Accepter la différence", "Aller chez le dentiste", "Aller chez le médecin", "Apprendre à attendre", "Apprendre à partager", "Devenir propre", "Dire au revoir à la tétine", "Dire la vérité", "Dormir dans son grand lit", "Gérer la colère", "Goûter de nouveaux aliments", "La confiance en soi", "La peur du noir", "La politesse", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Le premier jour à la crèche", "Les cauchemars", "Les écrans : savoir s'arrêter", "Les émotions", "Oser se faire des amis", "Partir en vacances", "Prendre soin de la nature", "Quand papa et maman se séparent", "Ranger sa chambre", "Se brosser les dents", "S'habiller tout seul", "Un déménagement", "Une aventure pour rire"].sort((a, b) => a.localeCompare(b, 'fr'));
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const anniv = () => S.enfant.anniv_j && S.enfant.anniv_m ? `${String(S.enfant.anniv_m).padStart(2, '0')}-${String(S.enfant.anniv_j).padStart(2, '0')}` : '';
   const UNIV = await (await fetch('/api/univers')).json();          // univers et fêtes (univers.py)
@@ -197,7 +197,7 @@
     enfant: { prenom: '', age: '5', genre: 'fille', peau: 'p2', coiffure: 'long', couleur_cheveux: 'chatain', yeux: 'marron', lunettes: 'aucune', couleur_lunettes: 'rouge', taches: 'non', tenue: 'pyjama', couleur_tenue: 'jaune' },
     doudou: { actif: true, nom: '', type: 'lapin', couleur: 'bleu', accessoire: 'noeud', couleur_accessoire: 'rouge' },
     animaux: [],
-    histoire: { theme: THEMES[0], univers: UNIVERS[0], fetes: ['anniversaire', 'noel'], heros_livre: 'enfant', passions: '', precision: '', numero: '01', code: '', demo: false },
+    histoire: { theme: 'La peur du noir', univers: UNIVERS[0], fetes: ['anniversaire', 'noel'], heros_livre: 'enfant', passions: '', precision: '', numero: '01', code: '', demo: false },
     commande: { formule: 'mensuel', email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
   };
   let S;
