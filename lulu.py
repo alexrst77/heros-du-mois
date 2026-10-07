@@ -82,7 +82,10 @@ def cost(pages, addr, email, pod=None, shipping=None):
     r = api("POST", "/print-job-cost-calculations/", {
         "line_items": [{"page_count": pages, "pod_package_id": pod or POD_PACKAGE, "quantity": 1}],
         "shipping_address": address(addr, email), "shipping_option": shipping or SHIPPING})
-    return {"total_ttc": r.get("total_cost_incl_tax"), "total_ht": r.get("total_cost_excl_tax"), "devise": r.get("currency")}
+    li = (r.get("line_item_costs") or [{}])[0]
+    return {"total_ttc": r.get("total_cost_incl_tax"), "total_ht": r.get("total_cost_excl_tax"), "devise": r.get("currency"),
+            "impression_ttc": li.get("total_cost_incl_tax"), "port_ttc": (r.get("shipping_cost") or {}).get("total_cost_incl_tax"),
+            "frais_ttc": (r.get("fulfillment_cost") or {}).get("total_cost_incl_tax"), "livraison": shipping or SHIPPING}
 
 
 VARIANTES = [   # (code POD, description en clair) : même format carré 21,6 cm, 24 pages, couleur

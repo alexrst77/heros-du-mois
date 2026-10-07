@@ -56,6 +56,10 @@
   .files a { display:inline-block; margin:4px 10px 0 0; }
   .issues { margin:8px 0 0; padding:10px 12px; background:var(--gold-soft); border-radius:12px; font-size:13px; }
   .issues.red { background:var(--red-soft); }
+  .result { position:relative; margin-top:10px; padding:12px 40px 12px 14px; border-radius:12px; background:var(--blue-soft); font-size:14px; }
+  .result.ok { background:var(--green-soft); } .result.err { background:var(--red-soft); color:#8B2420; }
+  .result .x { position:absolute; top:6px; right:8px; border:0; background:transparent; font-size:18px; cursor:pointer; color:var(--soft); }
+  .result table { margin-top:6px; } .result .big { font:700 20px Georgia, serif; }
   .issues ul { margin:4px 0 0 18px; padding:0; }
   .card { background:var(--card); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:var(--shadow); }
   .kv { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:14px; } .kv span:nth-child(odd) { color:var(--soft); }
@@ -85,6 +89,7 @@ const usd = v => (v || 0).toFixed(2).replace('.', ',') + ' $';
 const day = t => t ? new Date(t * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
 const FORMULE = { livre: 'Livre', mensuel: 'Abonnement mensuel', annuel: 'Abonnement annuel', fetes: 'Livres de fête', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu' };
 let D = null, TAB = 'accueil', FILTRE = 'actifs';
+const RES = {}, OPEN = new Set();   // résultats affichés sous un livre (restent jusqu'à ce que tu les fermes) ; menus ouverts
 
 function toast(t) { const e = document.getElementById('toast'); e.textContent = t; e.classList.add('show'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('show'), 4200); }
 
@@ -149,7 +154,8 @@ function carte(o) {
     ${bud ? `<div class="money">IA : <b>${usd(bud)}</b> / ${D.plafond} $ <span class="bar"><i class="${pct > 80 ? 'warn' : ''}" style="width:${pct}%"></i></span></div>` : ''}
     ${err}${issues}
     <div class="acts">${bt.main}</div>
-    <details><summary>Plus d'options et infos</summary><div class="more">
+    ${RES[o.id] ? `<div class="result ${RES[o.id].cls || ''}"><button class="x" title="Fermer" onclick="delete RES['${o.id}'];render()">×</button>${RES[o.id].html}</div>` : ''}
+    <details ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">
       <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
       ${o.mail_pret ? `<div>📧 Mail « livre prêt » envoyé au client le ${new Date(o.mail_pret * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
       ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
@@ -209,7 +215,8 @@ function vueReglages() {
   const c = D.config;
   if (!TARIFS) fetch('/admin/api/tarifs' + Q, { headers: H }).then(r => r.json()).then(t => { TARIFS = t; render(); });
   const t = TARIFS, e = t && t.etat, m = t && t.tarifs.modeles;
-  return `<div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">💰 Plafond IA : ${D.plafond} $ par livre</h3>
+  return `${RES._reg ? `<div class="result ${RES._reg.cls || ''}" style="margin:0 0 12px"><button class="x" onclick="delete RES._reg;render()">×</button>${RES._reg.html}</div>` : ''}
+  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">💰 Plafond IA : ${D.plafond} $ par livre</h3>
     ${!t ? 'Chargement…' : `<div>${e.ok ? '<span class="pill p-green">✅ Fabrication autorisée</span>' : '<span class="pill p-red">⛔ Fabrication bloquée</span> ' + e.manque.map(esc).join(' ; ')}</div>
       <div class="meta" style="margin-top:8px">Prix confirmés le <b>${esc(e.confirme_le || '—')}</b> · image de référence : <b>${esc(e.jetons_image_entree_max || 'non calibrée')}</b> jetons</div>
       <div class="meta">gpt-image-2 : texte ${m['gpt-image-2'].texte_entree} $/M · image entrée ${m['gpt-image-2'].image_entree} $/M · image sortie ${m['gpt-image-2'].sortie_image} $/M — gpt-4.1 : ${m['gpt-4.1'].texte_entree} / ${m['gpt-4.1'].sortie} $/M</div>
@@ -249,20 +256,36 @@ const CONFIRM = {
   'mois-suivant': "Fabriquer maintenant le livre suivant de cet abonnement ?",
   'mail-pret': "Envoyer au client le mail « votre livre est prêt » ?"
 };
+const eu = v => v == null || v === '' ? '—' : parseFloat(v).toFixed(2).replace('.', ',') + ' €';
+const LIV = { MAIL: 'économique', PRIORITY_MAIL: 'prioritaire', GROUND: 'standard', EXPEDITED: 'express', EXPRESS: 'express' };
+function resultat(action, j) {
+  const i = j.info || {};
+  if (action === 'cout') return { html: `<div>🏷️ <b>Prix Lulu pour ce livre</b> (livraison ${LIV[i.livraison] || i.livraison || ''})</div>
+      <table><tr><td>Impression</td><td class="r">${eu(i.impression_ttc)}</td></tr><tr><td>Port</td><td class="r">${eu(i.port_ttc)}</td></tr>
+      ${i.frais_ttc && parseFloat(i.frais_ttc) ? `<tr><td>Frais de traitement</td><td class="r">${eu(i.frais_ttc)}</td></tr>` : ''}
+      <tr><td><b>Total TTC</b></td><td class="r big">${eu(i.total_ttc)}</td></tr></table>
+      <div class="meta">Devis seulement : rien n'est commandé. Compare les autres fabrications dans ⚙️ Réglages.</div>` };
+  if (action === 'couverture') return { cls: i.pret_a_imprimer ? 'ok' : '', html: `📐 <b>Couverture prête</b> ${i.dimensions_lulu ? '(dimensions Lulu)' : '(dimensions estimées)'} · dos ${(i.dos / 72 * 25.4).toFixed(1)} mm · numéro ${i.numero}
+      · <a target="_blank" href="/admin/fichier/__ID__/impression_couverture.pdf${Q}&t=${Date.now()}">ouvrir le PDF</a>
+      ${(i.problemes || []).length ? `<div class="meta" style="margin-top:6px">⚠️ ${i.problemes.map(esc).join('<br>⚠️ ')}</div>` : ''}` };
+  const T = { finaliser: '✅ Livre validé et sauvegardé.', relancer: '▶️ Fabrication relancée.', 'refaire-refusees': '🔁 Images refusées relancées.',
+              imprimer: "🖨️ Envoyé à l'imprimeur.", suivi: '🔄 Suivi actualisé.', 'mail-pret': '📧 Mail envoyé à ' + esc(i.envoye_a || ''),
+              'essai-apercu': '🧪 Essai aperçu lancé.', 'essai-brouillon': '🧪 Essai brouillon lancé.', 'mois-suivant': '➕ Livre suivant lancé.',
+              'arreter-abonnement': '⏹️ Abonnement arrêté.', effacer: '🧹 Données effacées.', 'valider-paiement-test': '💳 Paiement simulé.' };
+  return { cls: 'ok', html: T[action] || '✅ Fait.' };
+}
 async function act(id, action, btn) {
   if (CONFIRM[action] && !confirm(CONFIRM[action])) return;
-  btn.disabled = true;
+  btn.disabled = true; const t = btn.innerHTML; btn.innerHTML = '⏳ ' + t;
   try {
     const r = await fetch(`/admin/api/${id}/${action}${Q}`, { method: 'POST', headers: H });
     const j = await r.json();
-    if (j.erreur) toast('⚠️ ' + j.erreur);
-    else if (action === 'budget') budgetDlg(j.info);
-    else if (action === 'couverture') { toast('✅ Couverture prête'); open(`/admin/fichier/${id}/impression_couverture.pdf${Q}&t=${Date.now()}`, '_blank'); }
-    else if (action === 'cout') toast(`🏷️ Lulu : ${j.info.total_ttc} ${j.info.devise} TTC (impression + livraison)`);
-    else toast({ finaliser: '✅ Livre validé et sauvegardé', relancer: '▶️ Relancé', 'refaire-refusees': '🔁 Images refusées relancées', imprimer: "🖨️ Envoyé à l'imprimeur", 'mail-pret': '📧 Mail envoyé à ' + (j.info && j.info.envoye_a) }[action] || '✅ Fait');
-    setTimeout(load, 1200);
-  } catch (e) { toast('⚠️ ' + e.message); }
-  btn.disabled = false;
+    if (j.erreur) RES[id] = { cls: 'err', html: '⚠️ ' + esc(j.erreur) };
+    else if (action === 'budget') { budgetDlg(j.info); btn.disabled = false; btn.innerHTML = t; return; }
+    else { const x = resultat(action, j); x.html = x.html.replace(/__ID__/g, id); RES[id] = x; }
+  } catch (e) { RES[id] = { cls: 'err', html: '⚠️ ' + esc(e.message) }; }
+  btn.disabled = false; btn.innerHTML = t;
+  render(); setTimeout(load, 1500);
 }
 
 function budgetDlg(i) {
@@ -282,17 +305,17 @@ async function regler(aid, b) {
 async function confirmer() {
   if (!confirm("Les prix affichés sont-ils ceux de la page officielle OpenAI aujourd'hui ?")) return;
   await fetch('/admin/api/tarifs/confirmer' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: '{}' });
-  TARIFS = null; toast('✅ Prix confirmés'); render();
+  TARIFS = null; RES._reg = { cls: 'ok', html: '✅ Prix confirmés.' }; render();
 }
 async function calibrer(b) {
   if (!confirm('Lancer UN appel payant de calibrage (≈ 0,02 $) ?')) return;
   b.disabled = true; const r = await (await fetch('/admin/api/tarifs/calibrer' + Q, { method: 'POST', headers: H })).json();
-  TARIFS = null; toast(r.erreur ? '⚠️ ' + r.erreur : '✅ Calibré : ' + r.info.jetons_image_entree + ' jetons'); render();
+  TARIFS = null; RES._reg = r.erreur ? { cls: 'err', html: '⚠️ ' + esc(r.erreur) } : { cls: 'ok', html: '✅ Calibré : ' + r.info.jetons_image_entree + ' jetons par image de référence.' }; render();
 }
 async function comparer(b) {
-  b.disabled = true; toast('⏳ Demande des devis à Lulu…');
-  const r = await (await fetch('/admin/api/lulu/comparer' + Q, { method: 'POST', headers: H })).json(); b.disabled = false;
-  if (r.erreur) return toast('⚠️ ' + r.erreur);
+  b.disabled = true; b.textContent = '⏳ Devis en cours (≈ 20 s)…';
+  const r = await (await fetch('/admin/api/lulu/comparer' + Q, { method: 'POST', headers: H })).json(); b.disabled = false; b.textContent = 'Comparer';
+  if (r.erreur) { RES._reg = { cls: 'err', html: '⚠️ ' + esc(r.erreur) }; return render(); }
   const f = v => v == null ? '—' : parseFloat(v).toFixed(2).replace('.', ',') + ' €';
   const L = { MAIL: 'Économique', PRIORITY_MAIL: 'Prioritaire' };
   const ok = r.options.filter(x => !x.erreur).sort((a, c) => parseFloat(a.total_ttc) - parseFloat(c.total_ttc));
@@ -306,7 +329,7 @@ async function comparer(b) {
 }
 async function vignettes(b) {
   b.disabled = true; const r = await (await fetch('/admin/api/vignettes' + Q, { method: 'POST', headers: H })).json();
-  toast(r.lancees ? (r.lancees.length ? `🖼️ ${r.lancees.length} vignette(s) en cours` : '✅ Toutes les vignettes sont faites') : '⚠️ ' + (r.erreur || 'erreur'));
+  RES._reg = r.lancees ? { cls: 'ok', html: r.lancees.length ? `🖼️ ${r.lancees.length} vignette(s) en cours (quelques minutes).` : '✅ Toutes les vignettes sont déjà faites.' } : { cls: 'err', html: '⚠️ ' + esc(r.erreur || 'erreur') }; render();
 }
 
 async function load() {
@@ -316,7 +339,7 @@ async function load() {
   const h = new Date().getHours();
   const nb = D.commandes.filter(o => AFAIRE.includes(etat(o).k)).length;
   document.getElementById('hi').textContent = `${h < 18 ? 'Bonjour' : 'Bonsoir'} Alex · ${nb ? nb + ' chose(s) à faire' : 'tout roule'}`;
-  if (!document.querySelector('details[open]') && !document.getElementById('dlg').open) render();
+  if (!document.getElementById('dlg').open) render();
 }
 load(); setInterval(load, 15000);
 </script>
