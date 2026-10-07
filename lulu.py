@@ -115,6 +115,18 @@ def comparer(pages, addr, email):
                             "frais_ttc": fc.get("total_cost_incl_tax"), "total_ttc": r.get("total_cost_incl_tax")})
             except Exception as e:
                 out.append({"pod": pod, "fabrication": label, "livraison": ship, "erreur": str(e)[:160]})
+    for pod, label in VARIANTES[:2]:             # colis de 3 livres (abonnement envoyé par trimestre) : prix PAR livre
+        try:
+            r = api("POST", "/print-job-cost-calculations/", {
+                "line_items": [{"page_count": pages, "pod_package_id": pod, "quantity": 3}],
+                "shipping_address": address(addr, email), "shipping_option": "MAIL"})
+            li = (r.get("line_item_costs") or [{}])[0]; sc = r.get("shipping_cost") or {}; fc = r.get("fulfillment_cost") or {}
+            par = lambda v: None if v in (None, "") else round(float(v) / 3, 2)
+            out.append({"pod": pod, "fabrication": label + " — colis de 3, prix par livre", "livraison": "MAIL", "devise": r.get("currency"),
+                        "impression_ttc": par(li.get("total_cost_incl_tax")), "port_ttc": par(sc.get("total_cost_incl_tax")),
+                        "frais_ttc": par(fc.get("total_cost_incl_tax")), "total_ttc": par(r.get("total_cost_incl_tax")), "lot": 3})
+        except Exception as e:
+            out.append({"pod": pod, "fabrication": label + " — colis de 3", "livraison": "MAIL", "erreur": str(e)[:160]})
     return out
 
 
