@@ -27,6 +27,9 @@ def configured():
 def _http(method, url, data=None, headers=None, form=False):
     body = None
     headers = dict(headers or {})
+    # Cloudflare (devant l'API Lulu) refuse l'identité par défaut de Python (« error code: 1010 ») : on se présente
+    headers.setdefault("User-Agent", "MonHerosDuMois/1.0 (+https://heros-du-mois-production.up.railway.app)")
+    headers.setdefault("Accept", "application/json")
     if data is not None:
         if form:
             body = urllib.parse.urlencode(data).encode(); headers["Content-Type"] = "application/x-www-form-urlencoded"
