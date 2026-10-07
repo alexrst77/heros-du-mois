@@ -38,6 +38,7 @@
   .couv .big { height:66%; } .couv .group { height:72%; }
   .couv .dos { position:absolute; z-index:4; left:0; top:0; bottom:0; width:5.5%; background:linear-gradient(90deg, rgba(10,14,40,.75), rgba(10,14,40,.35));
                border-right:1px solid rgba(242,213,138,.45); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:10px 0 12px; }
+  .couvnote { margin:8px 4px 0; font:italic 500 12px/1.35 var(--texte); color:var(--encre-2); text-align:center; opacity:.85; }
   .couv .dos i { font-style:normal; color:#F2D58A; font-size:11px; }
   .couv .dos b { width:18px; height:18px; border-radius:50%; background:#E8C25A; color:#1A1F4A; font:800 11px/18px var(--texte); text-align:center; box-shadow:0 0 0 1px #9C7A2B; }
   .scene .big svg { width:100%; height:100%; }
@@ -152,6 +153,7 @@
     <aside class="stage">
       <div class="scene couv"><div class="decor" id="decor"></div><svg class="fl" id="fl" xmlns="http://www.w3.org/2000/svg"></svg>
         <div class="ctitre" id="ctitre"></div><div id="big" class="big"></div><div class="dos" aria-hidden="true"><i>★</i><b id="dosnum">1</b></div></div>
+      <p class="couvnote">* Aperçu pour présenter l'équipe : la vraie couverture est illustrée sur mesure avec votre héros.</p>
       <div id="stat"></div>
       <div class="who" id="who"></div>
       <div class="team" id="team"></div>
