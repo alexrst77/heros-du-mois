@@ -16,7 +16,7 @@ import univers
 import couleur
 
 TEXT_MODEL = os.getenv("OPENAI_TEXT_MODEL", "gpt-4.1")
-IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
+IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2")   # le procédé (panoramas 2:1) et le plafond de 3 $ sont calculés pour ce modèle
 IMAGE_QUALITY = os.getenv("OPENAI_IMAGE_QUALITY", "high")   # portraits et couverture : low | medium | high
 SCENE_QUALITY = os.getenv("OPENAI_SCENE_QUALITY", "medium")  # 18 pages intérieures (le poste de coût principal)
 INPUT_FIDELITY = os.getenv("OPENAI_INPUT_FIDELITY", "high")  # high = personnages plus fidèles, mais références plus chères
