@@ -157,6 +157,15 @@ def _etoile(c, cx, cy, r):
 
 # ---------------------------------------------------------------- aperçus déterministes
 def _pdf_png(pdf, page, dpi, dst):
+    """Rendu d'une page en PNG : PyMuPDF (installé sur le serveur), sinon poppler (pdftoppm)."""
+    try:
+        import fitz
+        doc = fitz.open(str(pdf))
+        doc[page - 1].get_pixmap(matrix=fitz.Matrix(dpi / 72, dpi / 72)).save(str(dst))
+        doc.close()
+        return dst
+    except ImportError:
+        pass
     tmp = Path(tempfile.mkdtemp()) / "p"
     subprocess.run(['pdftoppm', '-f', str(page), '-l', str(page), '-r', str(dpi), '-png', '-singlefile', str(pdf), str(tmp)], check=True)
     shutil.move(str(tmp) + ".png", dst)
