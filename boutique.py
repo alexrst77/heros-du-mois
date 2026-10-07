@@ -685,6 +685,13 @@ def admin_action(oid, action):
                 raise RuntimeError("aucune illustration refusée à refaire")
             start_book(oid, auto=True, reprise=True)   # tout le reste (histoire, portraits, couverture, pages acceptées) est réutilisé
             return jsonify(ok=True, info={"refaites": n, "anciennes_gardees_dans": str(arch.relative_to(folder))})
+        if action == "mail-pret":                 # envoi (ou renvoi) à la main du mail « livre prêt »
+            if not os.getenv("SMTP_PASSWORD"):
+                raise RuntimeError("SMTP_PASSWORD absent dans Railway : envoi de mails non configuré")
+            db.annuler_mail_pret(oid)
+            if not mail_livre_pret(oid):
+                raise RuntimeError("mail non envoyé (livre non finalisé, essai, ou erreur : voir les logs Railway)")
+            return jsonify(ok=True, info={"envoye_a": o["email"]})
         if action == "budget":
             folder = A.OUT / (o["job_id"] or "_")
             lid = procede.livre_id(folder) if folder.exists() else oid

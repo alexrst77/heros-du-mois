@@ -121,6 +121,7 @@ function boutons(o, e) {
   if (e.k === 'expedie') main = (o.suivi || []).map(u => `<a class="btn main" target="_blank" href="${esc(u)}">📍 Suivre le colis</a>`).join('');
   const sec = [];
   if (!['paiement', 'archive'].includes(e.k)) sec.push(b('budget', '💰 Coût IA détaillé'));
+  if (e.k === 'pret') sec.push(b('mail-pret', o.mail_pret ? '📧 Renvoyer le mail « prêt »' : '📧 Envoyer le mail « prêt »'));
   if (['relire', 'pret'].includes(e.k)) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'));
   if (o.abonnement_id) sec.push(b('mois-suivant', '➕ Livre suivant'), b('arreter-abonnement', '⏹️ Arrêter l\'abonnement', 'danger'));
   if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai')) sec.push(b('essai-apercu', '🧪 Essai aperçu (≈ 1 $)'), b('essai-brouillon', '🧪 Essai brouillon (≈ 0,5 $)'));
@@ -242,7 +243,8 @@ const CONFIRM = {
   'arreter-abonnement': "Arrêter cet abonnement ?",
   'essai-apercu': "Lancer un essai aperçu (couverture + 1 double page, ≈ 1 $) ?",
   'essai-brouillon': "Lancer un essai brouillon (tout le livre en petite qualité, ≈ 0,5 $) ?",
-  'mois-suivant': "Fabriquer maintenant le livre suivant de cet abonnement ?"
+  'mois-suivant': "Fabriquer maintenant le livre suivant de cet abonnement ?",
+  'mail-pret': "Envoyer au client le mail « votre livre est prêt » ?"
 };
 async function act(id, action, btn) {
   if (CONFIRM[action] && !confirm(CONFIRM[action])) return;
@@ -254,7 +256,7 @@ async function act(id, action, btn) {
     else if (action === 'budget') budgetDlg(j.info);
     else if (action === 'couverture') { toast('✅ Couverture prête'); open(`/admin/fichier/${id}/impression_couverture.pdf${Q}&t=${Date.now()}`, '_blank'); }
     else if (action === 'cout') toast(`🏷️ Lulu : ${j.info.total_ttc} ${j.info.devise} TTC (impression + livraison)`);
-    else toast({ finaliser: '✅ Livre validé et sauvegardé', relancer: '▶️ Relancé', 'refaire-refusees': '🔁 Images refusées relancées', imprimer: "🖨️ Envoyé à l'imprimeur" }[action] || '✅ Fait');
+    else toast({ finaliser: '✅ Livre validé et sauvegardé', relancer: '▶️ Relancé', 'refaire-refusees': '🔁 Images refusées relancées', imprimer: "🖨️ Envoyé à l'imprimeur", 'mail-pret': '📧 Mail envoyé à ' + (j.info && j.info.envoye_a) }[action] || '✅ Fait');
     setTimeout(load, 1200);
   } catch (e) { toast('⚠️ ' + e.message); }
   btn.disabled = false;
