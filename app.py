@@ -257,6 +257,10 @@ def index():
 def parse_book(data):
     """Formulaire de l'éditeur -> données du livre validées. Renvoie (form, erreur)."""
     form = {k: str(data.get(k, "")).strip()[:300] for k in FIELDS if data.get(k) not in (None, "")}
+    suite = data.get("suite")                       # pack : thème et univers choisis pour les livres 2, 3… N
+    if isinstance(suite, list):
+        form["suite"] = [{"theme": str((x or {}).get("theme", "")).strip()[:80], "univers": str((x or {}).get("univers", "")).strip()[:80]}
+                         for x in suite[:11] if isinstance(x, dict)]
     for k in REQUIRED:
         if not form.get(k):
             return None, f"Champ obligatoire manquant : {k}"

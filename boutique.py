@@ -230,6 +230,11 @@ def _start_book(oid, auto=False, reprise=False):
         form = dict(form, numero=f"{n:02d}", theme=THEMES[(THEMES.index(form["theme"]) + n - 1) % len(THEMES)] if form.get("theme") in THEMES else THEMES[n % len(THEMES)],
                     univers=UNIVERS[(UNIVERS.index(form["univers"]) + n - 1) % len(UNIVERS)] if form.get("univers") in UNIVERS else UNIVERS[n % len(UNIVERS)])
         form.pop("precision", None)               # le mot du parent concernait le premier livre
+        choix = (form.get("suite") or [])[n - 2] if 0 <= n - 2 < len(form.get("suite") or []) else {}
+        if choix.get("theme"):                    # aventure choisie par le parent à la commande
+            form["theme"] = choix["theme"]
+        if choix.get("univers") in UNIVERS:
+            form["univers"] = choix["univers"]
     else:
         form = dict(form, numero=f"{o['numero']:02d}")
     if o.get("univers"):                          # livre de fête : univers imposé

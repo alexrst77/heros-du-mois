@@ -38,6 +38,12 @@
   .couv .big { height:66%; } .couv .group { height:72%; }
   .couv .dos { position:absolute; z-index:4; left:0; top:0; bottom:0; width:5.5%; background:linear-gradient(90deg, rgba(10,14,40,.75), rgba(10,14,40,.35));
                border-right:1px solid rgba(242,213,138,.45); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:10px 0 12px; }
+  .multi.suite .liste { display:block; }
+  .suite summary small { font-weight:500; color:var(--encre-2); }
+  .suite .sl { display:grid; grid-template-columns:62px 1fr 1fr; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid var(--trait); }
+  .suite .sl b { font:700 13px var(--texte); }
+  .suite .sl select { padding:8px 10px; font-size:13px; min-width:0; }
+  @media (max-width:520px) { .suite .sl { grid-template-columns:1fr; gap:6px; } }
   .couvnote { margin:8px 4px 0; font:italic 500 12px/1.35 var(--texte); color:var(--encre-2); text-align:center; opacity:.85; }
   .couv .dos i { font-style:normal; color:#F2D58A; font-size:11px; }
   .couv .dos b { width:18px; height:18px; border-radius:50%; background:#E8C25A; color:#1A1F4A; font:800 11px/18px var(--texte); text-align:center; box-shadow:0 0 0 1px #9C7A2B; }
@@ -425,12 +431,36 @@
       `<button type="button" class="btn danger" data-delpet="1">Retirer ${esc(petName(p, pet))}</button>`;
     return h;
   }
+  /* pack : une aventure (thème + univers) par livre, proposée d'office et modifiable */
+  function suiteDe() {
+    const h = S.histoire, n = (F[S.commande.formule] || {}).livres || 1;
+    if (!Array.isArray(h.suite)) h.suite = [];
+    // propositions d'office : thèmes « universels » seulement (jamais séparation, propreté, dentiste… sans choix du parent)
+    const DOUX = ["La confiance en soi", "Oser se faire des amis", "Apprendre à partager", "Les émotions", "Une aventure pour rire", "Prendre soin de la nature",
+      "Gérer la colère", "La politesse", "Dire la vérité", "Apprendre à attendre", "Goûter de nouveaux aliments", "Partir en vacances", "La peur du noir", "Ranger sa chambre"].filter(t => t !== h.theme);
+    const ui = Math.max(0, UNIVERS.indexOf(h.univers));
+    for (let k = 2; k <= Math.max(n, h.suite.length + 1); k++) {
+      const x = h.suite[k - 2] || (h.suite[k - 2] = {});
+      if (!x.perso_t) x.theme = DOUX[(k - 2) % DOUX.length];
+      if (!x.perso_u) x.univers = UNIVERS[(ui + k - 1) % UNIVERS.length];
+    }
+    return h.suite.slice(0, Math.max(0, n - 1));
+  }
+  function suiteHTML(ouvert) {
+    const n = (F[S.commande.formule] || {}).livres || 1, h = S.histoire;
+    if (n < 2 || S.commande.formule === 'fetes') return '';
+    const sel = (k, key, list, v) => `<select data-suite="${k}" data-sk="${key}">${list.map(t => `<option ${v === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+    const un = h.occasion ? (FETES.find(u => u.cle === h.occasion) || {}).nom : h.univers;
+    return G(`Les ${n} aventures`, `<details class="multi suite" ${ouvert || OUVERT.suite ? 'open' : ''}><summary>Livre 1 : ${esc(h.theme)} · ${esc(un || '')}<br><small>Livres 2 à ${n} : déjà choisis pour vous, modifiables</small></summary>` +
+      `<div class="liste">${suiteDe().map((x, i) => `<div class="sl"><b>Livre ${i + 2}</b>${sel(i, 'theme', THEMES, x.theme)}${sel(i, 'univers', UNIVERS, x.univers)}</div>`).join('')}</div></details>` +
+      `<p class="hint" style="margin:8px 0 0">Un thème et un univers différents par livre, avec les mêmes personnages.</p>`, 'thème et univers');
+  }
   function panelHistoire() {
     const h = S.histoire, occ = h.occasion ? FETES.find(u => u.cle === h.occasion) : null;
     return G('Thème du mois', `<select data-in="theme">${THEMES.map(t => `<option ${h.theme === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`) +
       (S.commande.formule === 'fetes' ? '' : occ ? G('Ce livre', `<div class="occasion"><b>Livre de fête : ${esc(occ.nom)}</b><button type="button" class="lien" data-occ="0">Choisir plutôt un univers</button></div>`) :
         G('Univers', `<select data-in="univers">${UNIVERS.map(t => `<option ${h.univers === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`)) +
-      ((F[S.commande.formule] || {}).livres > 1 && S.commande.formule !== 'fetes' ? `<p class="hint" style="margin:-4px 0 14px">Vous choisissez le thème et l'univers du 1er livre. Les ${F[S.commande.formule].livres - 1} autres auront chacun un nouveau thème et un nouvel univers, avec les mêmes personnages.</p>` : '') +
+      suiteHTML() +
       G('Le héros du livre', `<select data-in="heros_livre">${herosChoix().map(([v, l]) => `<option value="${v}" ${h.heros_livre === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`,
         'les autres l\'accompagnent') +
       (S.commande.formule !== 'fetes' ? '' : G('Les 6 fêtes', `<details class="multi" ${OUVERT.fetes ? 'open' : ''}><summary>${h.fetes.length ? esc(FETES.filter(u => h.fetes.includes(u.cle)).map(u => u.puce).join(', ')) : '<span class="ph">Aucune fête choisie</span>'}</summary>` +
@@ -455,6 +485,7 @@
           `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>` +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
           (n < 6 ? `<p class="astuce">Livraison offerte et ${eur2(F.pack6.prix_livre)} le livre à partir de 6 livres.</p>` : '') + `</div>`; })() +
+      suiteHTML() +
       `<div class="delai"><b>Livraison estimée : ${delai()}</b>` +
       `<span>${(F[c.formule].livres > 1 ? 'Création et relecture des livres, impression, puis un seul colis' : 'Création et relecture du livre, impression, puis expédition')} : 7 à 15 jours ouvrés.</span></div>` +
       `<label class="toggle" style="margin-bottom:12px"><input type="checkbox" data-chk="cadeau" ${c.cadeau ? 'checked' : ''}> C'est pour offrir</label>` +
@@ -511,6 +542,7 @@
       else if (S.commande.formule === 'fetes' && f.length >= 6) { el.checked = false; $('err').textContent = 'La formule comprend 6 fêtes : retirez-en une avant d\'en ajouter une autre.'; return; }
       else f.push(c);
       $('err').textContent = ''; return render(); }
+    if (el.dataset.suite !== undefined) { const x = suiteDe()[+el.dataset.suite]; x[el.dataset.sk] = el.value; x[el.dataset.sk === 'theme' ? 'perso_t' : 'perso_u'] = true; OUVERT.suite = true; return render(); }
     if (el.dataset.chk) { target()[el.dataset.chk] = el.checked; render(); }
     else if (el.tagName === 'SELECT' && el.dataset.in) { target()[el.dataset.in] = el.value; renderStage(); save(); }
   });
@@ -553,6 +585,7 @@
     const h = S.histoire, e = S.enfant;
     const payload = {
       prenom: e.prenom.trim(), age: e.age, genre: e.genre, theme: h.theme, univers: (h.occasion && S.commande.formule !== 'fetes' && FETES.find(u => u.cle === h.occasion)) ? FETES.find(u => u.cle === h.occasion).nom : h.univers, fetes: h.fetes.join(','), anniversaire: anniv(), heros_livre: (herosChoix(), h.heros_livre), passions: h.passions,
+      suite: S.commande.formule === 'fetes' ? [] : suiteDe().map(x => ({ theme: x.theme, univers: x.univers })),
       precision: h.precision, numero: h.numero, code: h.code, demo: h.demo ? '1' : '',
       avatar: { enfant: e, doudou: S.doudou, animaux: S.animaux }
     };
