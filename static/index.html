@@ -39,6 +39,9 @@
   .couv .dos { position:absolute; z-index:4; left:0; top:0; bottom:0; width:5.5%; background:linear-gradient(90deg, rgba(10,14,40,.75), rgba(10,14,40,.35));
                border-right:1px solid rgba(242,213,138,.45); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:10px 0 12px; }
   .multi.suite .liste { display:block; }
+  .suitebar { display:flex; gap:12px; align-items:center; margin-bottom:10px; }
+  .suitebar .btn { flex:none; padding:10px 16px; font-size:14px; background:var(--luciole); color:var(--encre); box-shadow:none; }
+  .suitebar .hint { margin:0; font-size:13px; }
   .suite summary small { font-weight:500; color:var(--encre-2); }
   .suite .sl { display:grid; grid-template-columns:62px 1fr 1fr; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid var(--trait); }
   .suite .sl b { font:700 13px var(--texte); }
@@ -432,12 +435,18 @@
     return h;
   }
   /* pack : une aventure (thème + univers) par livre, proposée d'office et modifiable */
+  // propositions d'office et hasard : thèmes « universels » seulement (jamais séparation, propreté, dentiste… sans choix du parent)
+  const DOUX_T = ["La confiance en soi", "Oser se faire des amis", "Apprendre à partager", "Les émotions", "Une aventure pour rire", "Prendre soin de la nature",
+    "Gérer la colère", "La politesse", "Dire la vérité", "Apprendre à attendre", "Goûter de nouveaux aliments", "Partir en vacances", "La peur du noir", "Ranger sa chambre"];
+  const melange = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  function hasard() {
+    const h = S.histoire, l = suiteDe(), t = melange(DOUX_T.filter(x => x !== h.theme)), u = melange(UNIVERS.filter(x => x !== h.univers));
+    l.forEach((x, i) => { x.theme = t[i % t.length]; x.univers = u[i % u.length]; x.perso_t = x.perso_u = true; });
+  }
   function suiteDe() {
     const h = S.histoire, n = (F[S.commande.formule] || {}).livres || 1;
     if (!Array.isArray(h.suite)) h.suite = [];
-    // propositions d'office : thèmes « universels » seulement (jamais séparation, propreté, dentiste… sans choix du parent)
-    const DOUX = ["La confiance en soi", "Oser se faire des amis", "Apprendre à partager", "Les émotions", "Une aventure pour rire", "Prendre soin de la nature",
-      "Gérer la colère", "La politesse", "Dire la vérité", "Apprendre à attendre", "Goûter de nouveaux aliments", "Partir en vacances", "La peur du noir", "Ranger sa chambre"].filter(t => t !== h.theme);
+    const DOUX = DOUX_T.filter(t => t !== h.theme);
     const ui = Math.max(0, UNIVERS.indexOf(h.univers));
     for (let k = 2; k <= Math.max(n, h.suite.length + 1); k++) {
       const x = h.suite[k - 2] || (h.suite[k - 2] = {});
@@ -451,16 +460,14 @@
     if (n < 2 || S.commande.formule === 'fetes') return '';
     const sel = (k, key, list, v) => `<select data-suite="${k}" data-sk="${key}">${list.map(t => `<option ${v === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
     const un = h.occasion ? (FETES.find(u => u.cle === h.occasion) || {}).nom : h.univers;
-    return G(`Les ${n} aventures`, `<details class="multi suite" ${ouvert || OUVERT.suite ? 'open' : ''}><summary>Livre 1 : ${esc(h.theme)} · ${esc(un || '')}<br><small>Livres 2 à ${n} : déjà choisis pour vous, modifiables</small></summary>` +
-      `<div class="liste">${suiteDe().map((x, i) => `<div class="sl"><b>Livre ${i + 2}</b>${sel(i, 'theme', THEMES, x.theme)}${sel(i, 'univers', UNIVERS, x.univers)}</div>`).join('')}</div></details>` +
-      `<p class="hint" style="margin:8px 0 0">Un thème et un univers différents par livre, avec les mêmes personnages.</p>`, 'thème et univers');
+    return G(`Les ${n} aventures`, `<div class="suitebar"><button type="button" class="btn ghost" data-hasard="1">🎲 Au hasard</button><span class="hint">Pas envie de choisir ? On tire les aventures pour vous.</span></div>` + `<details class="multi suite" ${ouvert || OUVERT.suite ? 'open' : ''}><summary>Livre 1 : ${esc(h.theme)} · ${esc(un || '')}<br><small>Livres 2 à ${n} : déjà choisis pour vous, modifiables</small></summary>` +
+      `<div class="liste">${suiteDe().map((x, i) => `<div class="sl"><b>Livre ${i + 2}</b>${sel(i, 'theme', THEMES, x.theme)}${sel(i, 'univers', UNIVERS, x.univers)}</div>`).join('')}</div></details>`, 'thème et univers');
   }
   function panelHistoire() {
     const h = S.histoire, occ = h.occasion ? FETES.find(u => u.cle === h.occasion) : null;
     return G('Thème du mois', `<select data-in="theme">${THEMES.map(t => `<option ${h.theme === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`) +
       (S.commande.formule === 'fetes' ? '' : occ ? G('Ce livre', `<div class="occasion"><b>Livre de fête : ${esc(occ.nom)}</b><button type="button" class="lien" data-occ="0">Choisir plutôt un univers</button></div>`) :
         G('Univers', `<select data-in="univers">${UNIVERS.map(t => `<option ${h.univers === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`)) +
-      suiteHTML() +
       G('Le héros du livre', `<select data-in="heros_livre">${herosChoix().map(([v, l]) => `<option value="${v}" ${h.heros_livre === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`,
         'les autres l\'accompagnent') +
       (S.commande.formule !== 'fetes' ? '' : G('Les 6 fêtes', `<details class="multi" ${OUVERT.fetes ? 'open' : ''}><summary>${h.fetes.length ? esc(FETES.filter(u => h.fetes.includes(u.cle)).map(u => u.puce).join(', ')) : '<span class="ph">Aucune fête choisie</span>'}</summary>` +
@@ -514,6 +521,7 @@
   /* ---------- événements ---------- */
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button'); if (!b) return;
+    if (b.dataset.hasard) { hasard(); OUVERT.suite = true; return render(); }
     if (b.dataset.occ) { S.histoire.occasion = ''; return render(); }
     if (b.dataset.t) { tab = b.dataset.t; $('err').textContent = ''; return render(); }
     if (b.dataset.go) { tab = b.dataset.go; if (b.dataset.pet) pet = +b.dataset.pet; return render(); }
