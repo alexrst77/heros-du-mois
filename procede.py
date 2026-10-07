@@ -13,7 +13,7 @@ Règles tenues ici :
 - un panorama 2:1 est demandé en paramètre de taille ; une image qui n'est pas en 2:1 est refusée (jamais étirée ni coupée) ;
 - corrections automatiques limitées (2 par image), la meilleure tentative est gardée, un écart persistant -> relecture humaine ;
 - textes contrôlés avec la police et la largeur du moteur AVANT de payer les illustrations (jamais de réduction du corps)."""
-import os, re, json, time, math, base64, hashlib, shutil, contextvars
+import os, re, json, time, math, base64, hashlib, shutil, contextvars, threading
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw
@@ -213,6 +213,9 @@ def references(snap, cfg, refs, folder, progress):
     return out, rapport
 
 
+_sheet_lock = threading.Lock()
+
+
 def group_sheet(ids, portraits, folder):
     """Fiche de groupe (sans texte) : les personnages côte à côte, à la même échelle, dans l'ordre donné."""
     ims = [Image.open(portraits[i]).convert("RGB") for i in ids]
@@ -220,8 +223,12 @@ def group_sheet(ids, portraits, folder):
     sheet = Image.new("RGB", (cell * len(ims), cell), (244, 238, 224))
     for k, im in enumerate(ims):
         im.thumbnail((cell, cell)); sheet.paste(im, (k * cell + (cell - im.width) // 2, (cell - im.height) // 2))
-    p = Path(folder) / ("fiche_groupe_" + "_".join(ids) + ".png")
-    sheet.save(p)
+    h = sha([fsha(portraits[i]) for i in ids])[:8]          # le nom suit le contenu des portraits
+    p = Path(folder) / ("fiche_groupe_" + "_".join(ids) + f"_{h}.png")
+    with _sheet_lock:                       # plusieurs doubles pages en parallèle peuvent demander la même fiche
+        if not p.exists():
+            tmp = p.with_name(f".{p.stem}.{os.getpid()}.{threading.get_ident()}.png")
+            sheet.save(tmp); os.replace(tmp, p)        # écriture atomique : jamais de fichier à moitié écrit
     return p
 
 
@@ -539,6 +546,8 @@ Compare l'image à la fiche. BLOQUANTS (l'image est refaite) — uniquement :
 - un visage, une tête d'animal ou l'action essentielle coupé par la pliure (bande de 44 à 56 % de la largeur) ;
 - un détail obligatoire de l'histoire absent ; du texte, des lettres ou un cadre dans l'image ; une anatomie très fausse.
 MINEURS : nuances, détails de vêtements, zone basse un peu chargée, lumière.
+Une teinte due à la lumière de la scène (reflet bleuté, lumière dorée) n'est PAS une couleur fausse. Une peluche tenue, assise ou
+inerte, au pelage doux et aux yeux brillants, reste une peluche : ce n'est pas bloquant.
 Sois factuel, en cas de doute ce n'est pas bloquant.
 Réponds UNIQUEMENT en JSON : {"bloquants": ["consigne de correction en anglais"], "mineurs": ["en français"], "personnages_vus": ["noms"]}"""
 
