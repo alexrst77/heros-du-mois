@@ -74,14 +74,41 @@ Un livre = 2 à 4 appels texte + 13 images (planche, couverture, 9 scènes, 2 d�
   DejaVu Serif 14,8/21 pt, fondu de 225 pt, texte à 43 pt du bas, 147 pt maximum). Test sans API :
   `python3 moteur_livre.py kit/noe-demo.json --output test/Noe.pdf` (20 pages, identique au PDF Noé d'origine).
 - `procede.py` : instantané de la commande (version + empreinte) → fiches des personnages (« aucun » explicite) → portraits
-  d'identité contrôlés (2 corrections max) + fiche de groupe → storyboard JSON (9 doubles pages, textes vérifiés avec la police du
+  d'identité contrôlés (aucune régénération automatique) + fiche de groupe → storyboard JSON (9 doubles pages, textes vérifiés avec la police du
   moteur AVANT les images) → couverture sans texte (titre composé dans le PDF) → panorama pilote → 8 panoramas → contrôles →
   assemblage → rendu contrôlé (pages en images, planches contact). États : queued, references, storyboard, illustrating,
   reviewing, assembling, ready, needs_review, failed.
 - Chaque appel image envoie les fichiers (couverture personnalisée, fiche de groupe, portraits des présents, 1 référence de STYLE
   Mila/Noé) ; tout est tracé dans `references_transmises.jsonl` (rôle, empreinte, taille demandée/reçue, modèle, prompt).
 - Variables : `OPENAI_IMAGE_MODEL` (ou `OPENAI_PANO_MODEL`) doit gérer les tailles libres (gpt-image-2…), sinon la fabrication
-  s'arrête avant toute dépense ; `OPENAI_PANO_SIZE` (2048x1024), `OPENAI_COVER_SIZE` (1024x1024), `KIT_CORRECTIONS` (2).
-  `PROCEDE=ancien` remet l'ancienne chaîne (24 pages, fichiers Lulu).
-- Pas encore branché pour ce format : fichiers d'impression Lulu (gabarit, fond perdu, nombre de pages) ; l'impression est refusée.
-- Tests : `python3 tests/test_procede.py` (commande → PDF depuis le site, OpenAI simulé).
+  s'arrête avant toute dépense ; `OPENAI_PANO_SIZE` (2048x1024), `OPENAI_COVER_SIZE` (1024x1024).
+  L'ancienne chaîne (`PROCEDE=ancien`) est désactivée : elle ne passe pas par le plafond de 3 $.
+- Tests : `python3 tests/test_procede.py`, `tests/test_budget.py`, `tests/test_commande.py`, `tests/test_essai.py`, `tests/test_fetes.py`
+  (OpenAI, Stripe et Lulu simulés : aucun appel réel, aucun paiement, aucune impression).
+
+## Plafond de 3 $ par livre (`budget.py`, `tarifs.json`)
+
+- **Tarifs** : `tarifs.json` (copie de travail : `DATA_DIR/tarifs.json`). Tant que tu n'as pas confirmé les prix dans l'admin
+  (« J'ai vérifié ces prix… ») et lancé le calibrage (1 appel ≈ 0,02 $ qui mesure les jetons d'une image de référence), **toute
+  fabrication est refusée**. Un modèle sans tarif, une qualité ou une taille hors calcul : appel refusé.
+- **Avant de lancer** : borne haute de tous les appels restants (modèles, tailles, qualités, jetons max fixés ; marge 15 %),
+  recalculée exactement après le storyboard. Au-delà de 3 $ (dépense déjà faite comprise) : refus, rien n'est dépensé.
+- **Avant chaque appel** : réservation atomique de son coût maximal (SQLite, sûr entre fils et processus) ; après : coût réel.
+  Le budget est celui de la COMMANDE : refaire un livre ne redonne pas 3 $.
+- **Aucune relance** : client OpenAI `max_retries=0`, une seule image par page, pas de variantes, pas de correction automatique.
+  Coupure réseau après envoi → appel « incertain », réservé, jamais renvoyé ; le livre s'arrête. Dans l'admin, « Budget API du
+  livre » → « Saisir le coût constaté » (d'après platform.openai.com/usage), puis « Relancer » : seul ce qui manque est fait.
+- **Sortie non conforme** → « à relire ». Tu relis le PDF, puis « Finaliser après relecture » (aucun appel) ou tu laisses en l'état.
+- **Livre finalisé** (`final.json`, empreintes de tous les fichiers) : téléchargements, aperçus, réimpression = fichiers enregistrés,
+  zéro appel. Sauvegarde zip dans `DATA_DIR/sauvegardes` (ou `SAUVEGARDE_DIR`), restauration vérifiée par empreintes.
+
+## Fabrication (`fabrication.py`)
+
+- PDF de lecture : 20 faces (couverture + 18 pages + 4e). Intérieur imprimeur : 24 pages 8,5 po + fond perdu 0,125 po
+  (minimum Lulu en couverture rigide), les doubles pages tombent sur de vraies doubles pages.
+- Couverture à plat 4e | dos | 1re aux dimensions de l'API Lulu (sinon maquette marquée « non confirmée »).
+- **volumeNumber** : numéro du livre dans la collection (1, 2, 3…), attribué une fois (sans doublon), composé par code en bas du
+  dos, toujours au même endroit, et repris sur la 4e et la dernière page.
+- **Limite Lulu** : pas de texte sur le dos en dessous de 81 pages (dos de 0,25 po à 24 pages). Le numéro est composé quand même,
+  mais le fichier est marqué NON prêt à imprimer et l'envoi est bloqué. Quand l'imprimeur a validé par écrit : `DOS_NUMERO_VALIDE_IMPRIMEUR=1`.
+- Aperçus (`apercus/`) : couverture, couverture à plat, détail du dos, doubles pages, album sur l'étagère, tous tirés des PDF réels.

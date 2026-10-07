@@ -7,6 +7,7 @@ import os, re, json, time, uuid, shutil, secrets, threading, traceback
 from pathlib import Path
 from flask import Blueprint, request, jsonify, send_file, abort, redirect, Response
 import commandes as db, paiement, lulu
+import budget, procede, fabrication
 
 bp = Blueprint("boutique", __name__)
 A = None                      # module app (injecté par setup)
@@ -36,6 +37,13 @@ def _resume():
             if (o.get("tentatives") or 0) >= 3:            # garde-fou : jamais de boucle de relances qui coûte
                 db.update(o["id"], statut="erreur", erreur="Fabrication interrompue 3 fois : relance-la à la main depuis l'admin")
                 continue
+            folder = A.OUT / (o["job_id"] or o["id"])
+            if folder.exists() and procede.verrou_libre(folder):
+                n = budget.orphelines_vers_incertain(procede.livre_id(folder))
+                if n:                                  # appel coupé en plein vol : jamais renvoyé à l'aveugle
+                    db.update(o["id"], statut="erreur", erreur=f"{n} appel(s) API au résultat incertain après redémarrage : "
+                              "vérifie l'usage OpenAI et règle-les dans l'admin avant de relancer")
+                    continue
             log(f"commande {o['id']} : fabrication interrompue, relance")
             try:
                 start_book(o["id"], auto=True, reprise=True)   # reprend là où elle s'était arrêtée (rien n'est payé deux fois)
@@ -188,8 +196,20 @@ def check_fetes(s, jour=None):
     return lances
 
 
+_start_lock = threading.Lock()
+
+
 def start_book(oid, auto=False, reprise=False):
+    with _start_lock:                             # vérification + lancement d'un seul tenant (requêtes simultanées)
+        return _start_book(oid, auto, reprise)
+
+
+def _start_book(oid, auto=False, reprise=False):
     o = db.get(oid)
+    if A.JOBS.get(o["job_id"] or "", {}).get("etat") in ("en_cours", "validation"):
+        return False                              # double clic / double webhook : un seul travail par livre
+    if o["job_id"] and fabrication.est_finalise(A.OUT / o["job_id"]):
+        raise RuntimeError("livre finalisé : il est servi tel quel, jamais refabriqué (une modification = nouvelle version, à la main)")
     essai = o["formule"].split("_", 1)[1] if (o["formule"] or "").startswith("essai_") else None
     o = db.get(oid)
     form, refs = load_book(o["origine"])
@@ -209,14 +229,19 @@ def start_book(oid, auto=False, reprise=False):
             form = dict(form, age=str(int(form["age"]) + 1 + depuis))
         except (ValueError, TypeError, KeyError):
             pass
-    job_id = oid
+    form = dict(form, volume_number=db.assign_volume(oid))      # volumeNumber : attribué une fois, jamais changé
+    job_id = o["job_id"] or oid
+    if not reprise and (A.OUT / job_id).exists() and any((A.OUT / job_id).glob("*.png")):
+        # « refaire » : l'ancien dossier est gardé à part, la nouvelle version a son propre dossier, le MÊME budget (la commande)
+        n = 2
+        while (A.OUT / f"{oid}-v{n}").exists(): n += 1
+        job_id = f"{oid}-v{n}"
     folder = A.OUT / job_id
-    if not reprise:
-        shutil.rmtree(folder, ignore_errors=True)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / ".commande").write_text(oid)
     db.update(oid, statut="generation", job_id=job_id, erreur=None, tentatives=(o.get("tentatives") or 0) + 1 if reprise else 1)
     A.start_job(job_id, form, refs, auto=auto, on_end=lambda j, job: book_done(oid, job), reprise=reprise, essai=essai)
+    return True
 
 
 def book_done(oid, job):
@@ -351,7 +376,14 @@ def build_cover(oid):
     o = db.get(oid)
     folder = A.OUT / o["job_id"]
     if (folder / "livre.json").exists() and not (folder / "histoire.json").exists():
-        raise RuntimeError("Livre au format du kit (lecture 210 mm) : la couverture Lulu n'est pas encore branchée pour ce format.")
+        # livre du procédé actuel : couverture à plat recomposée par code à partir des fichiers enregistrés (aucun appel IA)
+        book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+        form, _ = load_book(o["origine"])
+        dims = fabrication.dimensions_couverture()
+        info = fabrication.couverture_a_plat(book, folder / "impression_couverture.pdf", folder, book.get("volumeNumber") or o.get("volume_number") or 1,
+                                             form.get("prenom") or "", dims)
+        info["dimensions_lulu"] = bool(dims)
+        return info
     story = json.loads((folder / "histoire.json").read_text(encoding="utf-8")) if (folder / "histoire.json").exists() else None
     if story is None:
         raise RuntimeError("histoire.json introuvable : livre démo ?")
@@ -375,16 +407,25 @@ def send_to_print(oid):
         raise RuntimeError("livre d'essai : pas d'impression")
     if o["statut"] not in ("a_verifier", "erreur") or not o["job_id"]:
         raise RuntimeError(f"statut {o['statut']} : rien à imprimer")
+    if (A.OUT / o["job_id"] / "livre.json").exists() and not fabrication.est_finalise(A.OUT / o["job_id"]):
+        raise RuntimeError("Livre non finalisé (à relire) : finalise-le après relecture avant l'impression.")
     if not lulu.configured():
         raise RuntimeError("Clés Lulu absentes (.env : LULU_CLIENT_KEY, LULU_CLIENT_SECRET).")
     pub = os.getenv("PUBLIC_URL", "").rstrip("/")
     if not pub.startswith("https://"):
         raise RuntimeError("Lulu doit télécharger les PDF : renseigne PUBLIC_URL (adresse https publique du site).")
     folder = A.OUT / o["job_id"]
+    if (folder / "livre.json").exists() and not (folder / "histoire.json").exists():
+        if not fabrication.est_finalise(folder):
+            raise RuntimeError("Livre non finalisé (à relire) : finalise-le après relecture avant l'impression.")
+        info = build_cover(oid)
+        if not info["pret_a_imprimer"]:
+            raise RuntimeError("Couverture NON prête à imprimer : " + " ".join(info["problemes"]))
     if not (folder / "impression_interieur.pdf").exists():
         raise RuntimeError("Pas de fichier d'impression : un livre au format du kit (lecture 210 mm) n'est pas encore prêt pour Lulu "
                            "(gabarit, fond perdu et nombre de pages à brancher)." if (folder / "livre.json").exists() else "impression_interieur.pdf introuvable")
-    build_cover(oid)
+    if not (folder / "livre.json").exists():
+        build_cover(oid)
     jeton = o["jeton"] or secrets.token_urlsafe(24)
     db.update(oid, jeton=jeton)
     cost = lulu.cost(24, o["adresse"], o["email"])
@@ -499,6 +540,58 @@ def admin_vignettes():
     return jsonify(lancees=todo)
 
 
+@bp.get("/admin/api/tarifs")
+def admin_tarifs():
+    if not admin_ok():
+        abort(403)
+    return jsonify(etat=budget.etat_tarifs(), tarifs=budget.tarifs())
+
+
+@bp.post("/admin/api/tarifs/confirmer")
+def admin_tarifs_confirmer():
+    """Tu as vérifié les prix sur platform.openai.com/docs/pricing : tu les confirmes (ou tu les corriges ici)."""
+    if not admin_ok():
+        abort(403)
+    body = request.get_json(force=True, silent=True) or {}
+    t = budget.tarifs()
+    for m, vals in (body.get("modeles") or {}).items():
+        if m in t["modeles"]:
+            for k in ("texte_entree", "image_entree", "sortie_image", "sortie"):
+                if isinstance(vals.get(k), (int, float)) and vals[k] > 0:
+                    t["modeles"][m][k] = float(vals[k])
+    t["confirme_le"] = time.strftime("%Y-%m-%d %H:%M"); t["confirme_par"] = "admin"
+    budget.enregistrer_tarifs(t)
+    return jsonify(ok=True, etat=budget.etat_tarifs())
+
+
+@bp.post("/admin/api/tarifs/calibrer")
+def admin_tarifs_calibrer():
+    """UN appel payant (~0,02 $, au plus 0,17 $), lancé seulement par toi : mesure les jetons d'une image de référence."""
+    if not admin_ok():
+        abort(403)
+    if not budget.tarifs().get("confirme_le"):
+        return jsonify(erreur="Confirme d'abord les tarifs"), 400
+    try:
+        return jsonify(ok=True, info=procede.calibrer(A.OUT / "_calibrage"), etat=budget.etat_tarifs())
+    except Exception as e:
+        return jsonify(erreur=str(e)), 400
+
+
+@bp.post("/admin/api/appels/<int:aid>/regler")
+def admin_regler_appel(aid):
+    """Appel au résultat incertain : tu saisis le coût constaté sur le tableau de bord OpenAI (0 si rien n'a été facturé)."""
+    if not admin_ok():
+        abort(403)
+    a = budget.appel_get(aid) or abort(404)
+    if a["statut"] != "incertain":
+        return jsonify(erreur=f"appel {aid} : statut {a['statut']}"), 400
+    reel = float((request.get_json(force=True, silent=True) or {}).get("reel", -1))
+    if reel < 0:
+        return jsonify(erreur="coût réel manquant"), 400
+    budget.regler_incertain(aid, reel)
+    return jsonify(ok=True, depense=budget.depense(a["livre"]))
+
+
 @bp.post("/admin/api/<oid>/<action>")
 def admin_action(oid, action):
     if not admin_ok():
@@ -519,9 +612,21 @@ def admin_action(oid, action):
                 raise RuntimeError("seulement avant l'envoi à l'impression")
             if A.JOBS.get(o["job_id"] or "", {}).get("etat") in ("en_cours", "validation"):
                 raise RuntimeError("fabrication en cours : attends la fin avant de relancer")
+            if o["job_id"] and fabrication.est_finalise(A.OUT / o["job_id"]):
+                raise RuntimeError("livre finalisé : il n'est jamais refabriqué")
             # en erreur ou bloquée : on reprend là où elle s'est arrêtée ; « Refaire le livre » (à relire) repart de zéro
             start_book(oid, auto=True, reprise=o["statut"] != "a_verifier")
             return jsonify(ok=True)
+        if action == "finaliser":                 # après relecture humaine d'un livre « à relire » : fige les fichiers, aucun appel IA
+            man = procede.finaliser_apres_relecture(A.OUT / (o["job_id"] or "_"))
+            return jsonify(ok=True, info={"finalise_le": man["finalise_le"], "fichiers": len(man["fichiers"])})
+        if action == "budget":
+            folder = A.OUT / (o["job_id"] or "_")
+            lid = procede.livre_id(folder) if folder.exists() else oid
+            bj = folder / "budget.json"
+            return jsonify(ok=True, info={"livre": lid, "plafond": budget.PLAFOND, "depense": budget.depense(lid), "appels": budget.appels(lid),
+                                          "borne": json.loads(bj.read_text(encoding="utf-8")) if bj.exists() else None,
+                                          "tarifs": budget.etat_tarifs()})
         if action == "valider-paiement-test" and not paiement.configured():
             confirm_paid(oid)
             return jsonify(ok=True)
@@ -552,7 +657,7 @@ def admin_action(oid, action):
             db.update(oid, statut="annulee" if o["statut"] != "expediee" else "expediee", pdf=None, erreur="données effacées")
             return jsonify(ok=True)
         abort(404)
-    except (RuntimeError, lulu.LuluError, paiement.StripeError) as e:
+    except (RuntimeError, lulu.LuluError, paiement.StripeError, budget.BudgetLivreError) as e:
         return jsonify(erreur=str(e)), 400
 
 

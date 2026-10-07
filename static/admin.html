@@ -28,6 +28,8 @@
 <div class="wrap">
   <h1>Commandes</h1>
   <div class="cfg" id="cfg"></div>
+  <h2>Budget API (plafond 3 $ par livre)</h2>
+  <div class="card" id="tarifs">Chargement…</div>
   <div id="list">Chargement…</div>
   <h2>Abonnements</h2>
   <div id="subs"></div>
@@ -45,7 +47,7 @@ const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
 const date = t => t ? new Date(t * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 const ESSAI = { essai_brouillon: 'essai brouillon', essai_apercu: 'essai aperçu' };
 const LABEL = { attente_paiement: 'attente paiement', payee: 'payée', attente_fete: 'attend sa fête', generation: 'fabrication', a_verifier: 'à relire', envoyee_impression: 'chez Lulu', expediee: 'expédiée', erreur: 'erreur', annulee: 'annulée' };
-const CONFIRM = { relancer: "Refaire entièrement ce livre ? (nouvelle génération, environ 4 € d'images)", imprimer: "Envoyer ce livre à l'impression chez Lulu ? (en production, c'est une vraie commande payée)", effacer: "Effacer définitivement les données et fichiers de cette commande ?", 'arreter-abonnement': "Arrêter cet abonnement ?" };
+const CONFIRM = { finaliser: "Tu as relu le PDF : figer ce livre tel quel ? (ensuite il est servi sans aucun appel IA)", relancer: "Relancer ? (uniquement ce qui manque, dans les 3 $ du livre : ce qui a déjà été payé est réutilisé)", imprimer: "Envoyer ce livre à l'impression chez Lulu ? (en production, c'est une vraie commande payée)", effacer: "Effacer définitivement les données et fichiers de cette commande ?", 'arreter-abonnement': "Arrêter cet abonnement ?" };
 
 async function act(id, action, btn) {
   if (CONFIRM[action] && !confirm(CONFIRM[action])) return;
@@ -53,6 +55,13 @@ async function act(id, action, btn) {
   try {
     const r = await fetch(`/admin/api/${id}/${action}?code=${encodeURIComponent(code)}`, { method: 'POST', headers: H });
     const j = await r.json(); out.textContent = j.erreur ? '⚠ ' + j.erreur : '✓ ' + (j.info ? JSON.stringify(j.info) : 'fait');
+    if (action === 'budget' && !j.erreur) {
+      const i = j.info, d = i.depense;
+      out.innerHTML = `Payé <b>${d.regle.toFixed(3)} $</b> · en cours ${d.reserve.toFixed(3)} $ · incertain <b>${d.incertain.toFixed(3)} $</b> · plafond ${i.plafond} $` +
+        (i.borne ? ` · borne au lancement ${i.borne.borne_lancement_usd} $` : '') + '<ul>' + i.appels.map(a => `<li>#${a.id} ${esc(a.etape)} · ${a.statut} · ` +
+        (a.statut === 'regle' ? `${(a.reel || 0).toFixed(4)} $` : `réservé ${a.reserve.toFixed(4)} $`) +
+        (a.statut === 'incertain' ? ` <button onclick="regler(${a.id}, this)">Saisir le coût constaté</button>` : '') + '</li>').join('') + '</ul>';
+    }
     if (action === 'couverture' && !j.erreur) out.innerHTML += ` · <a target="_blank" href="/admin/fichier/${id}/impression_couverture.pdf?code=${encodeURIComponent(code)}&t=${Date.now()}">voir la couverture</a>`;
     setTimeout(load, 1500);
   } catch (e) { out.textContent = '⚠ ' + e.message; }
@@ -69,7 +78,8 @@ async function load() {
     const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${q}">${esc(f)}</a>`).join('');
     const btns = [];
     const essai = (o.formule || '').startsWith('essai');
-    if (o.statut === 'a_verifier' && !essai) btns.push(['couverture', 'Préparer la couverture'], ['cout', 'Coût Lulu'], ['imprimer', "Envoyer à l'impression", 'main']);
+    if (o.statut === 'a_verifier' && !essai) btns.push(['finaliser', 'Finaliser après relecture'], ['couverture', 'Préparer la couverture'], ['cout', 'Coût Lulu'], ['imprimer', "Envoyer à l'impression", 'main']);
+    if (o.statut !== 'attente_paiement') btns.push(['budget', 'Budget API du livre']);
     if (o.statut === 'envoyee_impression') btns.push(['suivi', 'Actualiser le suivi']);
     if (['erreur', 'generation', 'payee'].includes(o.statut)) btns.push(['relancer', 'Relancer la fabrication']);
     if (o.statut === 'a_verifier') btns.push(['relancer', 'Refaire le livre']);
@@ -97,7 +107,32 @@ async function load() {
   }).catch(() => {});
   document.getElementById('subs').innerHTML = d.abonnements.length ? d.abonnements.map(s => `<div class="card"><b>${esc(s.formule)}</b> · ${esc(s.statut)} · ${esc(s.email)} · dernier livre n°${s.numero}${s.livres_restants != null ? ' · ' + s.livres_restants + ' livre(s) restant(s)' : ''}${s.prochain ? ' · prochain le ' + date(s.prochain) : s.statut === 'actif' ? ' · prochain à la prochaine facture Stripe' : ''}</div>`).join('') : '<p class="muted">Aucun abonnement.</p>';
 }
-load(); setInterval(load, 30000);
+async function tarifs() {
+  const r = await fetch('/admin/api/tarifs?code=' + encodeURIComponent(code), { headers: H }); if (!r.ok) return;
+  const d = await r.json(), e = d.etat, m = d.tarifs.modeles;
+  document.getElementById('tarifs').innerHTML = `<div>${e.ok ? '✓ Fabrication autorisée' : '<span class="warn">⛔ Fabrication bloquée : ' + e.manque.map(esc).join(' ; ') + '</span>'}</div>
+    <div class="muted">Tarifs relevés le ${esc(e.verifie_le)} · confirmés : <b>${esc(e.confirme_le || 'non')}</b> · jetons d'une image de référence : <b>${esc(e.jetons_image_entree_max || 'non calibré')}</b></div>
+    <div class="muted">gpt-image-2 : texte ${m['gpt-image-2'].texte_entree} $/M · image en entrée ${m['gpt-image-2'].image_entree} $/M · image en sortie ${m['gpt-image-2'].sortie_image} $/M — gpt-4.1 : ${m['gpt-4.1'].texte_entree} $/M entrée, ${m['gpt-4.1'].sortie} $/M sortie</div>
+    <button onclick="confirmer(this)">J'ai vérifié ces prix sur platform.openai.com/docs/pricing</button>
+    <button onclick="calibrer(this)" ${e.confirme_le ? '' : 'disabled'}>Calibrer (1 appel payant, ≈ 0,02 $)</button>
+    <div class="msg" id="tarifsR"></div>`;
+}
+async function regler(aid, b) {
+  const v = prompt("Coût réel de cet appel d'après platform.openai.com/usage (0 s'il n'a pas été facturé) :"); if (v === null) return;
+  const r = await (await fetch(`/admin/api/appels/${aid}/regler`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ reel: parseFloat(v.replace(',', '.')) }) })).json();
+  b.replaceWith(r.erreur ? '⚠ ' + r.erreur : '✓ réglé');
+}
+async function confirmer(b) {
+  if (!confirm("Les prix affichés sont-ils bien ceux de la page officielle OpenAI aujourd'hui ?")) return;
+  const r = await (await fetch('/admin/api/tarifs/confirmer', { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: '{}' })).json();
+  tarifs();
+}
+async function calibrer(b) {
+  if (!confirm("Lancer UN appel payant de calibrage (≈ 0,02 $, 0,17 $ au plus) ?")) return;
+  b.disabled = true; const r = await (await fetch('/admin/api/tarifs/calibrer', { method: 'POST', headers: H })).json();
+  await tarifs(); document.getElementById('tarifsR').textContent = r.erreur ? '⚠ ' + r.erreur : '✓ ' + JSON.stringify(r.info);
+}
+tarifs(); load(); setInterval(load, 30000);
 </script>
 </body>
 </html>

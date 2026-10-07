@@ -114,6 +114,51 @@ def _serie(c, t):
     c.setFillColor(HexColor('#FFF4DC')); c.setFont('Story', 11.5); c.drawCentredString(S / 2, 32, line)
 
 
+def page_couverture(c, cover, book):
+    c.drawImage(cover, 0, 0, S, S)
+    if book.get('coverTitle'):
+        _cover_title(c, book['coverTitle'])
+        _serie(c, book['coverTitle'])
+
+
+def page_histoire(c, idx, txt, p, book, folio_y=19):
+    """Une page d'histoire (calculs du kit). Renvoie la hauteur du texte."""
+    spread = idx // 2; half = idx % 2
+    im = Image.open(p); w, h = im.size
+    scale = max(2 * S / w, S / h); dw, dh = w * scale, h * scale
+    c.drawImage(p, (2 * S - dw) / 2 - half * S, (S - dh) / 2, dw, dh)
+    color = book['pages'][idx]['veil']; ink = book['pages'][idx]['ink']
+    c.drawImage(ImageReader(_veil(color)), 0, 0, S, 225, mask='auto')
+    c.setFillAlpha(1)
+    para = Paragraph(escape(txt), body_style(ink)); pw, ph = para.wrap(S - 90, 160)
+    if ph > TEXT_MAX: raise ValueError(f'Text overflow on page {idx + 2}; shorten text, do not shrink type')
+    para.drawOn(c, 45, 43)
+    c.setFillColor(HexColor(ink)); c.setFont('Story', 8); c.drawCentredString(S / 2, folio_y, str(idx + 2))
+    return ph
+
+
+def page_quatrieme(c, p, book):
+    # Back cover, image and quiet integrated synopsis.  (code du kit)
+    im = Image.open(p); w, h = im.size; scale = S / h
+    c.drawImage(p, S - w * scale, 0, w * scale, S)
+    c.setFillColor(HexColor(book['backColor'])); c.setFillAlpha(.84); c.rect(0, 0, S, S, fill=1, stroke=0); c.setFillAlpha(1)
+    c.setFillColor(HexColor('#EAD49D')); c.setFont('Story', 12); c.drawCentredString(S / 2, 520, book['collection'].upper())
+    style = ParagraphStyle('backtitle', fontName='StoryBold', fontSize=29, leading=38, textColor=HexColor('#FFF4DC'), alignment=1)
+    up = 36 if book.get('cadeau') else 0       # livre offert : le texte remonte pour laisser la place au petit mot
+    q = Paragraph('<br/>'.join(escape(t) for t in book['backTitle']), style); _, h = q.wrap(S - 100, 140); q.drawOn(c, 50, 370 + up)
+    style = ParagraphStyle('back', fontName='Story', fontSize=16, leading=25, textColor=HexColor('#FFF4DC'), alignment=1)
+    q = Paragraph('<br/><br/>'.join(escape(t) for t in book['backText']), style); _, h = q.wrap(S - 130, 240); q.drawOn(c, 65, 325 + up - h)
+    if book.get('cadeau'):                     # livre offert : de la part de qui, et son petit mot
+        k = book['cadeau']
+        st = ParagraphStyle('kdo', fontName='Story', fontSize=11.5, leading=16, textColor=HexColor('#EAD49D'), alignment=1)
+        body = f"<font name='StoryBold'>Offert par {escape(k['de'])}</font>" + (f"<br/>« {escape(k['message'])} »" if k.get('message') else '')
+        q = Paragraph(body, st); _, hk = q.wrap(S - 150, 90); q.drawOn(c, 75, 126)
+    c.setStrokeColor(HexColor('#DCC38C')); c.setLineWidth(.7); c.line(245, 112, 350, 112)
+    c.setFont('Story', 11); c.drawCentredString(S / 2, 85, 'Une aventure à lire ensemble • ' + book['ageLabel'])
+    num = (book.get('coverTitle') or {}).get('numero')
+    c.setFont('Story', 9); c.drawCentredString(S / 2, 62, book['title'] + (f"  •  livre n° {int(num)} de la collection" if num else ''))
+
+
 def render(book, out, base=None, work=None, pages=None, check=True):
     """book : manifeste au format du kit (title, collection, ageLabel, cover, spreads[9], pages[18] {text, veil, ink},
     backTitle, backText, backColor ; + coverTitle facultatif). Chemins relatifs à `base`.
@@ -151,47 +196,15 @@ def render(book, out, base=None, work=None, pages=None, check=True):
     c = canvas.Canvas(str(out), pagesize=(S, S), pageCompression=1)
     c.setTitle(book['title']); c.setAuthor(book['collection']); c.setSubject('Une aventure illustrée à lire ensemble • ' + book.get('ageLabel', '4–7 ans'))
     # Cover and final back cover are included in the 20-page count.
-    c.drawImage(cover, 0, 0, S, S)
-    if book.get('coverTitle'):
-        _cover_title(c, book['coverTitle'])
-        _serie(c, book['coverTitle'])
+    page_couverture(c, cover, book)
     c.showPage()
     heights = {}
     for idx, txt in enumerate(texts):
         if not full and idx not in pages: continue
-        spread = idx // 2; half = idx % 2
-        p = paths[spread]; im = Image.open(p); w, h = im.size
-        scale = max(2 * S / w, S / h); dw, dh = w * scale, h * scale
-        c.drawImage(p, (2 * S - dw) / 2 - half * S, (S - dh) / 2, dw, dh)
-        color = book['pages'][idx]['veil']; ink = book['pages'][idx]['ink']
-        c.drawImage(ImageReader(_veil(color)), 0, 0, S, 225, mask='auto')
-        c.setFillAlpha(1)
-        para = Paragraph(escape(txt), body_style(ink)); pw, ph = para.wrap(S - 90, 160)
-        heights[idx + 2] = ph
-        if ph > TEXT_MAX: raise ValueError(f'Text overflow on page {idx + 2}; shorten text, do not shrink type')
-        para.drawOn(c, 45, 43)
-        c.setFillColor(HexColor(ink)); c.setFont('Story', 8); c.drawCentredString(S / 2, 19, str(idx + 2))
+        heights[idx + 2] = page_histoire(c, idx, txt, paths[idx // 2], book)
         c.showPage()
     if full:
-        # Back cover, image and quiet integrated synopsis.  (code du kit)
-        p = paths[7]; im = Image.open(p); w, h = im.size; scale = S / h
-        c.drawImage(p, S - w * scale, 0, w * scale, S)
-        c.setFillColor(HexColor(book['backColor'])); c.setFillAlpha(.84); c.rect(0, 0, S, S, fill=1, stroke=0); c.setFillAlpha(1)
-        c.setFillColor(HexColor('#EAD49D')); c.setFont('Story', 12); c.drawCentredString(S / 2, 520, book['collection'].upper())
-        style = ParagraphStyle('backtitle', fontName='StoryBold', fontSize=29, leading=38, textColor=HexColor('#FFF4DC'), alignment=1)
-        up = 36 if book.get('cadeau') else 0       # livre offert : le texte remonte pour laisser la place au petit mot
-        p = Paragraph('<br/>'.join(escape(t) for t in book['backTitle']), style); _, h = p.wrap(S - 100, 140); p.drawOn(c, 50, 370 + up)
-        style = ParagraphStyle('back', fontName='Story', fontSize=16, leading=25, textColor=HexColor('#FFF4DC'), alignment=1)
-        p = Paragraph('<br/><br/>'.join(escape(t) for t in book['backText']), style); _, h = p.wrap(S - 130, 240); p.drawOn(c, 65, 325 + up - h)
-        if book.get('cadeau'):                     # livre offert : de la part de qui, et son petit mot
-            k = book['cadeau']
-            st = ParagraphStyle('kdo', fontName='Story', fontSize=11.5, leading=16, textColor=HexColor('#EAD49D'), alignment=1)
-            body = f"<font name='StoryBold'>Offert par {escape(k['de'])}</font>" + (f"<br/>« {escape(k['message'])} »" if k.get('message') else '')
-            p = Paragraph(body, st); _, hk = p.wrap(S - 150, 90); p.drawOn(c, 75, 126)
-        c.setStrokeColor(HexColor('#DCC38C')); c.setLineWidth(.7); c.line(245, 112, 350, 112)
-        c.setFont('Story', 11); c.drawCentredString(S / 2, 85, 'Une aventure à lire ensemble • ' + book['ageLabel'])
-        c.setFont('Story', 9); c.drawCentredString(S / 2, 62, book['title'] + (f"  •  aventure n° {int(book['coverTitle']['numero'])} de la collection"
-                                                                                 if (book.get('coverTitle') or {}).get('numero') else ''))
+        page_quatrieme(c, paths[7], book)
         c.showPage()
     c.save()
     report = {"pdf": str(out), "bytes": out.stat().st_size, "hauteurs_texte": heights}

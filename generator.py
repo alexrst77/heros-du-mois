@@ -106,29 +106,35 @@ WORKERS = int(os.getenv("IMAGE_WORKERS", "3"))
 
 
 def _client():
+    """Aucune relance automatique (max_retries=0) : une seconde tentative serait une seconde facturation possible."""
     from openai import OpenAI
-    return OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    try:
+        return OpenAI(api_key=os.environ["OPENAI_API_KEY"], max_retries=0, timeout=float(os.getenv("OPENAI_TIMEOUT", "600")))
+    except TypeError:                     # faux client des tests
+        return OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 
-def _retry(fn, tries=3):
-    for i in range(tries):
-        try:
-            return fn()
-        except Exception as e:  # erreurs réseau / limites de débit
-            msg = str(e)
-            if i == tries - 1 or "invalid_api_key" in msg or "Incorrect API key" in msg or "insufficient_quota" in msg:
-                raise
-            time.sleep(4 * (i + 1))
+def _retry(fn, tries=1):
+    """Gardé pour compatibilité : UNE seule tentative. Les appels facturables ne sont jamais renvoyés automatiquement."""
+    return fn()
 
 
-def _chat_json(system, user):
+TEXT_MAX_TOKENS = int(os.getenv("OPENAI_TEXT_MAX_TOKENS", "7000"))
+
+
+def _chat_json(system, user, etape="texte", max_tokens=None):
     check_budget()
+    import budget
+    mt = max_tokens or TEXT_MAX_TOKENS
     def call():
-        r = _client().chat.completions.create(model=TEXT_MODEL, response_format={"type": "json_object"},
-                                              messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
-        _count("texte", TEXT_MODEL, getattr(r, "usage", None))
-        return json.loads(r.choices[0].message.content)
-    return _retry(call)
+        return _client().chat.completions.create(model=TEXT_MODEL, response_format={"type": "json_object"}, max_tokens=mt,
+                                                 messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
+    if budget.LIVRE.get():                # livre identifié : réservation du coût maximal avant l'appel
+        r = budget.appel(etape, TEXT_MODEL, budget.cout_chat_max([system, user], mt, TEXT_MODEL), call, "texte")
+    else:
+        r = call()
+    _count("texte", TEXT_MODEL, getattr(r, "usage", None))
+    return json.loads(r.choices[0].message.content)
 
 
 OPTIONS = json.loads((Path(__file__).parent / "static" / "options.json").read_text(encoding="utf-8"))
@@ -324,9 +330,20 @@ def portrait_prompt(c, has_model, has_guide, diffs=None):
         + [art.AVOID])
 
 
-def draw_portrait(c, guide=None, variant=0, base=None):
+PORTRAIT_QUALITY = os.getenv("OPENAI_PORTRAIT_QUALITY", "medium")
+
+
+def portrait_path(c, variant=0):
+    return REF_DIR / f"{c['cle']}_{variant}{_m('suffix', '')}.png"     # un brouillon ne remplace jamais un vrai portrait
+
+
+def portrait_en_cache(c):
+    return portrait_path(c).exists()
+
+
+def draw_portrait(c, guide=None, variant=0, base=None, etape=None):
     """Portrait peint personnalisé. Mis en cache par clé (config + version) : réutilisé d'un livre à l'autre (abonnement)."""
-    out = REF_DIR / f"{c['cle']}_{variant}{_m('suffix', '')}.png"     # un brouillon ne remplace jamais un vrai portrait
+    out = portrait_path(c, variant)
     if out.exists():
         return out
     model = base if base and Path(base).exists() else None     # aperçu recoloré du navigateur (couleurs, lunettes, yeux…)
@@ -341,17 +358,18 @@ def draw_portrait(c, guide=None, variant=0, base=None):
                 model = None
         diffs = base_differences(c["type"], c["config"])
     refs = [r for r in (model, guide) if r and Path(r).exists()] + [art.STYLE_BOARD]
-    return _edit(portrait_prompt(c, bool(model and Path(model).exists()), bool(guide and Path(guide).exists()), diffs), refs, out)
+    return _edit(portrait_prompt(c, bool(model and Path(model).exists()), bool(guide and Path(guide).exists()), diffs), refs, out,
+                 quality=PORTRAIT_QUALITY, etape=etape)
 
 
-def draw_invented(c, variant=0):
+def draw_invented(c, variant=0, etape=None):
     """Personnage inventé par l'histoire (ex. une dinosaure) : portrait à partir de sa description, pour rester identique."""
     import hashlib
     key = hashlib.sha1((c["nom"] + c["desc"] + art.STYLE_VERSION).encode()).hexdigest()[:20]
     out = REF_DIR / f"{key}_{variant}{_m('suffix', '')}.png"
     if out.exists():
         return out
-    return _edit(portrait_prompt(c, False, False), [art.STYLE_BOARD], out)
+    return _edit(portrait_prompt(c, False, False), [art.STYLE_BOARD], out, quality=PORTRAIT_QUALITY, etape=etape)
 
 
 # ====================================================================== 2. histoire (18 pages illustrées) + relecture
@@ -678,31 +696,37 @@ def _reused(path):
     return str(Path(path).parent) in REUSE and Path(path).exists()
 
 
-def _edit(prompt, refs, path, size="1024x1024", quality=None):
+def _edit(prompt, refs, path, size="1024x1024", quality=None, etape=None):
+    """Un appel d'image (édition avec références). Dans un livre identifié : références ramenées à 1024 px (borne de jetons
+    calibrée), coût maximal réservé avant l'appel, une seule tentative, résultat sauvegardé dès réception."""
     check_budget()
+    import budget
     refs = [Path(r) for r in refs]
     missing = [str(r) for r in refs if not r.exists()]
     if missing:
         raise FileNotFoundError(f"Référence introuvable : {missing}")
+    q = _m("q_scene", quality) if quality else _m("q_main", IMAGE_QUALITY)
+    livre = budget.LIVRE.get()
+    if livre and len(prompt.encode()) > 6000:
+        raise budget.BudgetLivreError(f"Prompt de {Path(path).name} trop long pour la borne de coût prévue")
+    if livre:
+        refs = [budget.normaliser_ref(r, Path(path).parent / "refs") for r in refs]
     def call():
         files = [open(r, "rb") for r in refs]
         try:
-            q = _m("q_scene", quality) if quality else _m("q_main", IMAGE_QUALITY)
             kw = dict(model=IMAGE_MODEL, image=files, prompt=prompt, size=size, quality=q, n=1)
-            try:
-                r = _client().images.edit(input_fidelity=_m("fidelity", INPUT_FIDELITY), **kw)
-                _count("image", IMAGE_MODEL, getattr(r, "usage", None))
-                return r
-            except Exception as e:   # option non gérée par le SDK ou le modèle : on réessaie sans
-                if not isinstance(e, TypeError) and "input_fidelity" not in str(e):
-                    raise
-                for fh in files: fh.seek(0)
-                r = _client().images.edit(**kw)
-                _count("image", IMAGE_MODEL, getattr(r, "usage", None))
-                return r
+            if not IMAGE_MODEL.startswith("gpt-image-2"):        # gpt-image-2 traite toujours les références en haute fidélité
+                kw["input_fidelity"] = _m("fidelity", INPUT_FIDELITY)
+            return _client().images.edit(**kw)
         finally:
             for fh in files: fh.close()
-    out = _retry(lambda: _save(call(), path))
+    if livre:
+        r = budget.appel(etape or f"image {Path(path).name}", IMAGE_MODEL, budget.cout_image_max(prompt, len(refs), size, q, IMAGE_MODEL),
+                         call, "image", {"fichier": Path(path).name, "refs": [x.name for x in refs], "size": size, "quality": q})
+    else:
+        r = call()
+    _count("image", IMAGE_MODEL, getattr(r, "usage", None))
+    out = _save(r, path)
     corr = couleur.fix_file(out)          # dominante jaune-orangée corrigée (l'original reste en *_brut.png)
     # trace : quelles références ont réellement été transmises pour cette image
     with open(Path(path).parent / "references_transmises.jsonl", "a", encoding="utf-8") as f:

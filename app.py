@@ -140,8 +140,11 @@ def run(job_id, form, refs):
                 res["titre"] = "[aperçu] " + res["titre"]
             job.update(etat="termine", progression=100, etape="Livre prêt" if res["phase"] == "ready" else "À relire : écarts signalés",
                        pdf=res["pdf"], titre=res["titre"], controle=res["controle"], mineurs=res["mineurs"], pages=res["pages"],
-                       cout=round(meter["dollars"], 2), format="kit")
+                       cout=res.get("cout") if res.get("cout") is not None else round(meter["dollars"], 2), format="kit",
+                       finalise=bool(res.get("finalise")))
             return
+        if not (form.get("demo") or not os.getenv("OPENAI_API_KEY")):
+            raise RuntimeError("Ancien procédé désactivé : il ne passe pas par le plafond de 3 $ par livre (PROCEDE=kit obligatoire)")
         portraits_pdf = None
         if form.get("demo") or not os.getenv("OPENAI_API_KEY"):
             progress("Mode démo : livre d'exemple, sans appel API", 20)
@@ -329,9 +332,17 @@ def decision(job_id):
     return jsonify(ok=True)
 
 
+def _manifeste(job_id):
+    """Livre finalisé : manifeste enregistré (fichiers et empreintes). Servir ce livre n'appelle jamais un modèle."""
+    if not re.fullmatch(r"[\w-]{6,40}", job_id):
+        return None
+    f = OUT / job_id / "final.json"
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+
+
 @app.get("/api/livres/<job_id>/fichier/<name>")
 def fichier(job_id, name):
-    if job_id not in JOBS or not PUBLIC.match(name):
+    if (job_id not in JOBS and not _manifeste(job_id)) or not PUBLIC.match(name):
         abort(404)
     p = OUT / job_id / name
     if not p.exists():
@@ -339,8 +350,20 @@ def fichier(job_id, name):
     return send_file(p)
 
 
+@app.get("/api/livres/<job_id>/apercu/<name>")
+def apercu_livre(job_id, name):
+    """Aperçus du livre finalisé (couverture, couverture à plat, dos, doubles pages, étagère) : fichiers enregistrés."""
+    man = _manifeste(job_id) or abort(404)
+    if f"apercus/{name}" not in man["fichiers"]:
+        abort(404)
+    return send_file(OUT / job_id / "apercus" / name, max_age=86400)
+
+
 @app.get("/api/livres/<job_id>/pdf")
 def download(job_id):
+    man = _manifeste(job_id)
+    if man:                                       # livre finalisé : le PDF enregistré, rien n'est refait
+        return send_file(OUT / job_id / man["pdf_lecture"], as_attachment=True, download_name=man["pdf_lecture"])
     job = JOBS.get(job_id) or abort(404)
     if job.get("etat") != "termine":
         abort(409)

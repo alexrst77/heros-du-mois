@@ -1,0 +1,27 @@
+{
+ "_lisez_moi": "Tarifs API utilisés pour le plafond de 3 USD par livre. Toute fabrication est BLOQUÉE tant que 'confirme_le' est vide (confirmation dans l'admin après vérification sur https://platform.openai.com/docs/pricing) ou tant que 'jetons_image_entree_max' n'est pas calibré.",
+ "verifie_le": "2026-10-07",
+ "sources": [
+  "https://www.aifreeapi.com/en/posts/openai-image-generation-api-pricing (tarifs OpenAI relevés le 6/09/2026 : gpt-image-2 texte 5 $/M, image en entrée 8 $/M, image en sortie 30 $/M ; par image 1024x1024 low 0,006 / medium 0,053 / high 0,211 $ ; 1536x1024 low 0,005 / medium 0,041 / high 0,165 $)",
+  "https://community.openai.com/t/gpt-image-2-output-pricing-calculator-online-and-in-your-code/1382699 (formule des jetons de sortie de gpt-image-2, vérifiée ici contre les 6 prix par image ci-dessus)",
+  "gpt-4.1 : 2 $/M en entrée, 8 $/M en sortie ; vision en tuiles de 512 px (85 + 170 par tuile, detail=high)"
+ ],
+ "confirme_le": null,
+ "confirme_par": null,
+ "modeles": {
+  "gpt-image-2": {
+   "texte_entree": 5.0,
+   "image_entree": 8.0,
+   "sortie_image": 30.0,
+   "sortie": "formule_gpt_image_2",
+   "jetons_image_entree_max": null,
+   "cote_max_reference_px": 1024,
+   "qualites": ["low", "medium", "high"]
+  },
+  "gpt-4.1": {
+   "texte_entree": 2.0,
+   "sortie": 8.0,
+   "vision": "tuiles_512"
+  }
+ }
+}

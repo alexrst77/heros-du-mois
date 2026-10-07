@@ -32,7 +32,8 @@ def _db():
 with _db() as _c:
     _c.executescript(SCHEMA)
     for _t, _col in (("commandes", "cout real"), ("commandes", "tentatives integer default 0"), ("commandes", "univers text"),
-                     ("abonnements", "faites text"), ("abonnements", "paiements integer default 1")):   # colonnes ajoutées après la mise en ligne
+                     ("abonnements", "faites text"), ("abonnements", "paiements integer default 1"),
+                     ("commandes", "volume_number integer")):   # colonnes ajoutées après la mise en ligne
         try:
             _c.execute(f"alter table {_t} add column {_col}")
         except sqlite3.OperationalError:
@@ -150,3 +151,31 @@ def messages(limit=100):
 def messages_recent(email, since):
     with _db() as c:
         return c.execute("select count(*) from messages where email=? and cree>?", (email, since)).fetchone()[0]
+
+
+def assign_volume(cid):
+    """volumeNumber : numéro du livre dans la collection de l'enfant (1, 2, 3…). Attribué UNE fois, atomiquement
+    (BEGIN IMMEDIATE : pas de doublon même avec des demandes simultanées), puis jamais modifié (reprise, réimpression)."""
+    c = sqlite3.connect(DB, timeout=30, isolation_level=None); c.row_factory = sqlite3.Row
+    try:
+        c.execute("begin immediate")
+        o = c.execute("select * from commandes where id=?", (cid,)).fetchone()
+        if o is None:
+            c.execute("rollback"); return None
+        if o["volume_number"]:
+            c.execute("commit"); return o["volume_number"]
+        if (o["formule"] or "").startswith("essai"):          # livre d'essai : le numéro du livre dont il est l'essai, jamais un nouveau
+            src = c.execute("select max(volume_number) v from commandes where origine=? and formule not like 'essai%'", (o["origine"],)).fetchone()
+            n = (src["v"] if src and src["v"] else 1)
+        else:
+            m = c.execute("select max(volume_number) v from commandes where origine=? and formule not like 'essai%'", (o["origine"] or cid,)).fetchone()
+            n = (m["v"] or 0) + 1
+        c.execute("update commandes set volume_number=?, maj=? where id=?", (n, time.time(), cid))
+        c.execute("commit")
+        return n
+    except sqlite3.Error:
+        try: c.execute("rollback")
+        except sqlite3.Error: pass
+        raise
+    finally:
+        c.close()

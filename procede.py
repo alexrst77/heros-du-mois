@@ -13,23 +13,31 @@ Règles tenues ici :
 - un panorama 2:1 est demandé en paramètre de taille ; une image qui n'est pas en 2:1 est refusée (jamais étirée ni coupée) ;
 - corrections automatiques limitées (2 par image), la meilleure tentative est gardée, un écart persistant -> relecture humaine ;
 - textes contrôlés avec la police et la largeur du moteur AVANT de payer les illustrations (jamais de réduction du corps)."""
-import os, re, json, time, base64, hashlib, shutil, contextvars
+import os, re, json, time, math, base64, hashlib, shutil, contextvars
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw
 import generator as G
+import budget as BU
 import moteur_livre as M
 import univers as U
 
 KIT = M.KIT
-VERSION = "procede-2026-10-02-v1"          # version des prompts et des règles : entre dans les clés de cache
+VERSION = "procede-2026-10-07-v2"          # version des prompts et des règles : entre dans les clés de cache
 PANO_SIZE = os.getenv("OPENAI_PANO_SIZE", "2048x1024")
 COVER_SIZE = os.getenv("OPENAI_COVER_SIZE", "1024x1024")
-MAX_CORR = int(os.getenv("KIT_CORRECTIONS", "2"))
+MAX_CORR = 0                                  # aucune régénération automatique (exigence : plafond 3 $, première sortie conforme)
+PROMPT_IMAGE_MAX = 6000                       # octets : au-delà, le prompt est refusé avant tout appel (borne de coût)
+REVIEW_MAX_TOKENS = 700
+TEXTE_MAX = 16000                             # octets du brief de l'histoire (borne de coût)
+REVISION_MAX = 56000                          # octets de la demande de révision (brief + version précédente + problèmes)
+FICHE_MAX = 6000                              # octets de la fiche envoyée avec une image à contrôler
+MAX_INVENTES = 1                              # personnages inventés récurrents prévus au budget (portrait de référence)
 PROMPT_STORY = (KIT / "prompts" / "storyboard.txt").read_text(encoding="utf-8")
 PROMPT_IMAGE = (KIT / "prompts" / "illustration.txt").read_text(encoding="utf-8")
 STYLE = {"jour": KIT / "style" / "jour-mila-2.jpg", "soir": KIT / "style" / "soir-mila-9.jpg",
-         "nuit": KIT / "style" / "nuit-noe-6.jpg", "chambre": KIT / "style" / "chambre-noe-9.jpg"}
+         "nuit": KIT / "style" / "nuit-noe-6.jpg", "chambre": KIT / "style" / "chambre-noe-9.jpg",
+         "couverture": KIT / "style" / "couverture-mila.jpg"}
 THEMES = {"nuit": {"veil": "#171B3A", "ink": "#FFF7E8"}, "mer_nuit": {"veil": "#092D43", "ink": "#FFF7E8"},
           "clair": {"veil": "#F5F0DF", "ink": "#163E49"}}
 ETATS = ("queued", "references", "storyboard", "illustrating", "reviewing", "assembling", "ready", "needs_review", "failed")
@@ -152,20 +160,31 @@ Réponds UNIQUEMENT en JSON : {"bloquants": ["consigne de correction en anglais"
 
 
 def _vision(system, fiche_json, path):
-    b64 = base64.b64encode(Path(path).read_bytes()).decode()
-    def call():
-        r = G._client().chat.completions.create(model=G.REVIEW_MODEL, response_format={"type": "json_object"}, messages=[
+    """Contrôle visuel : UNE fois, budget réservé avant l'appel. Image envoyée en JPEG 1536 px max : coût en tuiles connu."""
+    import io
+    im = Image.open(path).convert("RGB"); im.thumbnail((1536, 1536))
+    buf = io.BytesIO(); im.save(buf, "JPEG", quality=88)
+    b64 = base64.b64encode(buf.getvalue()).decode()
+    texte = json.dumps(fiche_json, ensure_ascii=False)
+    if len(texte.encode()) > FICHE_MAX:
+        return {"bloquants": [], "mineurs": [], "controle_impossible": "fiche trop longue pour la borne de coût prévue"}
+    send = lambda: G._client().chat.completions.create(
+        model=G.REVIEW_MODEL, response_format={"type": "json_object"}, max_tokens=REVIEW_MAX_TOKENS, messages=[
             {"role": "system", "content": system},
-            {"role": "user", "content": [{"type": "text", "text": json.dumps(fiche_json, ensure_ascii=False)},
-                                         {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}}]}])
+            {"role": "user", "content": [{"type": "text", "text": texte},
+                                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}", "detail": "high"}}]}])
+    try:
+        if BU.LIVRE.get():
+            r = BU.appel("controle " + Path(path).name, G.REVIEW_MODEL,
+                         BU.cout_chat_max([system, texte], REVIEW_MAX_TOKENS, G.REVIEW_MODEL, [im.size]), send, "controle")
+        else:
+            r = send()
         G._count("controle", G.REVIEW_MODEL, getattr(r, "usage", None))
         v = json.loads(r.choices[0].message.content)
         v["bloquants"] = [x for x in v.get("bloquants") or [] if isinstance(x, str)][:6]
         v["mineurs"] = [x for x in v.get("mineurs") or [] if isinstance(x, str)][:6]
         return v
-    try:
-        return G._retry(call)
-    except G.BudgetError:
+    except (G.BudgetError, BU.BudgetLivreError, BU.AppelIncertain):
         raise
     except Exception as e:                        # le contrôle n'a pas pu se faire : c'est dit, jamais « OK » par défaut
         return {"bloquants": [], "mineurs": [], "controle_impossible": str(e)[:200]}
@@ -178,14 +197,15 @@ def references(snap, cfg, refs, folder, progress):
     for c in cfg["personnages"]:
         progress(f"Référence : {c['nom']}")
         r = refs.get(c["id"], {})
-        best = None
-        for variant in range(MAX_CORR + 1):
-            src = G.draw_portrait(c, r.get("guide"), variant, base=r.get("apercu"))
+        neuf = not G.portrait_en_cache(c)
+        src = G.draw_portrait(c, r.get("guide"), 0, base=r.get("apercu"), etape=f"portrait {c['id']}")
+        controle = Path(str(src) + ".controle.json")       # contrôle mémorisé avec le portrait : jamais refait ni refacturé
+        if neuf or not controle.exists():
             v = _vision(SYSTEM_REF, by[c["id"]], src)
-            if best is None or len(v["bloquants"]) < len(best[1]["bloquants"]):
-                best = (src, v, variant)
-            if not v["bloquants"]:
-                break
+            controle.write_text(json.dumps(v, ensure_ascii=False))
+        else:
+            v = json.loads(controle.read_text())
+        best = (src, v, 0)
         dst = Path(folder) / f"portrait_{c['id']}.png"
         shutil.copy(best[0], dst)
         out[c["id"]] = dst
@@ -196,7 +216,7 @@ def references(snap, cfg, refs, folder, progress):
 def group_sheet(ids, portraits, folder):
     """Fiche de groupe (sans texte) : les personnages côte à côte, à la même échelle, dans l'ordre donné."""
     ims = [Image.open(portraits[i]).convert("RGB") for i in ids]
-    cell = 512
+    cell = min(512, 1024 // len(ims) if len(ims) > 2 else 512)
     sheet = Image.new("RGB", (cell * len(ims), cell), (244, 238, 224))
     for k, im in enumerate(ims):
         im.thumbnail((cell, cell)); sheet.paste(im, (k * cell + (cell - im.width) // 2, (cell - im.height) // 2))
@@ -220,7 +240,7 @@ Format JSON exact :
    "requiredVisibleDetails": ["…"], "leftComposition": "…", "rightComposition": "…", "palette": "…", "light": "jour|soir|nuit|intérieur",
    "readingThemes": {"left": {"veil": "#RRGGBB", "ink": "#RRGGBB"}, "right": {"veil": "#RRGGBB", "ink": "#RRGGBB"}}} × 9]}
 Identifiants : utilise EXACTEMENT ceux de la configuration (heros, doudou, animal_1…) ; un personnage inventé qui revient reçoit
-un identifiant invente_<nom> et une fiche dans characterBible. Tout personnage nommé dans le texte d'une double page figure dans
+un identifiant invente_<nom> et une fiche dans characterBible (UN SEUL personnage inventé récurrent au plus). Tout personnage nommé dans le texte d'une double page figure dans
 presentCharacterIds de cette double page ; une absence volontaire d'un compagnon doit être justifiée par le texte.
 Thèmes de lecture : scène claire -> voile #F5F0DF, encre #163E49 ; scène sombre ou nocturne -> voile #171B3A (ou #092D43 sous l'eau), encre #FFF7E8.
 Longueur : {mots} mots par page, jamais plus de 7 lignes. Typographie française (espaces avant ! ? : ;, guillemets « »).
@@ -238,6 +258,7 @@ def check_board(b, snap):
     lo, hi = word_range(snap["age"])
     sp = b.get("spreads") or []
     if len(sp) != 9: probs.append(f"Il faut exactement 9 doubles pages (reçu {len(sp)}).")
+    if len(inv) > MAX_INVENTES: probs.append(f"Un seul personnage inventé récurrent au plus dans characterBible (reçu {len(inv)}).")
     for k in ("title", "coverBrief"):
         if not str(b.get(k) or "").strip(): probs.append(f"Champ « {k} » manquant.")
     if not (1 <= len(b.get("backTitle") or []) <= 3): probs.append("backTitle : 1 à 3 lignes.")
@@ -306,13 +327,18 @@ def storyboard(snap):
                                    + (" Le doudou prend vie le temps de l'aventure (il parle, marche) mais garde son apparence de peluche." if pr["type"] == "doudou" else ""))
     system = PROMPT_STORY + STORY_RULES.replace("{mots}", f"{lo} à {hi}")
     user = json.dumps(brief, ensure_ascii=False)
-    b = G._chat_json(system, user)
-    for _ in range(2):                                  # problèmes résolus AVANT toute illustration
+    if len((system + user).encode()) > TEXTE_MAX:
+        raise ProcedeError("Brief de l'histoire trop long pour la borne de coût prévue")
+    b = G._chat_json(system, user, etape="histoire")
+    for _ in range(1):                                  # UNE révision prévue au budget, avant toute illustration
         probs = check_board(b, snap)
         if not probs:
             break
-        b2 = G._chat_json(system, user + "\n\nVersion précédente :\n" + json.dumps(b, ensure_ascii=False) +
-                          "\n\nCorrige ces problèmes et renvoie l'objet complet :\n- " + "\n- ".join(probs[:30]))
+        user2 = (user + "\n\nVersion précédente :\n" + json.dumps(b, ensure_ascii=False) +
+                 "\n\nCorrige ces problèmes et renvoie l'objet complet :\n- " + "\n- ".join(probs[:30]))
+        if len((system + user2).encode()) > REVISION_MAX:          # hors de la borne prévue : pas de révision (écarts signalés plus bas)
+            break
+        b2 = G._chat_json(system, user2, etape="histoire (révision)")
         if len(check_board(b2, snap)) <= len(probs):
             b = b2
     if len(b.get("spreads") or []) != 9:
@@ -375,15 +401,17 @@ def refs_for(ids, portraits, cover, folder, light):
     known = [x for x in ids if x in portraits]
     if len(known) > 1:
         out.append(("fiche de groupe, de gauche à droite : " + ", ".join(known), group_sheet(known, portraits, folder)))
-    out += [(f"référence d'identité : {x}", portraits[x]) for x in known]
-    out.append(("référence de STYLE uniquement (Mila/Noé : ne pas copier ces personnages)", style_ref(light)))
-    return out[:16]
+    elif known:
+        out.append((f"référence d'identité : {known[0]}", portraits[known[0]]))
+    out.append(("référence de STYLE uniquement (Mila/Noé : ne pas copier ces personnages)",
+                STYLE["couverture"] if (cover is None and light == "couverture") else style_ref(light)))
+    return out[:3]                            # 3 références au plus : coût d'entrée borné
 
 
 EN = [("couverture personnalisée (identité et rendu de CE livre)", "this book's personalised cover (identity and rendering of THIS book)"),
       ("fiche de groupe, de gauche à droite : ", "group sheet, same scale, left to right: "),
       ("référence d'identité : ", "IDENTITY reference: "),
-      ("référence de STYLE uniquement (Mila/Noé : ne pas copier ces personnages)", "STYLE reference only (painting technique and light; never copy its characters or setting)")]
+      ("référence de STYLE uniquement (Mila/Noé : ne pas copier ces personnages)", "STYLE reference only (painting technique, light and cover composition; never copy its characters, setting or any text)")]
 
 
 def refs_text(refs, snap, extra_names=None):
@@ -442,28 +470,33 @@ def _decode_check(path, size):
     return im.size
 
 
-def image(prompt, refs, path, size, quality, trace):
-    """Appel OpenAI (édition avec références réelles), contrôle des dimensions décodées, trace complète."""
+def image(prompt, refs, path, size, quality, trace, etape=None):
+    """UN appel d'image : prompt borné, références ramenées à la taille calibrée, coût maximal réservé avant l'appel,
+    aucune seconde tentative, image sauvegardée dès réception, dimensions décodées vérifiées, trace complète."""
     G.check_budget()
     m = model()
+    if len(prompt.encode()) > PROMPT_IMAGE_MAX:
+        raise ProcedeError(f"Prompt de {Path(path).name} trop long ({len(prompt.encode())} octets) pour la borne de coût prévue")
+    cote = int(BU.tarifs()["modeles"].get("gpt-image-2", {}).get("cote_max_reference_px") or 1024)
+    refs = [(role, BU.normaliser_ref(f, Path(path).parent / "refs", cote)) for role, f in refs]
     files_meta = [{"role": role, "fichier": Path(f).name, "empreinte": fsha(f), "taille": list(Image.open(f).size)} for role, f in refs]
     def call():
         fhs = [open(f, "rb") for _, f in refs]
         try:
             kw = dict(model=m, image=fhs, prompt=prompt, size=size, quality=quality, n=1)
-            try:
-                r = G._client().images.edit(input_fidelity=G._m("fidelity", G.INPUT_FIDELITY), **kw)
-            except Exception as e:
-                if not isinstance(e, TypeError) and "input_fidelity" not in str(e): raise
-                for fh in fhs: fh.seek(0)
-                r = G._client().images.edit(**kw)
-            G._count("image", m, getattr(r, "usage", None))
-            return r
+            if not m.startswith("gpt-image-2"):
+                kw["input_fidelity"] = G._m("fidelity", G.INPUT_FIDELITY)
+            return G._client().images.edit(**kw)
         finally:
             for fh in fhs: fh.close()
     t0 = time.time()
-    r = G._retry(call)
-    Path(path).write_bytes(base64.b64decode(r.data[0].b64_json))
+    if BU.LIVRE.get():
+        r = BU.appel(etape or f"image {Path(path).name}", m, BU.cout_image_max(prompt, len(refs), size, quality, m), call, "image",
+                     {"fichier": Path(path).name, "size": size, "quality": quality, "refs": [x["fichier"] for x in files_meta]})
+    else:
+        r = call()
+    G._count("image", m, getattr(r, "usage", None))
+    Path(path).write_bytes(base64.b64decode(r.data[0].b64_json))          # sauvegardé dès réception
     dims = _decode_check(path, size)
     with open(Path(path).parent / "references_transmises.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps({"image": Path(path).name, "modele": m, "taille_demandee": size, "taille_recue": list(dims), "qualite": quality,
@@ -526,39 +559,155 @@ def cache_key(*parts):
     return sha([VERSION, model(), *parts])[:12]
 
 
-def draw_spread(s, snap, b, portraits, cover, folder, quality):
-    """Un panorama : clé de cache complète, contrôle, 2 corrections au plus, meilleure tentative gardée."""
+def spread_target(s, snap, portraits, cover, folder, quality):
+    """Références et fichier d'un panorama (la clé de cache dit si l'image existe déjà : rien n'est refait ni refacturé)."""
     refs = refs_for(s["presentCharacterIds"], portraits, cover, folder, s["light"])
     key = cache_key(snap["empreinte"], s, [fsha(f) for _, f in refs], PANO_SIZE, quality)
-    path = Path(folder) / f"spread-{s['id']}-{key}.png"
+    return refs, Path(folder) / f"spread-{s['id']}-{key}.png"
+
+
+def draw_spread(s, snap, b, portraits, cover, folder, quality):
+    """Un panorama : clé de cache complète, UNE génération, UN contrôle. Écart bloquant -> livre « à relire », jamais regénéré
+    automatiquement. Déjà fait avec les mêmes entrées -> réutilisé sans appel."""
+    refs, path = spread_target(s, snap, portraits, cover, folder, quality)
     rapport_p = path.with_suffix(".json")
-    if path.exists() and rapport_p.exists():          # déjà fait avec exactement les mêmes entrées
+    if path.exists() and rapport_p.exists():
         return path, json.loads(rapport_p.read_text())
-    best, fix, essais = None, None, []
-    for attempt in range(MAX_CORR + 1):
-        p = path.with_name(path.stem + f"_t{attempt}.png")
-        prompt = pano_prompt(s, snap, b, refs, fix)
+    if not path.exists():
+        prompt = pano_prompt(s, snap, b, refs)
         (Path(folder) / "prompts").mkdir(exist_ok=True)
-        (Path(folder) / "prompts" / f"{p.stem}.txt").write_text(prompt, encoding="utf-8")
-        image(prompt, refs, p, PANO_SIZE, quality, f"prompts/{p.stem}.txt")
-        v = review(p, s, snap, b)
-        essais.append({"fichier": p.name, **v})
-        if best is None or len(v["bloquants"]) < len(best[1]["bloquants"]):
-            best = (p, v)
-        if not v["bloquants"]:
-            break
-        fix = v["bloquants"]
-    shutil.copy(best[0], path)
-    rapport = {"retenu": best[0].name, "bloquants": best[1]["bloquants"], "mineurs": best[1].get("mineurs", []),
-               "essais": essais, "controle_impossible": best[1].get("controle_impossible")}
+        (Path(folder) / "prompts" / f"{path.stem}.txt").write_text(prompt, encoding="utf-8")
+        image(prompt, refs, path, PANO_SIZE, quality, f"prompts/{path.stem}.txt", etape=f"double page {s['id']}")
+    v = review(path, s, snap, b)
+    rapport = {"retenu": path.name, "bloquants": v["bloquants"], "mineurs": v.get("mineurs", []), "essais": [{"fichier": path.name, **v}],
+               "controle_impossible": v.get("controle_impossible")}
     rapport_p.write_text(json.dumps(rapport, ensure_ascii=False, indent=1))
     return path, rapport
 
 
-# ====================================================================== 5. chaîne complète
-def run(form, cfg, refs, folder, job, progress, essai=None):
-    """Fabrication complète. Renvoie le résumé pour le suivi de la commande (pdf, titre, contrôles, état interne)."""
+# ====================================================================== 5. budget du livre (borne haute AVANT tout appel)
+def _vision_dims(size):
+    w, h = (int(x) for x in size.split("x")); k = min(1.0, 1536 / max(w, h))
+    return (int(w * k), int(h * k))
+
+
+def _p_image(etape, n_refs, size, quality):
+    return {"type": "image", "etape": etape, "modele": model(), "prompt_max": "x" * PROMPT_IMAGE_MAX, "refs": n_refs, "size": size, "quality": quality}
+
+
+def _p_controle(etape, system, size):
+    return {"type": "chat", "etape": etape, "modele": G.REVIEW_MODEL, "textes": [system, "x" * FICHE_MAX], "max_tokens": REVIEW_MAX_TOKENS,
+            "images": [_vision_dims(size)]}
+
+
+def _inventes(b):
+    return [x for x in b.get("characterBible") or [] if str(x.get("id", "")).startswith("invente_")
+            and sum(str(x.get("id")) in s["presentCharacterIds"] for s in b["spreads"]) >= 2 and x.get("visual_en")]
+
+
+def plan_livre(cfg, folder, essai=None, b=None, snap=None, quality=None, quality_cover=None):
+    """Liste des appels qui RESTENT à faire pour ce livre, chacun à son maximum (modèle, taille, qualité, jetons fixés).
+    Sans storyboard : tout est compté. Avec storyboard et références déjà là : calcul exact d'après les clés de cache."""
     folder = Path(folder)
+    quality = quality or G._m("q_scene", G.SCENE_QUALITY); quality_cover = quality_cover or G._m("q_main", G.IMAGE_QUALITY)
+    q_portrait = G._m("q_scene", G.PORTRAIT_QUALITY)
+    plan = []
+    for c in cfg["personnages"]:
+        if not G.portrait_en_cache(c):
+            plan.append(_p_image(f"portrait {c['id']}", 3, "1024x1024", q_portrait))
+        if not G.portrait_en_cache(c) or not Path(str(G.portrait_path(c)) + ".controle.json").exists():
+            plan.append(_p_controle(f"contrôle portrait {c['id']}", SYSTEM_REF, "1024x1024"))
+    if b is None:
+        plan.append({"type": "chat", "etape": "histoire", "modele": G.TEXT_MODEL, "textes": ["x" * TEXTE_MAX], "max_tokens": G.TEXT_MAX_TOKENS})
+        plan.append({"type": "chat", "etape": "histoire (révision)", "modele": G.TEXT_MODEL, "textes": ["x" * REVISION_MAX], "max_tokens": G.TEXT_MAX_TOKENS})
+        plan += [_p_image(f"personnage inventé {i + 1}", 1, "1024x1024", q_portrait) for i in range(MAX_INVENTES)]
+    else:
+        plan += [_p_image(f"personnage inventé {x['id']}", 1, "1024x1024", q_portrait) for x in _inventes(b)
+                 if not (folder / f"portrait_{x['id']}.png").exists()]
+    ids = [c["id"] for c in cfg["personnages"]] + ([x["id"] for x in _inventes(b)] if b else [])
+    portraits = {i: folder / f"portrait_{i}.png" for i in ids}
+    if b is None or snap is None or not all(p.exists() for p in portraits.values()):
+        plan.append(_p_image("couverture", 3, COVER_SIZE, quality_cover))
+        for i in range(1 if essai == "apercu" else 9):
+            plan.append(_p_image(f"double page {i + 1}", 3, PANO_SIZE, quality))
+            plan.append(_p_controle(f"contrôle double page {i + 1}", SYSTEM_PANO, PANO_SIZE))
+        return plan
+    crefs = refs_for(b["coverCharacterIds"], portraits, None, folder, "couverture")
+    cover = folder / f"couverture-{cache_key(snap['empreinte'], b['coverBrief'], b['coverCharacterIds'], [fsha(f) for _, f in crefs], COVER_SIZE, quality_cover)}.png"
+    if not cover.exists():
+        plan.append(_p_image("couverture", len(crefs), COVER_SIZE, quality_cover))
+    for s in (b["spreads"][:1] if essai == "apercu" else b["spreads"]):
+        refs, path = spread_target(s, snap, portraits, cover if cover.exists() else STYLE["couverture"], folder, quality)
+        done = cover.exists() and path.exists()
+        if not done:
+            plan.append(_p_image(f"double page {s['id']}", len(refs), PANO_SIZE, quality))
+        if not (done and path.with_suffix(".json").exists()):
+            plan.append(_p_controle(f"contrôle double page {s['id']}", SYSTEM_PANO, PANO_SIZE))
+    return plan
+
+
+def livre_id(folder):
+    """Identifiant stable du livre pour le budget : la commande (toutes ses versions partagent les mêmes 3 $)."""
+    f = Path(folder) / ".commande"
+    return (f.read_text().strip() if f.exists() else "") or Path(folder).name
+
+
+def verrou_libre(folder):
+    """True si aucun processus ne fabrique ce livre (sert au redémarrage pour classer les réservations orphelines)."""
+    import fcntl
+    p = Path(folder) / ".fabrication.lock"
+    if not p.exists():
+        return True
+    with open(p, "a+") as f:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB); fcntl.flock(f, fcntl.LOCK_UN); return True
+        except OSError:
+            return False
+
+
+class _Verrou:
+    """Verrou de fabrication par livre (fichier, non bloquant) : double clic, double webhook, deux processus -> un seul travail."""
+    def __init__(self, folder):
+        self.p = Path(folder) / ".fabrication.lock"; self.f = None
+    def __enter__(self):
+        import fcntl
+        self.f = open(self.p, "a+")
+        try:
+            fcntl.flock(self.f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            self.f.close()
+            raise ProcedeError("Fabrication déjà en cours pour ce livre (double demande ignorée)")
+        return self
+    def __exit__(self, *a):
+        import fcntl
+        fcntl.flock(self.f, fcntl.LOCK_UN); self.f.close()
+
+
+def resume_finalise(folder):
+    """Livre finalisé : on renvoie ce qui est enregistré. Aucun appel, aucun recalcul."""
+    man = json.loads((Path(folder) / "final.json").read_text(encoding="utf-8"))
+    return {"pdf": man["pdf_lecture"], "titre": man["titre"], "controle": [], "mineurs": man.get("mineurs", []), "pages": man.get("pages"),
+            "phase": "ready", "cout": man.get("cout_api_usd"), "finalise": True}
+
+
+# ====================================================================== 6. chaîne complète
+def run(form, cfg, refs, folder, job, progress, essai=None):
+    """Fabrication complète, dans le budget du livre (plafond 3 $). Renvoie le résumé pour le suivi de la commande."""
+    import fabrication as F
+    folder = Path(folder)
+    if F.est_finalise(folder):
+        return resume_finalise(folder)
+    with _Verrou(folder):
+        livre = livre_id(folder)
+        jeton = BU.LIVRE.set(livre)
+        try:
+            return _run(form, cfg, refs, folder, job, progress, essai, livre)
+        finally:
+            BU.LIVRE.reset(jeton)
+
+
+def _run(form, cfg, refs, folder, job, progress, essai, livre):
+    import fabrication as F
     def etat(e, step, pct):
         job["phase"] = e; progress(step, pct)
     def save(name, data):
@@ -567,6 +716,10 @@ def run(form, cfg, refs, folder, job, progress, essai=None):
 
     etat("queued", "Instantané de la configuration", 2)
     check_model()
+    dep = BU.depense(livre)
+    if dep["incertain"] > 0 or dep["reserve"] > 0:
+        raise ProcedeError(f"Appel(s) au résultat incertain pour ce livre ({dep['incertain'] + dep['reserve']:.3f} $ réservés) : "
+                           "vérifie l'usage sur platform.openai.com et règle-les dans l'admin avant toute reprise (rien n'est renvoyé à l'aveugle).")
     snap = snapshot(form, cfg)
     ecarts = check_snapshot(snap, form)
     if ecarts:
@@ -576,6 +729,16 @@ def run(form, cfg, refs, folder, job, progress, essai=None):
         for f in list(folder.glob("spread-*")) + list(folder.glob("couverture-*")) + [folder / "storyboard.json"]:
             if f.exists(): f.unlink()
     save("instantane.json", snap)
+    numero = int(form.get("volume_number") or snap["histoire"].get("numero") or 1)
+    quality_cover = G._m("q_main", G.IMAGE_QUALITY); quality = G._m("q_scene", G.SCENE_QUALITY)
+
+    # borne haute de tout ce qui reste à faire, AVANT le premier appel
+    b = old("storyboard.json")
+    if b and b.get("_empreinte") != snap["empreinte"]:
+        b = None
+    lignes, borne = BU.verifier_lancement(plan_livre(cfg, folder, essai, b, snap, quality, quality_cover), livre)
+    save("budget.json", {"livre": livre, "plafond_usd": BU.PLAFOND, "marge": BU.MARGE, "borne_lancement_usd": borne, "detail_lancement": lignes,
+                         "deja_engage_usd": round(dep["total"], 4), "tarifs": BU.etat_tarifs()})
 
     etat("references", "Références des personnages", 6)
     portraits, rapport_refs = references(snap, cfg, refs, folder, lambda s: progress(s))
@@ -583,37 +746,42 @@ def run(form, cfg, refs, folder, job, progress, essai=None):
     bloq_refs = {k: v["bloquants"] for k, v in rapport_refs.items() if v["bloquants"]}
 
     etat("storyboard", "Histoire et storyboard (9 doubles pages)", 14)
-    b = old("storyboard.json")
-    if not b or b.get("_empreinte") != snap["empreinte"]:
+    if not b:
         b = storyboard(snap); b["_empreinte"] = snap["empreinte"]; save("storyboard.json", b)
 
-    for x in b.get("characterBible") or []:              # personnage inventé récurrent : une référence fixe, elle aussi
-        cid = str(x.get("id", ""))
-        n = sum(cid in s["presentCharacterIds"] for s in b["spreads"])
-        if cid.startswith("invente_") and n >= 2 and x.get("visual_en"):
-            progress(f"Référence : {x.get('name', cid)}")
-            src = G.draw_invented({"id": cid, "type": "invente", "role": "personnage inventé", "nom": str(x.get("name") or cid),
-                                   "desc": x["visual_en"]})
-            portraits[cid] = Path(folder) / f"portrait_{cid}.png"; shutil.copy(src, portraits[cid])
-            rapport_refs[cid] = {"fichier": portraits[cid].name, "empreinte": fsha(portraits[cid]), "invente": True, "bloquants": [], "mineurs": []}
+    inventes = _inventes(b)
+    if len(inventes) > MAX_INVENTES:
+        raise ProcedeError(f"Le storyboard demande {len(inventes)} personnages inventés récurrents ({MAX_INVENTES} prévu au budget) : à relire")
+    for x in inventes:                                   # personnage inventé récurrent : une référence fixe, elle aussi
+        cid = str(x["id"])
+        progress(f"Référence : {x.get('name', cid)}")
+        src = G.draw_invented({"id": cid, "type": "invente", "role": "personnage inventé", "nom": str(x.get("name") or cid),
+                               "desc": x["visual_en"]}, etape=f"personnage inventé {cid}")
+        portraits[cid] = folder / f"portrait_{cid}.png"; shutil.copy(src, portraits[cid])
+        rapport_refs[cid] = {"fichier": portraits[cid].name, "empreinte": fsha(portraits[cid]), "invente": True, "bloquants": [], "mineurs": []}
     save("references.json", rapport_refs)
-    quality_cover = G._m("q_main", G.IMAGE_QUALITY); quality = G._m("q_scene", G.SCENE_QUALITY)
+
+    # second contrôle, exact (clés de cache connues) avant la première illustration
+    lignes2, borne2 = BU.verifier_lancement(plan_livre(cfg, folder, essai, b, snap, quality, quality_cover), livre)
+    bj = old("budget.json"); bj.update(borne_illustrations_usd=borne2, detail_illustrations=lignes2, engage_avant_illustrations_usd=round(BU.depense(livre)["total"], 4))
+    save("budget.json", bj)
+
     etat("illustrating", "Couverture", 22)
-    crefs = refs_for(b["coverCharacterIds"], portraits, None, folder, "jour")
+    crefs = refs_for(b["coverCharacterIds"], portraits, None, folder, "couverture")
     ckey = cache_key(snap["empreinte"], b["coverBrief"], b["coverCharacterIds"], [fsha(f) for _, f in crefs], COVER_SIZE, quality_cover)
     cover = folder / f"couverture-{ckey}.png"
     if not cover.exists():
         prompt = cover_prompt(b, snap, crefs)
         (folder / "prompts").mkdir(exist_ok=True); (folder / "prompts" / f"{cover.stem}.txt").write_text(prompt, encoding="utf-8")
-        image(prompt, crefs, cover, COVER_SIZE, quality_cover, f"prompts/{cover.stem}.txt")
+        image(prompt, crefs, cover, COVER_SIZE, quality_cover, f"prompts/{cover.stem}.txt", etape="couverture")
 
     spreads = b["spreads"]
     etat("illustrating", "Panorama pilote (double page 1)", 28)
     results = {1: draw_spread(spreads[0], snap, b, portraits, cover, folder, quality)}
     if results[1][1]["bloquants"]:                    # le pilote ne passe pas : on n'engage pas les 8 autres
         save("controle.json", {"etat": "needs_review", "pilote": results[1][1], "references": rapport_refs})
-        raise ProcedeError("Panorama pilote refusé après corrections : " + " ; ".join(results[1][1]["bloquants"]) +
-                           " (relecture nécessaire avant de dépenser plus)")
+        raise ProcedeError("Panorama pilote non conforme : " + " ; ".join(results[1][1]["bloquants"]) +
+                           " (relecture humaine : aucune régénération automatique)")
     todo = [s for s in spreads[1:]] if essai != "apercu" else []
     done = [1]
     def one(s):
@@ -621,8 +789,15 @@ def run(form, cfg, refs, folder, job, progress, essai=None):
         done[0] += 1; progress(f"Panoramas {done[0]}/9", 28 + 7 * done[0])
         return s["id"], r
     with ThreadPoolExecutor(max_workers=G.WORKERS) as ex:
-        for sid, r in [f.result() for f in [ex.submit(contextvars.copy_context().run, one, s) for s in todo]]:
-            results[sid] = r
+        futs = [ex.submit(contextvars.copy_context().run, one, s) for s in todo]
+        errs = []
+        for f in futs:                                # chaque résultat déjà reçu est gardé, même si un autre appel échoue
+            try:
+                sid, r = f.result(); results[sid] = r
+            except Exception as e:
+                errs.append(e)
+        if errs:
+            raise errs[0]
 
     etat("reviewing", "Contrôles", 92)
     pages = []
@@ -636,8 +811,8 @@ def run(form, cfg, refs, folder, job, progress, essai=None):
     titre = b["title"]
     lines = [x for x in b.get("coverTitleLines") or [] if str(x).strip()] or [titre]
     book = {"title": titre, "collection": "Mon Héros du Mois", "ageLabel": b.get("ageLabel") or "4–7 ans",
-            "cover": cover.name, "coverTitle": {"lines": lines, "numero": int(snap["histoire"].get("numero") or 1), "serie": snap["serie"]},
-            "cadeau": snap.get("cadeau"),
+            "cover": cover.name, "coverTitle": {"lines": lines, "numero": numero, "serie": snap["serie"]},
+            "volumeNumber": numero, "cadeau": snap.get("cadeau"),
             "spreads": [results[s["id"]][0].name if s["id"] in results else None for s in spreads],
             "pages": pages, "backTitle": b["backTitle"], "backText": b["backText"],
             "backColor": "#171B3A" if (pages[14] or {}).get("veil", "#171B3A") != THEMES["clair"]["veil"] else "#163E49"}
@@ -645,12 +820,15 @@ def run(form, cfg, refs, folder, job, progress, essai=None):
 
     etat("assembling", "Assemblage du PDF", 95)
     name = re.sub(r"[^\w\-]+", "-", titre, flags=re.U).strip("-")[:80] or "livre"
+    fab, apercus_ = None, {}
     if essai == "apercu":
         pdf = folder / "apercu.pdf"
         rep = M.render(book, pdf, base=folder, work=folder / "rendu", pages=[0, 1])
     else:
         pdf = folder / f"{name}.pdf"
         rep = M.render(book, pdf, base=folder, work=folder / "rendu")
+        fab = fabrication_files(book, folder, pdf, numero, snap["prenom"])
+        apercus_ = fab.pop("apercus")
     for i, sheet in enumerate(rep.get("planches", [])):          # planches contact visibles depuis l'admin
         shutil.copy(folder / "rendu" / sheet, folder / f"planche_contact_{i + 1}.jpg")
     bloquants = [f"double page {k} : {x}" for k, (_, r) in sorted(results.items()) for x in r["bloquants"]]
@@ -658,14 +836,104 @@ def run(form, cfg, refs, folder, job, progress, essai=None):
     bloquants += rep.get("problemes_rendu", [])
     mineurs = [f"double page {k} : {x}" for k, (_, r) in sorted(results.items()) for x in r.get("mineurs", [])]
     impossibles = [f"double page {k} : contrôle visuel impossible ({r['controle_impossible']})" for k, (_, r) in results.items() if r.get("controle_impossible")]
+    impression = (fab or {}).get("couverture", {}).get("problemes", [])
     phase = "needs_review" if (bloquants or impossibles) else "ready"
+    dep = BU.depense(livre)
+    cout = round(dep["regle"], 4)
     controle = {"etat": phase, "instantane": snap["empreinte"], "modele_image": model(), "tailles": {"panorama": PANO_SIZE, "couverture": COVER_SIZE},
                 "references": rapport_refs, "storyboard": b.get("controle", []), "panoramas": {k: r for k, (_, r) in results.items()},
                 "rendu": rep, "bloquants": bloquants, "mineurs": mineurs, "controles_impossibles": impossibles,
-                "format": "lecture 210 × 210 mm (kit) : fichiers d'impression Lulu non générés"}
+                "volumeNumber": numero, "fabrication": fab, "impression_bloquee": impression, "cout_api_usd": cout, "budget": dep}
     save("controle.json", controle)
     job["phase"] = phase
-    return {"pdf": pdf.name, "titre": titre, "controle": bloquants + impossibles, "mineurs": mineurs, "pages": rep.get("pages"), "phase": phase}
+    res = {"pdf": pdf.name, "titre": titre, "controle": bloquants + impossibles, "mineurs": mineurs + impression, "pages": rep.get("pages"),
+           "phase": phase, "cout": cout}
+    if phase == "ready" and essai != "apercu":
+        finaliser(folder, book, pdf, numero, res, apercus_)
+    return res
+
+
+def fabrication_files(book, folder, pdf_lecture, numero, prenom):
+    """Intérieur d'impression, couverture à plat (gabarit Lulu si disponible), aperçus : tout à partir des fichiers du livre."""
+    import fabrication as F
+    folder = Path(folder)
+    it = F.interieur(book, folder / "impression_interieur.pdf", folder, numero, prenom)
+    try:
+        dims = F.dimensions_couverture()
+    except Exception as e:                               # gabarit indisponible : maquette marquée non confirmée
+        dims = None; print("gabarit Lulu indisponible :", e)
+    cv = F.couverture_a_plat(book, folder / "impression_couverture.pdf", folder, numero, prenom, dims)
+    ap = F.apercus(folder, pdf_lecture, folder / "impression_couverture.pdf", cv)
+    return {"interieur": it, "couverture": cv, "apercus": ap}
+
+
+def finaliser(folder, book, pdf, numero, res, apercus_):
+    """Fige le livre : manifeste (empreintes), sauvegarde. Ensuite, consulter / télécharger / réimprimer = fichiers enregistrés."""
+    import fabrication as F
+    folder = Path(folder)
+    fichiers = ([pdf.name, "livre.json", "storyboard.json", "instantane.json", "references.json", "controle.json", "budget.json",
+                 "impression_interieur.pdf", "impression_couverture.pdf", book["cover"]] + [x for x in book["spreads"] if x]
+                + [p.name for p in folder.glob("portrait_*.png")] + [f"apercus/{v}" for v in apercus_.values()])
+    man = F.finaliser(folder, fichiers, {"titre": res["titre"], "pdf_lecture": pdf.name, "volumeNumber": numero, "pages": res["pages"],
+                                         "mineurs": res["mineurs"], "cout_api_usd": res["cout"], "appels_api": BU.appels(livre_id(folder)),
+                                         "apercus": apercus_})
+    try:
+        F.sauvegarder(folder, Path(os.getenv("SAUVEGARDE_DIR") or BU.DATA / "sauvegardes"))
+    except Exception as e:
+        print("sauvegarde du livre impossible :", e)
+    res["finalise"] = True
+    return man
+
+
+def finaliser_apres_relecture(folder):
+    """Admin, après relecture humaine d'un livre « à relire » : fige les fichiers déjà produits. Aucun appel IA."""
+    import fabrication as F
+    folder = Path(folder)
+    if F.est_finalise(folder):
+        return json.loads((folder / "final.json").read_text(encoding="utf-8"))
+    book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+    ctl = json.loads((folder / "controle.json").read_text(encoding="utf-8"))
+    if not ctl.get("fabrication") or None in book["spreads"]:
+        raise ProcedeError("Livre incomplet (aperçu ou illustration manquante) : rien à finaliser")
+    pdfs = [p for p in folder.glob("*.pdf") if not p.name.startswith("impression_") and p.name != "apercu.pdf"]
+    ap = {p.stem: p.name for p in (folder / "apercus").glob("*.png")}
+    res = {"titre": book["title"], "pages": (ctl.get("rendu") or {}).get("pages"), "mineurs": ctl.get("mineurs", []) + ctl.get("bloquants", []),
+           "cout": ctl.get("cout_api_usd")}
+    return finaliser(folder, book, pdfs[0], book.get("volumeNumber") or 1, res, ap)
+
+
+def calibrer(folder):
+    """UN appel de calibrage (accord de l'admin) : jetons facturés pour UNE image de référence de 1024 px (cas le plus lourd
+    après normalisation), et vérification de la formule des jetons de sortie. Coût maximal réservé : ~0,17 $."""
+    folder = Path(folder); folder.mkdir(parents=True, exist_ok=True)
+    ref = BU.normaliser_ref(STYLE["couverture"], folder, 1024)
+    im = Image.open(ref).convert("RGB")
+    if im.size != (1024, 1024):                           # carré de 1024 px : le plus de jetons possible pour une référence normalisée
+        im = im.resize((1024, 1024)); im.save(ref)
+    m = model(); t = BU._modele(m)
+    prompt = "Paint a small calm watercolour sky. No text."
+    maximum = (BU.jetons_texte_max(prompt) * t["texte_entree"] + 20000 * t["image_entree"] + BU.jetons_sortie_image("1024x1024", "low", m) * t["sortie_image"]) / 1e6
+    def call():
+        with open(ref, "rb") as fh:
+            return G._client().images.edit(model=m, image=[fh], prompt=prompt, size="1024x1024", quality="low", n=1)
+    jeton = BU.LIVRE.set("calibrage-" + time.strftime("%Y%m%d-%H%M%S"))
+    try:
+        r = BU.appel("calibrage jetons image en entrée", m, maximum, call, "image")
+    finally:
+        BU.LIVRE.reset(jeton)
+    u = BU._usage_dict(getattr(r, "usage", None)) or {}
+    det = u.get("input_tokens_details") or {}
+    img = det.get("image_tokens"); out = u.get("output_tokens"); attendu = BU.jetons_sortie_image("1024x1024", "low", m)
+    if not img:
+        raise ProcedeError(f"Calibrage impossible : l'API n'a pas renvoyé le détail des jetons ({u})")
+    rapport = {"usage": u, "jetons_image_entree": img, "jetons_sortie": out, "jetons_sortie_formule": attendu,
+               "formule_sortie_ok": out is not None and out <= attendu}
+    if not rapport["formule_sortie_ok"]:
+        raise ProcedeError(f"Jetons de sortie {out} > formule {attendu} : borne de coût invalide, fabrication bloquée ({rapport})")
+    tr = BU.tarifs(); tr["modeles"]["gpt-image-2"]["jetons_image_entree_max"] = math.ceil(img * 1.1)
+    tr["calibrage"] = dict(rapport, le=time.strftime("%Y-%m-%d %H:%M"), marge=1.1)
+    BU.enregistrer_tarifs(tr)
+    return rapport
 
 
 def demo(folder, progress):
