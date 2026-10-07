@@ -592,6 +592,22 @@ def admin_tarifs():
     return jsonify(etat=budget.etat_tarifs(), tarifs=budget.tarifs())
 
 
+@bp.post("/admin/api/lulu/comparer")
+def admin_lulu_comparer():
+    """Devis Lulu pour plusieurs fabrications (aucune commande, aucun paiement), avec l'adresse de la dernière commande."""
+    if not admin_ok():
+        abort(403)
+    if not lulu.configured():
+        return jsonify(erreur="Clés Lulu absentes"), 400
+    o = next((x for x in db.lister(200) if x.get("adresse") and (x["adresse"] or {}).get("pays")), None)
+    addr = (o or {}).get("adresse") or {"nom": "Test", "adresse1": "1 rue de la Mairie", "code_postal": "77000", "ville": "Melun",
+                                         "pays": "FR", "telephone": "0600000000"}
+    try:
+        return jsonify(ok=True, ville=addr.get("ville"), options=lulu.comparer(24, addr, (o or {}).get("email") or CONTACT))
+    except Exception as e:
+        return jsonify(erreur=str(e)), 400
+
+
 @bp.post("/admin/api/tarifs/confirmer")
 def admin_tarifs_confirmer():
     """Tu as vérifié les prix sur platform.openai.com/docs/pricing : tu les confirmes (ou tu les corriges ici)."""

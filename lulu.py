@@ -85,6 +85,36 @@ def cost(pages, addr, email, pod=None, shipping=None):
     return {"total_ttc": r.get("total_cost_incl_tax"), "total_ht": r.get("total_cost_excl_tax"), "devise": r.get("currency")}
 
 
+VARIANTES = [   # (code POD, description en clair) : même format carré 21,6 cm, 24 pages, couleur
+    ("0850X0850FCPRECW080CW444GXX", "Rigide · couleur premium · papier épais brillant (actuel)"),
+    ("0850X0850FCSTDCW080CW444GXX", "Rigide · couleur standard · papier épais brillant"),
+    ("0850X0850FCSTDCW060UW444MXX", "Rigide · couleur standard · papier fin mat"),
+    ("0850X0850FCPREPB080CW444GXX", "Souple · couleur premium · papier épais brillant"),
+    ("0850X0850FCSTDPB080CW444GXX", "Souple · couleur standard · papier épais brillant"),
+    ("0850X0850FCSTDSS080CW444GXX", "Agrafé · couleur standard · papier épais brillant"),
+]
+
+
+def comparer(pages, addr, email):
+    """Devis Lulu (aucune commande) pour plusieurs fabrications et deux modes de livraison : impression et port séparés."""
+    out = []
+    for pod, label in VARIANTES:
+        for ship in ("MAIL", "PRIORITY_MAIL"):
+            try:
+                r = api("POST", "/print-job-cost-calculations/", {
+                    "line_items": [{"page_count": pages, "pod_package_id": pod, "quantity": 1}],
+                    "shipping_address": address(addr, email), "shipping_option": ship})
+                li = (r.get("line_item_costs") or [{}])[0]
+                sc = r.get("shipping_cost") or {}
+                fc = r.get("fulfillment_cost") or {}
+                out.append({"pod": pod, "fabrication": label, "livraison": ship, "devise": r.get("currency"),
+                            "impression_ttc": li.get("total_cost_incl_tax"), "port_ttc": sc.get("total_cost_incl_tax"),
+                            "frais_ttc": fc.get("total_cost_incl_tax"), "total_ttc": r.get("total_cost_incl_tax")})
+            except Exception as e:
+                out.append({"pod": pod, "fabrication": label, "livraison": ship, "erreur": str(e)[:160]})
+    return out
+
+
 def create_print_job(order_id, title, interior_url, cover_url, addr, email, pod=None, shipping=None):
     pod = pod or POD_PACKAGE
     return api("POST", "/print-jobs/", {

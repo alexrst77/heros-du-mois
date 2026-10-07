@@ -221,6 +221,9 @@ function vueReglages() {
     <span>Produit</span><span>${esc(c.pod)}</span>
     <span>Adresse du site</span><span>${esc(c.public_url || '—')}</span>
     <span>Impression auto</span><span>${c.auto_impression ? 'oui' : 'non (tu valides chaque livre)'}</span></div></div>
+  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🏷️ Comparer les prix d'impression</h3>
+    <p class="meta" style="margin:0">Devis Lulu pour plusieurs fabrications (rigide, souple, agrafé…) et deux livraisons. Aucune commande, rien n'est payé.</p>
+    <div class="acts"><button class="btn" onclick="comparer(this)">Comparer</button></div></div>
   <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🖼️ Vignettes de l'accueil du site</h3>
     <p class="meta" style="margin:0">Illustrations des cartes univers et fêtes encore manquantes (une image par vignette).</p>
     <div class="acts"><button class="btn" onclick="vignettes(this)">Générer les vignettes manquantes</button></div></div>`;
@@ -285,6 +288,21 @@ async function calibrer(b) {
   if (!confirm('Lancer UN appel payant de calibrage (≈ 0,02 $) ?')) return;
   b.disabled = true; const r = await (await fetch('/admin/api/tarifs/calibrer' + Q, { method: 'POST', headers: H })).json();
   TARIFS = null; toast(r.erreur ? '⚠️ ' + r.erreur : '✅ Calibré : ' + r.info.jetons_image_entree + ' jetons'); render();
+}
+async function comparer(b) {
+  b.disabled = true; toast('⏳ Demande des devis à Lulu…');
+  const r = await (await fetch('/admin/api/lulu/comparer' + Q, { method: 'POST', headers: H })).json(); b.disabled = false;
+  if (r.erreur) return toast('⚠️ ' + r.erreur);
+  const f = v => v == null ? '—' : parseFloat(v).toFixed(2).replace('.', ',') + ' €';
+  const L = { MAIL: 'Économique', PRIORITY_MAIL: 'Prioritaire' };
+  const ok = r.options.filter(x => !x.erreur).sort((a, c) => parseFloat(a.total_ttc) - parseFloat(c.total_ttc));
+  document.getElementById('dlgIn').innerHTML = `<h3>🏷️ Prix Lulu pour 1 livre (24 pages, livré à ${esc(r.ville || '')})</h3>
+    <table><tr><th>Fabrication</th><th>Livraison</th><th class="r">Impression</th><th class="r">Port</th><th class="r">Total TTC</th></tr>
+    ${ok.map(x => `<tr${x.pod.includes('FCPRECW') && x.livraison === 'MAIL' ? ' style="background:var(--gold-soft)"' : ''}><td>${esc(x.fabrication)}</td><td>${L[x.livraison] || x.livraison}</td><td class="r">${f(x.impression_ttc)}</td><td class="r">${f(x.port_ttc)}</td><td class="r"><b>${f(x.total_ttc)}</b></td></tr>`).join('')}</table>
+    ${r.options.filter(x => x.erreur).length ? `<p class="meta">Non proposé par Lulu : ${r.options.filter(x => x.erreur).map(x => esc(x.fabrication) + ' (' + (L[x.livraison] || x.livraison) + ')').join(', ')}</p>` : ''}
+    <p class="meta">En jaune : la fabrication actuelle. Rien n'est changé tant que tu ne le décides pas.</p>
+    <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
+  document.getElementById('dlg').showModal();
 }
 async function vignettes(b) {
   b.disabled = true; const r = await (await fetch('/admin/api/vignettes' + Q, { method: 'POST', headers: H })).json();
