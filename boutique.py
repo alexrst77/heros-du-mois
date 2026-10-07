@@ -686,8 +686,8 @@ def admin_action(oid, action):
             start_book(oid, auto=True, reprise=True)   # tout le reste (histoire, portraits, couverture, pages acceptées) est réutilisé
             return jsonify(ok=True, info={"refaites": n, "anciennes_gardees_dans": str(arch.relative_to(folder))})
         if action == "mail-pret":                 # envoi (ou renvoi) à la main du mail « livre prêt »
-            if not os.getenv("SMTP_PASSWORD"):
-                raise RuntimeError("SMTP_PASSWORD absent dans Railway : envoi de mails non configuré")
+            if not mail_configure():
+                raise RuntimeError("envoi de mails non configuré (BREVO_API_KEY absent dans Railway)")
             db.annuler_mail_pret(oid)
             DERNIERE_ERREUR_MAIL.pop(oid, None)
             if not mail_livre_pret(oid):
@@ -745,15 +745,36 @@ CONTACT = os.getenv("CONTACT_EMAIL", "monherosdumois@gmail.com")
 SUJETS = {"question": "Une question", "commande": "Ma commande", "cadeau": "Offrir un livre", "autre": "Autre"}
 
 
-def send_mail(subject, body, reply_to=None, to=None, html=None, images=None):
-    """Envoi par Gmail (SMTP) si SMTP_PASSWORD (mot de passe d'application Google) est renseigné ; sinon rien.
-    to : destinataire (par défaut toi) ; html + images {cid: chemin} : version illustrée avec images intégrées."""
+def mail_configure():
+    return bool(os.getenv("BREVO_API_KEY") or os.getenv("SMTP_PASSWORD"))
+
+
+def send_mail(subject, body, reply_to=None, to=None, html=None, images=None, image_urls=None):
+    """Envoi d'un mail. Railway bloque le SMTP (ports 465/587) : on passe par l'API HTTPS de Brevo si BREVO_API_KEY est
+    renseigné, sinon par SMTP (Gmail) si SMTP_PASSWORD l'est ; sinon rien. to : destinataire (par défaut toi).
+    html + images {cid: chemin} (SMTP, images intégrées) ou image_urls {cid: url} (Brevo, images hébergées par le site)."""
+    user = os.getenv("SMTP_USER", CONTACT)
+    if os.getenv("BREVO_API_KEY"):
+        import urllib.request, urllib.error
+        if html:
+            for cid, url in (image_urls or {}).items():
+                html = html.replace(f"cid:{cid}", url)
+        data = {"sender": {"name": "Mon Héros du Mois", "email": os.getenv("MAIL_FROM", user)}, "to": [{"email": to or CONTACT}],
+                "subject": subject, "textContent": body}
+        if html: data["htmlContent"] = html
+        if reply_to: data["replyTo"] = {"email": reply_to}
+        req = urllib.request.Request("https://api.brevo.com/v3/smtp/email", data=json.dumps(data).encode(), method="POST",
+                                     headers={"api-key": os.getenv("BREVO_API_KEY"), "Content-Type": "application/json", "Accept": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return 200 <= r.status < 300
+        except urllib.error.HTTPError as e:
+            raise RuntimeError(f"Brevo {e.code} : {e.read().decode(errors='replace')[:300]}")
     pw = os.getenv("SMTP_PASSWORD")
     if not pw:
         return False
     import smtplib, mimetypes
     from email.message import EmailMessage
-    user = os.getenv("SMTP_USER", CONTACT)
     m = EmailMessage(); m["Subject"] = subject; m["From"] = f"Mon Héros du Mois <{user}>"; m["To"] = to or CONTACT
     if reply_to: m["Reply-To"] = reply_to
     m.set_content(body)
@@ -794,8 +815,8 @@ def mail_livre_pret(oid):
     folder = A.OUT / (o["job_id"] or "_")
     if not fabrication.est_finalise(folder):
         return False
-    if not os.getenv("SMTP_PASSWORD"):
-        log(f"commande {oid} : mail « livre prêt » non envoyé (SMTP_PASSWORD absent)")
+    if not mail_configure():
+        log(f"commande {oid} : mail « livre prêt » non envoyé (envoi de mails non configuré)")
         return False
     if not db.marquer_mail_pret(oid):
         return False                                      # déjà envoyé
@@ -832,7 +853,10 @@ def mail_livre_pret(oid):
  <p style="font:14px system-ui,sans-serif;color:#6B6F8E;text-align:center;margin:22px 0 0">Une question&nbsp;? Répondez simplement à ce mail.<br><a href="{site}" style="color:#3D6BD8">{site.replace('https://', '')}</a></p>
 </div></body></html>"""
         ok = send_mail(f"📚 Le livre de {prenom} est prêt !", texte, reply_to=CONTACT, to=o["email"], html=html,
-                       images={"couverture": img} if img.exists() else None)
+                       images={"couverture": img} if img.exists() else None,
+                       image_urls={"couverture": f"{site}/api/livres/{o['job_id']}/apercu/couverture.png"})
+        if not ok:
+            raise RuntimeError("le service d'envoi a refusé le mail")
         log(f"commande {oid} : mail « livre prêt » envoyé à {o['email']}")
         return ok
     except Exception as e:
@@ -874,4 +898,4 @@ def contact():
 def admin_messages():
     if not admin_ok():
         abort(403)
-    return jsonify(messages=db.messages(), envoi=bool(os.getenv("SMTP_PASSWORD")))
+    return jsonify(messages=db.messages(), envoi=mail_configure())
