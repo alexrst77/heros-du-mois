@@ -33,7 +33,7 @@ with _db() as _c:
     _c.executescript(SCHEMA)
     for _t, _col in (("commandes", "cout real"), ("commandes", "tentatives integer default 0"), ("commandes", "univers text"),
                      ("abonnements", "faites text"), ("abonnements", "paiements integer default 1"),
-                     ("commandes", "volume_number integer")):   # colonnes ajoutées après la mise en ligne
+                     ("commandes", "volume_number integer"), ("commandes", "mail_pret real")):   # colonnes ajoutées après la mise en ligne
         try:
             _c.execute(f"alter table {_t} add column {_col}")
         except sqlite3.OperationalError:
@@ -151,6 +151,17 @@ def messages(limit=100):
 def messages_recent(email, since):
     with _db() as c:
         return c.execute("select count(*) from messages where email=? and cree>?", (email, since)).fetchone()[0]
+
+
+def marquer_mail_pret(cid):
+    """True une seule fois par commande (même avec deux validations simultanées) : le mail « livre prêt » ne part qu'une fois."""
+    with _lock, _db() as c:
+        return c.execute("update commandes set mail_pret=? where id=? and mail_pret is null", (time.time(), cid)).rowcount == 1
+
+
+def annuler_mail_pret(cid):
+    with _lock, _db() as c:
+        c.execute("update commandes set mail_pret=null where id=?", (cid,))
 
 
 def assign_volume(cid):

@@ -150,6 +150,7 @@ function carte(o) {
     <div class="acts">${bt.main}</div>
     <details><summary>Plus d'options et infos</summary><div class="more">
       <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
+      ${o.mail_pret ? `<div>📧 Mail « livre prêt » envoyé au client le ${new Date(o.mail_pret * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
       ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
       <div class="files">${files}</div>
       <div class="acts">${bt.sec}</div><div class="muted" style="margin-top:6px">Réf. ${o.id}</div>

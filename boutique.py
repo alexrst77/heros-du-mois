@@ -5,6 +5,7 @@ Abonnements : mensuel (Stripe facture chaque mois, un livre à chaque facture pa
 Aucun appel OpenAI avant le paiement. Aucune impression sans ton accord (sauf AUTO_IMPRESSION=1)."""
 import os, re, json, time, uuid, shutil, secrets, threading, traceback
 from pathlib import Path
+from xml.sax.saxutils import escape
 from flask import Blueprint, request, jsonify, send_file, abort, redirect, Response
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
@@ -254,7 +255,9 @@ def book_done(oid, job):
         f.unlink(missing_ok=True)
     for f in (A.OUT / job.get("_id", oid)).glob("*_essai*.png"):
         f.unlink(missing_ok=True)
-    log(f"commande {oid} : livre prêt « {job['titre']} », à relire")
+    log(f"commande {oid} : livre prêt « {job['titre']} », " + ("finalisé" if job.get("finalise") else "à relire"))
+    if job.get("finalise"):
+        _mail_pret_async(oid)
     if auto_print() and not job.get("controle") and not db.get(oid)["formule"].startswith("essai"):
         try:
             send_to_print(oid)
@@ -661,6 +664,7 @@ def admin_action(oid, action):
             return jsonify(ok=True)
         if action == "finaliser":                 # après relecture humaine d'un livre « à relire » : fige les fichiers, aucun appel IA
             man = procede.finaliser_apres_relecture(A.OUT / (o["job_id"] or "_"))
+            _mail_pret_async(oid)
             return jsonify(ok=True, info={"finalise_le": man["finalise_le"], "fichiers": len(man["fichiers"])})
         if action == "refaire-refusees":         # décision humaine : refaire les illustrations refusées, dans les 3 $ du livre
             folder = A.OUT / (o["job_id"] or "_")
@@ -732,20 +736,101 @@ CONTACT = os.getenv("CONTACT_EMAIL", "monherosdumois@gmail.com")
 SUJETS = {"question": "Une question", "commande": "Ma commande", "cadeau": "Offrir un livre", "autre": "Autre"}
 
 
-def send_mail(subject, body, reply_to=None):
-    """Envoi par Gmail (SMTP) si SMTP_PASSWORD (mot de passe d'application Google) est renseigné ; sinon rien (le message reste dans l'admin)."""
+def send_mail(subject, body, reply_to=None, to=None, html=None, images=None):
+    """Envoi par Gmail (SMTP) si SMTP_PASSWORD (mot de passe d'application Google) est renseigné ; sinon rien.
+    to : destinataire (par défaut toi) ; html + images {cid: chemin} : version illustrée avec images intégrées."""
     pw = os.getenv("SMTP_PASSWORD")
     if not pw:
         return False
-    import smtplib
+    import smtplib, mimetypes
     from email.message import EmailMessage
     user = os.getenv("SMTP_USER", CONTACT)
-    m = EmailMessage(); m["Subject"] = subject; m["From"] = user; m["To"] = CONTACT
+    m = EmailMessage(); m["Subject"] = subject; m["From"] = f"Mon Héros du Mois <{user}>"; m["To"] = to or CONTACT
     if reply_to: m["Reply-To"] = reply_to
     m.set_content(body)
+    if html:
+        m.add_alternative(html, subtype="html")
+        part = m.get_payload()[-1]
+        for cid, path in (images or {}).items():
+            typ = (mimetypes.guess_type(str(path))[0] or "image/jpeg").split("/")
+            part.add_related(Path(path).read_bytes(), maintype=typ[0], subtype=typ[1], cid=f"<{cid}>")
     with smtplib.SMTP(os.getenv("SMTP_HOST", "smtp.gmail.com"), int(os.getenv("SMTP_PORT", "587")), timeout=20) as s:
         s.starttls(); s.login(user, pw); s.send_message(m)
     return True
+
+
+def _jours_ouvres(t, n):
+    import datetime
+    d = datetime.date.fromtimestamp(t)
+    while n > 0:
+        d += datetime.timedelta(days=1)
+        if d.weekday() < 5: n -= 1
+    return d
+
+
+def _date_fr(d):
+    mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+    jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+    return f"{jours[d.weekday()]} {d.day} {mois[d.month - 1]}"
+
+
+def mail_livre_pret(oid):
+    """Mail automatique au client quand son livre est validé (finalisé) : couverture, titre, livraison estimée. Une seule fois."""
+    o = db.get(oid)
+    if not o or (o["formule"] or "").startswith("essai") or not o.get("email"):
+        return False
+    folder = A.OUT / (o["job_id"] or "_")
+    if not fabrication.est_finalise(folder):
+        return False
+    if not os.getenv("SMTP_PASSWORD"):
+        log(f"commande {oid} : mail « livre prêt » non envoyé (SMTP_PASSWORD absent)")
+        return False
+    if not db.marquer_mail_pret(oid):
+        return False                                      # déjà envoyé
+    try:
+        man = json.loads((folder / "final.json").read_text(encoding="utf-8"))
+        form, _ = load_book(o["origine"])
+        prenom = form.get("prenom") or "votre enfant"
+        titre = man.get("titre") or o.get("titre") or "son livre"
+        n = man.get("volumeNumber") or 1
+        now = time.time()
+        d1 = max(_jours_ouvres(o["cree"], 7), _jours_ouvres(now, 5)); d2 = max(_jours_ouvres(o["cree"], 15), _jours_ouvres(now, 10))
+        cadeau = (form.get("cadeau") or {}) if isinstance(form.get("cadeau"), dict) else {}
+        from PIL import Image
+        src = folder / "apercus" / "couverture.png"
+        img = folder / "_mail_couverture.jpg"
+        if src.exists() and not img.exists():
+            im = Image.open(src).convert("RGB"); im.thumbnail((640, 640)); im.save(img, quality=88)
+        site = (os.getenv("PUBLIC_URL") or "https://heros-du-mois-production.up.railway.app").rstrip("/")
+        texte = (f"Bonjour,\n\nLe livre de {prenom} est prêt : « {titre} » (livre n° {n} de sa collection).\n"
+                 f"Il a été relu et part maintenant à l'impression. Livraison estimée entre le {_date_fr(d1)} et le {_date_fr(d2)}.\n\n"
+                 f"Une question ? Répondez simplement à ce mail.\n\nÀ très vite,\nL'équipe Mon Héros du Mois\n{site}")
+        html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
+<div style="max-width:560px;margin:0 auto;padding:28px 18px">
+ <p style="font:600 13px system-ui,sans-serif;letter-spacing:.12em;color:#B8892B;text-align:center;margin:0 0 6px">MON HÉROS DU MOIS</p>
+ <h1 style="font-size:26px;text-align:center;margin:0 0 18px">Le livre de {escape(prenom)} est prêt&nbsp;✨</h1>
+ {'<img src="cid:couverture" alt="" width="420" style="display:block;margin:0 auto 18px;width:100%;max-width:420px;border-radius:10px;box-shadow:0 8px 24px rgba(31,37,87,.25)">' if img.exists() else ''}
+ <p style="font-size:19px;text-align:center;margin:0 0 4px"><b>« {escape(titre)} »</b></p>
+ <p style="font:14px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 22px">Livre n° {n} de sa collection{(' · offert par ' + escape(str(cadeau.get('de')))) if cadeau.get('de') else ''}</p>
+ <div style="background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.5 system-ui,sans-serif">
+  <p style="margin:0 0 8px">✅ Le livre a été créé et relu avec soin.</p>
+  <p style="margin:0 0 8px">🖨️ Il part maintenant à l'impression (couverture rigide).</p>
+  <p style="margin:0">📦 Livraison estimée <b>entre le {_date_fr(d1)} et le {_date_fr(d2)}</b>.</p>
+ </div>
+ <p style="font:14px system-ui,sans-serif;color:#6B6F8E;text-align:center;margin:22px 0 0">Une question&nbsp;? Répondez simplement à ce mail.<br><a href="{site}" style="color:#3D6BD8">{site.replace('https://', '')}</a></p>
+</div></body></html>"""
+        ok = send_mail(f"📚 Le livre de {prenom} est prêt !", texte, reply_to=CONTACT, to=o["email"], html=html,
+                       images={"couverture": img} if img.exists() else None)
+        log(f"commande {oid} : mail « livre prêt » envoyé à {o['email']}")
+        return ok
+    except Exception as e:
+        db.annuler_mail_pret(oid)                     # pas envoyé : il pourra repartir à la prochaine validation
+        log(f"commande {oid} : mail « livre prêt » impossible : {e}")
+        return False
+
+
+def _mail_pret_async(oid):
+    threading.Thread(target=mail_livre_pret, args=(oid,), daemon=True).start()
 
 
 @bp.post("/api/contact")
