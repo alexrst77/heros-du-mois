@@ -47,7 +47,7 @@ const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
 const date = t => t ? new Date(t * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
 const ESSAI = { essai_brouillon: 'essai brouillon', essai_apercu: 'essai aperçu' };
 const LABEL = { attente_paiement: 'attente paiement', payee: 'payée', attente_fete: 'attend sa fête', generation: 'fabrication', a_verifier: 'à relire', envoyee_impression: 'chez Lulu', expediee: 'expédiée', erreur: 'erreur', annulee: 'annulée' };
-const CONFIRM = { finaliser: "Tu as relu le PDF : figer ce livre tel quel ? (ensuite il est servi sans aucun appel IA)", relancer: "Relancer ? (uniquement ce qui manque, dans les 3 $ du livre : ce qui a déjà été payé est réutilisé)", imprimer: "Envoyer ce livre à l'impression chez Lulu ? (en production, c'est une vraie commande payée)", effacer: "Effacer définitivement les données et fichiers de cette commande ?", 'arreter-abonnement': "Arrêter cet abonnement ?" };
+const CONFIRM = { 'refaire-refusees': "Refaire uniquement les illustrations refusées ? (≈ 0,10 $ par double page, toujours dans les 3 $ du livre ; le reste est réutilisé)", finaliser: "Tu as relu le PDF : figer ce livre tel quel ? (ensuite il est servi sans aucun appel IA)", relancer: "Relancer ? (uniquement ce qui manque, dans les 3 $ du livre : ce qui a déjà été payé est réutilisé)", imprimer: "Envoyer ce livre à l'impression chez Lulu ? (en production, c'est une vraie commande payée)", effacer: "Effacer définitivement les données et fichiers de cette commande ?", 'arreter-abonnement': "Arrêter cet abonnement ?" };
 
 async function act(id, action, btn) {
   if (CONFIRM[action] && !confirm(CONFIRM[action])) return;
@@ -83,6 +83,7 @@ async function load() {
     if (o.statut === 'envoyee_impression') btns.push(['suivi', 'Actualiser le suivi']);
     if (['erreur', 'generation', 'payee'].includes(o.statut)) btns.push(['relancer', 'Relancer la fabrication']);
     if (o.statut === 'a_verifier') btns.push(['relancer', 'Refaire le livre']);
+    if (['erreur', 'a_verifier'].includes(o.statut) && (o.controle || o.erreur || '').toString().match(/non conforme|double page/i)) btns.push(['refaire-refusees', 'Refaire les illustrations refusées']);
     if (o.statut === 'erreur' && o.lulu_id == null && o.pdf) btns.push(['imprimer', "Envoyer à l'impression", 'main']);
     if (o.statut === 'attente_paiement' && c.stripe === 'simulé') btns.push(['valider-paiement-test', 'Simuler le paiement']);
     if (o.abonnement_id) btns.push(['mois-suivant', 'Fabriquer le livre suivant'], ['arreter-abonnement', "Arrêter l'abonnement"]);

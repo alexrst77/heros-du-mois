@@ -242,6 +242,8 @@ Format JSON exact :
 Identifiants : utilise EXACTEMENT ceux de la configuration (heros, doudou, animal_1…) ; un personnage inventé qui revient reçoit
 un identifiant invente_<nom> et une fiche dans characterBible (UN SEUL personnage inventé récurrent au plus). Tout personnage nommé dans le texte d'une double page figure dans
 presentCharacterIds de cette double page ; une absence volontaire d'un compagnon doit être justifiée par le texte.
+leftComposition et rightComposition décrivent les deux moitiés d'UN SEUL INSTANT : chaque personnage est placé dans UNE seule
+des deux moitiés (jamais le même personnage à gauche ET à droite, sinon l'illustrateur le dessine deux fois).
 Thèmes de lecture : scène claire -> voile #F5F0DF, encre #163E49 ; scène sombre ou nocturne -> voile #171B3A (ou #092D43 sous l'eau), encre #FFF7E8.
 Longueur : {mots} mots par page, jamais plus de 7 lignes. Typographie française (espaces avant ! ? : ;, guillemets « »).
 """
@@ -279,6 +281,10 @@ def check_board(b, snap):
             if G._fold(nom) in txt and cid not in pres:
                 probs.append(f"Double page {i + 1} : le texte nomme {nom} ({cid}) mais il n'est pas dans presentCharacterIds.")
         if not s.get("requiredVisibleDetails"): probs.append(f"Double page {i + 1} : requiredVisibleDetails vide.")
+        for pid, nom in _noms(snap, b).items():
+            if pid in (s.get("presentCharacterIds") or []) and nom.lower() in str(s.get("leftComposition", "")).lower() \
+                    and nom.lower() in str(s.get("rightComposition", "")).lower():
+                probs.append(f"Double page {s.get('id')} : {nom} est placé à gauche ET à droite (il serait dessiné deux fois) : une seule moitié.")
         for k in ("scene", "leftComposition", "rightComposition", "palette", "light"):
             if not str(s.get(k) or "").strip(): probs.append(f"Double page {i + 1} : « {k} » manquant.")
     pr = snap.get("protagoniste", "heros")
@@ -426,6 +432,24 @@ def refs_text(refs, snap, extra_names=None):
     return "REFERENCE IMAGES SENT WITH THIS REQUEST:\n" + "\n".join(lines)
 
 
+def _noms(snap, b):
+    n = {p["id"]: p["nom"] for p in snap["personnages"]}
+    n.update({x.get("id"): str(x.get("name") or "") for x in b.get("characterBible") or [] if x.get("name")})
+    return n
+
+
+def une_seule_fois(s, snap, b):
+    """Garde-fou déterministe : un personnage cité dans les deux moitiés n'est dessiné que dans la première."""
+    out = []
+    left, right = str(s.get("leftComposition", "")).lower(), str(s.get("rightComposition", "")).lower()
+    for pid in s["presentCharacterIds"]:
+        nom = _noms(snap, b).get(pid, "")
+        if nom and nom.lower() in left and nom.lower() in right:
+            out.append(f"{nom.upper()} appears ONLY ONCE, in the LEFT half; the right half shows the rest of the same moment "
+                       f"(setting, view, other characters) WITHOUT a second {nom.upper()}.")
+    return out
+
+
 def pano_prompt(s, snap, b, refs, fix=None):
     ids = s["presentCharacterIds"]
     p = PROMPT_IMAGE
@@ -442,6 +466,7 @@ def pano_prompt(s, snap, b, refs, fix=None):
              f"WORLD: {U.PAR_CLE[k]['image'] if k else G.art.DEFAULT_UNIVERS}.",
              f"CHARACTERS IN THIS SCENE: exactly {len(ids)} recurring characters ({', '.join(allnames.get(x, x) for x in ids)}), each shown once; "
              "no other pet or plush; small background wildlife only if the scene asks for it."]
+    extra += une_seule_fois(s, snap, b)
     if fix: extra.append("CORRECTIONS REQUIRED (a previous attempt was rejected): " + "; ".join(fix))
     return p + "\n\n" + "\n".join(extra)
 

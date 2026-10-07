@@ -620,6 +620,25 @@ def admin_action(oid, action):
         if action == "finaliser":                 # après relecture humaine d'un livre « à relire » : fige les fichiers, aucun appel IA
             man = procede.finaliser_apres_relecture(A.OUT / (o["job_id"] or "_"))
             return jsonify(ok=True, info={"finalise_le": man["finalise_le"], "fichiers": len(man["fichiers"])})
+        if action == "refaire-refusees":         # décision humaine : refaire les illustrations refusées, dans les 3 $ du livre
+            folder = A.OUT / (o["job_id"] or "_")
+            if o["statut"] not in ("erreur", "a_verifier") or not folder.exists():
+                raise RuntimeError("seulement pour un livre en erreur ou à relire")
+            if fabrication.est_finalise(folder):
+                raise RuntimeError("livre finalisé : il n'est jamais refabriqué")
+            if A.JOBS.get(o["job_id"] or "", {}).get("etat") in ("en_cours", "validation"):
+                raise RuntimeError("fabrication en cours")
+            arch = folder / "refusees" / time.strftime("%Y%m%d-%H%M%S"); n = 0
+            for rp in folder.glob("spread-*.json"):
+                if json.loads(rp.read_text(encoding="utf-8")).get("bloquants"):
+                    arch.mkdir(parents=True, exist_ok=True)
+                    for f in (rp, rp.with_suffix(".png")):
+                        if f.exists(): f.rename(arch / f.name)
+                    n += 1
+            if not n:
+                raise RuntimeError("aucune illustration refusée à refaire")
+            start_book(oid, auto=True, reprise=True)   # tout le reste (histoire, portraits, couverture, pages acceptées) est réutilisé
+            return jsonify(ok=True, info={"refaites": n, "anciennes_gardees_dans": str(arch.relative_to(folder))})
         if action == "budget":
             folder = A.OUT / (o["job_id"] or "_")
             lid = procede.livre_id(folder) if folder.exists() else oid

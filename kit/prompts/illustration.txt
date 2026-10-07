@@ -17,6 +17,6 @@ Required visible story details: {{required_details}}
 
 COMPOSITION
 Centre seam at x=50%. No face, pet head, important accessory or essential action in x=44–56%. Keep key subjects in the middle and upper area. Reserve roughly the bottom third of each half for quiet low-detail painted ground, water, mist or room surfaces so typeset prose can be added later. Continue the painting organically into this area, no blank rectangle.
-One coherent scene unless the storyboard explicitly asks for two sequential moments. Do not duplicate the protagonist or companions unintentionally. Vary camera distance, poses and scenery across the book while preserving identity.
+ONE single moment spread across both pages, never one picture per page: every character appears exactly ONCE in the whole panorama (no second copy of the child, the plush toy or a pet, no reflection or double). Vary camera distance, poses and scenery across the book while preserving identity.
 
 No writing, letters, captions, page numbers, watermark, typography, frame, collage panels or photo-on-background effect. No flat vector, plastic 3D style or uniform yellow filter. All text will be typeset separately.
