@@ -132,6 +132,29 @@ def comparer(pages, addr, email):
     return out
 
 
+CALENDRIERS = [   # codes possibles (non documentés publiquement) : on demande un devis à Lulu pour savoir lesquels existent
+    "1100X0850FCPRECO100CW444GXX", "1100X0850FCPREWO100CW444GXX", "1100X0850FCPRECO100CW444MXX", "1100X0850FCPRECO100CW444UXX",
+    "1100X0850FCPRECO080CW444GXX", "1100X0850FCSTDCO100CW444GXX", "0850X1100FCPRECO100CW444GXX", "1100X0850FCPRECA100CW444GXX",
+]
+
+
+def tester_calendriers(addr, email):
+    """Devis (aucune commande) pour chaque code de calendrier possible et 26 ou 28 pages : dit ce que l'API accepte."""
+    out = []
+    for pod in CALENDRIERS:
+        for pages in (26, 28):
+            try:
+                r = api("POST", "/print-job-cost-calculations/", {
+                    "line_items": [{"page_count": pages, "pod_package_id": pod, "quantity": 1}],
+                    "shipping_address": address(addr, email), "shipping_option": "MAIL"})
+                li = (r.get("line_item_costs") or [{}])[0]
+                out.append({"pod": pod, "pages": pages, "ok": True, "impression_ttc": li.get("total_cost_incl_tax"),
+                            "port_ttc": (r.get("shipping_cost") or {}).get("total_cost_incl_tax"), "total_ttc": r.get("total_cost_incl_tax")})
+            except Exception as e:
+                out.append({"pod": pod, "pages": pages, "ok": False, "erreur": str(e)[:220]})
+    return out
+
+
 def create_print_job(order_id, items, addr, email, pod=None, shipping=None):
     """UN travail d'impression pour tout le pack (un seul colis). items : [{id, titre, interieur, couverture}]."""
     pod = pod or POD_PACKAGE

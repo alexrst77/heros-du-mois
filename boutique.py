@@ -648,6 +648,21 @@ def admin_lulu_comparer():
         return jsonify(erreur=str(e)), 400
 
 
+@bp.post("/admin/api/lulu/calendrier")
+def admin_lulu_calendrier():
+    """Test en bac à sable : quels codes de calendrier l'API Lulu accepte, et à quel prix (devis seulement)."""
+    if not admin_ok():
+        abort(403)
+    if not lulu.configured():
+        return jsonify(erreur="Clés Lulu absentes"), 400
+    o = next((x for x in db.lister(200) if x.get("adresse") and (x["adresse"] or {}).get("pays")), None)
+    addr = (o or {}).get("adresse") or {"nom": "Test", "adresse1": "1 rue de la Mairie", "code_postal": "77000", "ville": "Melun",
+                                         "pays": "FR", "telephone": "0600000000"}
+    res = lulu.tester_calendriers(addr, (o or {}).get("email") or CONTACT)
+    log("test calendriers Lulu : " + json.dumps(res, ensure_ascii=False)[:2000])
+    return jsonify(ok=True, resultats=res)
+
+
 @bp.post("/admin/api/tarifs/confirmer")
 def admin_tarifs_confirmer():
     """Tu as vérifié les prix sur platform.openai.com/docs/pricing : tu les confirmes (ou tu les corriges ici)."""
