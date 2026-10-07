@@ -87,7 +87,10 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
 const usd = v => (v || 0).toFixed(2).replace('.', ',') + ' $';
 const day = t => t ? new Date(t * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
-const FORMULE = { livre: '1 livre', pack3: 'Pack 3 livres', pack6: 'Pack 6 livres', pack12: 'Pack 12 livres', fetes: '6 livres de fête', mensuel: 'Abonnement (ancien)', annuel: 'Abonnement annuel', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu' };
+const FORMULE = { livre: '1 livre', pack3: 'Pack 3 livres', pack6: 'Pack 6 livres', pack12: 'Pack 12 livres', fetes: '6 livres de fête', mensuel: 'Abonnement (ancien)', annuel: 'Abonnement annuel', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu', calendrier: '📅 Calendrier' };
+// colis = livres + calendrier de la même commande
+const NB = o => (o.pack_total || 0) + (o.pack_cal || 0), PRETS = o => (o.pack_prets || 0) + (o.pack_cal_prets || 0);
+const colis = o => [(o.pack_total ? `${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}` : ''), (o.pack_cal ? 'le calendrier' : '')].filter(Boolean).join(' + ');
 let D = null, TAB = 'accueil', FILTRE = 'actifs';
 const RES = {}, OPEN = new Set();   // résultats affichés sous un livre (restent jusqu'à ce que tu les fermes) ; menus ouverts
 
@@ -102,11 +105,11 @@ function etat(o) {
   if (o.statut === 'erreur' && !o.pdf) return { k: 'bloque', pill: ['p-red', '⚠️', 'Bloqué'], say: 'La fabrication s\'est arrêtée. Rien n\'est perdu : ce qui est fait est gardé.' };
   if (o.statut === 'a_verifier' || (o.statut === 'erreur' && o.pdf)) {
     if (essai) return { k: 'essai', pill: ['p-violet', '🧪', 'Essai terminé'], say: 'Livre d\'essai : à regarder, jamais imprimé.' };
-    if (o.finalise && o.pack_total > 1 && (o.pack_prets < o.pack_total || (o.origine && o.origine !== o.id)))
-      return { k: 'valide', pill: ['p-green', '✅', 'Validé'], say: o.pack_prets < o.pack_total
-        ? `Figé et sauvegardé. Le colis partira quand les ${o.pack_total} livres seront validés (${o.pack_prets}/${o.pack_total}).`
+    if (o.finalise && NB(o) > 1 && (PRETS(o) < NB(o) || (o.origine && o.origine !== o.id)))
+      return { k: 'valide', pill: ['p-green', '✅', 'Validé'], say: PRETS(o) < NB(o)
+        ? `Figé et sauvegardé. Le colis partira quand tout sera validé : ${colis(o)} (${PRETS(o)}/${NB(o)}).`
         : 'Figé et sauvegardé. Il part avec le livre 1 du pack, dans le même colis.' };
-    if (o.finalise) return { k: 'pret', pill: ['p-green', '✅', 'Prêt à imprimer'], say: o.pack_total > 1 ? `Les ${o.pack_total} livres du pack sont validés : ils partent ensemble, dans un seul colis.` : 'Figé et sauvegardé. Il ne coûtera plus jamais rien en IA.' };
+    if (o.finalise) return { k: 'pret', pill: ['p-green', '✅', 'Prêt à imprimer'], say: NB(o) > 1 ? `Tout est validé (${colis(o)}) : ça part ensemble, dans un seul colis.` : 'Figé et sauvegardé. Il ne coûtera plus jamais rien en IA.' };
     return { k: 'relire', pill: ['p-gold', '👀', 'À relire'], say: 'Ouvre le livre, regarde les pages, puis valide-le.' };
   }
   if (o.statut === 'envoyee_impression') return { k: 'imprimeur', pill: ['p-blue', '🖨️', "Chez l'imprimeur"], say: o.lulu_statut ? 'Statut Lulu : ' + esc(o.lulu_statut) : '' };
@@ -118,12 +121,12 @@ const AFAIRE = ['relire', 'bloque', 'pret'];
 
 function boutons(o, e) {
   const pdf = (o.fichiers || []).find(f => f.endsWith('.pdf') && !f.startsWith('impression_'));
-  const lire = pdf ? `<a class="btn" target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(pdf)}${Q}">📖 Lire le livre</a>` : '';
+  const lire = pdf ? `<a class="btn" target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(pdf)}${Q}">${o.calendrier ? '📅 Voir le calendrier' : '📖 Lire le livre'}</a>` : '';
   const b = (a, t, cls = '') => `<button class="btn ${cls}" onclick="act('${o.id}','${a}',this)">${t}</button>`;
   let main = '';
   if (e.k === 'paiement' && D.config.stripe === 'simulé') main = b('valider-paiement-test', '💳 Simuler le paiement', 'main');
   if (e.k === 'relire') main = lire + b('finaliser', "✅ C'est bon, je valide", 'ok') + (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées') : '');
-  if (e.k === 'pret') main = lire + b('imprimer', o.pack_total > 1 ? `🖨️ Envoyer le colis (${o.pack_total} livres)` : "🖨️ Envoyer à l'impression", 'gold');
+  if (e.k === 'pret') main = lire + b('imprimer', NB(o) > 1 ? `🖨️ Envoyer le colis (${colis(o)})` : "🖨️ Envoyer à l'impression", 'gold');
   if (e.k === 'valide') main = lire;
   if (e.k === 'essai') main = lire;
   if (e.k === 'bloque') main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main');
@@ -132,9 +135,10 @@ function boutons(o, e) {
   const sec = [];
   if (!['paiement', 'archive'].includes(e.k)) sec.push(b('budget', '💰 Coût IA détaillé'));
   if (e.k === 'pret' || e.k === 'valide') sec.push(b('mail-pret', o.pack_mail ? '📧 Renvoyer le mail « prêt »' : '📧 Envoyer le mail « prêt »'));
-  if (['relire', 'pret', 'valide'].includes(e.k)) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'));
+  if (['relire', 'pret', 'valide'].includes(e.k)) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'), b('verifier-lulu', '🔎 Vérifier les fichiers chez Lulu'));
+  if (o.calendrier && e.k === 'relire') sec.push(b('recomposer', '🔁 Recomposer les pages (sans IA)'));
   if (o.abonnement_id) sec.push(b('mois-suivant', '➕ Livre suivant'), b('arreter-abonnement', '⏹️ Arrêter l\'abonnement', 'danger'));
-  if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai')) sec.push(b('essai-apercu', '🧪 Essai aperçu (≈ 1 $)'), b('essai-brouillon', '🧪 Essai brouillon (≈ 0,5 $)'));
+  if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai') && !o.calendrier) sec.push(b('essai-apercu', '🧪 Essai aperçu (≈ 1 $)'), b('essai-brouillon', '🧪 Essai brouillon (≈ 0,5 $)'));
   if (e.k === 'relire') sec.push(b('relancer', '♻️ Refaire tout le livre', 'danger'));
   if (['expedie', 'bloque', 'archive'].includes(e.k) && o.job_id && o.erreur !== 'données effacées') sec.push(b('effacer', '🧹 Effacer les données', 'danger'));
   return { main, sec: sec.join('') };
@@ -142,7 +146,7 @@ function boutons(o, e) {
 
 function carte(o) {
   const e = etat(o), bt = boutons(o, e), a = o.adresse || {};
-  const titre = o.titre || (o.prenom ? `Le livre de ${esc(o.prenom)}` : 'Livre en préparation');
+  const titre = o.titre || (o.prenom ? `${o.calendrier ? 'Le calendrier' : 'Le livre'} de ${esc(o.prenom)}` : 'En préparation');
   const cov = o.vignette ? `<div class="cover"><img loading="lazy" src="/admin/vignette/${o.id}${Q}&v=${o.finalise ? 1 : 0}" alt=""></div>` : `<div class="cover">${e.k === 'fabrication' ? '🎨' : '📖'}</div>`;
   const bud = o.budget ? o.budget.total : null, pct = bud != null ? Math.min(100, bud / D.plafond * 100) : 0;
   const issues = (o.controle || []).length && e.k !== 'pret'
@@ -152,7 +156,7 @@ function carte(o) {
     + (o.job_id && o.statut !== 'attente_paiement' ? `<a href="/admin/archive/${o.id}${Q}">📦 dossier complet (zip, pour Claude)</a>` : '');
   return `<div class="book">${cov}<div>
     <div class="title">${esc(titre)}</div>
-    <div class="meta">${(o.formule || '').startsWith('essai') ? '🧪 ' : ''}${esc(FORMULE[o.formule] || o.formule)}${o.pack_total > 1 ? ` · livre ${o.numero}/${o.pack_total}` : ''}${o.volume_number ? ' · tome ' + o.volume_number : ''}${o.montant ? ' · ' + eur(o.montant) : ''} · ${day(o.cree)}</div>
+    <div class="meta">${(o.formule || '').startsWith('essai') ? '🧪 ' : ''}${esc(FORMULE[o.formule] || o.formule)}${o.calendrier ? (o.pack_total ? ` · avec ${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}, même colis` : '') : o.pack_total > 1 ? ` · livre ${o.numero}/${o.pack_total}` : ''}${!o.calendrier && o.pack_cal ? ' · + calendrier' : ''}${o.volume_number ? ' · tome ' + o.volume_number : ''}${o.montant ? ' · ' + eur(o.montant) : ''} · ${day(o.cree)}</div>
     <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>
     <div class="say">${e.say}</div>
     ${e.k === 'fabrication' ? `<div class="bar"><i style="width:${o.progression || 3}%"></i></div>` : ''}
@@ -237,7 +241,7 @@ function vueReglages() {
     <p class="meta" style="margin:0">Devis Lulu pour plusieurs fabrications (rigide, souple, agrafé…) et deux livraisons. Aucune commande, rien n'est payé.</p>
     <div class="acts"><button class="btn" onclick="comparer(this)">Comparer</button></div></div>
   <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">📅 Calendriers Lulu (test)</h3>
-    <p class="meta" style="margin:0">Demande des devis à Lulu pour savoir si l'API accepte les calendriers, avec quel code et à quel prix. Aucune commande.</p>
+    <p class="meta" style="margin:0">Code produit : <b>${esc(D.config.pod_calendrier || '')}</b> · fichiers ${D.config.calendrier_valide ? '<b style="color:var(--green)">validés par Lulu ✅</b>' : '<b style="color:var(--red)">pas encore validés</b> (bouton « 🔎 Vérifier les fichiers chez Lulu » sur un calendrier)'}.<br>Devis de test : aucune commande.</p>
     <div class="acts"><button class="btn" onclick="calendrier(this)">Tester</button></div></div>
   <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🖼️ Vignettes de l'accueil du site</h3>
     <p class="meta" style="margin:0">Illustrations des cartes univers et fêtes encore manquantes (une image par vignette).</p>
@@ -268,7 +272,12 @@ const eu = v => v == null || v === '' ? '—' : parseFloat(v).toFixed(2).replace
 const LIV = { MAIL: 'économique', PRIORITY_MAIL: 'prioritaire', GROUND: 'standard', EXPEDITED: 'express', EXPRESS: 'express' };
 function resultat(action, j) {
   const i = j.info || {};
-  if (action === 'cout') return { html: `<div>🏷️ <b>Prix Lulu ${i.livres > 1 ? `pour le colis de ${i.livres} livres` : 'pour ce livre'}</b> (livraison ${LIV[i.livraison] || i.livraison || ''})</div>
+  if (action === 'verifier-lulu') { const R = i.resultats || {}, L = k => R[k] ? `${esc(R[k].statut)}${R[k].pages ? ' · ' + R[k].pages + ' pages' : ''}${R[k].erreurs ? ' · ' + esc(JSON.stringify(R[k].erreurs)) : ''}` : '—';
+    return { cls: i.ok ? 'ok' : 'err', html: `🔎 <b>${i.ok ? 'Fichiers acceptés par Lulu' : i.en_cours ? 'Lulu vérifie encore : relance dans une minute' : 'Lulu signale un problème'}</b>
+      <table><tr><td>Intérieur</td><td class="r">${L('interior')}</td></tr><tr><td>Couverture</td><td class="r">${L('cover')}</td></tr></table>
+      ${i.ok && i.calendrier ? '<div class="meta">C\'est noté pour tous les calendriers : ils peuvent partir à l\'impression.</div>' : ''}` }; }
+  if (action === 'recomposer') return { cls: 'ok', html: '🔁 Pages recomposées : relis le calendrier.' };
+  if (action === 'cout') return { html: `<div>🏷️ <b>Prix Lulu ${i.livres + (i.calendriers || 0) > 1 ? `pour le colis (${i.livres ? i.livres + ' livre(s)' : ''}${i.livres && i.calendriers ? ' + ' : ''}${i.calendriers ? 'calendrier' : ''})` : i.calendriers ? 'pour ce calendrier' : 'pour ce livre'}</b> (livraison ${LIV[i.livraison] || i.livraison || ''})</div>
       <table><tr><td>Impression</td><td class="r">${eu(i.impression_ttc)}</td></tr><tr><td>Port</td><td class="r">${eu(i.port_ttc)}</td></tr>
       ${i.frais_ttc && parseFloat(i.frais_ttc) ? `<tr><td>Frais de traitement</td><td class="r">${eu(i.frais_ttc)}</td></tr>` : ''}
       <tr><td><b>Total TTC</b></td><td class="r big">${eu(i.total_ttc)}</td></tr></table>

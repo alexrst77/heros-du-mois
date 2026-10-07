@@ -112,3 +112,23 @@ Un livre = 2 à 4 appels texte + 13 images (planche, couverture, 9 scènes, 2 d�
 - **Limite Lulu** : pas de texte sur le dos en dessous de 81 pages (dos de 0,25 po à 24 pages). Le numéro est composé quand même,
   mais le fichier est marqué NON prêt à imprimer et l'envoi est bloqué. Quand l'imprimeur a validé par écrit : `DOS_NUMERO_VALIDE_IMPRIMEUR=1`.
 - Aperçus (`apercus/`) : couverture, couverture à plat, détail du dos, doubles pages, album sur l'étagère, tous tirés des PDF réels.
+
+## Calendrier mural (`calendrier.py`)
+
+- Produit : calendrier Lulu paysage 11 × 8,5 po (28 × 22 cm), spirale, 12 mois, 26 pages (couverture, image + grille × 12, 4e).
+  Code produit `LULU_CAL_POD` (défaut `1100X0850FCPRECO080CW444GXX`, accepté par l'API : ≈ 11,52 € d'impression + port).
+- Prix : 34,90 € seul + livraison 7,90 € (`PRIX_CALENDRIER`) ; 29,90 € ajouté à des livres (`PRIX_CALENDRIER_AJOUT`), même colis.
+- Création : `/creer?produit=calendrier` (mêmes avatars), ou case « Ajouter le calendrier » à l'étape commande des livres.
+  Le parent choisit le premier mois, les fêtes de sa famille et ses dates de famille (15 au plus).
+- Fabrication : mêmes portraits de référence que les livres (repris du cache), 13 illustrations sans texte (couverture + 12 mois,
+  `OPENAI_CAL_SIZE` 1792x1392), un contrôle visuel chacune, aucune régénération automatique ; plafond propre
+  `BUDGET_CALENDRIER_USD` (4 $ max). Le mois de l'anniversaire devient sa fête ; Noël, Pâques, Halloween, Hanoukka, Diwali,
+  Nouvel An chinois cochés remplacent la scène de saison de leur mois.
+- Tout le texte est composé par code : grilles (semaine du lundi), jours fériés du pays de livraison, fêtes des mères/pères,
+  changements d'heure, fêtes choisies, « Lou a 6 ans ! », dates de famille, couverture dorée, 4e avec les 12 vignettes.
+- Impression : les livres et le calendrier d'une commande partent dans UN travail Lulu (un colis). Avant le tout premier
+  calendrier : bouton admin « 🔎 Vérifier les fichiers chez Lulu » (outil de validation Lulu, aucune commande) ; une fois
+  accepté, c'est noté pour tous les calendriers. Commander un premier exemplaire de test reste conseillé (sens d'impression
+  des pages au dos des feuillets).
+- Admin : « 🔁 Recomposer les pages (sans IA) » refait grilles et PDF à partir des 13 images enregistrées.
+- Test : `python3 tests/test_calendrier.py` (OpenAI, Stripe, Lulu simulés).

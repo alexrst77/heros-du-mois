@@ -19,7 +19,12 @@ DATA = Path(os.getenv("DATA_DIR") or ROOT / "data"); DATA.mkdir(parents=True, ex
 PLAFOND = min(3.0, float(os.getenv("BUDGET_LIVRE_USD", "3")))     # jamais au-dessus de 3 USD, même par variable d'environnement
 MARGE = 1.15                                                       # marge de sécurité sur la borne haute du livre
 DB = Path(os.getenv("DATA_DIR") or ROOT / "data") / "commandes.sqlite"
-LIVRE = contextvars.ContextVar("livre_budget", default=None)        # identifiant stable du livre en cours (commande)
+LIVRE = contextvars.ContextVar("livre_budget", default=None)
+PLAFONDS = {}                    # plafond propre à certains produits (calendrier : 13 images), par identifiant de commande
+
+
+def plafond_de(livre):
+    return PLAFONDS.get(livre, PLAFOND)        # identifiant stable du livre en cours (commande)
 _lock = threading.Lock()
 
 
@@ -156,9 +161,9 @@ def reserver(livre, etape, modele, maximum, detail=None):
             c.execute("begin immediate")
             deja = sum((row["reel"] if row["statut"] == "regle" else row["reserve"]) or 0 for row in
                        c.execute("select statut, reserve, reel from appels_api where livre=? and statut in ('regle','reserve','incertain')", (livre,)))
-            if deja + maximum > PLAFOND + 1e-9:
+            if deja + maximum > plafond_de(livre) + 1e-9:
                 c.execute("rollback")
-                raise BudgetLivreError(f"Plafond du livre : {deja:.3f} $ engagés + {maximum:.3f} $ pour « {etape} » dépasseraient {PLAFOND:.2f} $")
+                raise BudgetLivreError(f"Plafond du livre : {deja:.3f} $ engagés + {maximum:.3f} $ pour « {etape} » dépasseraient {plafond_de(livre):.2f} $")
             cur = c.execute("insert into appels_api (livre, etape, modele, statut, reserve, cree, maj, detail) values (?,?,?,?,?,?,?,?)",
                             (livre, etape, modele, "reserve", maximum, time.time(), time.time(), json.dumps(detail or {}, ensure_ascii=False)))
             c.execute("commit")
@@ -252,9 +257,9 @@ def verifier_lancement(plan, livre):
         raise BudgetLivreError("Fabrication bloquée : " + " ; ".join(st["manque"]))
     lignes, total = borne_livre(plan)
     deja = depense(livre)["total"]
-    if deja + total > PLAFOND:
+    if deja + total > plafond_de(livre):
         raise BudgetLivreError(f"Borne haute du livre {total:.2f} $ (marge {int((MARGE - 1) * 100)} % comprise)"
-                               + (f" + {deja:.2f} $ déjà engagés" if deja else "") + f" > plafond {PLAFOND:.2f} $ : fabrication refusée")
+                               + (f" + {deja:.2f} $ déjà engagés" if deja else "") + f" > plafond {plafond_de(livre):.2f} $ : fabrication refusée")
     return lignes, total
 
 

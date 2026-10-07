@@ -79,13 +79,33 @@ def cover_dimensions(pages, pod=None):
 
 
 def cost(pages, addr, email, pod=None, shipping=None, quantite=1):
+    return cost_lignes([(pages, pod or POD_PACKAGE, quantite)], addr, email, shipping)
+
+
+def cost_lignes(lignes, addr, email, shipping=None):
+    """Devis d'UN colis pouvant mêler livres et calendrier : lignes = [(pages, code POD, quantité)]."""
+    lignes = [l for l in lignes if l[2] > 0]
     r = api("POST", "/print-job-cost-calculations/", {
-        "line_items": [{"page_count": pages, "pod_package_id": pod or POD_PACKAGE, "quantity": quantite}],
+        "line_items": [{"page_count": p, "pod_package_id": pod, "quantity": q} for p, pod, q in lignes],
         "shipping_address": address(addr, email), "shipping_option": shipping or SHIPPING})
-    li = (r.get("line_item_costs") or [{}])[0]
+    lis = r.get("line_item_costs") or [{}]
+    somme = lambda k: round(sum(float(x.get(k) or 0) for x in lis), 2)
     return {"total_ttc": r.get("total_cost_incl_tax"), "total_ht": r.get("total_cost_excl_tax"), "devise": r.get("currency"),
-            "impression_ttc": li.get("total_cost_incl_tax"), "port_ttc": (r.get("shipping_cost") or {}).get("total_cost_incl_tax"),
-            "frais_ttc": (r.get("fulfillment_cost") or {}).get("total_cost_incl_tax"), "livraison": shipping or SHIPPING, "quantite": quantite}
+            "impression_ttc": somme("total_cost_incl_tax"), "port_ttc": (r.get("shipping_cost") or {}).get("total_cost_incl_tax"),
+            "frais_ttc": (r.get("fulfillment_cost") or {}).get("total_cost_incl_tax"), "livraison": shipping or SHIPPING,
+            "quantite": sum(l[2] for l in lignes)}
+
+
+def valider(kind, url, pod, pages=None):
+    """Outil de validation des fichiers de Lulu (aucune commande) : kind = interior | cover. Renvoie l'identifiant à suivre."""
+    data = {"source_url": url, "pod_package_id": pod}
+    if kind == "cover":
+        data["interior_page_count"] = pages
+    return api("POST", f"/validate-{kind}/", data)
+
+
+def etat_validation(kind, vid):
+    return api("GET", f"/validate-{kind}/{vid}/")
 
 
 VARIANTES = [   # (code POD, description en clair) : même format carré 21,6 cm, 24 pages, couleur
@@ -161,8 +181,8 @@ def create_print_job(order_id, items, addr, email, pod=None, shipping=None):
     return api("POST", "/print-jobs/", {
         "contact_email": os.getenv("LULU_CONTACT_EMAIL") or email,
         "external_id": order_id,
-        "line_items": [{"external_id": it["id"], "title": it["titre"][:250], "quantity": 1, "pod_package_id": pod,
-                        "printable_normalization": {"pod_package_id": pod, "cover": {"source_url": it["couverture"]},
+        "line_items": [{"external_id": it["id"], "title": it["titre"][:250], "quantity": 1, "pod_package_id": it.get("pod") or pod,
+                        "printable_normalization": {"pod_package_id": it.get("pod") or pod, "cover": {"source_url": it["couverture"]},
                                                     "interior": {"source_url": it["interieur"]}}} for it in items],
         "shipping_address": address(addr, email),
         "shipping_level": shipping or SHIPPING})

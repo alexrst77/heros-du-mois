@@ -9,6 +9,7 @@ from xml.sax.saxutils import escape
 from flask import Blueprint, request, jsonify, send_file, abort, redirect, Response
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
+import calendrier
 
 bp = Blueprint("boutique", __name__)
 A = None                      # module app (injecté par setup)
@@ -110,6 +111,15 @@ def order_create():
         if formule == "fetes":
             return jsonify(erreur="Indiquez la date d'anniversaire de l'enfant, ou choisissez une autre fête."), 400
         fetes.remove("anniversaire"); form["fetes"] = ",".join(fetes)         # date facultative : pas de livre d'anniversaire
+    cal = c.get("calendrier") if isinstance(c.get("calendrier"), dict) else {}
+    avec_cal = formule == "calendrier" or bool(cal.get("actif"))           # calendrier seul, ou ajouté aux livres
+    if avec_cal:
+        import datetime
+        debut = str(cal.get("debut") or calendrier.debut_par_defaut())
+        if debut not in calendrier.debuts_possibles():
+            return jsonify(erreur="Choisissez le premier mois du calendrier."), 400
+        form["calendrier"] = {"debut": debut, "dates": calendrier.nettoyer_dates(cal.get("dates")), "pays": addr["pays"],
+                              "commande_le": datetime.date.today().isoformat()}
 
     oid = uuid.uuid4().hex[:12]
     folder = STORE / oid; folder.mkdir(parents=True)
@@ -118,11 +128,11 @@ def order_create():
     (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {k: p.name for k, p in guides.items()},
                                                    "apercus": {k: p.name for k, p in previews.items()}}, ensure_ascii=False), encoding="utf-8")
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
-              montant=paiement.total(formule, addr.get("pays")), origine=oid, numero=1)
+              montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal), origine=oid, numero=0 if formule == "calendrier" else 1)
     if not paiement.configured():
         return jsonify(id=oid, url=f"/creer?commande={oid}&test=1")
     try:
-        sid, url = paiement.checkout(oid, formule, email, base_url(), pays=addr.get("pays"))
+        sid, url = paiement.checkout(oid, formule, email, base_url(), pays=addr.get("pays"), calendrier=paiement.avec_calendrier(formule, avec_cal))
     except paiement.StripeError as e:
         db.update(oid, statut="erreur", erreur=str(e))
         return jsonify(erreur=str(e)), 502
@@ -152,14 +162,21 @@ def confirm_paid(oid, stripe_sub=None):
 
 
 def livres_du_pack(origine):
-    """Commandes d'un même pack (hors essais), dans l'ordre des numéros."""
-    return sorted([x for x in db.lister(1000) if x["origine"] == origine and not (x["formule"] or "").startswith("essai")],
-                  key=lambda x: x["numero"] or 1)
+    """Livres d'une même commande (hors essais et hors calendrier), dans l'ordre des numéros."""
+    return sorted([x for x in db.lister(1000) if x["origine"] == origine and not (x["formule"] or "").startswith("essai")
+                   and x["formule"] != "calendrier"], key=lambda x: x["numero"] or 1)
+
+
+def calendriers_du_pack(origine):
+    """Calendrier(s) de la commande : ils partent dans le même colis que les livres."""
+    return [x for x in db.lister(1000) if x["origine"] == origine and x["formule"] == "calendrier"]
 
 
 def creer_pack(oid):
     """Crée les livres 2..N du pack (une fois) et attribue leurs numéros de collection dans l'ordre. Renvoie les ids à fabriquer."""
     o = db.get(oid)
+    if o["formule"] == "calendrier":                              # calendrier seul : la commande est le calendrier
+        return [oid]
     f = paiement.FORMULES.get(o["formule"]) or {"livres": 1}
     n = f["livres"]
     form, _ = load_book(oid)
@@ -187,6 +204,11 @@ def creer_pack(oid):
         ids.append(cid)
     for cid in ids:                                              # numéros de collection 1, 2, 3… dans l'ordre du pack
         db.assign_volume(cid)
+    if form.get("calendrier"):                                   # calendrier ajouté aux livres : même colis
+        cid = f"{oid}-cal"
+        if not db.get(cid):
+            db.create(id=cid, formule="calendrier", email=o["email"], adresse=o["adresse"], statut="payee", montant=0, origine=oid, numero=0)
+        ids.append(cid)
     return ids
 
 
@@ -225,7 +247,9 @@ def _start_book(oid, auto=False, reprise=False):
     essai = o["formule"].split("_", 1)[1] if (o["formule"] or "").startswith("essai_") else None
     o = db.get(oid)
     form, refs = load_book(o["origine"])
-    if o["origine"] != oid:                       # livre du mois suivant : nouveau thème, nouvel univers
+    if o["formule"] == "calendrier":              # calendrier mural : mêmes avatars, sa propre chaîne (calendrier.py)
+        form = dict(form, produit="calendrier")
+    elif o["origine"] != oid:                     # livre du mois suivant : nouveau thème, nouvel univers
         n = o["numero"]
         form = dict(form, numero=f"{n:02d}", theme=THEMES[(THEMES.index(form["theme"]) + n - 1) % len(THEMES)] if form.get("theme") in THEMES else THEMES[n % len(THEMES)],
                     univers=UNIVERS[(UNIVERS.index(form["univers"]) + n - 1) % len(UNIVERS)] if form.get("univers") in UNIVERS else UNIVERS[n % len(UNIVERS)])
@@ -237,15 +261,16 @@ def _start_book(oid, auto=False, reprise=False):
             form["univers"] = choix["univers"]
     else:
         form = dict(form, numero=f"{o['numero']:02d}")
-    if o.get("univers"):                          # livre de fête : univers imposé
+    if o.get("univers") and o["formule"] != "calendrier":   # livre de fête : univers imposé
         form = dict(form, univers=o["univers"])
-    if U.cle_de(form.get("univers")) == "anniversaire":   # il a un an de plus le jour J
+    if o["formule"] != "calendrier" and U.cle_de(form.get("univers")) == "anniversaire":   # il a un an de plus le jour J
         try:
             depuis = int((time.time() - db.get(o["origine"] or oid)["cree"]) // (365.25 * 86400))
             form = dict(form, age=str(int(form["age"]) + 1 + depuis))
         except (ValueError, TypeError, KeyError):
             pass
-    form = dict(form, volume_number=db.assign_volume(oid))      # volumeNumber : attribué une fois, jamais changé
+    if o["formule"] != "calendrier":
+        form = dict(form, volume_number=db.assign_volume(oid))  # volumeNumber : attribué une fois, jamais changé
     job_id = o["job_id"] or oid
     if not reprise and (A.OUT / job_id).exists() and any((A.OUT / job_id).glob("*.png")):
         # « refaire » : l'ancien dossier est gardé à part, la nouvelle version a son propre dossier, le MÊME budget (la commande)
@@ -292,7 +317,11 @@ def order_status(oid):
                 o = db.get(oid)
         except paiement.StripeError as e:
             log(f"vérification Stripe {oid} : {e}")
-    return jsonify(id=oid, statut=o["statut"], formule=o["formule"], job=o["job_id"], titre=o["titre"],
+    try:
+        avec_cal = o["formule"] == "calendrier" or bool(load_book(o["origine"] or oid)[0].get("calendrier"))
+    except Exception:
+        avec_cal = False
+    return jsonify(id=oid, statut=o["statut"], formule=o["formule"], job=o["job_id"], titre=o["titre"], calendrier=avec_cal,
                    test=not paiement.configured())
 
 
@@ -389,10 +418,19 @@ def purge_old(days=int(os.getenv("PURGE_JOURS", "30"))):
 
 
 # ------------------------------------------------------------------ impression
+def est_calendrier(folder):
+    return (Path(folder) / "calendrier.json").exists()
+
+
 def build_cover(oid):
     """Couverture Lulu en une pièce (4e | tranche | 1re) aux dimensions données par Lulu pour 24 pages."""
     o = db.get(oid)
     folder = A.OUT / o["job_id"]
+    if est_calendrier(folder):                    # calendrier : couverture aux dimensions Lulu du calendrier
+        dims = calendrier.dimensions_couverture()
+        info = calendrier.couverture_impression(folder, dims)
+        info["dimensions_lulu"] = bool(dims)
+        return info
     if (folder / "livre.json").exists() and not (folder / "histoire.json").exists():
         # livre du procédé actuel : couverture à plat recomposée par code à partir des fichiers enregistrés (aucun appel IA)
         book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
@@ -424,7 +462,13 @@ def _verifier_imprimable(b):
     if b["statut"] not in ("a_verifier", "erreur") or not b["job_id"]:
         raise RuntimeError(f"livre n°{b['numero']} : statut {b['statut']}, pas prêt")
     folder = A.OUT / b["job_id"]
-    if (folder / "livre.json").exists() and not (folder / "histoire.json").exists():
+    if est_calendrier(folder):
+        if not fabrication.est_finalise(folder):
+            raise RuntimeError("calendrier non finalisé (à relire) : valide-le avant l'impression.")
+        info = build_cover(b["id"])
+        if not info["pret_a_imprimer"]:
+            raise RuntimeError("Calendrier NON prêt à imprimer : " + " ".join(info["problemes"]))
+    elif (folder / "livre.json").exists() and not (folder / "histoire.json").exists():
         if not fabrication.est_finalise(folder):
             raise RuntimeError(f"livre n°{b['numero']} non finalisé (à relire) : valide-le avant l'impression.")
         info = build_cover(b["id"])
@@ -437,44 +481,88 @@ def _verifier_imprimable(b):
 
 
 def send_to_print(oid):
-    """Envoie TOUT le pack chez l'imprimeur en un seul travail (un seul colis). Refusé tant qu'un livre du pack n'est pas prêt."""
+    """Envoie TOUTE la commande (livres + calendrier) chez l'imprimeur en un seul travail (un seul colis).
+    Refusé tant qu'un livre ou le calendrier n'est pas prêt."""
     o = db.get(oid)
     if (o["formule"] or "").startswith("essai"):
         raise RuntimeError("livre d'essai : pas d'impression")
     origine = o["origine"] or oid
-    livres = livres_du_pack(origine)
-    attendus = (paiement.FORMULES.get(db.get(origine)["formule"]) or {"livres": len(livres)})["livres"]
+    livres, cals = livres_du_pack(origine), calendriers_du_pack(origine)
+    tete = db.get(origine)
+    attendus = (paiement.FORMULES.get(tete["formule"]) or {"livres": len(livres)})["livres"]
     if len(livres) < attendus:
         raise RuntimeError(f"pack incomplet : {len(livres)}/{attendus} livres créés")
-    if any(b["statut"] in ("envoyee_impression", "expediee") for b in livres):
-        raise RuntimeError("ce pack est déjà chez l'imprimeur")
-    pas_prets = [b for b in livres if b["statut"] not in ("a_verifier", "erreur") or not b["job_id"]
-                 or ((A.OUT / b["job_id"] / "livre.json").exists() and not fabrication.est_finalise(A.OUT / b["job_id"]))]
+    tout = livres + cals
+    if any(b["statut"] in ("envoyee_impression", "expediee") for b in tout):
+        raise RuntimeError("cette commande est déjà chez l'imprimeur")
+    pas_prets = [b for b in tout if b["statut"] not in ("a_verifier", "erreur") or not b["job_id"]
+                 or (((A.OUT / b["job_id"] / "livre.json").exists() or est_calendrier(A.OUT / b["job_id"]))
+                     and not fabrication.est_finalise(A.OUT / b["job_id"]))]
     if pas_prets:
-        raise RuntimeError("Livre non finalisé (à relire) : valide-le avant l'impression." if len(livres) == 1 else
-                           f"{len(livres) - len(pas_prets)}/{len(livres)} livres prêts : le colis part quand tous sont finalisés (validés)")
+        raise RuntimeError("Non finalisé (à relire) : valide-le avant l'impression." if len(tout) == 1 else
+                           f"{len(tout) - len(pas_prets)}/{len(tout)} prêts : le colis part quand tout est finalisé (validé)")
     if not lulu.configured():
         raise RuntimeError("Clés Lulu absentes (.env : LULU_CLIENT_KEY, LULU_CLIENT_SECRET).")
     pub = os.getenv("PUBLIC_URL", "").rstrip("/")
     if not pub.startswith("https://"):
         raise RuntimeError("Lulu doit télécharger les PDF : renseigne PUBLIC_URL (adresse https publique du site).")
-    for b in livres:
+    for b in tout:
         _verifier_imprimable(b)
     items = []
-    for b in livres:
+    for b in tout:
         jeton = b["jeton"] or secrets.token_urlsafe(24)
         db.update(b["id"], jeton=jeton)
-        items.append({"id": b["id"], "titre": b["titre"] or "Mon Héros du Mois",
-                      "interieur": f"{pub}/impression/{b['id']}/{jeton}/interieur.pdf", "couverture": f"{pub}/impression/{b['id']}/{jeton}/couverture.pdf"})
-    tete = db.get(origine)
-    cost = lulu.cost(24, tete["adresse"], tete["email"], quantite=len(items))
+        it = {"id": b["id"], "titre": b["titre"] or "Mon Héros du Mois",
+              "interieur": f"{pub}/impression/{b['id']}/{jeton}/interieur.pdf", "couverture": f"{pub}/impression/{b['id']}/{jeton}/couverture.pdf"}
+        if b["formule"] == "calendrier":
+            it["pod"] = calendrier.POD
+        items.append(it)
+    cost = lulu.cost_lignes([(24, lulu.POD_PACKAGE, len(livres)), (calendrier.PAGES, calendrier.POD, len(cals))], tete["adresse"], tete["email"])
     job = lulu.create_print_job(origine, items, tete["adresse"], tete["email"])
     st = (job.get("status") or {}).get("name")
-    for b in livres:
+    quoi = (f"{len(livres)} livre(s)" if livres else "") + (" + " if livres and cals else "") + ("calendrier" if cals else "")
+    for b in tout:
         db.update(b["id"], statut="envoyee_impression", lulu_id=str(job.get("id")), lulu_statut=st,
-                  lulu_cout=f"{cost['total_ttc']} {cost['devise']} (colis de {len(items)})" if b["id"] == origine else None, erreur=None)
-    log(f"pack {origine} ({len(items)} livre(s)) envoyé à Lulu ({lulu.env()}) : travail {job.get('id')}, {cost['total_ttc']} {cost['devise']}")
+                  lulu_cout=f"{cost['total_ttc']} {cost['devise']} (colis : {quoi})" if b["id"] == origine else None, erreur=None)
+    log(f"commande {origine} ({quoi}) envoyée à Lulu ({lulu.env()}) : travail {job.get('id')}, {cost['total_ttc']} {cost['devise']}")
     return job
+
+
+def verifier_fichiers_lulu(oid, attente=55):
+    """Outil de validation de Lulu sur les fichiers RÉELS de ce livre ou de ce calendrier (aucune commande, aucun paiement).
+    Calendrier accepté (intérieur et couverture) : noté une fois pour toutes pour ce code produit."""
+    o = db.get(oid)
+    folder = A.OUT / (o["job_id"] or "_")
+    if not (folder / "impression_interieur.pdf").exists() or not (folder / "impression_couverture.pdf").exists():
+        raise RuntimeError("fichiers d'impression absents")
+    if not lulu.configured():
+        raise RuntimeError("Clés Lulu absentes")
+    pub = os.getenv("PUBLIC_URL", "").rstrip("/")
+    if not pub.startswith("https://"):
+        raise RuntimeError("Lulu doit télécharger les PDF : renseigne PUBLIC_URL (adresse https publique du site).")
+    cal = est_calendrier(folder)
+    if cal:
+        build_cover(oid)
+    jeton = o["jeton"] or secrets.token_urlsafe(24)
+    db.update(oid, jeton=jeton)
+    pod, pages = (calendrier.POD, calendrier.PAGES) if cal else (lulu.POD_PACKAGE, fabrication.PAGES_IMPRESSION)
+    ids = {"interior": lulu.valider("interior", f"{pub}/impression/{oid}/{jeton}/interieur.pdf", pod).get("id"),
+           "cover": lulu.valider("cover", f"{pub}/impression/{oid}/{jeton}/couverture.pdf", pod, pages).get("id")}
+    res, t0 = {}, time.time()
+    while time.time() - t0 < attente:
+        time.sleep(5)
+        for k, vid in ids.items():
+            if res.get(k, {}).get("status") not in ("VALIDATED", "NORMALIZED", "ERROR"):
+                res[k] = lulu.etat_validation(k, vid)
+        if all(r.get("status") in ("VALIDATED", "NORMALIZED", "ERROR") for r in res.values()) and len(res) == 2:
+            break
+    ok = len(res) == 2 and all(r.get("status") in ("VALIDATED", "NORMALIZED") for r in res.values())
+    if ok and cal:
+        (budget.DATA / "lulu_calendrier_valide.json").write_text(json.dumps({"pod": calendrier.POD, "le": time.strftime("%Y-%m-%d %H:%M"),
+                                                                             "commande": oid, "resultats": res}, ensure_ascii=False))
+    out = {k: {"statut": r.get("status") or "en cours", "pages": r.get("page_count"), "erreurs": r.get("errors") or r.get("error")}
+           for k, r in res.items()}
+    return {"ok": ok, "calendrier": cal, "pod": pod, "resultats": out, "en_cours": not ok and any(v["statut"] == "en cours" for v in out.values())}
 
 
 def refresh_print(oid):
@@ -539,7 +627,8 @@ def admin_list():
         except Exception:
             r["budget"] = None
         r["refusees"] = folder.exists() and any(json.loads(f.read_text(encoding="utf-8")).get("bloquants")
-                                                for f in folder.glob("spread-*.json"))
+                                                for f in list(folder.glob("spread-*.json")) + list(folder.glob("cal-*.json")))
+        r["calendrier"] = r["formule"] == "calendrier"
         try:
             r["prenom"] = json.loads((STORE / r["origine"] / "livre.json").read_text(encoding="utf-8"))["form"].get("prenom")
         except Exception:
@@ -552,11 +641,14 @@ def admin_list():
         g = packs.get(r["origine"] or r["id"]) or [r]
         tete = next((x for x in g if x["id"] == (r["origine"] or r["id"])), r)
         r["pack_total"] = (paiement.FORMULES.get(tete["formule"]) or {"livres": len(g)})["livres"]
-        r["pack_prets"] = sum(1 for x in g if x.get("finalise"))
+        r["pack_prets"] = sum(1 for x in g if x.get("finalise") and x["formule"] != "calendrier")
+        r["pack_cal"] = sum(1 for x in g if x["formule"] == "calendrier")
+        r["pack_cal_prets"] = sum(1 for x in g if x["formule"] == "calendrier" and x.get("finalise"))
         r["pack_mail"] = tete.get("mail_pret")
     return jsonify(plafond=budget.PLAFOND, commandes=rows, abonnements=db.subs(),
                    config={"stripe": "live" if paiement.live() else "test" if paiement.configured() else "simulé",
                            "lulu": lulu.env() if lulu.configured() else "non configuré", "pod": lulu.POD_PACKAGE,
+                           "pod_calendrier": calendrier.POD, "calendrier_valide": calendrier.fichiers_valides(),
                            "public_url": os.getenv("PUBLIC_URL", ""), "auto_impression": auto_print(),
                            "depense_jour": A.generator.spent_today(), "budget_jour": A.generator.BUDGET_JOUR})
 
@@ -722,8 +814,18 @@ def admin_action(oid, action):
         if action == "couverture":
             return jsonify(ok=True, info=build_cover(oid))
         if action == "cout":
-            n = len(livres_du_pack(o["origine"] or oid)) or 1
-            return jsonify(ok=True, info=dict(lulu.cost(24, o["adresse"], o["email"], quantite=n), livres=n))
+            n, k = len(livres_du_pack(o["origine"] or oid)), len(calendriers_du_pack(o["origine"] or oid))
+            return jsonify(ok=True, info=dict(lulu.cost_lignes([(24, lulu.POD_PACKAGE, n), (calendrier.PAGES, calendrier.POD, k)], o["adresse"], o["email"]),
+                                              livres=n, calendriers=k))
+        if action == "verifier-lulu":
+            return jsonify(ok=True, info=verifier_fichiers_lulu(oid))
+        if action == "recomposer":                # calendrier : pages recomposées à partir des 13 images enregistrées (aucun appel IA)
+            folder = A.OUT / (o["job_id"] or "_")
+            if not est_calendrier(folder):
+                raise RuntimeError("seulement pour un calendrier")
+            form, _ = load_book(o["origine"])
+            fab = calendrier.recomposer(folder, form)
+            return jsonify(ok=True, info={"pdf": fab["pdf"]})
         if action == "imprimer":
             job = send_to_print(oid)
             return jsonify(ok=True, info={"lulu": job.get("id"), "env": lulu.env()})
@@ -740,7 +842,8 @@ def admin_action(oid, action):
             start_book(oid, auto=True, reprise=o["statut"] != "a_verifier")
             return jsonify(ok=True)
         if action == "finaliser":                 # après relecture humaine d'un livre « à relire » : fige les fichiers, aucun appel IA
-            man = procede.finaliser_apres_relecture(A.OUT / (o["job_id"] or "_"))
+            folder = A.OUT / (o["job_id"] or "_")
+            man = (calendrier.finaliser_apres_relecture(folder) if est_calendrier(folder) else procede.finaliser_apres_relecture(folder))
             _mail_pret_async(oid)
             return jsonify(ok=True, info={"finalise_le": man["finalise_le"], "fichiers": len(man["fichiers"])})
         if action == "refaire-refusees":         # décision humaine : refaire les illustrations refusées, dans les 3 $ du livre
@@ -752,7 +855,7 @@ def admin_action(oid, action):
             if A.JOBS.get(o["job_id"] or "", {}).get("etat") in ("en_cours", "validation"):
                 raise RuntimeError("fabrication en cours")
             arch = folder / "refusees" / time.strftime("%Y%m%d-%H%M%S"); n = 0
-            for rp in folder.glob("spread-*.json"):
+            for rp in list(folder.glob("spread-*.json")) + list(folder.glob("cal-*.json")):
                 if json.loads(rp.read_text(encoding="utf-8")).get("bloquants"):
                     arch.mkdir(parents=True, exist_ok=True)
                     for f in (rp, rp.with_suffix(".png")):
@@ -781,6 +884,8 @@ def admin_action(oid, action):
         if action == "valider-paiement-test" and not paiement.configured():
             confirm_paid(oid)
             return jsonify(ok=True)
+        if action in ("essai-brouillon", "essai-apercu") and o["formule"] == "calendrier":
+            raise RuntimeError("pas d'essai pour un calendrier")
         if action in ("essai-brouillon", "essai-apercu"):
             # livre d'essai à partir de la même configuration, sans paiement ni impression
             tid = uuid.uuid4().hex[:12]
@@ -894,10 +999,10 @@ def mail_livre_pret(oid):
     tete = db.get(origine) or o
     if (tete["formule"] or "").startswith("essai") or not tete.get("email"):
         return False
-    livres = livres_du_pack(origine)
+    livres, cals = livres_du_pack(origine), calendriers_du_pack(origine)
     attendus = (paiement.FORMULES.get(tete["formule"]) or {"livres": 1})["livres"]
-    if len(livres) < attendus or not all(b["job_id"] and fabrication.est_finalise(A.OUT / b["job_id"]) for b in livres):
-        return False                                      # le pack n'est pas encore complet : le mail part avec le dernier livre
+    if len(livres) < attendus or not all(b["job_id"] and fabrication.est_finalise(A.OUT / b["job_id"]) for b in livres + cals):
+        return False                                      # la commande n'est pas encore complète : le mail part avec le dernier
     if not mail_configure():
         log(f"commande {origine} : mail « livre prêt » non envoyé (envoi de mails non configuré)")
         return False
@@ -912,7 +1017,7 @@ def mail_livre_pret(oid):
         d1 = max(_jours_ouvres(tete["cree"], 7), _jours_ouvres(now, 5)); d2 = max(_jours_ouvres(tete["cree"], 15), _jours_ouvres(now, 10))
         cadeau_de = form.get("cadeau_de")
         fiches, images, urls = [], {}, {}
-        for i, b in enumerate(livres):
+        for i, b in enumerate(livres + cals):
             folder = A.OUT / b["job_id"]
             man = json.loads((folder / "final.json").read_text(encoding="utf-8"))
             src = folder / "apercus" / "couverture.png"
@@ -923,10 +1028,12 @@ def mail_livre_pret(oid):
             if img.exists():
                 images[cid] = img; urls[cid] = f"{site}/api/livres/{b['job_id']}/apercu/couverture.png"
             fiches.append({"titre": man.get("titre") or b.get("titre") or "son livre", "n": man.get("volumeNumber") or b.get("volume_number") or i + 1,
-                           "cid": cid if img.exists() else None})
+                           "cid": cid if img.exists() else None, "cal": b["formule"] == "calendrier"})
         un = len(fiches) == 1
-        titre_mail = f"Le livre de {prenom} est prêt" if un else f"Les {len(fiches)} livres de {prenom} sont prêts"
-        texte = (f"Bonjour,\n\n{titre_mail} :\n" + "\n".join(f"– « {f['titre']} » (livre n° {f['n']})" for f in fiches) +
+        nl = len(livres)
+        quoi = (("le livre" if nl == 1 else f"les {nl} livres") if nl else "") + (" et le calendrier" if nl and cals else "le calendrier" if cals else "")
+        titre_mail = (quoi[0].upper() + quoi[1:] + f" de {prenom} " + ("est prêt" if un else "sont prêts"))
+        texte = (f"Bonjour,\n\n{titre_mail} :\n" + "\n".join(f"– « {f['titre']} »" + ("" if f["cal"] else f" (livre n° {f['n']})") for f in fiches) +
                  f"\n\n{'Il a été relu et part' if un else 'Ils ont été relus et partent'} maintenant à l'impression, dans un seul colis. "
                  f"Livraison estimée entre le {_date_fr(d1)} et le {_date_fr(d2)}.\n\nUne question ? Répondez simplement à ce mail.\n\n"
                  f"À très vite,\nL'équipe Mon Héros du Mois\n{site}")
@@ -935,12 +1042,13 @@ def mail_livre_pret(oid):
             visuels = (f'<img src="cid:{f["cid"]}" alt="" width="420" style="display:block;margin:0 auto 18px;width:100%;max-width:420px;border-radius:10px;'
                        f'box-shadow:0 8px 24px rgba(31,37,87,.25)">' if f["cid"] else "") + \
                       f'<p style="font-size:19px;text-align:center;margin:0 0 4px"><b>« {escape(f["titre"])} »</b></p>' \
-                      f'<p style="font:14px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 22px">Livre n° {f["n"]} de sa collection' \
+                      f'<p style="font:14px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 22px">' \
+                      f'{"Calendrier mural · 12 mois illustrés" if f["cal"] else "Livre n° " + str(f["n"]) + " de sa collection"}' \
                       f'{(" · offert par " + escape(cadeau_de)) if cadeau_de else ""}</p>'
         else:
             cases = "".join(f'<td style="width:50%;padding:6px;vertical-align:top;text-align:center">'
                             + (f'<img src="cid:{f["cid"]}" alt="" width="250" style="width:100%;max-width:250px;border-radius:8px;box-shadow:0 6px 16px rgba(31,37,87,.2)">' if f["cid"] else "")
-                            + f'<div style="font:600 13px system-ui,sans-serif;margin-top:6px">n° {f["n"]} · {escape(f["titre"])}</div></td>'
+                            + f'<div style="font:600 13px system-ui,sans-serif;margin-top:6px">{"📅" if f["cal"] else "n° " + str(f["n"]) + " ·"} {escape(f["titre"])}</div></td>'
                             + ("</tr><tr>" if i % 2 == 1 else "") for i, f in enumerate(fiches))
             visuels = (f'<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 18px"><tr>{cases}</tr></table>'
                        + (f'<p style="font:14px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 22px">Offert par {escape(cadeau_de)}</p>' if cadeau_de else ""))
@@ -950,8 +1058,8 @@ def mail_livre_pret(oid):
  <h1 style="font-size:26px;text-align:center;margin:0 0 18px">{escape(titre_mail)}&nbsp;✨</h1>
  {visuels}
  <div style="background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.5 system-ui,sans-serif">
-  <p style="margin:0 0 8px">✅ {'Le livre a été créé et relu' if un else f'Les {len(fiches)} livres ont été créés et relus'} avec soin.</p>
-  <p style="margin:0 0 8px">🖨️ {'Il part' if un else 'Ils partent'} maintenant à l'impression (couverture rigide), dans un seul colis.</p>
+  <p style="margin:0 0 8px">✅ {escape(quoi[0].upper() + quoi[1:])} {'a été créé et relu' if un else 'ont été créés et relus'} avec soin.</p>
+  <p style="margin:0 0 8px">🖨️ {'Il part' if un else 'Ils partent'} maintenant à l'impression, dans un seul colis.</p>
   <p style="margin:0">📦 Livraison estimée <b>entre le {_date_fr(d1)} et le {_date_fr(d2)}</b>.</p>
  </div>
  <p style="font:14px system-ui,sans-serif;color:#6B6F8E;text-align:center;margin:22px 0 0">Une question&nbsp;? Répondez simplement à ce mail.<br><a href="{site}" style="color:#3D6BD8">{site.replace('https://', '')}</a></p>
