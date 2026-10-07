@@ -4,136 +4,300 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
 <link rel="apple-touch-icon" href="/static/marque/apple-touch-icon.png">
-<title>Commandes – Mon Héros du Mois</title>
+<title>Atelier – Mon Héros du Mois</title>
 <style>
-  :root { --bg:#0F2A37; --card:#16384A; --line:#2A5266; --cream:#FFF4E0; --muted:#A9C1C9; --gold:#F2CF7E; --ok:#7FD3A2; --err:#FF9B8A; }
-  body { margin:0; background:var(--bg); color:var(--cream); font:14px/1.45 system-ui, sans-serif; }
-  .wrap { max-width:1200px; margin:0 auto; padding:20px 16px 60px; }
-  h1 { font:600 24px Georgia, serif; margin:0 0 4px; } h2 { font:600 17px Georgia, serif; margin:28px 0 10px; }
-  .cfg { color:var(--muted); margin-bottom:16px; } .cfg b { color:var(--cream); }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px; }
-  .top { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline; }
-  .st { padding:2px 10px; border-radius:999px; font-weight:600; font-size:12px; background:#24495B; }
-  .st.a_verifier { background:var(--gold); color:#1B2A2E; } .st.erreur { background:var(--err); color:#1B2A2E; }
-  .st.expediee, .st.envoyee_impression { background:var(--ok); color:#1B2A2E; }
-  .muted { color:var(--muted); } a { color:var(--gold); }
-  .files a { margin-right:12px; } .warn { color:var(--err); }
-  button { background:#24495B; color:var(--cream); border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer; margin:6px 6px 0 0; font:600 13px system-ui; }
-  button.main { background:var(--gold); color:#1B2A2E; border-color:var(--gold); }
-  .msg { margin-top:8px; white-space:pre-wrap; font-size:13px; }
-  ul { margin:6px 0 0 18px; padding:0; }
+  :root {
+    --bg:#FBF5EA; --card:#FFFFFF; --ink:#1F2557; --soft:#6B6F8E; --line:#EADFCB; --gold:#E8B54A; --gold-soft:#FCEFD2;
+    --blue:#3D6BD8; --blue-soft:#E3EBFC; --green:#2E9E68; --green-soft:#DDF3E7; --red:#D9534F; --red-soft:#FBE3E1;
+    --grey-soft:#EFEBE3; --violet:#7A5AD8; --violet-soft:#ECE6FB; --shadow:0 2px 10px rgba(31,37,87,.07);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui, -apple-system, sans-serif; }
+  a { color:var(--blue); }
+  .wrap { max-width:1100px; margin:0 auto; padding:18px 16px 80px; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  header img { width:44px; height:44px; }
+  header h1 { font:700 24px Georgia, serif; margin:0; }
+  header .hi { color:var(--soft); font-size:14px; }
+  nav { display:flex; gap:6px; overflow-x:auto; padding:4px 0 10px; margin-bottom:8px; position:sticky; top:0; background:var(--bg); z-index:5; }
+  nav button { flex:none; border:0; background:transparent; color:var(--soft); font:600 15px system-ui; padding:9px 14px; border-radius:999px; cursor:pointer; }
+  nav button.on { background:var(--ink); color:#fff; }
+  nav .badge { display:inline-block; min-width:20px; padding:0 6px; margin-left:4px; border-radius:999px; background:var(--gold); color:var(--ink); font-size:12px; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:18px; }
+  .tile { background:var(--card); border-radius:16px; padding:14px; box-shadow:var(--shadow); cursor:pointer; border:2px solid transparent; }
+  .tile:hover { border-color:var(--line); }
+  .tile .n { font:700 30px Georgia, serif; } .tile .l { color:var(--soft); font-size:13px; } .tile .e { font-size:22px; float:right; }
+  h2 { font:700 19px Georgia, serif; margin:22px 0 10px; }
+  .empty { text-align:center; padding:40px 10px; color:var(--soft); background:var(--card); border-radius:16px; box-shadow:var(--shadow); }
+  .empty .big { font-size:44px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .chips button { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:6px 12px; font:600 13px system-ui; cursor:pointer; }
+  .chips button.on { background:var(--gold-soft); border-color:var(--gold); }
+  .book { display:grid; grid-template-columns:96px 1fr; gap:14px; background:var(--card); border-radius:18px; padding:14px; margin-bottom:12px; box-shadow:var(--shadow); }
+  .cover { width:96px; height:96px; border-radius:10px; object-fit:cover; background:linear-gradient(135deg, #F7D99A, #9DB7F0); display:flex; align-items:center; justify-content:center; font-size:38px; overflow:hidden; box-shadow:2px 3px 0 rgba(31,37,87,.15); }
+  .cover img { width:100%; height:100%; object-fit:cover; }
+  .title { font:700 17px Georgia, serif; margin:0 0 2px; }
+  .meta { color:var(--soft); font-size:13px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; font-weight:700; font-size:13px; margin:6px 6px 0 0; }
+  .p-gold { background:var(--gold-soft); color:#8A5A00; } .p-blue { background:var(--blue-soft); color:var(--blue); } .p-green { background:var(--green-soft); color:var(--green); }
+  .p-red { background:var(--red-soft); color:var(--red); } .p-grey { background:var(--grey-soft); color:var(--soft); } .p-violet { background:var(--violet-soft); color:var(--violet); }
+  .say { margin:8px 0 0; }
+  .bar { height:8px; background:var(--grey-soft); border-radius:99px; overflow:hidden; margin-top:8px; max-width:420px; }
+  .bar i { display:block; height:100%; background:linear-gradient(90deg, var(--blue), var(--violet)); border-radius:99px; transition:width .6s; }
+  .money { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--soft); margin-top:8px; }
+  .money .bar { width:120px; height:6px; margin:0; } .money .bar i { background:var(--green); }
+  .money .bar i.warn { background:var(--gold); }
+  .acts { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .btn { border:0; border-radius:12px; padding:10px 16px; font:700 14px system-ui; cursor:pointer; background:var(--grey-soft); color:var(--ink); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  .btn.main { background:var(--ink); color:#fff; } .btn.ok { background:var(--green); color:#fff; } .btn.gold { background:var(--gold); color:var(--ink); }
+  .btn.danger { background:var(--red-soft); color:var(--red); } .btn:disabled { opacity:.5; cursor:wait; }
+  details { margin-top:10px; } summary { cursor:pointer; color:var(--soft); font-size:13px; font-weight:600; }
+  .more { margin-top:8px; font-size:13px; color:var(--soft); } .more .acts { margin-top:8px; } .more .btn { padding:7px 12px; font-size:13px; }
+  .files a { display:inline-block; margin:4px 10px 0 0; }
+  .issues { margin:8px 0 0; padding:10px 12px; background:var(--gold-soft); border-radius:12px; font-size:13px; }
+  .issues.red { background:var(--red-soft); }
+  .issues ul { margin:4px 0 0 18px; padding:0; }
+  .card { background:var(--card); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:var(--shadow); }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:14px; } .kv span:nth-child(odd) { color:var(--soft); }
+  dialog { border:0; border-radius:18px; padding:0; max-width:640px; width:calc(100% - 32px); box-shadow:0 20px 60px rgba(0,0,0,.25); color:var(--ink); }
+  dialog .in { padding:18px; max-height:80vh; overflow:auto; }
+  dialog h3 { font:700 18px Georgia, serif; margin:0 0 10px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; } td, th { padding:6px 4px; border-bottom:1px solid var(--line); text-align:left; } td.r, th.r { text-align:right; }
+  #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(120px); background:var(--ink); color:#fff; padding:12px 18px; border-radius:14px; font-weight:600; max-width:calc(100% - 32px); transition:transform .3s, opacity .3s; z-index:20; opacity:0; pointer-events:none; }
+  #toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+  @media (max-width:560px) { .book { grid-template-columns:64px 1fr; } .cover { width:64px; height:64px; font-size:28px; } .tile .n { font-size:24px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Commandes</h1>
-  <div class="cfg" id="cfg"></div>
-  <h2>Budget API (plafond 3 $ par livre)</h2>
-  <div class="card" id="tarifs">Chargement…</div>
-  <div id="list">Chargement…</div>
-  <h2>Abonnements</h2>
-  <div id="subs"></div>
-  <h2>Vignettes de l'accueil</h2>
-  <p class="muted">Illustrations des cartes univers et fêtes encore manquantes. Coût : une image par vignette manquante.</p>
-  <button class="btn" id="vign" type="button">Générer les vignettes manquantes</button> <span id="vignR" class="muted"></span>
-  <h2>Messages du site</h2>
-  <div id="msgs"></div>
+  <header><img src="/static/marque/etoile-128.png" alt=""><div><h1>L'atelier</h1><div class="hi" id="hi">Chargement…</div></div></header>
+  <nav id="nav"></nav>
+  <main id="view"></main>
 </div>
+<dialog id="dlg"><div class="in" id="dlgIn"></div></dialog>
+<div id="toast"></div>
 <script>
 const code = new URLSearchParams(location.search).get('code') || '';
-const H = { 'X-Admin': code };
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const H = { 'X-Admin': code }, Q = '?code=' + encodeURIComponent(code);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
-const date = t => t ? new Date(t * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
-const ESSAI = { essai_brouillon: 'essai brouillon', essai_apercu: 'essai aperçu' };
-const LABEL = { attente_paiement: 'attente paiement', payee: 'payée', attente_fete: 'attend sa fête', generation: 'fabrication', a_verifier: 'à relire', envoyee_impression: 'chez Lulu', expediee: 'expédiée', erreur: 'erreur', annulee: 'annulée' };
-const CONFIRM = { 'refaire-refusees': "Refaire uniquement les illustrations refusées ? (≈ 0,10 $ par double page, toujours dans les 3 $ du livre ; le reste est réutilisé)", finaliser: "Tu as relu le PDF : figer ce livre tel quel ? (ensuite il est servi sans aucun appel IA)", relancer: "Relancer ? (uniquement ce qui manque, dans les 3 $ du livre : ce qui a déjà été payé est réutilisé)", imprimer: "Envoyer ce livre à l'impression chez Lulu ? (en production, c'est une vraie commande payée)", effacer: "Effacer définitivement les données et fichiers de cette commande ?", 'arreter-abonnement': "Arrêter cet abonnement ?" };
+const usd = v => (v || 0).toFixed(2).replace('.', ',') + ' $';
+const day = t => t ? new Date(t * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
+const FORMULE = { livre: 'Livre', mensuel: 'Abonnement mensuel', annuel: 'Abonnement annuel', fetes: 'Livres de fête', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu' };
+let D = null, TAB = 'accueil', FILTRE = 'actifs';
 
+function toast(t) { const e = document.getElementById('toast'); e.textContent = t; e.classList.add('show'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('show'), 4200); }
+
+// État d'un livre, en clair
+function etat(o) {
+  const essai = (o.formule || '').startsWith('essai');
+  if (o.statut === 'attente_paiement') return { k: 'paiement', pill: ['p-grey', '💳', 'Attend le paiement'], say: "Le client n'a pas encore payé." };
+  if (o.statut === 'attente_fete') return { k: 'attente', pill: ['p-violet', '🎉', 'Attend sa fête'], say: 'Il partira tout seul 35 jours avant la fête.' };
+  if (o.en_cours || ['payee', 'generation'].includes(o.statut)) return { k: 'fabrication', pill: ['p-blue', '🎨', 'En fabrication'], say: o.etape ? esc(o.etape) + '…' : 'Le livre se fabrique (5 à 10 minutes).' };
+  if (o.statut === 'erreur' && !o.pdf) return { k: 'bloque', pill: ['p-red', '⚠️', 'Bloqué'], say: 'La fabrication s\'est arrêtée. Rien n\'est perdu : ce qui est fait est gardé.' };
+  if (o.statut === 'a_verifier' || (o.statut === 'erreur' && o.pdf)) {
+    if (essai) return { k: 'essai', pill: ['p-violet', '🧪', 'Essai terminé'], say: 'Livre d\'essai : à regarder, jamais imprimé.' };
+    if (o.finalise) return { k: 'pret', pill: ['p-green', '✅', 'Prêt à imprimer'], say: 'Figé et sauvegardé. Il ne coûtera plus jamais rien en IA.' };
+    return { k: 'relire', pill: ['p-gold', '👀', 'À relire'], say: 'Ouvre le livre, regarde les pages, puis valide-le.' };
+  }
+  if (o.statut === 'envoyee_impression') return { k: 'imprimeur', pill: ['p-blue', '🖨️', "Chez l'imprimeur"], say: o.lulu_statut ? 'Statut Lulu : ' + esc(o.lulu_statut) : '' };
+  if (o.statut === 'expediee') return { k: 'expedie', pill: ['p-green', '📦', 'Expédié'], say: (o.suivi || []).length ? 'Colis en route.' : '' };
+  if (o.statut === 'annulee') return { k: 'archive', pill: ['p-grey', '🗂️', 'Archivé'], say: o.erreur === 'données effacées' ? 'Données effacées.' : '' };
+  return { k: 'autre', pill: ['p-grey', '•', o.statut], say: '' };
+}
+const AFAIRE = ['relire', 'bloque', 'pret'];
+
+function boutons(o, e) {
+  const pdf = (o.fichiers || []).find(f => f.endsWith('.pdf') && !f.startsWith('impression_'));
+  const lire = pdf ? `<a class="btn" target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(pdf)}${Q}">📖 Lire le livre</a>` : '';
+  const b = (a, t, cls = '') => `<button class="btn ${cls}" onclick="act('${o.id}','${a}',this)">${t}</button>`;
+  let main = '';
+  if (e.k === 'paiement' && D.config.stripe === 'simulé') main = b('valider-paiement-test', '💳 Simuler le paiement', 'main');
+  if (e.k === 'relire') main = lire + b('finaliser', "✅ C'est bon, je valide", 'ok') + (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées') : '');
+  if (e.k === 'pret') main = lire + b('imprimer', "🖨️ Envoyer à l'impression", 'gold');
+  if (e.k === 'essai') main = lire;
+  if (e.k === 'bloque') main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main');
+  if (e.k === 'imprimeur') main = b('suivi', '🔄 Actualiser le suivi', 'main');
+  if (e.k === 'expedie') main = (o.suivi || []).map(u => `<a class="btn main" target="_blank" href="${esc(u)}">📍 Suivre le colis</a>`).join('');
+  const sec = [];
+  if (!['paiement', 'archive'].includes(e.k)) sec.push(b('budget', '💰 Coût IA détaillé'));
+  if (['relire', 'pret'].includes(e.k)) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'));
+  if (o.abonnement_id) sec.push(b('mois-suivant', '➕ Livre suivant'), b('arreter-abonnement', '⏹️ Arrêter l\'abonnement', 'danger'));
+  if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai')) sec.push(b('essai-apercu', '🧪 Essai aperçu (≈ 1 $)'), b('essai-brouillon', '🧪 Essai brouillon (≈ 0,5 $)'));
+  if (e.k === 'relire') sec.push(b('relancer', '♻️ Refaire tout le livre', 'danger'));
+  if (['expedie', 'bloque', 'archive'].includes(e.k) && o.job_id && o.erreur !== 'données effacées') sec.push(b('effacer', '🧹 Effacer les données', 'danger'));
+  return { main, sec: sec.join('') };
+}
+
+function carte(o) {
+  const e = etat(o), bt = boutons(o, e), a = o.adresse || {};
+  const titre = o.titre || (o.prenom ? `Le livre de ${esc(o.prenom)}` : 'Livre en préparation');
+  const cov = o.vignette ? `<div class="cover"><img loading="lazy" src="/admin/vignette/${o.id}${Q}&v=${o.finalise ? 1 : 0}" alt=""></div>` : `<div class="cover">${e.k === 'fabrication' ? '🎨' : '📖'}</div>`;
+  const bud = o.budget ? o.budget.total : null, pct = bud != null ? Math.min(100, bud / D.plafond * 100) : 0;
+  const issues = (o.controle || []).length && e.k !== 'pret'
+    ? `<div class="issues"><b>Le contrôle a remarqué :</b><ul>${o.controle.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+  const err = o.erreur && o.erreur !== 'données effacées' && e.k !== 'pret' ? `<div class="issues red">${esc(o.erreur.replace(/^Fabrication : /, ''))}</div>` : '';
+  const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${Q}">${esc(f)}</a>`).join('')
+    + (o.job_id && o.statut !== 'attente_paiement' ? `<a href="/admin/archive/${o.id}${Q}">📦 dossier complet (zip, pour Claude)</a>` : '');
+  return `<div class="book">${cov}<div>
+    <div class="title">${esc(titre)}</div>
+    <div class="meta">${(o.formule || '').startsWith('essai') ? '🧪 ' : ''}${esc(FORMULE[o.formule] || o.formule)} · n°${o.numero}${o.volume_number ? ' · tome ' + o.volume_number : ''}${o.montant ? ' · ' + eur(o.montant) : ''} · ${day(o.cree)}</div>
+    <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>
+    <div class="say">${e.say}</div>
+    ${e.k === 'fabrication' ? `<div class="bar"><i style="width:${o.progression || 3}%"></i></div>` : ''}
+    ${bud ? `<div class="money">IA : <b>${usd(bud)}</b> / ${D.plafond} $ <span class="bar"><i class="${pct > 80 ? 'warn' : ''}" style="width:${pct}%"></i></span></div>` : ''}
+    ${err}${issues}
+    <div class="acts">${bt.main}</div>
+    <details><summary>Plus d'options et infos</summary><div class="more">
+      <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
+      ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
+      <div class="files">${files}</div>
+      <div class="acts">${bt.sec}</div><div class="muted" style="margin-top:6px">Réf. ${o.id}</div>
+    </div></details>
+  </div></div>`;
+}
+
+function liste(rows) { return rows.length ? rows.map(carte).join('') : ''; }
+
+function vueAccueil() {
+  const C = D.commandes.map(o => [o, etat(o).k]);
+  const n = k => C.filter(([, x]) => x === k).length;
+  const af = C.filter(([, k]) => AFAIRE.includes(k)).map(([o]) => o), fab = C.filter(([, k]) => k === 'fabrication').map(([o]) => o);
+  const c = D.config;
+  return `<div class="tiles">
+      <div class="tile" onclick="go('livres','relire')"><span class="e">👀</span><div class="n">${n('relire')}</div><div class="l">à relire</div></div>
+      <div class="tile" onclick="go('livres','fabrication')"><span class="e">🎨</span><div class="n">${n('fabrication')}</div><div class="l">en fabrication</div></div>
+      <div class="tile" onclick="go('livres','pret')"><span class="e">✅</span><div class="n">${n('pret')}</div><div class="l">prêts à imprimer</div></div>
+      <div class="tile" onclick="go('livres','bloque')"><span class="e">⚠️</span><div class="n">${n('bloque')}</div><div class="l">bloqués</div></div>
+      <div class="tile" onclick="go('reglages')"><span class="e">💰</span><div class="n" style="font-size:22px">${usd(c.depense_jour)}</div><div class="l">IA aujourd'hui (max ${c.budget_jour} $)</div></div>
+    </div>
+    <h2>À faire</h2>${af.length ? liste(af) : `<div class="empty"><div class="big">🎉</div>Rien à faire pour l'instant. Les livres se fabriquent tout seuls.</div>`}
+    ${fab.length ? `<h2>En train de se fabriquer</h2>${liste(fab)}` : ''}`;
+}
+
+const FILTRES = { actifs: '📚 En cours', relire: '👀 À relire', fabrication: '🎨 Fabrication', pret: '✅ Prêts', bloque: '⚠️ Bloqués', expedie: '📦 Expédiés', essai: '🧪 Essais', archive: '🗂️ Archivés', tout: 'Tout' };
+function vueLivres() {
+  const rows = D.commandes.filter(o => {
+    const k = etat(o).k;
+    if (FILTRE === 'tout') return true;
+    if (FILTRE === 'actifs') return !['archive', 'expedie', 'essai'].includes(k);
+    return k === FILTRE;
+  });
+  return `<div class="chips">${Object.entries(FILTRES).map(([k, t]) => `<button class="${k === FILTRE ? 'on' : ''}" onclick="FILTRE='${k}';render()">${t}</button>`).join('')}</div>
+    ${rows.length ? liste(rows) : '<div class="empty"><div class="big">🌙</div>Aucun livre ici.</div>'}`;
+}
+
+function vueAbos() {
+  const S = D.abonnements;
+  if (!S.length) return '<div class="empty"><div class="big">🔁</div>Aucun abonnement pour l\'instant.</div>';
+  return S.map(s => `<div class="card"><b>${s.statut === 'actif' ? '🟢' : '⚪️'} ${esc(FORMULE[s.formule] || s.formule)}</b> · ${esc(s.email)}
+    <div class="meta" style="margin-top:4px">Dernier livre : n°${s.numero}${s.livres_restants != null ? ` · encore ${s.livres_restants} livre(s)` : ''}${s.prochain ? ' · prochain le ' + new Date(s.prochain * 1000).toLocaleDateString('fr-FR') : s.statut === 'actif' ? ' · prochain à la prochaine facture' : ''}</div></div>`).join('');
+}
+
+let MSG = null;
+function vueMessages() {
+  if (!MSG) { fetch('/admin/api/messages', { headers: H }).then(r => r.json()).then(m => { MSG = m; render(); }); return 'Chargement…'; }
+  return (MSG.envoi ? '' : '<p class="meta">Les messages arrivent ici (l\'envoi par e-mail n\'est pas configuré).</p>') +
+    (MSG.messages.length ? MSG.messages.map(x => `<div class="card"><b>✉️ ${esc(x.sujet)}</b><div class="meta">${esc(x.nom || '')} · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a> · ${day(x.cree)}</div><p style="white-space:pre-wrap;margin:8px 0 0">${esc(x.message)}</p></div>`).join('')
+      : '<div class="empty"><div class="big">📭</div>Aucun message.</div>');
+}
+
+let TARIFS = null;
+function vueReglages() {
+  const c = D.config;
+  if (!TARIFS) fetch('/admin/api/tarifs' + Q, { headers: H }).then(r => r.json()).then(t => { TARIFS = t; render(); });
+  const t = TARIFS, e = t && t.etat, m = t && t.tarifs.modeles;
+  return `<div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">💰 Plafond IA : ${D.plafond} $ par livre</h3>
+    ${!t ? 'Chargement…' : `<div>${e.ok ? '<span class="pill p-green">✅ Fabrication autorisée</span>' : '<span class="pill p-red">⛔ Fabrication bloquée</span> ' + e.manque.map(esc).join(' ; ')}</div>
+      <div class="meta" style="margin-top:8px">Prix confirmés le <b>${esc(e.confirme_le || '—')}</b> · image de référence : <b>${esc(e.jetons_image_entree_max || 'non calibrée')}</b> jetons</div>
+      <div class="meta">gpt-image-2 : texte ${m['gpt-image-2'].texte_entree} $/M · image entrée ${m['gpt-image-2'].image_entree} $/M · image sortie ${m['gpt-image-2'].sortie_image} $/M — gpt-4.1 : ${m['gpt-4.1'].texte_entree} / ${m['gpt-4.1'].sortie} $/M</div>
+      <div class="acts"><button class="btn" onclick="confirmer()">J'ai vérifié les prix OpenAI</button><button class="btn" onclick="calibrer(this)" ${e.confirme_le ? '' : 'disabled'}>Recalibrer (≈ 0,02 $)</button></div>`}
+  </div>
+  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">⚙️ Branchements</h3><div class="kv">
+    <span>Paiement</span><span>${c.stripe === 'live' ? '🟢 réel' : c.stripe === 'test' ? '🟡 test (carte 4242)' : '⚪️ simulé'}</span>
+    <span>Imprimeur</span><span>${c.lulu === 'non configuré' ? '⚪️ Lulu non branché' : c.lulu === 'production' ? '🟢 Lulu (réel)' : '🟡 Lulu bac à sable'}</span>
+    <span>Produit</span><span>${esc(c.pod)}</span>
+    <span>Adresse du site</span><span>${esc(c.public_url || '—')}</span>
+    <span>Impression auto</span><span>${c.auto_impression ? 'oui' : 'non (tu valides chaque livre)'}</span></div></div>
+  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🖼️ Vignettes de l'accueil du site</h3>
+    <p class="meta" style="margin:0">Illustrations des cartes univers et fêtes encore manquantes (une image par vignette).</p>
+    <div class="acts"><button class="btn" onclick="vignettes(this)">Générer les vignettes manquantes</button></div></div>`;
+}
+
+const TABS = [['accueil', '🏠 Accueil'], ['livres', '📚 Livres'], ['abos', '🔁 Abonnements'], ['messages', '💬 Messages'], ['reglages', '⚙️ Réglages']];
+function render() {
+  const nb = D.commandes.filter(o => AFAIRE.includes(etat(o).k)).length;
+  document.getElementById('nav').innerHTML = TABS.map(([k, t]) => `<button class="${k === TAB ? 'on' : ''}" onclick="go('${k}')">${t}${k === 'accueil' && nb ? `<span class="badge">${nb}</span>` : ''}</button>`).join('');
+  document.getElementById('view').innerHTML = { accueil: vueAccueil, livres: vueLivres, abos: vueAbos, messages: vueMessages, reglages: vueReglages }[TAB]();
+}
+function go(t, f) { TAB = t; if (f) FILTRE = f; render(); scrollTo(0, 0); }
+
+const CONFIRM = {
+  finaliser: "Tu as relu le livre et il te plaît ? Il sera figé et sauvegardé (plus aucun coût IA).",
+  'refaire-refusees': "Refaire seulement les images refusées ? (≈ 0,10 $ par page, toujours dans les 3 $ du livre)",
+  relancer: "Relancer ? Ce qui est déjà fait est réutilisé, rien n'est payé deux fois (dans les 3 $ du livre).",
+  imprimer: "Envoyer ce livre chez l'imprimeur ? En mode réel, c'est une vraie commande payée.",
+  effacer: "Effacer définitivement les données et fichiers de cette commande ?",
+  'arreter-abonnement': "Arrêter cet abonnement ?",
+  'essai-apercu': "Lancer un essai aperçu (couverture + 1 double page, ≈ 1 $) ?",
+  'essai-brouillon': "Lancer un essai brouillon (tout le livre en petite qualité, ≈ 0,5 $) ?",
+  'mois-suivant': "Fabriquer maintenant le livre suivant de cet abonnement ?"
+};
 async function act(id, action, btn) {
   if (CONFIRM[action] && !confirm(CONFIRM[action])) return;
-  const out = btn.closest('.card').querySelector('.msg'); btn.disabled = true; out.textContent = '…';
+  btn.disabled = true;
   try {
-    const r = await fetch(`/admin/api/${id}/${action}?code=${encodeURIComponent(code)}`, { method: 'POST', headers: H });
-    const j = await r.json(); out.textContent = j.erreur ? '⚠ ' + j.erreur : '✓ ' + (j.info ? JSON.stringify(j.info) : 'fait');
-    if (action === 'budget' && !j.erreur) {
-      const i = j.info, d = i.depense;
-      out.innerHTML = `Payé <b>${d.regle.toFixed(3)} $</b> · en cours ${d.reserve.toFixed(3)} $ · incertain <b>${d.incertain.toFixed(3)} $</b> · plafond ${i.plafond} $` +
-        (i.borne ? ` · borne au lancement ${i.borne.borne_lancement_usd} $` : '') + '<ul>' + i.appels.map(a => `<li>#${a.id} ${esc(a.etape)} · ${a.statut} · ` +
-        (a.statut === 'regle' ? `${(a.reel || 0).toFixed(4)} $` : `réservé ${a.reserve.toFixed(4)} $`) +
-        (a.statut === 'incertain' ? ` <button onclick="regler(${a.id}, this)">Saisir le coût constaté</button>` : '') + '</li>').join('') + '</ul>';
-    }
-    if (action === 'couverture' && !j.erreur) out.innerHTML += ` · <a target="_blank" href="/admin/fichier/${id}/impression_couverture.pdf?code=${encodeURIComponent(code)}&t=${Date.now()}">voir la couverture</a>`;
-    setTimeout(load, 1500);
-  } catch (e) { out.textContent = '⚠ ' + e.message; }
+    const r = await fetch(`/admin/api/${id}/${action}${Q}`, { method: 'POST', headers: H });
+    const j = await r.json();
+    if (j.erreur) toast('⚠️ ' + j.erreur);
+    else if (action === 'budget') budgetDlg(j.info);
+    else if (action === 'couverture') { toast('✅ Couverture prête'); open(`/admin/fichier/${id}/impression_couverture.pdf${Q}&t=${Date.now()}`, '_blank'); }
+    else if (action === 'cout') toast(`🏷️ Lulu : ${j.info.total_ttc} ${j.info.devise} TTC (impression + livraison)`);
+    else toast({ finaliser: '✅ Livre validé et sauvegardé', relancer: '▶️ Relancé', 'refaire-refusees': '🔁 Images refusées relancées', imprimer: "🖨️ Envoyé à l'imprimeur" }[action] || '✅ Fait');
+    setTimeout(load, 1200);
+  } catch (e) { toast('⚠️ ' + e.message); }
   btn.disabled = false;
 }
 
-async function load() {
-  const r = await fetch('/admin/api/commandes?code=' + encodeURIComponent(code), { headers: H });
-  if (!r.ok) { document.getElementById('list').textContent = 'Accès refusé (ajoute ?code=… à l\'adresse).'; return; }
-  const d = await r.json(), c = d.config;
-  document.getElementById('cfg').innerHTML = `OpenAI aujourd'hui : <b>${(c.depense_jour || 0).toFixed(2)} $ / ${c.budget_jour} $</b> · Paiement : <b>${c.stripe}</b> · Impression : <b>${c.lulu}</b> · Produit : <b>${esc(c.pod)}</b> · Adresse publique : <b>${esc(c.public_url || 'aucune')}</b> · Impression auto : <b>${c.auto_impression ? 'oui' : 'non (tu relis puis tu envoies)'}</b>`;
-  document.getElementById('list').innerHTML = d.commandes.length ? d.commandes.map(o => {
-    const a = o.adresse || {}, q = '?code=' + encodeURIComponent(code);
-    const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${q}">${esc(f)}</a>`).join('');
-    const btns = [];
-    const essai = (o.formule || '').startsWith('essai');
-    if (o.statut === 'a_verifier' && !essai) btns.push(['finaliser', 'Finaliser après relecture'], ['couverture', 'Préparer la couverture'], ['cout', 'Coût Lulu'], ['imprimer', "Envoyer à l'impression", 'main']);
-    if (o.statut !== 'attente_paiement') btns.push(['budget', 'Budget API du livre']);
-    if (o.statut === 'envoyee_impression') btns.push(['suivi', 'Actualiser le suivi']);
-    if (['erreur', 'generation', 'payee'].includes(o.statut)) btns.push(['relancer', 'Relancer la fabrication']);
-    if (o.statut === 'a_verifier') btns.push(['relancer', 'Refaire le livre']);
-    if (['erreur', 'a_verifier'].includes(o.statut) && (o.controle || o.erreur || '').toString().match(/non conforme|double page/i)) btns.push(['refaire-refusees', 'Refaire les illustrations refusées']);
-    if (o.statut === 'erreur' && o.lulu_id == null && o.pdf) btns.push(['imprimer', "Envoyer à l'impression", 'main']);
-    if (o.statut === 'attente_paiement' && c.stripe === 'simulé') btns.push(['valider-paiement-test', 'Simuler le paiement']);
-    if (o.abonnement_id) btns.push(['mois-suivant', 'Fabriquer le livre suivant'], ['arreter-abonnement', "Arrêter l'abonnement"]);
-    if (o.statut !== 'attente_paiement' && !essai) btns.push(['essai-brouillon', 'Essai brouillon (≈ 0,5 $)'], ['essai-apercu', 'Essai aperçu qualité finale (≈ 1,5 $)']);
-    if (['expediee', 'erreur', 'annulee'].includes(o.statut) && o.job_id) btns.push(['effacer', 'Effacer les données']);
-    return `<div class="card">
-      <div class="top"><span class="st ${o.statut}">${LABEL[o.statut] || o.statut}</span><b>${esc(o.titre || '(livre en attente)')}</b>
-        <span class="muted">n°${o.numero} · ${esc(ESSAI[o.formule] || o.formule)}${o.montant ? ' · ' + eur(o.montant) : ''}${o.cout != null ? ' · coût OpenAI ≈ ' + o.cout.toFixed(2) + ' $' : ''} · ${date(o.cree)} · ${o.id}</span></div>
-      <div class="muted">${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} (${esc(a.pays)}) · ${esc(a.telephone)}</div>
-      ${o.lulu_id ? `<div>Lulu : travail ${esc(o.lulu_id)} · <b>${esc(o.lulu_statut)}</b> · coût ${esc(o.lulu_cout)} ${(o.suivi || []).map(u => `<a target="_blank" href="${esc(u)}">suivi colis</a>`).join(' ')}</div>` : ''}
-      ${o.controle && o.controle.length ? `<div class="warn">Contrôle qualité :<ul>${o.controle.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : (o.statut === 'a_verifier' ? '<div class="muted">Contrôle qualité : aucun problème détecté. Relis le PDF avant l\'envoi.</div>' : '')}
-      ${o.erreur ? `<div class="warn">${esc(o.erreur)}</div>` : ''}
-      <div class="files">${files}${o.job_id && o.statut !== 'attente_paiement' ? `<a href="/admin/archive/${o.id}${q}">📦 tout le dossier (zip, pour Claude)</a>` : ''}</div>
-      <div>${btns.map(b => `<button class="${b[2] || ''}" onclick="act('${o.id}','${b[0]}',this)">${b[1]}</button>`).join('')}</div>
-      <div class="msg"></div></div>`;
-  }).join('') : '<p class="muted">Aucune commande pour l\'instant.</p>';
-  document.getElementById('vign').onclick = async () => { const r = await (await fetch('/admin/api/vignettes', { method: 'POST', headers: H })).json();
-    document.getElementById('vignR').textContent = r.lancees ? (r.lancees.length ? r.lancees.length + ' vignette(s) en cours (quelques minutes)' : 'Toutes les vignettes sont faites.') : (r.erreur || 'erreur'); };
-  fetch('/admin/api/messages', { headers: H }).then(r => r.json()).then(m => {
-    document.getElementById('msgs').innerHTML = (m.envoi ? '' : '<p class="muted">Envoi par e-mail non configuré (SMTP_PASSWORD) : les messages arrivent seulement ici.</p>') +
-      (m.messages.length ? m.messages.map(x => `<div class="card"><b>${esc(x.sujet)}</b> · ${esc(x.nom || '')} · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a> · ${date(x.cree)}<p style="white-space:pre-wrap;margin:8px 0 0">${esc(x.message)}</p></div>`).join('') : '<p class="muted">Aucun message.</p>');
-  }).catch(() => {});
-  document.getElementById('subs').innerHTML = d.abonnements.length ? d.abonnements.map(s => `<div class="card"><b>${esc(s.formule)}</b> · ${esc(s.statut)} · ${esc(s.email)} · dernier livre n°${s.numero}${s.livres_restants != null ? ' · ' + s.livres_restants + ' livre(s) restant(s)' : ''}${s.prochain ? ' · prochain le ' + date(s.prochain) : s.statut === 'actif' ? ' · prochain à la prochaine facture Stripe' : ''}</div>`).join('') : '<p class="muted">Aucun abonnement.</p>';
-}
-async function tarifs() {
-  const r = await fetch('/admin/api/tarifs?code=' + encodeURIComponent(code), { headers: H }); if (!r.ok) return;
-  const d = await r.json(), e = d.etat, m = d.tarifs.modeles;
-  document.getElementById('tarifs').innerHTML = `<div>${e.ok ? '✓ Fabrication autorisée' : '<span class="warn">⛔ Fabrication bloquée : ' + e.manque.map(esc).join(' ; ') + '</span>'}</div>
-    <div class="muted">Tarifs relevés le ${esc(e.verifie_le)} · confirmés : <b>${esc(e.confirme_le || 'non')}</b> · jetons d'une image de référence : <b>${esc(e.jetons_image_entree_max || 'non calibré')}</b></div>
-    <div class="muted">gpt-image-2 : texte ${m['gpt-image-2'].texte_entree} $/M · image en entrée ${m['gpt-image-2'].image_entree} $/M · image en sortie ${m['gpt-image-2'].sortie_image} $/M — gpt-4.1 : ${m['gpt-4.1'].texte_entree} $/M entrée, ${m['gpt-4.1'].sortie} $/M sortie</div>
-    <button onclick="confirmer(this)">J'ai vérifié ces prix sur platform.openai.com/docs/pricing</button>
-    <button onclick="calibrer(this)" ${e.confirme_le ? '' : 'disabled'}>Calibrer (1 appel payant, ≈ 0,02 $)</button>
-    <div class="msg" id="tarifsR"></div>`;
+function budgetDlg(i) {
+  const d = i.depense, ST = { regle: '✅', reserve: '⏳', incertain: '❓', annule: '✖️' };
+  document.getElementById('dlgIn').innerHTML = `<h3>💰 Coût IA du livre</h3>
+    <p style="margin:0 0 10px">Payé <b>${usd(d.regle)}</b> sur un plafond de <b>${i.plafond} $</b>${d.incertain ? ` · <span style="color:var(--red)">${usd(d.incertain)} incertain</span>` : ''}${d.reserve ? ` · ${usd(d.reserve)} en cours` : ''}</p>
+    <table><tr><th>Étape</th><th></th><th class="r">Coût</th></tr>${i.appels.map(a => `<tr><td>${esc(a.etape)}</td><td>${ST[a.statut] || a.statut}</td><td class="r">${a.statut === 'regle' ? (a.reel || 0).toFixed(3) + ' $' : 'max ' + a.reserve.toFixed(3) + ' $'}${a.statut === 'incertain' ? ` <button class="btn" style="padding:4px 8px" onclick="regler(${a.id},this)">Saisir le coût</button>` : ''}</td></tr>`).join('')}</table>
+    <p class="meta">❓ = appel coupé en route : regarde son coût sur platform.openai.com/usage, saisis-le, puis relance.</p>
+    <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
+  document.getElementById('dlg').showModal();
 }
 async function regler(aid, b) {
-  const v = prompt("Coût réel de cet appel d'après platform.openai.com/usage (0 s'il n'a pas été facturé) :"); if (v === null) return;
-  const r = await (await fetch(`/admin/api/appels/${aid}/regler`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ reel: parseFloat(v.replace(',', '.')) }) })).json();
-  b.replaceWith(r.erreur ? '⚠ ' + r.erreur : '✓ réglé');
+  const v = prompt("Coût réel de cet appel (platform.openai.com/usage), 0 s'il n'a pas été facturé :"); if (v === null) return;
+  const r = await (await fetch(`/admin/api/appels/${aid}/regler${Q}`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ reel: parseFloat(v.replace(',', '.')) }) })).json();
+  b.replaceWith(r.erreur ? '⚠️ ' + r.erreur : '✅ réglé');
 }
-async function confirmer(b) {
-  if (!confirm("Les prix affichés sont-ils bien ceux de la page officielle OpenAI aujourd'hui ?")) return;
-  const r = await (await fetch('/admin/api/tarifs/confirmer', { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: '{}' })).json();
-  tarifs();
+async function confirmer() {
+  if (!confirm("Les prix affichés sont-ils ceux de la page officielle OpenAI aujourd'hui ?")) return;
+  await fetch('/admin/api/tarifs/confirmer' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: '{}' });
+  TARIFS = null; toast('✅ Prix confirmés'); render();
 }
 async function calibrer(b) {
-  if (!confirm("Lancer UN appel payant de calibrage (≈ 0,02 $, 0,17 $ au plus) ?")) return;
-  b.disabled = true; const r = await (await fetch('/admin/api/tarifs/calibrer', { method: 'POST', headers: H })).json();
-  await tarifs(); document.getElementById('tarifsR').textContent = r.erreur ? '⚠ ' + r.erreur : '✓ ' + JSON.stringify(r.info);
+  if (!confirm('Lancer UN appel payant de calibrage (≈ 0,02 $) ?')) return;
+  b.disabled = true; const r = await (await fetch('/admin/api/tarifs/calibrer' + Q, { method: 'POST', headers: H })).json();
+  TARIFS = null; toast(r.erreur ? '⚠️ ' + r.erreur : '✅ Calibré : ' + r.info.jetons_image_entree + ' jetons'); render();
 }
-tarifs(); load(); setInterval(load, 30000);
+async function vignettes(b) {
+  b.disabled = true; const r = await (await fetch('/admin/api/vignettes' + Q, { method: 'POST', headers: H })).json();
+  toast(r.lancees ? (r.lancees.length ? `🖼️ ${r.lancees.length} vignette(s) en cours` : '✅ Toutes les vignettes sont faites') : '⚠️ ' + (r.erreur || 'erreur'));
+}
+
+async function load() {
+  const r = await fetch('/admin/api/commandes' + Q, { headers: H });
+  if (!r.ok) { document.getElementById('hi').textContent = 'Accès refusé : ajoute ?code=… à l\'adresse.'; return; }
+  D = await r.json();
+  const h = new Date().getHours();
+  const nb = D.commandes.filter(o => AFAIRE.includes(etat(o).k)).length;
+  document.getElementById('hi').textContent = `${h < 18 ? 'Bonjour' : 'Bonsoir'} Alex · ${nb ? nb + ' chose(s) à faire' : 'tout roule'}`;
+  if (!document.querySelector('details[open]') && !document.getElementById('dlg').open) render();
+}
+load(); setInterval(load, 15000);
 </script>
 </body>
 </html>

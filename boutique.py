@@ -489,11 +489,53 @@ def admin_list():
                                key=lambda n: n.startswith("impression_")) + \
                         (["controle.json"] if (A.OUT / (r["job_id"] or "_") / "controle.json").exists() else []) + \
                         sorted(p.name for p in (A.OUT / (r["job_id"] or "_")).glob("planche_contact_*.jpg"))
-    return jsonify(commandes=rows, abonnements=db.subs(),
+        folder = A.OUT / (r["job_id"] or "_")
+        r["finalise"] = folder.exists() and fabrication.est_finalise(folder)
+        r["vignette"] = folder.exists() and bool(_couverture(folder))
+        job = A.JOBS.get(r["job_id"] or "") or {}
+        r["en_cours"] = job.get("etat") in ("en_cours", "validation")
+        r["progression"], r["etape"] = job.get("progression"), job.get("etape")
+        try:
+            lid = procede.livre_id(folder) if folder.exists() else r["id"]
+            r["budget"] = budget.depense(lid)
+        except Exception:
+            r["budget"] = None
+        r["refusees"] = folder.exists() and any(json.loads(f.read_text(encoding="utf-8")).get("bloquants")
+                                                for f in folder.glob("spread-*.json"))
+        try:
+            r["prenom"] = json.loads((STORE / r["origine"] / "livre.json").read_text(encoding="utf-8"))["form"].get("prenom")
+        except Exception:
+            r["prenom"] = None
+    return jsonify(plafond=budget.PLAFOND, commandes=rows, abonnements=db.subs(),
                    config={"stripe": "live" if paiement.live() else "test" if paiement.configured() else "simulé",
                            "lulu": lulu.env() if lulu.configured() else "non configuré", "pod": lulu.POD_PACKAGE,
                            "public_url": os.getenv("PUBLIC_URL", ""), "auto_impression": auto_print(),
                            "depense_jour": A.generator.spent_today(), "budget_jour": A.generator.BUDGET_JOUR})
+
+
+def _couverture(folder):
+    a = folder / "apercus" / "couverture.png"
+    if a.exists():
+        return a
+    c = sorted(folder.glob("couverture-*.png"))
+    return c[0] if c else None
+
+
+@bp.get("/admin/vignette/<oid>")
+def admin_vignette(oid):
+    """Petite image de la couverture pour l'admin (faite une fois, à partir du fichier du livre ; aucun appel IA)."""
+    if not admin_ok():
+        abort(403)
+    o = db.get(oid) or abort(404)
+    folder = A.OUT / (o["job_id"] or "_")
+    src = _couverture(folder) if folder.exists() else None
+    if not src:
+        abort(404)
+    v = folder / f"_vignette_admin_{src.stem}.jpg"
+    if not v.exists():
+        from PIL import Image
+        im = Image.open(src).convert("RGB"); im.thumbnail((360, 360)); im.save(v, quality=86)
+    return send_file(v, max_age=300)
 
 
 @bp.get("/admin/fichier/<oid>/<name>")
