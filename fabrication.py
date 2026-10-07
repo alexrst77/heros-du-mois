@@ -101,11 +101,11 @@ def couverture_a_plat(book, out, base, numero, prenom, dims=None):
     back = Image.open(base / book['spreads'][7]).convert("RGB"); bw, bh = back.size
     fond(back.crop((bw - bh, 0, bw, bh)), 0, TRIM + m)
     c.setFillColor(HexColor(book['backColor'])); c.setFillAlpha(.84); c.rect(0, 0, TRIM + m, H, fill=1, stroke=0); c.setFillAlpha(1)
-    c.saveState(); c.translate(m, m); c.scale(k, k); M.page_quatrieme(c, str(base / book['spreads'][7]), book); c.restoreState()
+    c.saveState(); _clip(c, m, m, TRIM, TRIM); c.translate(m, m); c.scale(k, k); M.page_quatrieme(c, str(base / book['spreads'][7]), book); c.restoreState()
     # 1re de couverture (à droite)
     fond(cov, W - TRIM - m, TRIM + m)
     cov.save(tmpd / "c.jpg", quality=95)
-    c.saveState(); c.translate(W - TRIM - m, m); c.scale(k, k); M.page_couverture(c, str(tmpd / "c.jpg"), book); c.restoreState()
+    c.saveState(); _clip(c, W - TRIM - m, m, TRIM, TRIM); c.translate(W - TRIM - m, m); c.scale(k, k); M.page_couverture(c, str(tmpd / "c.jpg"), book); c.restoreState()
     # dos : décor en continuité avec la couverture (bande gauche de l'illustration, adoucie), motif, numéro
     x0 = TRIM + m
     if dos > 0.5:
@@ -143,6 +143,11 @@ def couverture_a_plat(book, out, base, numero, prenom, dims=None):
                      "(alors seulement : variable DOS_NUMERO_VALIDE_IMPRIMEUR=1).")
     return {"largeur": round(W, 2), "hauteur": round(H, 2), "dos": round(dos, 2), "marge": round(m, 2), "source": dims["source"],
             "numero": numero, "numero_y": NUM_Y_DEPUIS_BAS, "pret_a_imprimer": not probs, "problemes": probs}
+
+
+def _clip(c, x, y, w, h):
+    """Chaque face reste dans son panneau : rien ne déborde sur le dos ni sur l'autre face."""
+    pa = c.beginPath(); pa.rect(x, y, w, h); c.clipPath(pa, stroke=0, fill=0)
 
 
 def _etoile(c, cx, cy, r):
