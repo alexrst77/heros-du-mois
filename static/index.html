@@ -96,7 +96,10 @@
   .err { color:var(--erreur); font-weight:700; font-size:15px; min-height:20px; margin:0 22px 6px; }
   .hint { font-size:14px; color:var(--encre-2); margin:6px 0 0; }
   .kdo { background:#FFF7E0; border:1px solid #F3DFA2; border-radius:14px; padding:14px 16px 4px; margin:0 0 18px; }
-  .unefois { margin:-2px 0 14px; font-size:14px; } .unefois small { color:var(--encre-2); font-weight:600; }
+  .recap { background:#fff; border:1px solid var(--trait); border-radius:14px; padding:10px 16px; margin:8px 0 12px; font-variant-numeric:tabular-nums; }
+  .recap > div { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid var(--trait); font-size:15px; }
+  .recap > div.tot { border-bottom:0; font-weight:800; font-size:18px; }
+  .recap .offert { color:var(--mousse); } .recap .astuce { margin:6px 0 4px; font-size:13px; color:#8A5A00; font-weight:700; }
   .occasion { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; background:#FFF3D1; border:1px solid #F2CF6E; border-radius:12px; padding:12px 14px; }
   .lien { background:none; border:0; padding:0; color:var(--encre); font:700 14px var(--texte); text-decoration:underline; cursor:pointer; }
   .delai { background:#EEF6F1; border:1px solid #CFE5D8; border-radius:14px; padding:12px 16px; margin:4px 0 18px; display:grid; gap:2px; }
@@ -183,10 +186,21 @@
   Avatar.init(OPT);
   const $ = id => document.getElementById(id);
   const TABS = ['enfant', 'doudou', 'animaux', 'histoire', 'commande'];
+  const GR = await (await fetch('/api/tarifs')).json();                // prix : une seule source (paiement.py)
+  const eur = c => (c / 100).toFixed(2).replace('.', ',').replace(',00', '') + ' €';
+  const eur2 = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
+  const F = GR.formules;
   const PLANS = [
-    { id: 'mensuel', nom: 'Un livre chaque mois', txt: 'Une nouvelle aventure chaque mois, sans engagement', px: '29,90 €/mois', tag: 'Le plus choisi' },
-    { id: 'fetes', nom: 'Les 6 livres de fête', txt: 'Un livre avant chacune de vos 6 fêtes (anniversaire, Noël…), payé en 12 mensualités', px: '12,45 €/mois' },
-    { id: 'livre', nom: 'Ce livre seulement', txt: 'Un livre relié, livré chez vous', px: '34,90 €' }];
+    { id: 'pack6', nom: '6 livres', txt: `${eur2(F.pack6.prix_livre)} le livre · livraison offerte`, tag: 'Notre conseil' },
+    { id: 'pack12', nom: '12 livres', txt: `Une aventure pour chaque mois · ${eur2(F.pack12.prix_livre)} le livre · livraison offerte`, tag: 'Le meilleur prix' },
+    { id: 'pack3', nom: '3 livres', txt: `Trois aventures, un même héros · ${eur2(F.pack3.prix_livre)} le livre` },
+    { id: 'livre', nom: '1 livre', txt: 'Pour découvrir ou offrir' },
+    { id: 'fetes', nom: 'Les 6 livres de fête', txt: `Son anniversaire et 5 fêtes de votre choix · ${eur2(F.fetes.prix_livre)} le livre · livraison offerte` }]
+    .map(p => Object.assign(p, { px: eur2(F[p.id].prix), livres: F[p.id].livres }));
+  const port = () => { const f = F[S.commande.formule] || F.pack6, n = f.livres;
+    const base = n >= GR.port_offert_des ? 0 : (GR.port_fr[String(n)] ?? GR.port_fr['3']);
+    return base + (GR.supplement_pays[S.commande.pays] ?? GR.supplement_pays.BE); };
+  const totalC = () => (F[S.commande.formule] || F.pack6).prix + port();
   const THEMES = ["Accepter la différence", "Aller chez le dentiste", "Aller chez le médecin", "Apprendre à attendre", "Apprendre à partager", "Devenir propre", "Dire au revoir à la tétine", "Dire la vérité", "Dormir dans son grand lit", "Gérer la colère", "Goûter de nouveaux aliments", "La confiance en soi", "La peur du noir", "La politesse", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Le premier jour à la crèche", "Les cauchemars", "Les écrans : savoir s'arrêter", "Les émotions", "Oser se faire des amis", "Partir en vacances", "Prendre soin de la nature", "Quand papa et maman se séparent", "Ranger sa chambre", "Se brosser les dents", "S'habiller tout seul", "Un déménagement", "Une aventure pour rire"].sort((a, b) => a.localeCompare(b, 'fr'));
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const anniv = () => S.enfant.anniv_j && S.enfant.anniv_m ? `${String(S.enfant.anniv_m).padStart(2, '0')}-${String(S.enfant.anniv_j).padStart(2, '0')}` : '';
@@ -198,7 +212,7 @@
     doudou: { actif: true, nom: '', type: 'lapin', couleur: 'bleu', accessoire: 'noeud', couleur_accessoire: 'rouge' },
     animaux: [],
     histoire: { theme: 'La peur du noir', univers: UNIVERS[0], fetes: ['anniversaire', 'noel'], heros_livre: 'enfant', passions: '', precision: '', numero: '01', code: '', demo: false },
-    commande: { formule: 'mensuel', email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
+    commande: { formule: 'pack6', email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
   };
   let S;
   try { S = JSON.parse(localStorage.getItem('heros-avatar')) || null; } catch (_) { S = null; }
@@ -208,6 +222,8 @@
   if (!TEST) S.histoire.demo = false;
   if (!Array.isArray(S.histoire.fetes)) S.histoire.fetes = ['anniversaire', 'noel'];
   if (['sweat', 'robe'].includes(S.enfant.tenue)) S.enfant.tenue = 'tshirt';
+  if (!PLANS_IDS().includes(S.commande.formule)) S.commande.formule = 'pack6';   // anciennes formules (abonnement) : le pack de 6
+  function PLANS_IDS() { return ['livre', 'pack3', 'pack6', 'pack12', 'fetes']; }
   const save = () => { try { localStorage.setItem('heros-avatar', JSON.stringify(S)); } catch (_) {} };
   const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -382,18 +398,17 @@
     return G('Thème du mois', `<select data-in="theme">${THEMES.map(t => `<option ${h.theme === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`) +
       (S.commande.formule === 'fetes' ? '' : occ ? G('Ce livre', `<div class="occasion"><b>Livre de fête : ${esc(occ.nom)}</b><button type="button" class="lien" data-occ="0">Choisir plutôt un univers</button></div>`) :
         G('Univers', `<select data-in="univers">${UNIVERS.map(t => `<option ${h.univers === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`)) +
+      ((F[S.commande.formule] || {}).livres > 1 && S.commande.formule !== 'fetes' ? `<p class="hint" style="margin:-4px 0 14px">Vous choisissez le thème et l'univers du 1er livre. Les ${F[S.commande.formule].livres - 1} autres auront chacun un nouveau thème et un nouvel univers, avec les mêmes personnages.</p>` : '') +
       G('Le héros du livre', `<select data-in="heros_livre">${herosChoix().map(([v, l]) => `<option value="${v}" ${h.heros_livre === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`,
         'les autres l\'accompagnent') +
-      G('Les fêtes de votre famille', `<details class="multi" ${OUVERT.fetes ? 'open' : ''}><summary>${h.fetes.length ? esc(FETES.filter(u => h.fetes.includes(u.cle)).map(u => u.puce).join(', ')) : '<span class="ph">Aucune fête choisie</span>'}</summary>` +
+      (S.commande.formule !== 'fetes' ? '' : G('Les 6 fêtes', `<details class="multi" ${OUVERT.fetes ? 'open' : ''}><summary>${h.fetes.length ? esc(FETES.filter(u => h.fetes.includes(u.cle)).map(u => u.puce).join(', ')) : '<span class="ph">Aucune fête choisie</span>'}</summary>` +
         `<div class="liste">${FETES.map(u => `<label><input type="checkbox" data-fete="${u.cle}" ${h.fetes.includes(u.cle) ? 'checked' : ''}> ${esc(u.puce)}</label>`).join('')}</div></details>` +
-        `<p class="hint" style="margin:8px 0 0">${S.commande.formule === 'fetes' ? `Formule « 6 livres de fête » : choisissez 6 fêtes (${h.fetes.length}/6). Chaque livre arrive avant sa fête.` : "Avec l'abonnement, le livre qui arrive juste avant une de ces fêtes est un livre de fête."}</p>`, S.commande.formule === 'fetes' ? '6 à choisir' : 'facultatif') +
+        `<p class="hint" style="margin:8px 0 0">Choisissez 6 fêtes (${h.fetes.length}/6) : un livre pour chacune, livrés ensemble dans un seul colis.</p>`, '6 à choisir')) +
       G('Ses passions', `<input type="text" data-in="passions" maxlength="120" placeholder="les camions, chanter, les dinosaures" value="${esc(h.passions)}">`) +
       G('Un mot du parent', `<textarea data-in="precision" maxlength="280" placeholder="Il a peur des bruits de la nuit en ce moment, mais adore quand on chante ensemble.">${esc(h.precision)}</textarea>`, 'facultatif') +
       (TEST ? `<div class="row2">${G("N° d'aventure", `<input type="text" data-in="numero" maxlength="3" value="${esc(h.numero)}">`)}${G("Code d'accès", `<input type="text" data-in="code" placeholder="si demandé" value="${esc(h.code)}">`)}</div>` +
       `<label class="check"><input type="checkbox" data-chk="demo" ${h.demo ? 'checked' : ''}> Mode démo : tester sans appel API (livre d'exemple)</label>` : '');
   }
-  const nbMois = () => S.commande.formule === 'fetes' ? 12 : (S.commande.formule === 'mensuel' && S.commande.cadeau) ? +S.commande.cadeau_duree : 0;
-  const prixTotal = () => ((S.commande.formule === 'fetes' ? 12.45 : 29.90) * nbMois()).toFixed(2).replace('.', ',') + ' €';
   function delai() {               // 7 à 15 jours ouvrés (conditions de vente)
     const plus = n => { const d = new Date(); while (n > 0) { d.setDate(d.getDate() + 1); if (d.getDay() % 6) n--; } return d; };
     const f = d => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
@@ -403,19 +418,18 @@
     const c = S.commande, inp = (k, ph, extra) => `<input type="text" data-in="${k}" value="${esc(c[k])}" placeholder="${ph}" ${extra || ''}>`;
     return `<div class="plans">` + PLANS.map(p => `<button type="button" class="plan ${c.formule === p.id ? 'on' : ''}" data-k="formule" data-v="${p.id}">
         <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>` +
-      (nbMois() ? `<label class="check unefois"><input type="checkbox" data-chk="une_fois" ${c.une_fois ? 'checked' : ''}><span>Payer en une fois` +
-        (c.une_fois ? ` <small>· ${prixTotal()} au lieu de ${nbMois()} × ${c.formule === 'fetes' ? '12,45' : '29,90'} €</small>` : '') + `</span></label>` : '') +
-      `<div class="delai"><b>${c.formule === 'fetes' ? 'Chaque livre arrive avant sa fête' : 'Livraison estimée : ' + delai()}</b>` +
-      `<span>${c.formule === 'fetes' ? "Il est créé environ 5 semaines avant la fête, relu, imprimé puis expédié. Livraison offerte." :
-        "Création et relecture du livre, impression, puis expédition : 7 à 15 jours ouvrés. Livraison offerte" + (c.formule === 'mensuel' ? ", puis un nouveau livre chaque mois." : ".")}</span></div>` +
+      (() => { const f = F[c.formule], pt = port(), n = f.livres;
+        return `<div class="recap"><div><span>${n} livre${n > 1 ? 's' : ''} × ${eur2(f.prix_livre)}</span><span>${eur2(f.prix)}</span></div>` +
+          `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>` +
+          `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
+          (n < 6 ? `<p class="astuce">Livraison offerte et ${eur2(F.pack6.prix_livre)} le livre à partir de 6 livres.</p>` : '') + `</div>`; })() +
+      `<div class="delai"><b>Livraison estimée : ${delai()}</b>` +
+      `<span>${(F[c.formule].livres > 1 ? 'Création et relecture des livres, impression, puis un seul colis' : 'Création et relecture du livre, impression, puis expédition')} : 7 à 15 jours ouvrés.</span></div>` +
       `<label class="toggle" style="margin-bottom:12px"><input type="checkbox" data-chk="cadeau" ${c.cadeau ? 'checked' : ''}> C'est pour offrir</label>` +
       (c.cadeau ? `<div class="kdo">` +
-        (c.formule === 'mensuel' ? G('Durée offerte', `<div class="chips">${[['6', '6 mois · 6 livres'], ['12', '12 mois · 12 livres']].map(([v, l]) => `<button type="button" data-k="cadeau_duree" data-v="${v}" class="${c.cadeau_duree === v ? 'on' : ''}">${l}</button>`).join('')}</div>`,
-          'payé chaque mois, s\'arrête tout seul') : '') +
         G('De la part de', inp('cadeau_de', 'Mamie Jo, Tonton Karim…', 'maxlength="40"')) +
-        G('Un petit mot', `<textarea data-in="cadeau_message" maxlength="160" placeholder="Pour ma petite étoile, une aventure chaque mois !">${esc(c.cadeau_message)}</textarea>`, 'facultatif') +
-        `<p class="hint">${c.formule === 'livre' ? 'Le petit mot est imprimé au dos du livre.' :
-          `Le petit mot est imprimé au dos du livre. En bas de la couverture : « Livre 1 sur ${c.formule === 'fetes' ? 6 : c.cadeau_duree} », avec les aventures qui restent à recevoir.`}</p></div>` : '') +
+        G('Un petit mot', `<textarea data-in="cadeau_message" maxlength="160" placeholder="Pour ma petite étoile, plein d'aventures à lire ensemble !">${esc(c.cadeau_message)}</textarea>`, 'facultatif') +
+        `<p class="hint">${c.formule === 'livre' ? 'Le petit mot est imprimé au dos du livre.' : 'Le petit mot est imprimé au dos de chaque livre.'}</p></div>` : '') +
       G('E-mail', inp('email', c.cadeau ? 'pour suivre la commande (la vôtre)' : 'pour suivre la commande', 'type="email" autocomplete="email"')) +
       G('Nom et prénom', inp('nom', c.cadeau ? 'destinataire du colis (l\'enfant ou ses parents)' : 'destinataire du colis', 'autocomplete="name"')) +
       G('Adresse', inp('adresse1', 'numéro et rue', 'autocomplete="address-line1"') + '<div style="height:8px"></div>' + inp('adresse2', 'bâtiment, étage (facultatif)', 'autocomplete="address-line2"')) +
@@ -430,7 +444,7 @@
     $('body').innerHTML = { enfant: panelEnfant, doudou: panelDoudou, animaux: panelAnimaux, histoire: panelHistoire, commande: panelCommande }[tab]();
     $('prev').style.visibility = tab === 'enfant' ? 'hidden' : 'visible';
     const plan = PLANS.find(p => p.id === S.commande.formule) || PLANS[0];
-    $('next').textContent = tab === 'commande' ? `Payer ${S.commande.une_fois && nbMois() ? prixTotal() : plan.px}` : (tab === 'histoire' && S.histoire.demo) ? 'Créer le livre démo' : 'Suivant';
+    $('next').textContent = tab === 'commande' ? `Payer ${eur2(totalC())}` : (tab === 'histoire' && S.histoire.demo) ? 'Créer le livre démo' : 'Suivant';
     renderStage(); save();
   }
 
@@ -522,8 +536,7 @@
       if (!c.cgv) { $('err').textContent = 'Cochez la case des conditions de vente.'; return; }
       if (c.cadeau && !c.cadeau_de.trim()) { $('err').textContent = 'Indiquez de la part de qui est le cadeau.'; return; }
       payload.commande = { formule: c.formule, email: c.email.trim(), cgv: true,
-        une_fois: !!(c.une_fois && nbMois()),
-        cadeau: { actif: !!c.cadeau, de: c.cadeau_de, message: c.cadeau_message, duree: c.cadeau_duree },
+        cadeau: { actif: !!c.cadeau, de: c.cadeau_de, message: c.cadeau_message },
         adresse: { nom: c.nom, adresse1: c.adresse1, adresse2: c.adresse2, code_postal: c.code_postal, ville: c.ville, pays: c.pays, telephone: c.telephone } };
     }
     const go = $('next'), label = go.textContent; go.disabled = true; go.textContent = demo ? 'Envoi…' : 'Redirection vers le paiement…';
@@ -612,10 +625,11 @@
         $('titreSuivi').textContent = 'Merci, votre commande est confirmée !';
         $('pct').style.width = '100%';
         const pn = esc(e.prenom ? e.prenom.trim().replace(/^./, c => c.toUpperCase()) : 'votre enfant');
-        $('etape').innerHTML = (o.formule === 'fetes'
-          ? `Chaque livre de fête de <b>${pn}</b> sera créé environ 5 semaines avant sa fête, relu, puis expédié pour arriver à temps.`
-          : `Nous créons maintenant le livre de <b>${pn}</b>. Chaque livre est relu avant l'impression, puis expédié chez vous : livraison estimée ${delai()}.`) +
-          `<br><span class="hint">Une question : <a href="/#contact">écrivez-nous</a> · Commande n° ${esc(id)}${o.formule === 'mensuel' ? ' · un nouveau livre chaque mois' : o.formule === 'fetes' ? ' · 6 livres de fête, 12 mensualités' : ''}</span>`;
+        const nl = (F[o.formule] || { livres: 1 }).livres;
+        $('etape').innerHTML = (nl > 1
+          ? `Nous créons maintenant les ${nl} livres de <b>${pn}</b>. Chacun est relu avant l'impression, puis ils partent ensemble dans un seul colis : livraison estimée ${delai()}.`
+          : `Nous créons maintenant le livre de <b>${pn}</b>. Il est relu avant l'impression, puis expédié chez vous : livraison estimée ${delai()}.`) +
+          `<br><span class="hint">Une question : <a href="/#contact">écrivez-nous</a> · Commande n° ${esc(id)}</span>`;
         $('duree').style.display = 'none';
         document.querySelector('#suivi .kicker').textContent = 'Commande confirmée';
         $('fini').style.display = 'block'; $('dl').style.display = 'none';
@@ -626,7 +640,8 @@
   }
   { const q = new URLSearchParams(location.search);       // venant de la vitrine : prénom tapé, formule choisie
     if (q.get('prenom')) { S.enfant.prenom = q.get('prenom').trim().slice(0, 20).replace(/^./, c => c.toUpperCase()); save(); }
-    if (['livre', 'mensuel', 'fetes'].includes(q.get('formule'))) { S.commande.formule = q.get('formule'); save(); }
+    if (PLANS_IDS().includes(q.get('formule'))) { S.commande.formule = q.get('formule'); save(); }
+    else if (q.get('formule') === 'mensuel') { S.commande.formule = 'pack6'; save(); }
     const u = UNIV.find(x => !x.fete && x.cle === q.get('univers'));                 // carte « univers » de l'accueil
     if (u) { S.histoire.univers = u.nom; S.histoire.occasion = ''; save(); }
     const f = UNIV.find(x => x.fete && x.cle === q.get('fete'));                     // carte « occasion spéciale » de l'accueil

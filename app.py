@@ -272,13 +272,22 @@ def parse_book(data):
     return form, None
 
 
+FABRICATIONS = threading.BoundedSemaphore(int(os.getenv("FABRICATIONS_SIMULTANEES", "2")))
+
+
 def start_job(job_id, form, refs, auto=False, on_end=None, reprise=False, essai=None):
     """Lance la fabrication d'un livre dans un fil séparé (reprise=True : réutilise ce qui est déjà fait dans le dossier)."""
     (OUT / job_id).mkdir(exist_ok=True)
     JOBS[job_id] = {"etat": "en_cours", "etape": "Démarrage", "progression": 1, "_auto": auto, "_reprise": reprise, "_essai": essai}
 
     def work():
-        run(job_id, form, refs)
+        if not FABRICATIONS.acquire(blocking=False):      # pack de 12 : les livres attendent leur tour (débit OpenAI)
+            JOBS[job_id].update(etape="En attente de son tour", progression=1)
+            FABRICATIONS.acquire()
+        try:
+            run(job_id, form, refs)
+        finally:
+            FABRICATIONS.release()
         if on_end:
             on_end(job_id, JOBS[job_id])
     threading.Thread(target=work, daemon=True).start()
@@ -289,6 +298,12 @@ def vignette(cle):
     import vignettes
     p = vignettes.chemin(cle) if re.match(r"^[a-z_]+$", cle) else None
     return send_file(p, max_age=86400) if p else abort(404)
+
+
+@app.get("/api/tarifs")
+def api_tarifs():
+    import paiement
+    return jsonify(paiement.grille())
 
 
 @app.get("/api/univers")

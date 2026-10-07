@@ -87,7 +87,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
 const usd = v => (v || 0).toFixed(2).replace('.', ',') + ' $';
 const day = t => t ? new Date(t * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
-const FORMULE = { livre: 'Livre', mensuel: 'Abonnement mensuel', annuel: 'Abonnement annuel', fetes: 'Livres de fête', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu' };
+const FORMULE = { livre: '1 livre', pack3: 'Pack 3 livres', pack6: 'Pack 6 livres', pack12: 'Pack 12 livres', fetes: '6 livres de fête', mensuel: 'Abonnement (ancien)', annuel: 'Abonnement annuel', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu' };
 let D = null, TAB = 'accueil', FILTRE = 'actifs';
 const RES = {}, OPEN = new Set();   // résultats affichés sous un livre (restent jusqu'à ce que tu les fermes) ; menus ouverts
 
@@ -102,7 +102,11 @@ function etat(o) {
   if (o.statut === 'erreur' && !o.pdf) return { k: 'bloque', pill: ['p-red', '⚠️', 'Bloqué'], say: 'La fabrication s\'est arrêtée. Rien n\'est perdu : ce qui est fait est gardé.' };
   if (o.statut === 'a_verifier' || (o.statut === 'erreur' && o.pdf)) {
     if (essai) return { k: 'essai', pill: ['p-violet', '🧪', 'Essai terminé'], say: 'Livre d\'essai : à regarder, jamais imprimé.' };
-    if (o.finalise) return { k: 'pret', pill: ['p-green', '✅', 'Prêt à imprimer'], say: 'Figé et sauvegardé. Il ne coûtera plus jamais rien en IA.' };
+    if (o.finalise && o.pack_total > 1 && (o.pack_prets < o.pack_total || (o.origine && o.origine !== o.id)))
+      return { k: 'valide', pill: ['p-green', '✅', 'Validé'], say: o.pack_prets < o.pack_total
+        ? `Figé et sauvegardé. Le colis partira quand les ${o.pack_total} livres seront validés (${o.pack_prets}/${o.pack_total}).`
+        : 'Figé et sauvegardé. Il part avec le livre 1 du pack, dans le même colis.' };
+    if (o.finalise) return { k: 'pret', pill: ['p-green', '✅', 'Prêt à imprimer'], say: o.pack_total > 1 ? `Les ${o.pack_total} livres du pack sont validés : ils partent ensemble, dans un seul colis.` : 'Figé et sauvegardé. Il ne coûtera plus jamais rien en IA.' };
     return { k: 'relire', pill: ['p-gold', '👀', 'À relire'], say: 'Ouvre le livre, regarde les pages, puis valide-le.' };
   }
   if (o.statut === 'envoyee_impression') return { k: 'imprimeur', pill: ['p-blue', '🖨️', "Chez l'imprimeur"], say: o.lulu_statut ? 'Statut Lulu : ' + esc(o.lulu_statut) : '' };
@@ -119,15 +123,16 @@ function boutons(o, e) {
   let main = '';
   if (e.k === 'paiement' && D.config.stripe === 'simulé') main = b('valider-paiement-test', '💳 Simuler le paiement', 'main');
   if (e.k === 'relire') main = lire + b('finaliser', "✅ C'est bon, je valide", 'ok') + (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées') : '');
-  if (e.k === 'pret') main = lire + b('imprimer', "🖨️ Envoyer à l'impression", 'gold');
+  if (e.k === 'pret') main = lire + b('imprimer', o.pack_total > 1 ? `🖨️ Envoyer le colis (${o.pack_total} livres)` : "🖨️ Envoyer à l'impression", 'gold');
+  if (e.k === 'valide') main = lire;
   if (e.k === 'essai') main = lire;
   if (e.k === 'bloque') main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main');
   if (e.k === 'imprimeur') main = b('suivi', '🔄 Actualiser le suivi', 'main');
   if (e.k === 'expedie') main = (o.suivi || []).map(u => `<a class="btn main" target="_blank" href="${esc(u)}">📍 Suivre le colis</a>`).join('');
   const sec = [];
   if (!['paiement', 'archive'].includes(e.k)) sec.push(b('budget', '💰 Coût IA détaillé'));
-  if (e.k === 'pret') sec.push(b('mail-pret', o.mail_pret ? '📧 Renvoyer le mail « prêt »' : '📧 Envoyer le mail « prêt »'));
-  if (['relire', 'pret'].includes(e.k)) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'));
+  if (e.k === 'pret' || e.k === 'valide') sec.push(b('mail-pret', o.pack_mail ? '📧 Renvoyer le mail « prêt »' : '📧 Envoyer le mail « prêt »'));
+  if (['relire', 'pret', 'valide'].includes(e.k)) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'));
   if (o.abonnement_id) sec.push(b('mois-suivant', '➕ Livre suivant'), b('arreter-abonnement', '⏹️ Arrêter l\'abonnement', 'danger'));
   if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai')) sec.push(b('essai-apercu', '🧪 Essai aperçu (≈ 1 $)'), b('essai-brouillon', '🧪 Essai brouillon (≈ 0,5 $)'));
   if (e.k === 'relire') sec.push(b('relancer', '♻️ Refaire tout le livre', 'danger'));
@@ -147,7 +152,7 @@ function carte(o) {
     + (o.job_id && o.statut !== 'attente_paiement' ? `<a href="/admin/archive/${o.id}${Q}">📦 dossier complet (zip, pour Claude)</a>` : '');
   return `<div class="book">${cov}<div>
     <div class="title">${esc(titre)}</div>
-    <div class="meta">${(o.formule || '').startsWith('essai') ? '🧪 ' : ''}${esc(FORMULE[o.formule] || o.formule)} · n°${o.numero}${o.volume_number ? ' · tome ' + o.volume_number : ''}${o.montant ? ' · ' + eur(o.montant) : ''} · ${day(o.cree)}</div>
+    <div class="meta">${(o.formule || '').startsWith('essai') ? '🧪 ' : ''}${esc(FORMULE[o.formule] || o.formule)}${o.pack_total > 1 ? ` · livre ${o.numero}/${o.pack_total}` : ''}${o.volume_number ? ' · tome ' + o.volume_number : ''}${o.montant ? ' · ' + eur(o.montant) : ''} · ${day(o.cree)}</div>
     <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>
     <div class="say">${e.say}</div>
     ${e.k === 'fabrication' ? `<div class="bar"><i style="width:${o.progression || 3}%"></i></div>` : ''}
@@ -157,7 +162,7 @@ function carte(o) {
     ${RES[o.id] ? `<div class="result ${RES[o.id].cls || ''}"><button class="x" title="Fermer" onclick="delete RES['${o.id}'];render()">×</button>${RES[o.id].html}</div>` : ''}
     <details ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">
       <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
-      ${o.mail_pret ? `<div>📧 Mail « livre prêt » envoyé au client le ${new Date(o.mail_pret * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
+      ${o.pack_mail ? `<div>📧 Mail « livre prêt » envoyé au client le ${new Date(o.pack_mail * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
       ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
       <div class="files">${files}</div>
       <div class="acts">${bt.sec}</div><div class="muted" style="margin-top:6px">Réf. ${o.id}</div>
@@ -248,7 +253,7 @@ const CONFIRM = {
   finaliser: "Tu as relu le livre et il te plaît ? Il sera figé et sauvegardé (plus aucun coût IA).",
   'refaire-refusees': "Refaire seulement les images refusées ? (≈ 0,10 $ par page, toujours dans les 3 $ du livre)",
   relancer: "Relancer ? Ce qui est déjà fait est réutilisé, rien n'est payé deux fois (dans les 3 $ du livre).",
-  imprimer: "Envoyer ce livre chez l'imprimeur ? En mode réel, c'est une vraie commande payée.",
+  imprimer: "Envoyer chez l'imprimeur (tous les livres de la commande, un seul colis) ? En mode réel, c'est une vraie commande payée.",
   effacer: "Effacer définitivement les données et fichiers de cette commande ?",
   'arreter-abonnement': "Arrêter cet abonnement ?",
   'essai-apercu': "Lancer un essai aperçu (couverture + 1 double page, ≈ 1 $) ?",
@@ -260,7 +265,7 @@ const eu = v => v == null || v === '' ? '—' : parseFloat(v).toFixed(2).replace
 const LIV = { MAIL: 'économique', PRIORITY_MAIL: 'prioritaire', GROUND: 'standard', EXPEDITED: 'express', EXPRESS: 'express' };
 function resultat(action, j) {
   const i = j.info || {};
-  if (action === 'cout') return { html: `<div>🏷️ <b>Prix Lulu pour ce livre</b> (livraison ${LIV[i.livraison] || i.livraison || ''})</div>
+  if (action === 'cout') return { html: `<div>🏷️ <b>Prix Lulu ${i.livres > 1 ? `pour le colis de ${i.livres} livres` : 'pour ce livre'}</b> (livraison ${LIV[i.livraison] || i.livraison || ''})</div>
       <table><tr><td>Impression</td><td class="r">${eu(i.impression_ttc)}</td></tr><tr><td>Port</td><td class="r">${eu(i.port_ttc)}</td></tr>
       ${i.frais_ttc && parseFloat(i.frais_ttc) ? `<tr><td>Frais de traitement</td><td class="r">${eu(i.frais_ttc)}</td></tr>` : ''}
       <tr><td><b>Total TTC</b></td><td class="r big">${eu(i.total_ttc)}</td></tr></table>
@@ -318,10 +323,10 @@ async function comparer(b) {
   if (r.erreur) { RES._reg = { cls: 'err', html: '⚠️ ' + esc(r.erreur) }; return render(); }
   const f = v => v == null ? '—' : parseFloat(v).toFixed(2).replace('.', ',') + ' €';
   const L = { MAIL: 'Économique', PRIORITY_MAIL: 'Prioritaire' };
-  const ok = r.options.filter(x => !x.erreur).sort((a, c) => parseFloat(a.total_ttc) - parseFloat(c.total_ttc));
+  const ok = r.options.filter(x => !x.erreur && !x.lot).sort((a, c) => parseFloat(a.total_ttc) - parseFloat(c.total_ttc)).concat(r.options.filter(x => !x.erreur && x.lot));
   document.getElementById('dlgIn').innerHTML = `<h3>🏷️ Prix Lulu pour 1 livre (24 pages, livré à ${esc(r.ville || '')})</h3>
     <table><tr><th>Fabrication</th><th>Livraison</th><th class="r">Impression</th><th class="r">Port</th><th class="r">Total TTC</th></tr>
-    ${ok.map(x => `<tr${x.pod.includes('FCPRECW') && x.livraison === 'MAIL' ? ' style="background:var(--gold-soft)"' : ''}><td>${esc(x.fabrication)}</td><td>${L[x.livraison] || x.livraison}</td><td class="r">${f(x.impression_ttc)}</td><td class="r">${f(x.port_ttc)}</td><td class="r"><b>${f(x.total_ttc)}</b></td></tr>`).join('')}</table>
+    ${ok.map(x => `<tr${/actuel/.test(x.fabrication) && x.livraison === 'MAIL' ? ' style="background:var(--gold-soft)"' : ''}><td>${esc(x.fabrication)}</td><td>${L[x.livraison] || x.livraison}</td><td class="r">${f(x.impression_ttc)}</td><td class="r">${f(x.port_ttc)}${x.port_colis_ttc ? `<br><small class="meta">colis : ${f(x.port_colis_ttc)}</small>` : ''}</td><td class="r"><b>${f(x.total_ttc)}</b></td></tr>`).join('')}</table>
     ${r.options.filter(x => x.erreur).length ? `<p class="meta">Non proposé par Lulu : ${r.options.filter(x => x.erreur).map(x => esc(x.fabrication) + ' (' + (L[x.livraison] || x.livraison) + ')').join(', ')}</p>` : ''}
     <p class="meta">En jaune : la fabrication actuelle. Rien n'est changé tant que tu ne le décides pas.</p>
     <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
