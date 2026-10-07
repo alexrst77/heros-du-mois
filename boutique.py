@@ -689,8 +689,10 @@ def admin_action(oid, action):
             if not os.getenv("SMTP_PASSWORD"):
                 raise RuntimeError("SMTP_PASSWORD absent dans Railway : envoi de mails non configuré")
             db.annuler_mail_pret(oid)
+            DERNIERE_ERREUR_MAIL.pop(oid, None)
             if not mail_livre_pret(oid):
-                raise RuntimeError("mail non envoyé (livre non finalisé, essai, ou erreur : voir les logs Railway)")
+                fin = fabrication.est_finalise(A.OUT / (o["job_id"] or "_"))
+                raise RuntimeError("mail non envoyé : " + (DERNIERE_ERREUR_MAIL.get(oid) or ("livre non finalisé" if not fin else "livre d'essai ou sans e-mail")))
             return jsonify(ok=True, info={"envoye_a": o["email"]})
         if action == "budget":
             folder = A.OUT / (o["job_id"] or "_")
@@ -781,6 +783,9 @@ def _date_fr(d):
     return f"{jours[d.weekday()]} {d.day} {mois[d.month - 1]}"
 
 
+DERNIERE_ERREUR_MAIL = {}
+
+
 def mail_livre_pret(oid):
     """Mail automatique au client quand son livre est validé (finalisé) : couverture, titre, livraison estimée. Une seule fois."""
     o = db.get(oid)
@@ -832,7 +837,8 @@ def mail_livre_pret(oid):
         return ok
     except Exception as e:
         db.annuler_mail_pret(oid)                     # pas envoyé : il pourra repartir à la prochaine validation
-        log(f"commande {oid} : mail « livre prêt » impossible : {e}")
+        DERNIERE_ERREUR_MAIL[oid] = f"{type(e).__name__}: {e}"
+        log(f"commande {oid} : mail « livre prêt » impossible : {type(e).__name__}: {e}")
         return False
 
 
