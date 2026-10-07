@@ -25,6 +25,21 @@
   .scene { position:relative; aspect-ratio:1/1; border-radius:18px; overflow:hidden; display:flex; align-items:flex-end; justify-content:center;
            background:radial-gradient(circle at 50% 36%, #3A4690 0%, #232B66 52%, var(--nuit) 100%); }
   .scene .big { width:84%; height:94%; display:flex; align-items:flex-end; justify-content:center; }
+  /* aperçu façon couverture du livre : décor de l'univers choisi, « Mon Héros du Mois », prénom, titre, dos numéroté */
+  .couv { border-radius:6px 18px 18px 6px; box-shadow:inset -3px 0 0 rgba(255,255,255,.35), inset -6px 0 10px rgba(0,0,0,.18); }
+  .couv .decor { position:absolute; inset:-8%; background:center/cover no-repeat; filter:blur(7px) saturate(1.15) brightness(.82); transform:scale(1.04); transition:background-image .4s; }
+  .couv::after { content:""; position:absolute; inset:0; pointer-events:none;
+                 background:linear-gradient(180deg, rgba(14,18,48,.78) 0%, rgba(14,18,48,.35) 30%, rgba(14,18,48,0) 48%, rgba(14,18,48,0) 70%, rgba(14,18,48,.45) 100%); }
+  .couv .ctitre { position:absolute; z-index:2; top:6%; left:9%; right:5%; text-align:center; color:#FFF3D6; text-shadow:0 2px 10px rgba(10,14,40,.65); pointer-events:none; }
+  .couv .ctitre .k { font:700 clamp(9px,1.6vw,12px)/1 var(--texte); letter-spacing:.28em; text-transform:uppercase; color:#F2D58A; }
+  .couv .ctitre .p { font:400 clamp(34px,6.4vw,58px)/1 var(--titre); margin-top:8px; letter-spacing:-.5px; }
+  .couv .ctitre .t { font:400 clamp(16px,2.6vw,23px)/1.15 var(--titre); margin-top:6px; }
+  .couv .big, .couv .group { position:relative; z-index:3; }
+  .couv .big { height:66%; } .couv .group { height:72%; }
+  .couv .dos { position:absolute; z-index:4; left:0; top:0; bottom:0; width:5.5%; background:linear-gradient(90deg, rgba(10,14,40,.75), rgba(10,14,40,.35));
+               border-right:1px solid rgba(242,213,138,.45); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:10px 0 12px; }
+  .couv .dos i { font-style:normal; color:#F2D58A; font-size:11px; }
+  .couv .dos b { width:18px; height:18px; border-radius:50%; background:#E8C25A; color:#1A1F4A; font:800 11px/18px var(--texte); text-align:center; box-shadow:0 0 0 1px #9C7A2B; }
   .scene .big svg { width:100%; height:100%; }
   .scene .group { display:flex; align-items:flex-end; justify-content:center; width:100%; height:100%; padding:0 4%; }
   .scene .group svg { display:block; }
@@ -135,7 +150,8 @@
 
   <div id="builder" class="layout">
     <aside class="stage">
-      <div class="scene"><svg class="fl" id="fl" xmlns="http://www.w3.org/2000/svg"></svg><div id="big" class="big"></div></div>
+      <div class="scene couv"><div class="decor" id="decor"></div><svg class="fl" id="fl" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="ctitre" id="ctitre"></div><div id="big" class="big"></div><div class="dos" aria-hidden="true"><i>★</i><b id="dosnum">1</b></div></div>
       <div id="stat"></div>
       <div class="who" id="who"></div>
       <div class="team" id="team"></div>
@@ -305,7 +321,21 @@
   }
   const petName = (p, i) => p.nom || `Animal ${i + 1}`;
   const petScale = p => p.taille === 'petit' ? 70 : p.taille === 'grand' ? 96 : 84;
+  function titreCouv() {             // même hiérarchie que la vraie couverture : « Mon Héros du Mois », prénom, titre
+    const e = S.enfant, h = S.histoire;
+    let u = null;
+    if (S.commande.formule === 'fetes' && h.fetes.length) u = FETES.find(x => x.cle === h.fetes[0]);
+    else if (h.occasion) u = FETES.find(x => x.cle === h.occasion);
+    if (!u) u = UNIV.find(x => !x.fete && x.nom === h.univers) || UNIV.find(x => !x.fete);
+    const nom = (u && u.nom) || '';
+    const suite = nom.replace(/^Mon /, 'son ').replace(/^(La|Le|Les) /, m => m.toLowerCase()).replace(/^L'/, "l'");
+    const pr = (e.prenom || '').trim().replace(/^./, c => c.toUpperCase());
+    $('decor').style.backgroundImage = u ? `url("/vignette/${u.cle}.webp")` : '';
+    $('ctitre').innerHTML = `<div class="k">Mon Héros du Mois</div><div class="p">${esc(pr || 'Votre héros')}</div>` +
+      (suite ? `<div class="t">et ${esc(suite.charAt(0).toLowerCase() === suite.charAt(0) ? suite : suite.charAt(0).toLowerCase() + suite.slice(1))}</div>` : '');
+  }
   function renderStage() {
+    titreCouv();
     const e = S.enfant, big = $('big');
     let who = '', sub = '', which = null;
     if (tab === 'enfant' || (tab === 'animaux' && !S.animaux.length) || (tab === 'doudou' && !S.doudou.actif)) which = 'enfant';
