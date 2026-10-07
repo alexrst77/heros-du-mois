@@ -249,6 +249,8 @@ Format JSON exact :
 Identifiants : utilise EXACTEMENT ceux de la configuration (heros, doudou, animal_1…) ; un personnage inventé qui revient reçoit
 un identifiant invente_<nom> et une fiche dans characterBible (UN SEUL personnage inventé récurrent au plus). Tout personnage nommé dans le texte d'une double page figure dans
 presentCharacterIds de cette double page ; une absence volontaire d'un compagnon doit être justifiée par le texte.
+Aucun membre de la famille de l'enfant (maman, papa, frère, sœur, grands-parents, oncle, tante, cousins…) : ni dans le texte ni à
+l'image. Les seuls personnages sont ceux de la configuration et, si besoin, UN personnage imaginaire (créature, animal magique, lutin…).
 leftComposition et rightComposition décrivent les deux moitiés d'UN SEUL INSTANT : chaque personnage est placé dans UNE seule
 des deux moitiés (jamais le même personnage à gauche ET à droite, sinon l'illustrateur le dessine deux fois).
 Thèmes de lecture : scène claire -> voile #F5F0DF, encre #163E49 ; scène sombre ou nocturne -> voile #171B3A (ou #092D43 sous l'eau), encre #FFF7E8.
@@ -258,6 +260,11 @@ Longueur : {mots} mots par page, jamais plus de 7 lignes. Typographie française
 
 def protagoniste(snap):
     return next(p for p in snap["personnages"] if p["id"] == snap.get("protagoniste", "heros"))
+
+
+FAMILLE = re.compile(r"\b(maman|papa|m[eè]re|p[eè]re|parents?|fr[eè]re|s(?:œ|oe)ur|mamie|mami|papi|papy|grand-(?:m[eè]re|p[eè]re)|grands-parents|"
+                     r"tonton|tata|oncle|tante|cousine?|mom|mum|dad|mother|father|sister|brother|grandma|grandpa|grandmother|grandfather|aunt|uncle)\b"
+                     r"(?!\s+(?:du|de la|des|de l'|de)\s)(?!\s+No[eë]l)(?!\s+Fouettard)", re.I)
 
 
 def check_board(b, snap):
@@ -288,6 +295,10 @@ def check_board(b, snap):
             if G._fold(nom) in txt and cid not in pres:
                 probs.append(f"Double page {i + 1} : le texte nomme {nom} ({cid}) mais il n'est pas dans presentCharacterIds.")
         if not s.get("requiredVisibleDetails"): probs.append(f"Double page {i + 1} : requiredVisibleDetails vide.")
+        fam = FAMILLE.search(str(s.get("leftText", "")) + " " + str(s.get("rightText", "")) + " " + str(s.get("scene", "")) + " "
+                             + str(s.get("leftComposition", "")) + " " + str(s.get("rightComposition", "")))
+        if fam:
+            probs.append(f"Double page {s.get('id')} : membre de la famille (« {fam.group(0)} ») : interdit, remplace par les personnages configurés ou un personnage imaginaire.")
         for pid, nom in _noms(snap, b).items():
             if pid in (s.get("presentCharacterIds") or []) and nom.lower() in str(s.get("leftComposition", "")).lower() \
                     and nom.lower() in str(s.get("rightComposition", "")).lower():
@@ -358,9 +369,9 @@ def storyboard(snap):
         raise ProcedeError("Storyboard incomplet (9 doubles pages attendues) : relance la fabrication.")
     b = fix_board(b, snap)
     b["controle"] = check_board(b, snap)
-    trop = [p for p in b["controle"] if "trop long" in p]
+    trop = [p for p in b["controle"] if "trop long" in p or "membre de la famille" in p]
     if trop:
-        raise ProcedeError("Textes trop longs pour la mise en page (le corps n'est jamais réduit) : " + " ; ".join(trop))
+        raise ProcedeError("Storyboard non conforme après révision, arrêt AVANT les illustrations : " + " ; ".join(trop))
     return b
 
 
@@ -472,7 +483,8 @@ def pano_prompt(s, snap, b, refs, fix=None):
     extra = [refs_text(refs, snap, names),
              f"WORLD: {U.PAR_CLE[k]['image'] if k else G.art.DEFAULT_UNIVERS}.",
              f"CHARACTERS IN THIS SCENE: exactly {len(ids)} recurring characters ({', '.join(allnames.get(x, x) for x in ids)}), each shown once; "
-             "no other pet or plush; small background wildlife only if the scene asks for it."]
+             "no other pet or plush; small background wildlife only if the scene asks for it. No other human at all: no parent, sibling, "
+             "grandparent or other family member."]
     extra += une_seule_fois(s, snap, b)
     if fix: extra.append("CORRECTIONS REQUIRED (a previous attempt was rejected): " + "; ".join(fix))
     return p + "\n\n" + "\n".join(extra)
@@ -488,7 +500,7 @@ def cover_prompt(b, snap, refs):
         refs_text(refs, snap, {x.get("id"): str(x.get("name", "")).upper() for x in b.get("characterBible") or []}),
         f"WORLD: {U.PAR_CLE[k]['image'] if k else G.art.DEFAULT_UNIVERS}.",
         f"COVER SCENE: {b['coverBrief']}",
-        f"Exactly these characters: {', '.join(ids)}. {protagoniste(snap)['nom'].upper()} is the focal point, in the lower two thirds.",
+        f"Exactly these characters: {', '.join(ids)}; no other human, no family member. {protagoniste(snap)['nom'].upper()} is the focal point, in the lower two thirds.",
         "Keep the upper third calm (sky, foliage, soft light) for a title that will be typeset separately.",
         "No writing, letters, title, captions, watermark, typography or frame."])
 
@@ -540,7 +552,7 @@ def image(prompt, refs, path, size, quality, trace, etape=None):
 SYSTEM_PANO = """Tu contrôles une illustration panoramique (deux pages face à face, pliure au centre) d'un album jeunesse.
 Compare l'image à la fiche. BLOQUANTS (l'image est refaite) — uniquement :
 - un personnage attendu absent ou méconnaissable, ou un personnage récurrent en double ;
-- un humain ou un animal de compagnie en trop ; deux animaux fusionnés ;
+- un humain ou un animal de compagnie en trop (aucun parent, frère, sœur ou grand-parent ne doit apparaître) ; deux animaux fusionnés ;
 - espèce ou couleur principale fausse ; accessoire manquant ou présent alors que la fiche dit « aucun » ;
 - la peluche dessinée comme un animal vivant ; des lunettes sur un animal ou la peluche ;
 - un visage, une tête d'animal ou l'action essentielle coupé par la pliure (bande de 44 à 56 % de la largeur) ;
