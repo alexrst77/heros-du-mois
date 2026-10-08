@@ -299,6 +299,9 @@ def _start_book(oid, auto=False, reprise=False):
         try:
             depuis = int((time.time() - db.get(o["origine"] or oid)["cree"]) // (365.25 * 86400))
             form = dict(form, age=str(int(form["age"]) + 1 + depuis))
+            if str(form.get("naissance") or "").isdigit():      # année de naissance connue : l'âge exact du jour J
+                import datetime
+                form = dict(form, age=str(max(2, min(10, datetime.date.today().year + (1 if datetime.date.today().strftime("%m-%d") > (form.get("anniversaire") or "12-31") else 0) - int(form["naissance"])))))
         except (ValueError, TypeError, KeyError):
             pass
     if o["formule"] not in EXTRAS:

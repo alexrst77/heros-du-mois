@@ -28,7 +28,7 @@ JOBS = {}
 app = Flask(__name__, static_folder=str(ROOT / "static"))
 
 REQUIRED = ["prenom", "age"]
-FIELDS = ["prenom", "age", "genre", "cheveux", "yeux", "peau", "lunettes", "tenue", "doudou_nom", "doudou_type",
+FIELDS = ["prenom", "age", "naissance", "genre", "cheveux", "yeux", "peau", "lunettes", "tenue", "doudou_nom", "doudou_type",
           "doudou_desc", "animal", "passions", "univers", "fetes", "anniversaire", "heros_livre", "theme", "precision", "numero", "demo", "code"]
 PUBLIC = re.compile(r"^(portrait_[a-z0-9_]+\.png|image_\d\d\.png|apercu\.pdf|controle\.json)$")
 
@@ -272,6 +272,8 @@ def parse_book(data):
     for k in REQUIRED:
         if not form.get(k):
             return None, f"Champ obligatoire manquant : {k}"
+    if form.get("naissance") and not (form["naissance"].isdigit() and 2000 <= int(form["naissance"]) <= 2100):
+        form.pop("naissance")
     if not form["age"].isdigit() or not 2 <= int(form["age"]) <= 10:
         return None, "L'âge doit être compris entre 2 et 10 ans."
     if data.get("avatar"):

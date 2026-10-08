@@ -190,7 +190,8 @@ def evenements(y, m, snap):
         jour = min(int(a[3:]), CAL.monthrange(y, m)[1])
         d = DT.date(y, m, jour)
         try:
-            add(d, f"{snap['prenom']} a {age_au(d, snap.get('age') or 5, commande)} ans !", "anniv")
+            age = (d.year - int(snap["naissance"])) if str(snap.get("naissance") or "").isdigit() else age_au(d, snap.get("age") or 5, commande)
+            add(d, f"{snap['prenom']} a {age} ans !", "anniv")
         except (ValueError, TypeError):
             add(d, f"Anniversaire de {snap['prenom']}", "anniv")
     for x in snap.get("dates") or []:
@@ -682,7 +683,7 @@ def snapshot(form, cfg, today=None):
     c = form.get("calendrier") or {}
     debut = c.get("debut") if re.match(r"^\d{4}-(0[1-9]|1[0-2])$", str(c.get("debut") or "")) else debut_par_defaut(today)
     mois = mois_du_calendrier(debut)
-    data = {"version": VERSION, "produit": "calendrier", "prenom": cfg["personnages"][0]["nom"], "age": str(form.get("age")),
+    data = {"version": VERSION, "produit": "calendrier", "prenom": cfg["personnages"][0]["nom"], "age": str(form.get("age")), "naissance": form.get("naissance") or "",
             "personnages": [P.fiche(x) for x in cfg["personnages"]], "protagoniste": "heros",
             "debut": debut, "annee": libelle_annee(debut), "pays": (c.get("pays") or "FR").upper(),
             "scenes": scenes_du_calendrier(mois, form.get("fetes"), form.get("anniversaire")),

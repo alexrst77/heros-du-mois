@@ -297,6 +297,12 @@
   const totalC = () => (F[S.commande.formule] || F.pack6).prix + prixCalAjout() + prixColoAjout() + port();
   const THEMES = ["Accepter la différence", "Aller chez le dentiste", "Aller chez le médecin", "Apprendre à attendre", "Apprendre à partager", "Devenir propre", "Dire au revoir à la tétine", "Dire la vérité", "Dormir dans son grand lit", "Gérer la colère", "Goûter de nouveaux aliments", "La confiance en soi", "La peur du noir", "La politesse", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Le premier jour à la crèche", "Les cauchemars", "Les écrans : savoir s'arrêter", "Les émotions", "Oser se faire des amis", "Partir en vacances", "Prendre soin de la nature", "Quand papa et maman se séparent", "Ranger sa chambre", "Se brosser les dents", "S'habiller tout seul", "Un déménagement", "Une aventure pour rire"].sort((a, b) => a.localeCompare(b, 'fr'));
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  const AN = new Date().getFullYear(), ANNEES = Array.from({ length: 9 }, (_, i) => AN - 2 - i);      // de 2 à 10 ans
+  function majAge() {                 // âge d'aujourd'hui d'après l'année de naissance (et la date d'anniversaire si elle est connue)
+    const e = S.enfant; if (!e.naissance) return;
+    const d = new Date(), passe = !e.anniv_m || (d.getMonth() + 1 > +e.anniv_m) || (d.getMonth() + 1 == +e.anniv_m && d.getDate() >= +(e.anniv_j || 1));
+    e.age = String(Math.max(2, Math.min(10, AN - +e.naissance - (passe ? 0 : 1))));
+  }
   const anniv = () => S.enfant.anniv_j && S.enfant.anniv_m ? `${String(S.enfant.anniv_m).padStart(2, '0')}-${String(S.enfant.anniv_j).padStart(2, '0')}` : '';
   const UNIV = await (await fetch('/api/univers')).json();          // univers et fêtes (univers.py)
   const UNIVERS = UNIV.filter(u => !u.fete).map(u => u.nom), FETES = UNIV.filter(u => u.fete);
@@ -319,6 +325,7 @@
   if (!TEST) S.histoire.demo = false;
   if (!Array.isArray(S.histoire.fetes)) S.histoire.fetes = ['anniversaire', 'noel'];
   if (['sweat', 'robe'].includes(S.enfant.tenue)) S.enfant.tenue = 'tshirt';
+  if (!S.enfant.naissance) S.enfant.naissance = String(new Date().getFullYear() - (+S.enfant.age || 5));
   if (!PLANS_IDS().includes(S.commande.formule)) S.commande.formule = 'pack6';   // anciennes formules (abonnement) : le pack de 6
   function PLANS_IDS() { return ['livre', 'pack3', 'pack6', 'pack12', 'fetes', 'calendrier', 'coloriage']; }
   const COLO = await (await fetch('/api/coloriage')).json();        // catalogue des pages à colorier (coloriage.py)
@@ -462,6 +469,7 @@
       (suite ? `<div class="t">et ${esc(suite.charAt(0).toLowerCase() === suite.charAt(0) ? suite : suite.charAt(0).toLowerCase() + suite.slice(1))}</div>` : '');
   }
   function renderStage() {
+    majAge();
     titreCouv();
     const e = S.enfant, big = $('big');
     let who = '', sub = '', which = null;
@@ -510,7 +518,7 @@
   function panelEnfant() {
     const e = S.enfant, O = OPT.enfant;
     return `<div class="row2">${G('Prénom *', `<input type="text" data-in="prenom" maxlength="20" placeholder="Léo" value="${esc(e.prenom)}">`)}
-      ${G('Âge *', `<select data-in="age">${[3, 4, 5, 6, 7, 8].map(a => `<option ${e.age == a ? 'selected' : ''}>${a}</option>`).join('')}</select>`)}</div>` +
+      ${G('Année de naissance *', `<select data-in="naissance">${ANNEES.map(a => `<option ${e.naissance == a ? 'selected' : ''}>${a}</option>`).join('')}</select>`, e.age ? `${e.age} ans` : '')}</div>` +
       G('Son anniversaire', `<div class="row2" style="gap:0 10px"><select data-in="anniv_j" aria-label="Jour"><option value="">Jour</option>${Array.from({ length: 31 }, (_, i) => `<option ${e.anniv_j == i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>` +
         `<select data-in="anniv_m" aria-label="Mois"><option value="">Mois</option>${MOIS.map((m, i) => `<option value="${i + 1}" ${e.anniv_m == i + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select></div>`, 'facultatif · pour fêter son anniversaire') +
       G("C'est", chips(e, 'genre', O.genre)) +
@@ -771,7 +779,7 @@
       $('err').textContent = ''; return render(); }
     if (el.dataset.suite !== undefined) { const x = suiteDe()[+el.dataset.suite]; x[el.dataset.sk] = el.value; x[el.dataset.sk === 'theme' ? 'perso_t' : 'perso_u'] = true; OUVERT.suite = true; return render(); }
     if (el.dataset.chk) { target()[el.dataset.chk] = el.checked; render(); }
-    else if (el.tagName === 'SELECT' && el.dataset.in) { target()[el.dataset.in] = el.value; renderStage(); save(); }
+    else if (el.tagName === 'SELECT' && el.dataset.in) { target()[el.dataset.in] = el.value; if (['naissance', 'anniv_j', 'anniv_m'].includes(el.dataset.in)) return render(); renderStage(); save(); }
   });
   $('prev').onclick = () => { const T = TABS(); tab = T[Math.max(0, T.indexOf(tab) - 1)]; render(); scrollTo({ top: 0, behavior: 'smooth' }); };
   $('next').onclick = () => {
@@ -815,7 +823,7 @@
     if (S.produits.coloriage && S.coloriage.pages.length < COLO.nombre) { tab = 'pages'; render(); $('err').textContent = `Choisissez ${COLO.nombre} pages (${S.coloriage.pages.length} pour l'instant), ou cliquez sur « Compléter au hasard ».`; return; }
     const h = S.histoire, e = S.enfant;
     const payload = {
-      prenom: e.prenom.trim(), age: e.age, genre: e.genre, theme: h.theme, univers: (h.occasion && S.commande.formule !== 'fetes' && FETES.find(u => u.cle === h.occasion)) ? FETES.find(u => u.cle === h.occasion).nom : h.univers, fetes: h.fetes.join(','), anniversaire: anniv(), heros_livre: (herosChoix(), h.heros_livre), passions: h.passions,
+      prenom: e.prenom.trim(), age: (majAge(), e.age), naissance: e.naissance, genre: e.genre, theme: h.theme, univers: (h.occasion && S.commande.formule !== 'fetes' && FETES.find(u => u.cle === h.occasion)) ? FETES.find(u => u.cle === h.occasion).nom : h.univers, fetes: h.fetes.join(','), anniversaire: anniv(), heros_livre: (herosChoix(), h.heros_livre), passions: h.passions,
       suite: S.commande.formule === 'fetes' ? [] : suiteDe().map(x => ({ theme: x.theme, univers: x.univers })),
       precision: h.precision, numero: h.numero, code: h.code, demo: h.demo ? '1' : '',
       avatar: { enfant: e, doudou: S.doudou, animaux: S.animaux }
