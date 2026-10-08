@@ -329,6 +329,20 @@
   .cal .prix-cal b { font:800 34px/1 var(--texte); } .cal .prix-cal span { color:var(--encre-2); font-size:15px; }
   .cal .prix-cal .avec { flex-basis:100%; font-weight:700; color:#8A5A00; }
   @media (max-width:860px) { .cal { grid-template-columns:1fr; gap:32px; } }
+  /* tout son univers : les créations */
+  .crea { display:grid; grid-template-columns:1.35fr 1fr 1fr; gap:18px; margin-top:34px; }
+  .crea .c { background:var(--papier); border:1px solid var(--trait); border-radius:24px; overflow:hidden; display:flex; flex-direction:column;
+             box-shadow:0 24px 50px -36px rgba(31,37,87,.5); }
+  .crea .c img { width:100%; height:auto; aspect-ratio:4/3; object-fit:cover; display:block; }
+  .crea .c.phare img { aspect-ratio:auto; height:100%; max-height:300px; }
+  .crea .c .t { padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .crea .c h3 { font:400 23px/1.2 var(--titre); margin:0; } .crea .c p { margin:0; color:var(--encre-2); font-size:15px; }
+  .crea .c .px { font-weight:800; margin-top:auto; padding-top:6px; } .crea .c .px small { font-weight:600; color:var(--encre-2); }
+  .crea .c .l { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+  .crea .c .l a.voir { font-weight:700; font-size:14px; color:var(--encre-2); }
+  .crea .etiq { align-self:flex-start; background:var(--luciole); color:var(--encre); font:800 12px var(--texte); border-radius:999px; padding:3px 10px; }
+  .crea-bas { margin-top:18px; display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; justify-content:center; text-align:center; color:var(--encre-2); }
+  @media (max-width:900px) { .crea { grid-template-columns:1fr; } .crea .c.phare img { max-height:none; aspect-ratio:4/3; } }
   .coloriage { background:linear-gradient(180deg, var(--ciel), #EEF2FA 55%, var(--ciel)); }
   .colo-photos { display:grid; grid-template-columns:1fr; gap:12px; }
   .colo-photos img { width:100%; height:auto; display:block; border-radius:18px; box-shadow:0 24px 44px -26px rgba(31,37,87,.55); }
@@ -366,9 +380,9 @@
   <div class="in wrap">
     <a href="/" class="logo" aria-label="Mon Héros du Mois, accueil"><span class="logo-mark" aria-hidden="true"></span>Mon Héros du Mois</a>
     <nav aria-label="Navigation principale">
-      <a href="#feuilleter">Feuilleter</a><a href="#comment">Comment ça marche</a><a href="#univers">Univers</a><a href="#calendrier">Calendrier</a><a href="#coloriage">Coloriage</a><a href="#formules">Formules</a><a href="#questions">Questions</a>
+      <a href="#feuilleter">Feuilleter</a><a href="#comment">Comment ça marche</a><a href="#creations">Créations</a><a href="#univers">Univers</a><a href="#formules">Formules</a><a href="#questions">Questions</a>
     </nav>
-    <a class="btn petit" href="/creer">Créer son livre</a>
+    <a class="btn petit" href="/creer">Créer son univers</a>
   </div>
 </header>
 
@@ -377,13 +391,13 @@
   <div class="in wrap">
     <div>
       <h1>Le livre où votre enfant est le héros</h1>
-      <p class="intro">Son prénom, son apparence, son doudou et ses animaux dans une vraie histoire illustrée, imprimée et reliée. Chaque mois, une nouvelle aventure arrive dans la boîte aux lettres.</p>
+      <p class="intro">Son prénom, son apparence, son doudou et ses animaux dans une vraie histoire illustrée, imprimée et reliée. Et autour de ses livres, tout son univers : son calendrier, son cahier de coloriage…</p>
       <p class="prix-appel">À partir de <b>22,90 €</b> le livre, livraison offerte dès 6 livres</p>
       <form class="essai" action="/creer" method="get">
-        <label for="prenom">Essayez avec son prénom</label>
+        <label for="prenom">Créez son héros, puis choisissez ses créations</label>
         <div class="row">
           <input id="prenom" name="prenom" maxlength="20" placeholder="Léo" autocomplete="off">
-          <button class="btn" type="submit" id="go">Créer son livre</button>
+          <button class="btn" type="submit" id="go">Créer son univers</button>
         </div>
       </form>
       <ul class="rassure">
@@ -412,6 +426,29 @@
         </div>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="bloc" id="creations">
+  <div class="wrap">
+    <h2>Un seul héros, tout son univers</h2>
+    <p class="sous">Vous créez son avatar une fois : votre enfant, son doudou et ses animaux. Ensuite, choisissez ce qui lui fera plaisir. Tout est relu, imprimé, puis livré dans un seul colis.</p>
+    <div class="crea">
+      <div class="c phare"><img src="/static/vitrine/photo_04.webp" alt="Un livre Mon Héros du Mois tenu à deux mains" loading="lazy" width="800" height="1000">
+        <div class="t"><span class="etiq">Le préféré des familles</span><h3>Ses livres d'aventures</h3>
+          <p>Une vraie histoire illustrée dont il est le héros : 20 pages, couverture rigide, numérotées pour sa collection.</p>
+          <div class="px">Dès 22,90 € <small>le livre · livraison offerte dès 6</small></div>
+          <div class="l"><a class="btn" href="/creer?formule=pack6">Créer ses livres</a><a class="voir" href="#feuilleter">Feuilleter un livre</a></div></div></div>
+      <div class="c"><img src="/static/vitrine/cal_photo_2.webp" alt="Le calendrier ouvert au mois de juin, accroché au mur" loading="lazy" width="1139" height="1300">
+        <div class="t"><h3>Son calendrier</h3><p>12 mois illustrés avec lui, son anniversaire et vos dates de famille déjà marqués.</p>
+          <div class="px">34,90 € <small>· 29,90 € avec une autre création</small></div>
+          <div class="l"><a class="btn clair" href="/creer?produit=calendrier">Créer</a><a class="voir" href="#calendrier">Voir</a></div></div></div>
+      <div class="c"><img src="/static/vitrine/colo_photo_3.webp" alt="Le cahier de coloriage de Léo sur une table" loading="lazy" width="1004" height="1300">
+        <div class="t"><h3>Son cahier de coloriage</h3><p>30 dessins à colorier où il est le héros, choisis par vous parmi près de 70 idées.</p>
+          <div class="px">24,90 € <small>· 19,90 € avec une autre création</small></div>
+          <div class="l"><a class="btn clair" href="/creer?produit=coloriage">Créer</a><a class="voir" href="#coloriage">Voir</a></div></div></div>
+    </div>
+    <p class="crea-bas">✨ D'autres créations arrivent bientôt, toujours avec le même héros.</p>
   </div>
 </section>
 
@@ -684,8 +721,8 @@
   <div class="wrap">
     <div class="fin">
       <h2>Ce soir, votre enfant est le héros de l'histoire</h2>
-      <p>Composez son avatar en quelques minutes. Vous ne payez qu'à la fin, une fois votre livre configuré.</p>
-      <a class="btn" href="/creer">Créer son livre</a>
+      <p>Composez son avatar en quelques minutes, puis choisissez ses livres, son calendrier, son cahier de coloriage. Vous ne payez qu'à la fin.</p>
+      <a class="btn" href="/creer">Créer son univers</a>
     </div>
   </div>
 </section>
@@ -712,7 +749,7 @@
   /* le prénom tapé apparaît sur le bouton */
   const input = $('prenom'), go = $('go');
   const nom = v => v.trim().replace(/^./, c => c.toUpperCase());
-  input.addEventListener('input', () => { go.textContent = input.value.trim() ? 'Créer le livre de ' + nom(input.value) : 'Créer son livre'; });
+  input.addEventListener('input', () => { go.textContent = input.value.trim() ? "Créer l'univers de " + nom(input.value) : 'Créer son univers'; });
 
   /* feuilleter : deux livres (Léo, Mila). Chaque livre = suite de faces : couverture, puis gauche/droite de chaque double page, puis 4e de couverture.
      Sur grand écran : livre 3D (feuille j = faces 2j et 2j+1). Sur téléphone : une double page à la fois. */
