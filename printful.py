@@ -144,3 +144,24 @@ def commande(order_id):
     o = _http("GET", f"/orders/{int(order_id)}") or {}
     suivi = [s.get("tracking_url") for s in o.get("shipments") or [] if s.get("tracking_url")]
     return {"statut": o.get("status"), "suivi": suivi, "cout": (o.get("costs") or {}).get("total"), "devise": (o.get("costs") or {}).get("currency")}
+
+
+def maquettes(pid, variante, files, attente=90):
+    """Photos du produit fini générées par Printful (outil de maquette : aucune commande). files = [(emplacement, url, w, h)]."""
+    data = {"variant_ids": [int(variante)], "format": "jpg",
+            "files": [{"placement": p, "image_url": u, "position": {"area_width": w, "area_height": h, "width": w, "height": h, "top": 0, "left": 0}}
+                      for p, u, w, h in files]}
+    t = _http("POST", f"/mockup-generator/create-task/{int(pid)}", data) or {}
+    key, t0 = t.get("task_key"), time.time()
+    while key and time.time() - t0 < attente:
+        time.sleep(4)
+        r = _http("GET", f"/mockup-generator/task?task_key={key}") or {}
+        if r.get("status") == "completed":
+            out = []
+            for m in r.get("mockups") or []:
+                out.append({"titre": m.get("placement"), "url": m.get("mockup_url")})
+                out += [{"titre": x.get("title"), "url": x.get("url")} for x in m.get("extra") or []]
+            return [x for x in out if x["url"]]
+        if r.get("status") == "failed":
+            raise PrintfulError("maquette Printful : " + str(r.get("error") or "échec"))
+    raise PrintfulError("Printful prépare encore la maquette : réessaie dans une minute")

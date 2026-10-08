@@ -48,13 +48,13 @@ def kind_de(folder):
 # ====================================================================== formats
 def taille_image(w, h):
     """Format de l'illustration, au plus près du rapport du fichier d'impression (le reste est rogné au centre)."""
-    r = max(1 / 2.8, min(2.8, w / h))
+    r = max(1 / 3, min(3, w / h))
     if not P.custom_sizes_ok(P.model()):
         return "1536x1024" if r > 1.2 else "1024x1536" if r < 0.83 else "1024x1024"
     if r >= 1:
-        W, H = 1792, max(640, round(1792 / r / 16) * 16)
+        W, H = 1792, max(608, round(1792 / r / 16) * 16)
     else:
-        W, H = max(640, round(1792 * r / 16) * 16), 1792
+        W, H = max(608, round(1792 * r / 16) * 16), 1792
     return f"{W}x{H}"
 
 
@@ -78,7 +78,8 @@ def fichier_impression(illu, prenom, spec, dst):
     d = ImageDraw.Draw(im, "RGBA")
     nom = (prenom or "").upper()
     if nom:
-        px = int(min(H * 0.12, W * 0.09))
+        large = W / H > 2.5                                    # tasse, gourde : bande très allongée
+        px = int(min(H * (0.10 if large else 0.12), W * 0.09))
         f = _police(px)
         while d.textlength(nom, font=f) > W * 0.42 and px > 40:
             px = int(px * 0.9); f = _police(px)
@@ -86,7 +87,7 @@ def fichier_impression(illu, prenom, spec, dst):
         b = d.textbbox((0, 0), nom, font=f)
         th = b[3] - b[1]
         padx, pady = px * 0.6, px * 0.32
-        cy = H - H * 0.07 - th / 2 - pady
+        cy = H - H * (0.05 if large else 0.07) - th / 2 - pady
         box = (W / 2 - tw / 2 - padx, cy - th / 2 - pady, W / 2 + tw / 2 + padx, cy + th / 2 + pady)
         d.rounded_rectangle(box, radius=int(th / 2 + pady), fill=CREME + (235,), outline=(212, 175, 55, 255), width=max(3, px // 18))
         d.text((W / 2, cy), nom, font=f, fill=ENCRE, anchor="mm")
@@ -168,7 +169,9 @@ def image_prompt(snap, refs):
              f"CHARACTERS: exactly these recurring characters ({noms}), each shown once, close together, big and clearly visible; "
              f"{snap['personnages'][0]['nom'].upper()} is the focal point. No other human at all (no parent, sibling, grandparent).",
              "COMPOSITION: bold, simple and readable from a distance (it is printed on an object). Keep every character and face inside the "
-             "central 60 % of the width and above the bottom 24 % of the picture (a name ribbon will be typeset there: only grass or ground there).",
+             "central 60 % of the width. The characters are drawn a bit smaller and HIGHER in the picture: their feet and paws stay ABOVE the "
+             f"bottom {'32' if k['tour'] else '22'} % of the height, which shows only grass or ground (a name ribbon is typeset there). "
+             "Leave a little sky above their heads: the top 8 % may be trimmed.",
              ("The picture WRAPS AROUND A CYLINDER: the left and right edges must be simple continuous scenery (sky, grass, hills) that "
               "meet seamlessly, with no character near them." if k["tour"] else "Front view, vertical poster-like composition."),
              "No writing, letters, numbers, title, captions, watermark, typography or frame."]
@@ -365,6 +368,16 @@ def items_printful(folder, url_de):
     pf = obj["printful"]
     files = [{"type": pf["placement"], "url": url_de(obj["impression"])}] + [{"type": a["placement"], "url": url_de(a["fichier"])} for a in obj["autres"]]
     return {"variant_id": pf["variante"], "quantity": 1, "name": obj["titre"][:100], "files": files}
+
+
+def fichiers_maquette(folder, url_de):
+    obj = json.loads((Path(folder) / "objet.json").read_text(encoding="utf-8"))
+    pf = obj["printful"]
+    files = [(pf["placement"], url_de(obj["impression"]), pf["width"], pf["height"])]
+    for a in obj["autres"]:
+        w, h = Image.open(Path(folder) / a["fichier"]).size
+        files.append((a["placement"], url_de(a["fichier"]), w, h))
+    return pf, files
 
 
 def demo(form, cfg, folder, job, progress):

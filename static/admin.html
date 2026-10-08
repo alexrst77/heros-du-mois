@@ -141,7 +141,7 @@ function boutons(o, e) {
   if (!['paiement', 'archive'].includes(e.k)) sec.push(b('budget', '💰 Coût IA détaillé'));
   if (e.k === 'pret' || e.k === 'valide') sec.push(b('mail-pret', o.pack_mail ? '📧 Renvoyer le mail « prêt »' : '📧 Envoyer le mail « prêt »'));
   if (['relire', 'pret', 'valide'].includes(e.k) && !o.objet) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'), b('verifier-lulu', '🔎 Vérifier les fichiers chez Lulu'));
-  if (o.objet && ['relire', 'pret', 'valide'].includes(e.k)) sec.push(`<a class="btn" target="_blank" href="/admin/fichier/${o.id}/impression_objet.png${Q}">🖼️ Fichier d'impression</a>`);
+  if (o.objet && ['relire', 'pret', 'valide'].includes(e.k)) sec.push(`<a class="btn" target="_blank" href="/admin/fichier/${o.id}/impression_objet.png${Q}">🖼️ Fichier d'impression</a>`, b('maquette-printful', '📸 Photo du produit fini (Printful)'));
   if (o.extra && e.k === 'relire') sec.push(b('recomposer', o.objet ? "🔁 Refaire le fichier d'impression (sans IA)" : '🔁 Recomposer les pages (sans IA)'));
   if (o.abonnement_id) sec.push(b('mois-suivant', '➕ Livre suivant'), b('arreter-abonnement', '⏹️ Arrêter l\'abonnement', 'danger'));
   if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai') && !o.extra) sec.push(b('essai-apercu', '🧪 Essai aperçu (≈ 1 $)'), b('essai-brouillon', '🧪 Essai brouillon (≈ 0,5 $)'));
@@ -295,6 +295,7 @@ const CONFIRM = {
   'test-gourde': 'Fabriquer une gourde de test (illustration + fichier Printful) avec les avatars de cette commande ? (≈ 0,30 $ d\'IA, aucune commande Printful)',
   'test-tasse': 'Fabriquer une tasse de test (illustration + fichier Printful) avec les avatars de cette commande ? (≈ 0,30 $ d\'IA, aucune commande Printful)',
   'test-sac': 'Fabriquer un sac à dos de test (illustration + fichier Printful) avec les avatars de cette commande ? (≈ 0,30 $ d\'IA, aucune commande Printful)',
+  'maquette-printful': "Demander à Printful les photos du produit fini ? (gratuit, aucune commande, ≈ 30 s)",
   'printful-confirmer': "Confirmer la commande chez Printful ? Elle sera fabriquée, expédiée et FACTURÉE sur ta carte Printful."
 
 };
@@ -308,6 +309,7 @@ function resultat(action, j) {
       ${i.ok && i.calendrier ? '<div class="meta">C\'est noté pour tous les produits de ce type : ils peuvent partir à l\'impression.</div>' : ''}` }; }
   if (action === 'recomposer') return { cls: 'ok', html: '🔁 Fichiers recomposés : vérifie le résultat.' };
   if (action === 'imprimer' && i.printful) return { cls: 'ok', html: `🖨️ Envoyé.${i.lulu ? ' Lulu : travail ' + esc(i.lulu) + '.' : ''} Printful : commande ${esc(i.printful)} (${i.printful_statut === 'draft' ? 'brouillon : rien fabriqué ni facturé, bouton « Confirmer chez Printful » pour la lancer' : esc(i.printful_statut || '')}).` };
+  if (action === 'maquette-printful') return { cls: 'ok', html: `📸 <b>Maquettes Printful</b> (aucune commande)<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${(i.images || []).map(m => `<a href="${esc(m.url)}" target="_blank" title="${esc(m.titre || '')}"><img src="${esc(m.url)}" style="width:150px;height:150px;object-fit:cover;border-radius:8px;background:#fff"></a>`).join('')}</div>` };
   if (action === 'printful-confirmer') return { cls: 'ok', html: '✅ Commande Printful confirmée : fabrication lancée.' };
   if (action === 'cout') return { html: `<div>🏷️ <b>Prix Lulu ${i.livres + (i.calendriers || 0) > 1 ? `pour le colis (${[i.livres ? i.livres + ' livre(s)' : ''].concat(i.extras || []).filter(Boolean).join(' + ')})` : i.calendriers ? 'pour ' + esc((i.extras || [''])[0]) : 'pour ce livre'}</b> (livraison ${LIV[i.livraison] || i.livraison || ''})</div>
       <table><tr><td>Impression</td><td class="r">${eu(i.impression_ttc)}</td></tr><tr><td>Port</td><td class="r">${eu(i.port_ttc)}</td></tr>

@@ -1067,6 +1067,19 @@ def admin_action(oid, action):
             job = send_to_print(oid)
             return jsonify(ok=True, info={"lulu": None if job.get("printful") else job.get("id"), "env": lulu.env(),
                                           "printful": job.get("printful_id"), "printful_statut": job.get("printful_statut")})
+        if action == "maquette-printful":          # photos du produit fini par l'outil de maquette Printful (aucune commande)
+            folder = A.OUT / (o["job_id"] or "_")
+            if o["formule"] not in OBJETS or not (folder / "objet.json").exists():
+                raise RuntimeError("seulement pour un objet fabriqué")
+            pub = os.getenv("PUBLIC_URL", "").rstrip("/")
+            if not pub.startswith("https://"):
+                raise RuntimeError("Printful télécharge le fichier : renseigne PUBLIC_URL (adresse https publique du site).")
+            jeton = o["jeton"] or secrets.token_urlsafe(24)
+            db.update(oid, jeton=jeton)
+            pf, files = objets.fichiers_maquette(folder, lambda n: f"{pub}/objet/{oid}/{jeton}/{n}")
+            imgs = printful.maquettes(pf["produit"], pf["variante"], files)
+            (folder / "maquettes_printful.json").write_text(json.dumps({"le": time.strftime("%Y-%m-%d %H:%M"), "images": imgs}, ensure_ascii=False), encoding="utf-8")
+            return jsonify(ok=True, info={"images": imgs})
         if action == "printful-confirmer":         # brouillon Printful -> vraie commande (fabriquée et facturée par Printful)
             if not o.get("printful_id"):
                 raise RuntimeError("pas de commande Printful pour cet objet")
