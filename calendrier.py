@@ -664,12 +664,13 @@ def composer(folder, snap, cover, mois_imgs, couv_dims="auto"):
 SYSTEM_MOIS = """Tu contrôles une illustration de calendrier mural pour enfant (une page paysage, un mois).
 Compare l'image à la fiche. BLOQUANTS (uniquement) :
 - un personnage attendu absent ou méconnaissable, ou un personnage récurrent en double ;
-- un humain ou un animal de compagnie en trop (aucun parent, frère, sœur, grand-parent) ; deux animaux fusionnés ;
+- un humain en trop (aucun parent, frère, sœur, grand-parent) ; un chien, un chat ou un lapin domestique en trop ; deux animaux fusionnés ;
 - espèce ou couleur principale fausse ; accessoire manquant ou présent alors que la fiche dit « aucun » ;
 - la peluche dessinée comme un animal vivant ; des lunettes sur un animal ou sur la peluche ;
 - un visage dans les 8 % du haut ou les 10 % du bas de l'image (zone percée et reliée) ;
 - du texte, des lettres, des chiffres, un cadre ou un filigrane dans l'image ; une anatomie très fausse.
 MINEURS : nuances, détails de vêtements, lumière, décor un peu chargé.
+CE N'EST PAS UN ÉCART : de petits animaux sauvages du décor (oiseaux, papillons, écureuil, lapins de prairie, coccinelle) ; un accessoire de saison porté par la peluche (masque de carnaval, bonnet, écharpe, patins) tant qu'elle reste une peluche.
 Une teinte due à la lumière de la scène n'est PAS une couleur fausse. En cas de doute, ce n'est pas bloquant.
 Réponds UNIQUEMENT en JSON : {"bloquants": ["consigne en anglais"], "mineurs": ["en français"], "personnages_vus": ["noms"]}"""
 
