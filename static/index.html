@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
 <link rel="apple-touch-icon" href="/static/marque/apple-touch-icon.png">
-<title>Créer son livre – Mon Héros du Mois</title>
+<title>Créer son univers – Mon Héros du Mois</title>
 <link rel="stylesheet" href="/static/theme.css">
 <style>
   /* les anciennes variables, redéfinies sur le thème commun */
@@ -19,6 +19,8 @@
   .lead { color:var(--encre-2); margin:0 0 26px; max-width:62ch; font-size:18px; }
   .layout { display:grid; grid-template-columns:400px 1fr; gap:26px; align-items:start; }
   @media (max-width:900px) { .layout { grid-template-columns:1fr; } .stage { position:relative !important; top:0 !important; } }
+  @media (max-width:600px) { .stage { padding:10px; } .scene:not(.cal):not(.colo) { max-width:280px; margin:0 auto; } .scene.cal, .scene.colo { max-width:300px; margin-left:auto; margin-right:auto; }
+                             .lead { font-size:15px; margin-bottom:16px; } .who { font-size:20px; margin-top:8px; } .team button { width:50px; height:50px; } }
 
   /* scène : le soir, comme dans les livres */
   .stage { position:sticky; top:84px; background:var(--papier); border:1px solid var(--trait); border-radius:26px; padding:14px; box-shadow:0 24px 50px -34px rgba(31,37,87,.55); }
@@ -90,6 +92,14 @@
   .pages button.on b { position:absolute; right:-6px; top:-6px; background:var(--encre); color:#fff; border-radius:999px; min-width:22px; height:22px;
     font:800 11px/22px var(--texte); text-align:center; padding:0 5px; }
   .crea-l { display:grid; gap:12px; }
+  .reg { margin-top:12px; } .reg > summary { font-weight:800; font-size:15px; }
+  .reg > summary small { display:block; font:500 13px/1.35 var(--texte); color:var(--encre-2); margin-top:2px; }
+  .reg-b { padding:16px 14px 2px; border-top:1px solid var(--trait); }
+  .reg-b input[type=text], .reg-b input[type=email], .reg-b input[type=tel] { width:100%; height:auto; }
+  .reg-b .liste input[type=checkbox] { width:19px; height:19px; }
+  .crea-b .reg-b .grp:last-child { margin-bottom:12px; }
+  h3.sec { font:400 21px/1.2 var(--titre); margin:0 0 12px; } h3.sec em { font:600 13px var(--texte); font-style:normal; color:var(--encre-2); margin-left:6px; }
+  .sec-b { border-top:1px solid var(--trait); margin-top:8px; padding-top:20px; }
   .crea-c { border:2px solid var(--trait); border-radius:18px; background:#fff; overflow:hidden; }
   .crea-c.on { border-color:var(--encre); background:#FFFBEF; }
   .crea-h { display:grid; grid-template-columns:96px 1fr 34px; gap:14px; align-items:center; width:100%; border:0; background:none; padding:12px; text-align:left; cursor:pointer; color:var(--encre); }
@@ -227,7 +237,7 @@
 </div></header>
 <div class="wrap">
   <h1 id="h1">Créez son univers</h1>
-  <p class="lead">Composez son avatar en quelques minutes : votre enfant, son doudou et ses animaux. Puis choisissez ses créations : ses livres, son calendrier, son cahier de coloriage.</p>
+  <p class="lead">Quatre étapes : son avatar, son doudou et ses animaux, ses créations, puis la commande. Tout est réglé d'office pour lui : vous changez seulement ce que vous voulez.</p>
 
   <div id="builder" class="layout">
     <aside class="stage">
@@ -278,9 +288,9 @@
   Avatar.init(OPT);
   const $ = id => document.getElementById(id);
   /* onglets : l'avatar, puis « Ses créations », puis une étape par création choisie, puis la commande */
-  const ETAPES = { enfant: "L'enfant", doudou: 'Le doudou', animaux: 'Les animaux', creations: 'Ses créations', histoire: 'Ses livres', calendrier: 'Le calendrier', pages: 'Le coloriage', commande: 'La commande' };
-  const TABS = () => ['enfant', 'doudou', 'animaux', 'creations'].concat(S.produits.livres ? ['histoire'] : [], S.produits.calendrier ? ['calendrier'] : [],
-                                                                      S.produits.coloriage ? ['pages'] : [], ['commande']);
+  const ETAPES = { enfant: 'Le héros', compagnons: 'Doudou, animaux', creations: 'Ses créations', commande: 'La commande' };
+  const TABS = () => ['enfant', 'compagnons', 'creations', 'commande'];
+  let foc = 'doudou', vueFoc = '';          // compagnon affiché dans l'aperçu ; création dont les réglages sont ouverts
   const GR = await (await fetch('/api/tarifs')).json();                // prix : une seule source (paiement.py)
   const eur = c => (c / 100).toFixed(2).replace('.', ',').replace(',00', '') + ' €';
   const eur2 = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
@@ -298,9 +308,9 @@
   const prixCalAjout = () => S.commande.formule !== 'calendrier' && S.commande.cal_ajout ? GR.calendrier.ajout : 0;
   const prixColoAjout = () => S.commande.formule !== 'coloriage' && S.commande.colo_ajout ? GR.coloriage.ajout : 0;
   const OBJ = GR.objets || {};                                         // gourde, tasse, sac : en ajout, livraison comprise
-  const OBJ_INFO = { gourde: { emo: '🥤', court: 'Gourde à paille', txt: 'Gourde à paille CamelBak, le héros tout autour, son prénom dessus.' },
-                     tasse: { emo: '☕', court: 'Tasse émaillée', txt: 'Tasse émaillée incassable pour le chocolat chaud, avec son prénom.' },
-                     sac: { emo: '🎒', court: 'Sac à dos', txt: 'Sac à dos illustré avec le héros et son prénom, pour l\'école ou les sorties.' } };
+  const OBJ_INFO = { gourde: { emo: '🥤', img: '/static/vitrine/obj_gourde_gabin.webp', court: 'Gourde à paille', txt: 'Gourde à paille CamelBak, le héros tout autour, son prénom dessus.' },
+                     tasse: { emo: '☕', img: '/static/vitrine/obj_tasse_lea.webp', court: 'Tasse émaillée', txt: 'Tasse émaillée incassable pour le chocolat chaud, avec son prénom.' },
+                     sac: { emo: '🎒', img: '/static/vitrine/obj_sac_mael.webp', court: 'Sac à dos', txt: 'Sac à dos illustré avec le héros et son prénom, pour l\'école ou les sorties.' } };
   const objetsChoisis = () => (S.objets || []).filter(k => OBJ[k]);
   const prixObjets = () => objetsChoisis().reduce((t, k) => t + OBJ[k].prix, 0);
   const totalC = () => (F[S.commande.formule] || F.pack6).prix + prixCalAjout() + prixColoAjout() + prixObjets() + port();
@@ -453,7 +463,8 @@
   function titreCouv() {             // même hiérarchie que la vraie couverture : « Mon Héros du Mois », prénom, titre
     const e = S.enfant, h = S.histoire;
     const P = S.produits;
-    const vue = tab === 'calendrier' ? 'cal' : tab === 'pages' ? 'colo' : tab === 'histoire' || P.livres || aucune() ? 'livre' : P.calendrier ? 'cal' : 'colo';
+    const vue = tab === 'creations' && vueFoc === 'cal' && P.calendrier ? 'cal' : tab === 'creations' && vueFoc === 'colo' && P.coloriage ? 'colo'
+      : P.livres || aucune() ? 'livre' : P.calendrier ? 'cal' : 'colo';
     document.querySelector('.scene').classList.toggle('cal', vue === 'cal');
     document.querySelector('.scene').classList.toggle('colo', vue === 'colo');
     $('h1').textContent = (e.prenom || '').trim() ? `Créez l'univers de ${(e.prenom || '').trim().replace(/^./, c => c.toUpperCase())}` : 'Créez son univers';
@@ -484,9 +495,8 @@
     titreCouv();
     const e = S.enfant, big = $('big');
     let who = '', sub = '', which = null;
-    if (tab === 'enfant' || (tab === 'animaux' && !S.animaux.length) || (tab === 'doudou' && !S.doudou.actif)) which = 'enfant';
-    else if (tab === 'doudou') which = 'doudou';
-    else if (tab === 'animaux') which = 'animal_' + pet;
+    if (tab === 'enfant') which = 'enfant';
+    else if (tab === 'compagnons') which = foc === 'animaux' && S.animaux.length ? 'animal_' + pet : S.doudou.actif ? 'doudou' : S.animaux.length ? 'animal_' + pet : 'enfant';
     if (which) {
       const kind = kindOf(which), cfg = cfgOf(which), st = paintState(kind, cfg);
       const size = kind === 'animal' ? petScale(cfg) : kind === 'doudou' ? 84 : 100;
@@ -507,8 +517,9 @@
     }
     $('who').innerHTML = esc(who) + (sub ? `<small>${esc(sub)}</small>` : '');
     let t = `<button data-go="enfant" class="${tab === 'enfant' ? 'on' : ''}" title="${esc(e.prenom || 'Enfant')}">${img(paintState('enfant', e))}</button>`;
-    if (S.doudou.actif) t += `<button data-go="doudou" class="${tab === 'doudou' ? 'on' : ''}" title="Doudou">${img(paintState('doudou', S.doudou))}</button>`;
-    S.animaux.forEach((p, i) => { t += `<button data-go="animaux" data-pet="${i}" class="${tab === 'animaux' && pet === i ? 'on' : ''}" title="${esc(petName(p, i))}">${img(paintState('animal', p))}</button>`; });
+    const surC = tab === 'compagnons';
+    if (S.doudou.actif) t += `<button data-go="compagnons" data-foc="doudou" class="${surC && foc === 'doudou' ? 'on' : ''}" title="Doudou">${img(paintState('doudou', S.doudou))}</button>`;
+    S.animaux.forEach((p, i) => { t += `<button data-go="compagnons" data-foc="animaux" data-pet="${i}" class="${surC && foc === 'animaux' && pet === i ? 'on' : ''}" title="${esc(petName(p, i))}">${img(paintState('animal', p))}</button>`; });
     if (S.animaux.length < 3) t += `<button class="add" data-addpet="1" title="Ajouter un animal">+</button>`;
     $('team').innerHTML = t;
   }
@@ -536,11 +547,12 @@
       G('Teint', swatches(e, 'peau', O.peau), sel(O.peau, e.peau)) +
       G('Coiffure', thumbs(e, 'coiffure', O.coiffure.filter(c => COIF[e.genre].includes(c.id)), id => `<img src="/static/avatars/${Avatar.pick(O.coiffure, id).img}.webp" alt="" loading="lazy">`), sel(O.coiffure, e.coiffure)) +
       G('Couleur des cheveux', swatches(e, 'couleur_cheveux', O.couleur_cheveux), sel(O.couleur_cheveux, e.couleur_cheveux)) +
+      G('Couleur de la tenue', swatches(e, 'couleur_tenue', O.couleur_tenue), sel(O.couleur_tenue, e.couleur_tenue)) +
+      `<details class="multi reg" data-ouv="aff" ${OUVERT.aff ? 'open' : ''}><summary>Plus de détails <small>yeux ${esc(sel(O.yeux, e.yeux).toLowerCase())}, ${e.lunettes === 'aucune' ? 'sans lunettes' : 'lunettes'}, ${esc(sel(O.tenue, e.tenue).toLowerCase())}${e.taches === 'oui' ? ', taches de rousseur' : ''}</small></summary><div class="reg-b">` +
       G('Yeux', swatches(e, 'yeux', O.yeux), sel(O.yeux, e.yeux)) +
       G('Lunettes', chips(e, 'lunettes', O.lunettes) + (e.lunettes !== 'aucune' ? `<div style="margin-top:10px">${swatches(e, 'couleur_lunettes', O.couleur_lunettes)}</div>` : '')) +
       G('Taches de rousseur', chips(e, 'taches', O.taches)) +
-      G('Tenue', chips(e, 'tenue', O.tenue.filter(t => !RETIREES.includes(t.id)))) +
-      G('Couleur de la tenue', swatches(e, 'couleur_tenue', O.couleur_tenue), sel(O.couleur_tenue, e.couleur_tenue)) +
+      G('Tenue', chips(e, 'tenue', O.tenue.filter(t => !RETIREES.includes(t.id)))) + `</div></details>` +
       `<p class="hint">Aucune photo n'est demandée : l'avatar sert de modèle aux illustrations.</p>`;
   }
   function panelDoudou() {
@@ -568,6 +580,12 @@
       (p.type !== 'oiseau' ? G('Collier', swatches(p, 'collier', O.collier), sel(O.collier, p.collier)) : '') +
       `<button type="button" class="btn danger" data-delpet="1">Retirer ${esc(petName(p, pet))}</button>`;
     return h;
+  }
+  function panelCompagnons() {
+    const pr = esc((S.enfant.prenom || 'votre enfant').trim());
+    return `<div data-tgt="doudou"><h3 class="sec">Son doudou</h3>${panelDoudou()}</div>` +
+      `<div data-tgt="animaux" class="sec-b"><h3 class="sec">Ses animaux <em>facultatif</em></h3>${panelAnimaux()}</div>` +
+      `<p class="hint">Ils accompagnent ${pr} dans toutes ses créations : livres, calendrier, coloriage et objets.</p>`;
   }
   /* pack : une aventure (thème + univers) par livre, proposée d'office et modifiable */
   // propositions d'office et hasard : thèmes « universels » seulement (jamais séparation, propreté, dentiste… sans choix du parent)
@@ -637,16 +655,21 @@
         <img src="${img}" alt=""><span class="crea-t"><b>${titre}</b><span>${txt}</span><span class="crea-px">${prix}</span></span><i class="crea-ok">${P[k] ? '✓' : '+'}</i></button>${P[k] && corps ? `<div class="crea-b">${corps}</div>` : ''}</div>`;
     const plans = `<div class="plans">` + PLANS.map(p => `<button type="button" class="plan ${c.pack === p.id ? 'on' : ''}" data-pack="${p.id}">
         <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>`;
-    return `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr} : elles partent ensemble, dans un seul colis.</p>` +
+    const n = (F[c.formule] || {}).livres || 1, un = S.histoire.occasion ? (FETES.find(u => u.cle === S.histoire.occasion) || {}).nom : S.histoire.univers;
+    const reg = (cle, titre, resume, corps) => `<details class="multi reg" data-ouv="${cle}" ${OUVERT[cle] ? 'open' : ''}><summary>${titre} <small>${resume}</small></summary><div class="reg-b">${corps}</div></details>`;
+    const hist = reg('hist', n > 1 ? `Ses ${n} aventures` : 'Son aventure', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : `${esc(S.histoire.theme)} · ${esc(un || '')}${n > 1 ? ' · les suivantes déjà choisies' : ''}, modifiable`, panelHistoire());
+    const regCal = reg('cal', 'Réglages du calendrier', `commence en ${esc(moisLib(S.calendrier.debut).toLowerCase())}${S.calendrier.dates.filter(x => (x.texte || '').trim()).length ? ` · ${S.calendrier.dates.filter(x => (x.texte || '').trim()).length} date(s) de famille` : ''}, modifiable`, optionsCalendrier());
+    const regColo = reg('colo', 'Les 30 pages', `${S.coloriage.pages.length}/${COLO.nombre} choisies, notre sélection, modifiable`, pickerColoriage());
+    return `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr}. Tout est déjà réglé pour lui : ouvrez les réglages seulement si vous voulez changer quelque chose.</p>` +
       `<div class="crea-l">` +
-      carte('livres', '/static/vitrine/couv_jade.webp', 'Ses livres d\'aventures', 'Une vraie histoire illustrée dont il est le héros, couverture rigide.', `Dès ${eur2(F.pack12.prix_livre)} le livre`, plans) +
+      carte('livres', '/static/vitrine/couv_jade.webp', 'Ses livres d\'aventures', 'Une vraie histoire illustrée dont il est le héros, couverture rigide.', `Dès ${eur2(F.pack12.prix_livre)} le livre`, plans + hist) +
       carte('calendrier', '/static/vitrine/cal_photo_2.webp', 'Son calendrier', '12 mois illustrés avec lui, son anniversaire et vos dates de famille.',
-            autre('calendrier') ? `${eur2(GR.calendrier.ajout)} <s>${eur2(GR.calendrier.seul)}</s> avec une autre création` : `${eur2(GR.calendrier.seul)} · ${eur2(GR.calendrier.ajout)} avec une autre création`) +
+            autre('calendrier') ? `${eur2(GR.calendrier.ajout)} <s>${eur2(GR.calendrier.seul)}</s> avec une autre création` : `${eur2(GR.calendrier.seul)} · ${eur2(GR.calendrier.ajout)} avec une autre création`, regCal) +
       carte('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 dessins à colorier où il est le héros, choisis par vous.',
-            autre('coloriage') ? `${eur2(GR.coloriage.ajout)} <s>${eur2(GR.coloriage.seul)}</s> avec une autre création` : `${eur2(GR.coloriage.seul)} · ${eur2(GR.coloriage.ajout)} avec une autre création`) +
+            autre('coloriage') ? `${eur2(GR.coloriage.ajout)} <s>${eur2(GR.coloriage.seul)}</s> avec une autre création` : `${eur2(GR.coloriage.seul)} · ${eur2(GR.coloriage.ajout)} avec une autre création`, regColo) +
       `</div>` + (Object.keys(OBJ).length ? `<div class="objets-h">Ses objets, en plus <span>Avec une création ci-dessus · fabriqués par notre atelier objets, livrés à part, livraison comprise</span></div><div class="crea-l">` +
         Object.keys(OBJ).map(k => { const on = objetsChoisis().includes(k); return `<div class="crea-c ${on ? 'on' : ''}"><button type="button" class="crea-h" data-objet="${k}">
-        <span class="emo">${OBJ_INFO[k].emo}</span><span class="crea-t"><b>${OBJ_INFO[k].court}</b><span>${OBJ_INFO[k].txt}</span><span class="crea-px">${eur2(OBJ[k].prix)}, livraison comprise</span></span><i class="crea-ok">${on ? '✓' : '+'}</i></button></div>`; }).join('') + `</div>` : '');
+        <img src="${OBJ_INFO[k].img}" alt=""><span class="crea-t"><b>${OBJ_INFO[k].court}</b><span>${OBJ_INFO[k].txt}</span><span class="crea-px">${eur2(OBJ[k].prix)}, livraison comprise</span></span><i class="crea-ok">${on ? '✓' : '+'}</i></button></div>`; }).join('') + `</div>` : '');
   }
   function panelCalendrier() {
     const pr = esc((S.enfant.prenom || 'votre enfant').trim());
@@ -690,7 +713,7 @@
       `<b>+ ${eur2(GR.calendrier.ajout)}</b> <s>${eur2(GR.calendrier.seul)}</s>`, ajout('calendrier')));
     if (!P.coloriage) offres.push(offre('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 dessins à colorier où il est le héros.',
       `<b>+ ${eur2(GR.coloriage.ajout)}</b> <s>${eur2(GR.coloriage.seul)}</s>`, ajout('coloriage')));
-    Object.keys(OBJ).filter(k => !objetsChoisis().includes(k)).forEach(k => offres.push(offre(k, 'emo:' + OBJ_INFO[k].emo, OBJ_INFO[k].court,
+    Object.keys(OBJ).filter(k => !objetsChoisis().includes(k)).forEach(k => offres.push(offre(k, OBJ_INFO[k].img, OBJ_INFO[k].court,
       OBJ_INFO[k].txt + ' Livré à part.', `<b>+ ${eur2(OBJ[k].prix)}</b> livraison comprise`, `<button type="button" class="btn" data-objet-ajout="${k}">Ajouter</button>`)));
     const retirer = k => nbCrea() > 1 ? ` <button type="button" class="lien petit" data-retirer="${k}">retirer</button>` : '';
     return `<div class="moncolis"><div><b>Votre commande</b><span>${ch.join(' · ')}</span></div><button type="button" class="lien" data-t="creations">Modifier</button></div>` +
@@ -717,18 +740,18 @@
       `<div class="row2">${G('Pays', `<select data-in="pays">${[['FR', 'France'], ['BE', 'Belgique'], ['LU', 'Luxembourg'], ['CH', 'Suisse'], ['MC', 'Monaco']].map(([v, l]) => `<option value="${v}" ${c.pays === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}${G('Téléphone', inp('telephone', 'pour le transporteur', 'type="tel" autocomplete="tel"'))}</div>` +
       `<label class="check"><input type="checkbox" data-chk="cgv" ${c.cgv ? 'checked' : ''}><span>J'accepte les <a href="/cgv" target="_blank">conditions de vente</a> et je reconnais qu'un produit personnalisé n'ouvre pas de droit de rétractation.</span></label>`;
   }
-  const target = () => tab === 'enfant' ? S.enfant : tab === 'doudou' ? S.doudou : tab === 'animaux' ? S.animaux[pet] : tab === 'commande' ? S.commande : S.histoire;
+  const cible = el => { const t = el && el.closest && el.closest('[data-tgt]'); return t ? t.dataset.tgt : tab; };      // doudou / animaux sur la même étape
+  const target = el => { const k = cible(el); return k === 'enfant' ? S.enfant : k === 'doudou' ? S.doudou : k === 'animaux' ? S.animaux[pet] : k === 'commande' ? S.commande : S.histoire; };
 
   function render() {
     sync();
     if (!TABS().includes(tab)) tab = 'creations';
     $('tabs').innerHTML = TABS().map((t, i) => `<button data-t="${t}" class="${t === tab ? 'on' : ''}"><b>${i + 1}</b>${ETAPES[t]}</button>`).join('');
     { const on = $('tabs').querySelector('.on'); if (on) $('tabs').scrollLeft = on.offsetLeft - 40; }
-    $('body').innerHTML = { enfant: panelEnfant, doudou: panelDoudou, animaux: panelAnimaux, creations: panelCreations, histoire: panelHistoire,
-                            calendrier: panelCalendrier, pages: panelColoriage, commande: panelCommande }[tab]();
+    $('body').innerHTML = { enfant: panelEnfant, compagnons: panelCompagnons, creations: panelCreations, commande: panelCommande }[tab]();
     $('prev').style.visibility = tab === 'enfant' ? 'hidden' : 'visible';
     const plan = PLANS.find(p => p.id === S.commande.formule) || PLANS[0];
-    $('next').textContent = tab === 'commande' ? `Payer ${eur2(totalC())}` : (tab === 'histoire' && S.histoire.demo) ? 'Créer le livre démo' : 'Suivant';
+    $('next').textContent = tab === 'commande' ? `Payer ${eur2(totalC())}` : (tab === 'creations' && S.histoire.demo) ? 'Créer le livre démo' : 'Suivant';
     renderStage(); save();
   }
 
@@ -740,7 +763,7 @@
       S.produits[b.dataset.ajout] = true; if (b.dataset.pack) S.commande.pack = b.dataset.pack;
       const lib = { livres: 'Ses livres', calendrier: 'Le calendrier', coloriage: 'Le coloriage' }[b.dataset.ajout];
       render(); $('err').textContent = ''; const m = document.querySelector('.offres-ok') || document.createElement('p');
-      m.className = 'offres-ok'; m.innerHTML = `✓ Ajouté ! Réglages proposés d'office, modifiables dans l'onglet « ${lib} ».`;
+      m.className = 'offres-ok'; m.innerHTML = `✓ Ajouté ! Déjà réglé pour lui, modifiable dans « <button type="button" class="lien" data-t="creations">Ses créations</button> ».`;
       document.querySelector('.recap').after(m); return; }
     if (b.dataset.retirer) { S.produits[b.dataset.retirer] = false; return render(); }
     if (b.dataset.objet) { const l = S.objets, i = l.indexOf(b.dataset.objet); if (i >= 0) l.splice(i, 1); else l.push(b.dataset.objet); $('err').textContent = ''; return render(); }
@@ -763,30 +786,36 @@
     if (b.dataset.cdel !== undefined) { S.calendrier.dates.splice(+b.dataset.cdel, 1); return render(); }
     if (b.dataset.occ) { S.histoire.occasion = ''; return render(); }
     if (b.dataset.t) { tab = b.dataset.t; $('err').textContent = ''; return render(); }
-    if (b.dataset.go) { tab = b.dataset.go; if (b.dataset.pet) pet = +b.dataset.pet; return render(); }
-    if (b.dataset.addpet) { S.animaux.push(newPet()); pet = S.animaux.length - 1; tab = 'animaux'; return render(); }
+    if (b.dataset.go) { tab = b.dataset.go; if (b.dataset.foc) foc = b.dataset.foc; if (b.dataset.pet) pet = +b.dataset.pet; return render(); }
+    if (b.dataset.addpet) { S.animaux.push(newPet()); pet = S.animaux.length - 1; tab = 'compagnons'; foc = 'animaux'; return render(); }
     if (b.dataset.delpet) { S.animaux.splice(pet, 1); pet = Math.max(0, pet - 1); return render(); }
-    if (b.dataset.pet !== undefined && b.closest('.pets')) { pet = +b.dataset.pet; return render(); }
+    if (b.dataset.pet !== undefined && b.closest('.pets')) { pet = +b.dataset.pet; foc = 'animaux'; return render(); }
     if (b.dataset.k) {
-      const o = target(), avant = o[b.dataset.k]; o[b.dataset.k] = b.dataset.v;
+      const o = target(b), avant = o[b.dataset.k], tg = cible(b); o[b.dataset.k] = b.dataset.v;
+      if (tg === 'doudou' || tg === 'animaux') foc = tg;
       if (tab === 'commande' && b.dataset.k === 'formule' && avant !== b.dataset.v) {      // le produit choisi au départ reste dans la commande
         const AJ = { calendrier: 'cal_ajout', coloriage: 'colo_ajout' };
         if (AJ[avant]) o[AJ[avant]] = true;
         if (AJ[b.dataset.v]) o[AJ[b.dataset.v]] = false;
       }
       if (tab === 'enfant' && b.dataset.k === 'genre' && !COIF[o.genre].includes(o.coiffure)) o.coiffure = COIF[o.genre][0];
-      if (tab === 'animaux' && b.dataset.k === 'type') {      // on ne remplace que les réglages que le parent n'a pas encore touchés
+      if (tg === 'animaux' && b.dataset.k === 'type') {      // on ne remplace que les réglages que le parent n'a pas encore touchés
         const base = OPT.modeles.animal[o.type]; o._choisi = o._choisi || [];
         Object.keys(base).forEach(k => { if (!o._choisi.includes(k)) o[k] = base[k]; });
-      } else if (tab === 'animaux') { o._choisi = [...new Set([...(o._choisi || []), b.dataset.k])]; }
+      } else if (tg === 'animaux') { o._choisi = [...new Set([...(o._choisi || []), b.dataset.k])]; }
       return render();
     }
   });
+  document.addEventListener('toggle', ev => {
+    const d = ev.target; if (!d.dataset || !d.dataset.ouv) return;
+    OUVERT[d.dataset.ouv] = d.open;
+    if (['cal', 'colo', 'hist'].includes(d.dataset.ouv) && d.open) { vueFoc = d.dataset.ouv; renderStage(); }
+  }, true);
   document.addEventListener('input', ev => {
     const el = ev.target;
     if (el.dataset.cd !== undefined && el.dataset.ck === 'texte') { S.calendrier.dates[+el.dataset.cd].texte = el.value; save(); return; }
-    if (el.dataset.in) { target()[el.dataset.in] = el.value; renderStage(); save();
-      if (tab === 'animaux' && el.dataset.in === 'nom') document.querySelectorAll('.pets button')[pet].textContent = petName(S.animaux[pet], pet); }
+    if (el.dataset.in) { target(el)[el.dataset.in] = el.value; const tg = cible(el); if (tg === 'doudou' || tg === 'animaux') foc = tg; renderStage(); save();
+      if (tg === 'animaux' && el.dataset.in === 'nom') document.querySelectorAll('.pets button')[pet].textContent = petName(S.animaux[pet], pet); }
   });
   document.addEventListener('change', ev => {
     const el = ev.target;
@@ -798,16 +827,16 @@
       else f.push(c);
       $('err').textContent = ''; return render(); }
     if (el.dataset.suite !== undefined) { const x = suiteDe()[+el.dataset.suite]; x[el.dataset.sk] = el.value; x[el.dataset.sk === 'theme' ? 'perso_t' : 'perso_u'] = true; OUVERT.suite = true; return render(); }
-    if (el.dataset.chk) { target()[el.dataset.chk] = el.checked; render(); }
-    else if (el.tagName === 'SELECT' && el.dataset.in) { target()[el.dataset.in] = el.value; if (['naissance', 'anniv_j', 'anniv_m'].includes(el.dataset.in)) return render(); renderStage(); save(); }
+    if (el.dataset.chk) { target(el)[el.dataset.chk] = el.checked; if (cible(el) === 'doudou') foc = 'doudou'; render(); }
+    else if (el.tagName === 'SELECT' && el.dataset.in) { target(el)[el.dataset.in] = el.value; if (['naissance', 'anniv_j', 'anniv_m'].includes(el.dataset.in)) return render(); renderStage(); save(); }
   });
   $('prev').onclick = () => { const T = TABS(); tab = T[Math.max(0, T.indexOf(tab) - 1)]; render(); scrollTo({ top: 0, behavior: 'smooth' }); };
   $('next').onclick = () => {
     $('err').textContent = '';
     if (tab === 'enfant' && !S.enfant.prenom.trim()) { $('err').textContent = "Indiquez le prénom de l'enfant."; return; }
-    if (tab === 'doudou' && S.doudou.actif && !(S.doudou.nom || '').trim()) { $('err').textContent = "Donnez un nom au doudou : il sera un vrai personnage de l'histoire."; return; }
-    if (tab === 'animaux') { const i = S.animaux.findIndex(a => !(a.nom || '').trim()); if (i >= 0) { pet = i; render(); $('err').textContent = "Indiquez le nom de chaque animal."; return; } }
-    if (tab === 'histoire' && S.histoire.demo) return submit();
+    if (tab === 'compagnons' && S.doudou.actif && !(S.doudou.nom || '').trim()) { foc = 'doudou'; renderStage(); $('err').textContent = "Donnez un nom au doudou : il sera un vrai personnage de ses histoires."; return; }
+    if (tab === 'compagnons') { const i = S.animaux.findIndex(a => !(a.nom || '').trim()); if (i >= 0) { pet = i; foc = 'animaux'; render(); $('err').textContent = "Indiquez le nom de chaque animal."; return; } }
+    if (tab === 'creations' && S.histoire.demo) return submit();
     if (tab === 'creations' && aucune()) { $('err').textContent = 'Choisissez au moins une création.'; return; }
     if (tab !== 'commande') { const T = TABS(); tab = T[T.indexOf(tab) + 1]; render(); scrollTo({ top: 0, behavior: 'smooth' }); return; }
     submit();
@@ -833,14 +862,14 @@
   /* ---------- envoi ---------- */
   async function submit() {
     if (!S.enfant.prenom.trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez le prénom de l'enfant."; return; }
-    if (S.produits.livres && S.commande.formule === 'fetes' && S.histoire.fetes.length !== 6) { tab = 'histoire'; render(); $('err').textContent = `Choisissez 6 fêtes pour la formule « 6 livres de fête » (${S.histoire.fetes.length} pour l'instant).`; return; }
+    if (S.produits.livres && S.commande.formule === 'fetes' && S.histoire.fetes.length !== 6) { tab = 'creations'; OUVERT.hist = true; render(); $('err').textContent = `Choisissez 6 fêtes pour la formule « 6 livres de fête » (${S.histoire.fetes.length} pour l'instant).`; return; }
     if (S.histoire.fetes.includes('anniversaire') && !anniv()) {       // date facultative : sans elle, pas de livre d'anniversaire
       if (S.commande.formule === 'fetes') { tab = 'enfant'; render(); $('err').textContent = "Pour le livre d'anniversaire, indiquez sa date (jour et mois), ou choisissez une autre fête."; return; }
       S.histoire.fetes = S.histoire.fetes.filter(f => f !== 'anniversaire');
     }
     sync();
     if (aucune()) { tab = 'creations'; render(); $('err').textContent = 'Choisissez au moins une création.'; return; }
-    if (S.produits.coloriage && S.coloriage.pages.length < COLO.nombre) { tab = 'pages'; render(); $('err').textContent = `Choisissez ${COLO.nombre} pages (${S.coloriage.pages.length} pour l'instant), ou cliquez sur « Compléter au hasard ».`; return; }
+    if (S.produits.coloriage && S.coloriage.pages.length < COLO.nombre) { tab = 'creations'; OUVERT.colo = true; vueFoc = 'colo'; render(); $('err').textContent = `Choisissez ${COLO.nombre} pages (${S.coloriage.pages.length} pour l'instant), ou cliquez sur « Compléter au hasard ».`; return; }
     const h = S.histoire, e = S.enfant;
     const payload = {
       prenom: e.prenom.trim(), age: (majAge(), e.age), naissance: e.naissance, genre: e.genre, theme: h.theme, univers: (h.occasion && S.commande.formule !== 'fetes' && FETES.find(u => u.cle === h.occasion)) ? FETES.find(u => u.cle === h.occasion).nom : h.univers, fetes: h.fetes.join(','), anniversaire: anniv(), heros_livre: (herosChoix(), h.heros_livre), passions: h.passions,
@@ -976,6 +1005,10 @@
     if (['livre', 'pack3', 'pack6', 'pack12', 'fetes'].includes(q.get('formule'))) { S.commande.pack = q.get('formule'); S.produits = { livres: true, calendrier: false, coloriage: false }; save(); }
     if (['calendrier', 'coloriage'].includes(q.get('produit'))) { S.produits = { livres: false, calendrier: q.get('produit') === 'calendrier', coloriage: q.get('produit') === 'coloriage' }; save(); }
     else if (q.get('formule') === 'mensuel') { S.commande.formule = 'pack6'; save(); }
+    if (['gourde', 'tasse', 'sac'].includes(q.get('produit'))) {               // objet : ajouté à la création choisie (un livre par défaut)
+      if (!S.objets.includes(q.get('produit'))) S.objets.push(q.get('produit'));
+      if (aucune()) S.produits.livres = true;
+      save(); }
     const u = UNIV.find(x => !x.fete && x.cle === q.get('univers'));                 // carte « univers » de l'accueil
     if (u) { S.histoire.univers = u.nom; S.histoire.occasion = ''; save(); }
     const f = UNIV.find(x => x.fete && x.cle === q.get('fete'));                     // carte « occasion spéciale » de l'accueil
