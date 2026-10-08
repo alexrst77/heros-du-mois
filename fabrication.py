@@ -247,7 +247,7 @@ def sauvegarder(folder, dest_dir):
     z = dest / f"{folder.name}.zip"
     with zipfile.ZipFile(z, "w", zipfile.ZIP_STORED) as zz:
         for p in sorted(folder.rglob("*")):
-            if p.is_file() and "rendu" not in p.parts:
+            if p.is_file() and not ({"rendu", "refs", "refusees"} & set(p.parts)):
                 zz.write(p, str(p.relative_to(folder)))
     return z
 

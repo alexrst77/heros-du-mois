@@ -327,6 +327,8 @@ def book_done(oid, job):
         f.unlink(missing_ok=True)
     for f in (A.OUT / job.get("_id", oid)).glob("*_essai*.png"):
         f.unlink(missing_ok=True)
+    for x in ("rendu", "refs"):                                    # pages de rendu et copies de références : temporaires
+        shutil.rmtree(A.OUT / (db.get(oid)["job_id"] or oid) / x, ignore_errors=True)
     log(f"commande {oid} : livre prêt « {job['titre']} », " + ("finalisé" if job.get("finalise") else "à relire"))
     if job.get("finalise"):
         _mail_pret_async(oid)
@@ -440,6 +442,52 @@ def _scheduler():
                     refresh_print(o["id"])
         except Exception:
             traceback.print_exc()
+
+
+def _taille(p):
+    p = Path(p)
+    if p.is_file():
+        return p.stat().st_size
+    return sum(f.stat().st_size for f in p.rglob("*") if f.is_file()) if p.exists() else 0
+
+
+def place_disque():
+    """Ce qui occupe le disque (volume Railway), par catégorie, en Mo."""
+    D = budget.DATA
+    cats = {"livres et produits (output)": A.OUT, "sauvegardes (zip)": D / "sauvegardes", "commandes (avatars)": STORE,
+            "portraits en cache": Path(A.generator.REF_DIR), "avatars en cache": Path(A.generator.CACHE)}
+    out = {k: round(_taille(v) / 1e6, 1) for k, v in cats.items()}
+    tmp = 0
+    for d in A.OUT.iterdir() if A.OUT.exists() else []:
+        if d.is_dir():
+            tmp += sum(_taille(d / x) for x in ("rendu", "refs", "refusees")) + sum(f.stat().st_size for f in d.glob("*_brut.png"))
+    out["dont fichiers temporaires effaçables"] = round(tmp / 1e6, 1)
+    try:
+        st = shutil.disk_usage(D)
+        out["_disque"] = {"total_mo": round(st.total / 1e6), "libre_mo": round(st.free / 1e6), "utilise_mo": round(st.used / 1e6)}
+    except OSError:
+        pass
+    return out
+
+
+def nettoyer_disque():
+    """Libère de la place SANS toucher à ce qui sert : pages de rendu intermédiaires, copies de références, images brutes,
+    images refusées archivées, essais de plus de 3 jours, livres jamais commandés. Les livres, calendriers et cahiers, leurs
+    images, PDF, aperçus, portraits et sauvegardes sont gardés."""
+    libere = 0
+    en_cours = {o["job_id"] for o in db.lister(1000) if A.JOBS.get(o["job_id"] or "", {}).get("etat") in ("en_cours", "validation")}
+    essais_vieux = {o["job_id"] for o in db.lister(1000) if (o["formule"] or "").startswith("essai") and o["maj"] < time.time() - 3 * 86400}
+    for d in (A.OUT.iterdir() if A.OUT.exists() else []):
+        if not d.is_dir() or d.name in en_cours:
+            continue
+        if d.name in essais_vieux or (not (d / ".commande").exists() and d.stat().st_mtime < time.time() - 86400):
+            libere += _taille(d); shutil.rmtree(d, ignore_errors=True); continue
+        for x in ("rendu", "refs", "refusees", "_calibrage"):
+            if (d / x).exists():
+                libere += _taille(d / x); shutil.rmtree(d / x, ignore_errors=True)
+        for f in list(d.glob("*_brut.png")) + list(d.glob("_vignette_admin_*.jpg")):
+            libere += f.stat().st_size; f.unlink(missing_ok=True)
+    return round(libere / 1e6, 1)
 
 
 def purge_old(days=int(os.getenv("PURGE_JOURS", "30"))):
@@ -815,6 +863,22 @@ def admin_lulu_coloriage():
     res = lulu.tester_calendriers(addr, (o or {}).get("email") or CONTACT, codes=lulu.COLORIAGES, pages_list=(coloriage.pages_impression("_"),))
     log("test coloriage Lulu : " + json.dumps(res, ensure_ascii=False)[:2000])
     return jsonify(ok=True, resultats=res)
+
+
+@bp.get("/admin/api/disque")
+def admin_disque():
+    if not admin_ok():
+        abort(403)
+    return jsonify(place_disque())
+
+
+@bp.post("/admin/api/disque/nettoyer")
+def admin_disque_nettoyer():
+    if not admin_ok():
+        abort(403)
+    mo = nettoyer_disque()
+    log(f"nettoyage du disque : {mo} Mo libérés")
+    return jsonify(ok=True, libere_mo=mo, place=place_disque())
 
 
 @bp.post("/admin/api/tarifs/confirmer")

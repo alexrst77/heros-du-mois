@@ -248,6 +248,10 @@ function vueReglages() {
   <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">📅 Calendriers Lulu (test)</h3>
     <p class="meta" style="margin:0">Code produit : <b>${esc(D.config.pod_calendrier || '')}</b> · fichiers ${D.config.calendrier_valide ? '<b style="color:var(--green)">validés par Lulu ✅</b>' : '<b style="color:var(--red)">pas encore validés</b> (bouton « 🔎 Vérifier les fichiers chez Lulu » sur un calendrier)'}.<br>Devis de test : aucune commande.</p>
     <div class="acts"><button class="btn" onclick="calendrier(this)">Tester</button></div></div>
+  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">💾 Place sur le disque</h3>
+    <div id="disque" class="meta">Chargement…</div>
+    <div class="acts"><button class="btn" onclick="nettoyer(this)">🧹 Libérer de la place</button></div>
+    <p class="meta" style="margin:0">Efface seulement les fichiers temporaires (pages de rendu, copies de références, images refusées archivées), les essais de plus de 3 jours et les créations jamais commandées. Rien de ce qui sert n'est touché.</p></div>
   <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🖍️ Cahiers de coloriage Lulu (test)</h3>
     <p class="meta" style="margin:0">Code produit : <b>${esc(D.config.pod_coloriage || '')}</b> · fichiers ${D.config.coloriage_valide ? '<b style="color:var(--green)">validés par Lulu ✅</b>' : '<b style="color:var(--red)">pas encore validés</b> (bouton « 🔎 Vérifier les fichiers chez Lulu » sur un cahier)'}.<br>Devis de test des codes possibles (Lettre US, spirale, noir et blanc) : aucune commande.</p>
     <div class="acts"><button class="btn" onclick="calendrier(this, 'coloriage')">Tester</button></div></div>
@@ -261,6 +265,7 @@ function render() {
   const nb = D.commandes.filter(o => AFAIRE.includes(etat(o).k)).length;
   document.getElementById('nav').innerHTML = TABS.map(([k, t]) => `<button class="${k === TAB ? 'on' : ''}" onclick="go('${k}')">${t}${k === 'accueil' && nb ? `<span class="badge">${nb}</span>` : ''}</button>`).join('');
   document.getElementById('view').innerHTML = { accueil: vueAccueil, livres: vueLivres, abos: vueAbos, messages: vueMessages, reglages: vueReglages }[TAB]();
+  if (TAB === 'reglages') chargerDisque();
 }
 function go(t, f) { TAB = t; if (f) FILTRE = f; render(); scrollTo(0, 0); }
 
@@ -364,6 +369,16 @@ async function calendrier(b, quoi) {
     ? { cls: 'ok', html: `${quoi === 'coloriage' ? '🖍️' : '📅'} <b>Lulu accepte ${nom} par l'API</b><table>${ok.map(x => `<tr><td>${esc(x.pod)} · ${x.pages} pages</td><td class="r">impression ${f(x.impression_ttc)}</td><td class="r">port ${f(x.port_ttc)}</td><td class="r"><b>${f(x.total_ttc)}</b></td></tr>`).join('')}</table>` }
     : { cls: 'err', html: `Aucun code accepté pour ${nom}. Première réponse de Lulu : <small>${esc((r.resultats[0] || {}).erreur || '')}</small>` };
   render();
+}
+function disqueHtml(d) {
+  const k = d._disque, rows = Object.entries(d).filter(([n]) => n[0] !== '_').map(([n, v]) => `<tr><td>${esc(n)}</td><td class="r">${v.toLocaleString('fr-FR')} Mo</td></tr>`).join('');
+  return (k ? `<b style="color:${k.libre_mo < 500 ? 'var(--red)' : 'var(--green)'}">${(k.libre_mo / 1000).toFixed(1)} Go libres</b> sur ${(k.total_mo / 1000).toFixed(1)} Go` : '') + `<table>${rows}</table>`;
+}
+async function chargerDisque() { try { const d = await (await fetch('/admin/api/disque' + Q, { headers: H })).json(); const e = document.getElementById('disque'); if (e) e.innerHTML = disqueHtml(d); } catch (_) {} }
+async function nettoyer(b) {
+  b.disabled = true; b.textContent = '⏳ Nettoyage…';
+  const r = await (await fetch('/admin/api/disque/nettoyer' + Q, { method: 'POST', headers: H })).json(); b.disabled = false; b.textContent = '🧹 Libérer de la place';
+  toast(r.ok ? `🧹 ${r.libere_mo} Mo libérés` : '⚠️ ' + (r.erreur || 'erreur')); document.getElementById('disque').innerHTML = disqueHtml(r.place || {});
 }
 async function vignettes(b) {
   b.disabled = true; const r = await (await fetch('/admin/api/vignettes' + Q, { method: 'POST', headers: H })).json();
