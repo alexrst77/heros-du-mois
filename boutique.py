@@ -10,6 +10,7 @@ from flask import Blueprint, request, jsonify, send_file, abort, redirect, Respo
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
 import calendrier, coloriage
+import printful
 EXTRAS = {"calendrier": calendrier, "coloriage": coloriage}      # produits qui ne sont pas des livres
 NOMS_EXTRAS = {"calendrier": "le calendrier", "coloriage": "le cahier de coloriage"}
 
@@ -866,6 +867,26 @@ def admin_lulu_coloriage():
     res = lulu.tester_calendriers(addr, (o or {}).get("email") or CONTACT, codes=lulu.COLORIAGES, pages_list=(coloriage.pages_impression("_"),))
     log("test coloriage Lulu : " + json.dumps(res, ensure_ascii=False)[:2000])
     return jsonify(ok=True, resultats=res)
+
+
+@bp.get("/admin/api/printful")
+def admin_printful():
+    """Connexion Printful + recherche dans le catalogue (lecture seule, aucune commande)."""
+    if not admin_ok():
+        abort(403)
+    try:
+        if request.args.get("produit"):
+            info = printful.produit(request.args["produit"])
+            if info["variantes"]:
+                try:
+                    info["port"] = printful.port(info["variantes"][0]["id"])
+                except printful.PrintfulError as e:
+                    info["port_erreur"] = str(e)
+            return jsonify(ok=True, produit=info)
+        mots = [m for m in (request.args.get("q") or "").split(",") if m.strip()] or None
+        return jsonify(ok=True, etat=printful.etat(), produits=printful.chercher(mots))
+    except printful.PrintfulError as e:
+        return jsonify(erreur=str(e)), 400
 
 
 @bp.get("/admin/api/disque")

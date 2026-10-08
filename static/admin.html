@@ -249,6 +249,10 @@ function vueReglages() {
   <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">📅 Calendriers Lulu (test)</h3>
     <p class="meta" style="margin:0">Code produit : <b>${esc(D.config.pod_calendrier || '')}</b> · fichiers ${D.config.calendrier_valide ? '<b style="color:var(--green)">validés par Lulu ✅</b>' : '<b style="color:var(--red)">pas encore validés</b> (bouton « 🔎 Vérifier les fichiers chez Lulu » sur un calendrier)'}.<br>Devis de test : aucune commande.</p>
     <div class="acts"><button class="btn" onclick="calendrier(this)">Tester</button></div></div>
+  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🎒 Printful (gourdes, sacs à dos…)</h3>
+    <p class="meta" style="margin:0">Vérifie la connexion et cherche dans le catalogue (mots en anglais, séparés par des virgules). Lecture seule : aucune commande.</p>
+    <input id="pfq" placeholder="bottle, backpack, kid, mug, puzzle" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid #ddd">
+    <div class="acts"><button class="btn" onclick="printfulCat(this)">Vérifier et chercher</button></div></div>
   <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">💾 Place sur le disque</h3>
     <div id="disque" class="meta">Chargement…</div>
     <div class="acts"><button class="btn" onclick="nettoyer(this)">🧹 Libérer de la place</button></div>
@@ -348,6 +352,25 @@ async function calibrer(b) {
   if (!confirm('Lancer UN appel payant de calibrage (≈ 0,02 $) ?')) return;
   b.disabled = true; const r = await (await fetch('/admin/api/tarifs/calibrer' + Q, { method: 'POST', headers: H })).json();
   TARIFS = null; RES._reg = r.erreur ? { cls: 'err', html: '⚠️ ' + esc(r.erreur) } : { cls: 'ok', html: '✅ Calibré : ' + r.info.jetons_image_entree + ' jetons par image de référence.' }; render();
+}
+async function printfulCat(b) {
+  b.disabled = true; b.textContent = '⏳ Printful…';
+  const q = (document.getElementById('pfq') || {}).value || '';
+  const r = await (await fetch('/admin/api/printful' + Q + (Q ? '&' : '?') + 'q=' + encodeURIComponent(q), { headers: H })).json();
+  b.disabled = false; b.textContent = 'Vérifier et chercher';
+  if (r.erreur) { RES._reg = { cls: 'err', html: '⚠️ ' + esc(r.erreur) }; return render(); }
+  document.getElementById('dlgIn').innerHTML = `<h3>🎒 Printful : ✅ connecté à « ${esc(r.etat.boutique || '?')} » ${r.etat.devise ? '(' + esc(r.etat.devise) + ')' : ''}</h3>
+    <p class="meta">${r.produits.length} produits trouvés. Clique sur un produit pour son prix et le port vers la France.</p>
+    <div style="max-height:60vh;overflow:auto"><table>${r.produits.map(p => `<tr style="cursor:pointer" onclick="printfulProd(${p.id},this)"><td>${p.image ? `<img src="${esc(p.image)}" style="width:54px;height:54px;object-fit:cover;border-radius:6px">` : ''}</td><td><b>${esc(p.titre)}</b><br><small class="meta">#${p.id} · ${esc(p.type || '')} · ${p.variantes} variantes</small><div class="pfd"></div></td></tr>`).join('')}</table></div>
+    <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
+  document.getElementById('dlg').showModal();
+}
+async function printfulProd(id, tr) {
+  const d = tr.querySelector('.pfd'); if (d.innerHTML) { d.innerHTML = ''; return; } d.innerHTML = '<small>⏳</small>';
+  const r = await (await fetch('/admin/api/printful' + Q + (Q ? '&' : '?') + 'produit=' + id, { headers: H })).json();
+  if (r.erreur) { d.innerHTML = '⚠️ ' + esc(r.erreur); return; }
+  const p = r.produit, pt = (p.port || [])[0];
+  d.innerHTML = `<div class="meta" style="margin-top:4px">Prix : <b>${p.prix_min}${p.prix_max !== p.prix_min ? ' à ' + p.prix_max : ''} ${esc(p.devise || '')}</b>${pt ? ` · port FR : <b>${esc(pt.rate)} ${esc(pt.currency)}</b> (${esc(pt.name)})` : ''}${p.port_erreur ? ' · port : ' + esc(p.port_erreur) : ''}<br>Zones d'impression : ${p.zones.map(z => esc(z.titre || z.type)).join(', ') || '—'}</div>`;
 }
 async function comparer(b) {
   b.disabled = true; b.textContent = '⏳ Devis en cours (≈ 20 s)…';
