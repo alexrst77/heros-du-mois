@@ -182,9 +182,13 @@ def page_coloriage(trait, titre, num):
     im, d, x0, x1 = _cadre_page(titre, num)
     top, bas = BLEED + 80, PAGE[1] - BLEED - 52
     w, h = x1 - x0, bas - top
-    t = trait.copy()
-    t.thumbnail((_p(w), _p(h)), Image.LANCZOS)
-    t = t.point(lambda v: 0 if v < 128 else 255)
+    t = trait.convert("L")
+    box = ImageOps.invert(t).getbbox()                    # le dessin seul, sans ses marges blanches
+    if box:
+        pad = 6; t = t.crop((max(0, box[0] - pad), max(0, box[1] - pad), min(t.width, box[2] + pad), min(t.height, box[3] + pad)))
+    k = min(_p(w) / t.width, _p(h) / t.height)          # agrandi pour remplir la zone (jamais déformé)
+    t = t.resize((max(1, int(t.width * k)), max(1, int(t.height * k))), Image.LANCZOS)
+    t = t.filter(ImageFilter.GaussianBlur(1.2)).point(lambda v: 0 if v < 140 else 255)
     im.paste(t, (_p(x0 + (w - t.width / K) / 2), _p(top + (h - t.height / K) / 2)))
     return im
 
@@ -415,10 +419,12 @@ def composer(folder, snap, cover, traits_src):
 SYSTEM_PAGE = """Tu contrôles une page de cahier de coloriage pour enfant (dessin au trait noir sur fond blanc).
 Compare l'image à la fiche. BLOQUANTS (uniquement) :
 - l'enfant attendu absent ou méconnaissable (coiffure, lunettes, vêtements très différents) ; un personnage récurrent en double ;
-- un humain ou un animal de compagnie en trop (aucun parent, frère, sœur) ; la peluche dessinée comme un animal vivant ;
+- un humain en trop (aucun parent, frère, sœur) ; la peluche dessinée comme un animal vivant ;
 - de la couleur, des aplats gris ou des ombrages (ce doit être un dessin au trait à colorier) ;
 - du texte, des lettres, des chiffres, un cadre, une signature ; une anatomie très fausse.
 MINEURS : détails trop petits, traits un peu fins, décor chargé.
+CE N'EST PAS UN ÉCART : le costume ou la tenue demandés par la scène (astronaute, pompier, chevalier, déguisement, maillot…) ;
+les animaux qui font partie de la scène (chiots, poissons, animaux de la ferme, de la forêt, du zoo…) ; un accessoire absent de la scène.
 En cas de doute, ce n'est pas bloquant.
 Réponds UNIQUEMENT en JSON : {"bloquants": ["consigne en anglais"], "mineurs": ["en français"]}"""
 
