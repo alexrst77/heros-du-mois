@@ -668,6 +668,7 @@ def admin_list():
         r["calendrier"] = r["formule"] == "calendrier"
         r["coloriage"] = r["formule"] == "coloriage"
         r["extra"] = r["formule"] in EXTRAS
+        r["plafond"] = EXTRAS[r["formule"]].PLAFOND if r["formule"] in EXTRAS else budget.PLAFOND
         try:
             r["prenom"] = json.loads((STORE / r["origine"] / "livre.json").read_text(encoding="utf-8"))["form"].get("prenom")
         except Exception:

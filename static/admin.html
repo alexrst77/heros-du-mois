@@ -131,7 +131,8 @@ function boutons(o, e) {
   if (e.k === 'pret') main = lire + b('imprimer', NB(o) > 1 ? `🖨️ Envoyer le colis (${colis(o)})` : "🖨️ Envoyer à l'impression", 'gold');
   if (e.k === 'valide') main = lire;
   if (e.k === 'essai') main = lire;
-  if (e.k === 'bloque') main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main');
+  if (e.k === 'bloque' && /incertain/.test(o.erreur || '')) main = b('budget', '💰 Régler l\'appel incertain', 'main');
+  else if (e.k === 'bloque') main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main');
   if (e.k === 'imprimeur') main = b('suivi', '🔄 Actualiser le suivi', 'main');
   if (e.k === 'expedie') main = (o.suivi || []).map(u => `<a class="btn main" target="_blank" href="${esc(u)}">📍 Suivre le colis</a>`).join('');
   const sec = [];
@@ -152,7 +153,7 @@ function carte(o) {
   const e = etat(o), bt = boutons(o, e), a = o.adresse || {};
   const titre = o.titre || (o.prenom ? `${o.calendrier ? 'Le calendrier' : o.coloriage ? 'Le cahier de coloriage' : 'Le livre'} de ${esc(o.prenom)}` : 'En préparation');
   const cov = o.vignette ? `<div class="cover"><img loading="lazy" src="/admin/vignette/${o.id}${Q}&v=${o.finalise ? 1 : 0}" alt=""></div>` : `<div class="cover">${e.k === 'fabrication' ? '🎨' : '📖'}</div>`;
-  const bud = o.budget ? o.budget.total : null, pct = bud != null ? Math.min(100, bud / D.plafond * 100) : 0;
+  const PL = o.plafond || D.plafond, bud = o.budget ? o.budget.total : null, pct = bud != null ? Math.min(100, bud / PL * 100) : 0;
   const issues = (o.controle || []).length && e.k !== 'pret'
     ? `<div class="issues"><b>Le contrôle a remarqué :</b><ul>${o.controle.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
   const err = o.erreur && o.erreur !== 'données effacées' && e.k !== 'pret' ? `<div class="issues red">${esc(o.erreur.replace(/^Fabrication : /, ''))}</div>` : '';
@@ -164,7 +165,7 @@ function carte(o) {
     <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>
     <div class="say">${e.say}</div>
     ${e.k === 'fabrication' ? `<div class="prog"><div class="bar big"><i style="width:${o.progression || 1}%"></i></div><b>${o.progression || 0} %</b></div>${o.etape ? `<div class="meta">${esc(o.etape)}</div>` : ''}` : ''}
-    ${bud ? `<div class="money">IA : <b>${usd(bud)}</b> / ${D.plafond} $ <span class="bar"><i class="${pct > 80 ? 'warn' : ''}" style="width:${pct}%"></i></span></div>` : ''}
+    ${bud ? `<div class="money">IA : <b>${usd(bud)}</b> / ${PL} $ <span class="bar"><i class="${pct > 80 ? 'warn' : ''}" style="width:${pct}%"></i></span></div>` : ''}
     ${err}${issues}
     <div class="acts">${bt.main}</div>
     ${RES[o.id] ? `<div class="result ${RES[o.id].cls || ''}"><button class="x" title="Fermer" onclick="delete RES['${o.id}'];render()">×</button>${RES[o.id].html}</div>` : ''}
