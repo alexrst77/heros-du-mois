@@ -104,6 +104,9 @@
   .offres-h { font:800 15px var(--texte); margin-bottom:8px; } .offres-h span { display:block; font-weight:600; font-size:13px; color:var(--encre-2); }
   .offre { display:grid; grid-template-columns:64px 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid #F3E3B5; }
   .offre img { width:64px; height:64px; object-fit:cover; border-radius:10px; }
+  .emo { display:grid; place-items:center; width:64px; height:64px; border-radius:10px; font-size:34px; background:linear-gradient(135deg,#FFF1CC,#FFD9A8); }
+  .crea-h .emo { width:96px; height:96px; border-radius:12px; font-size:48px; }
+  .objets-h { font:800 16px var(--texte); margin:22px 0 4px; } .objets-h span { display:block; font:600 13px var(--texte); color:var(--encre-2); margin-top:2px; }
   .offre-t { display:grid; gap:2px; } .offre-t b { font:400 17px/1.2 var(--titre); } .offre-t > span { font-size:13px; color:var(--encre-2); }
   .offre-t .offre-px { color:var(--encre); font-size:14px; } .offre-t s { color:var(--encre-2); }
   .offre .btn { padding:9px 16px; font-size:14px; }
@@ -112,7 +115,7 @@
   .offre .mini button:hover { border-color:var(--encre); }
   .offres-ok { margin:-4px 0 14px; color:var(--mousse); font-weight:700; font-size:14px; }
   .lien.petit { font-size:12px; color:var(--encre-2); margin-left:6px; }
-  @media (max-width:520px) { .offre { grid-template-columns:52px 1fr; } .offre img { width:52px; height:52px; } .offre > .btn { grid-column:2; justify-self:start; } }
+  @media (max-width:520px) { .crea-h .emo { width:72px; height:72px; font-size:38px; } .emo { width:52px; height:52px; font-size:28px; } .offre { grid-template-columns:52px 1fr; } .offre img { width:52px; height:52px; } .offre > .btn { grid-column:2; justify-self:start; } }
   .moncolis { display:flex; gap:12px; align-items:center; justify-content:space-between; background:#FFFBEF; border:1px solid #F2CF6E; border-radius:14px; padding:12px 16px; margin-bottom:10px; }
   .moncolis b { display:block; font:800 15px var(--texte); } .moncolis span { font-size:14px; color:var(--encre-2); }
   .couvnote { margin:8px 4px 0; font:italic 500 12px/1.35 var(--texte); color:var(--encre-2); text-align:center; opacity:.85; }
@@ -294,7 +297,13 @@
     return base + (GR.supplement_pays[S.commande.pays] ?? GR.supplement_pays.BE); };
   const prixCalAjout = () => S.commande.formule !== 'calendrier' && S.commande.cal_ajout ? GR.calendrier.ajout : 0;
   const prixColoAjout = () => S.commande.formule !== 'coloriage' && S.commande.colo_ajout ? GR.coloriage.ajout : 0;
-  const totalC = () => (F[S.commande.formule] || F.pack6).prix + prixCalAjout() + prixColoAjout() + port();
+  const OBJ = GR.objets || {};                                         // gourde, tasse, sac : en ajout, livraison comprise
+  const OBJ_INFO = { gourde: { emo: '🥤', court: 'Gourde à paille', txt: 'Gourde à paille CamelBak, le héros tout autour, son prénom dessus.' },
+                     tasse: { emo: '☕', court: 'Tasse émaillée', txt: 'Tasse émaillée incassable pour le chocolat chaud, avec son prénom.' },
+                     sac: { emo: '🎒', court: 'Sac à dos', txt: 'Sac à dos illustré avec le héros et son prénom, pour l\'école ou les sorties.' } };
+  const objetsChoisis = () => (S.objets || []).filter(k => OBJ[k]);
+  const prixObjets = () => objetsChoisis().reduce((t, k) => t + OBJ[k].prix, 0);
+  const totalC = () => (F[S.commande.formule] || F.pack6).prix + prixCalAjout() + prixColoAjout() + prixObjets() + port();
   const THEMES = ["Accepter la différence", "Aller chez le dentiste", "Aller chez le médecin", "Apprendre à attendre", "Apprendre à partager", "Devenir propre", "Dire au revoir à la tétine", "Dire la vérité", "Dormir dans son grand lit", "Gérer la colère", "Goûter de nouveaux aliments", "La confiance en soi", "La peur du noir", "La politesse", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Le premier jour à la crèche", "Les cauchemars", "Les écrans : savoir s'arrêter", "Les émotions", "Oser se faire des amis", "Partir en vacances", "Prendre soin de la nature", "Quand papa et maman se séparent", "Ranger sa chambre", "Se brosser les dents", "S'habiller tout seul", "Un déménagement", "Une aventure pour rire"].sort((a, b) => a.localeCompare(b, 'fr'));
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const AN = new Date().getFullYear(), ANNEES = Array.from({ length: 9 }, (_, i) => AN - 2 - i);      // de 2 à 10 ans
@@ -315,6 +324,7 @@
     calendrier: { debut: '', dates: [] },
     coloriage: { pages: null },
     produits: { livres: true, calendrier: false, coloriage: false },
+    objets: [],
     commande: { formule: 'pack6', pack: 'pack6', cal_ajout: false, colo_ajout: false, email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
   };
   let S;
@@ -333,6 +343,7 @@
   if (!S.coloriage || !Array.isArray(S.coloriage.pages)) S.coloriage = { pages: COLO.par_defaut.slice() };
   S.coloriage.pages = S.coloriage.pages.filter(c => COLO_PAR[c]).slice(0, COLO.nombre);
   const isColo = () => S.commande.formule === 'coloriage';
+  if (!Array.isArray(S.objets)) S.objets = [];
   if (!S.produits) {                  // ancien enregistrement : on retrouve ses créations d'après sa formule
     const f = S.commande.formule;
     S.produits = { livres: !['calendrier', 'coloriage'].includes(f), calendrier: f === 'calendrier' || !!S.commande.cal_ajout, coloriage: f === 'coloriage' || !!S.commande.colo_ajout };
@@ -633,7 +644,9 @@
             autre('calendrier') ? `${eur2(GR.calendrier.ajout)} <s>${eur2(GR.calendrier.seul)}</s> avec une autre création` : `${eur2(GR.calendrier.seul)} · ${eur2(GR.calendrier.ajout)} avec une autre création`) +
       carte('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 dessins à colorier où il est le héros, choisis par vous.',
             autre('coloriage') ? `${eur2(GR.coloriage.ajout)} <s>${eur2(GR.coloriage.seul)}</s> avec une autre création` : `${eur2(GR.coloriage.seul)} · ${eur2(GR.coloriage.ajout)} avec une autre création`) +
-      `</div><p class="hint" style="text-align:center;margin-top:14px">✨ D'autres créations arrivent bientôt, avec le même héros.</p>`;
+      `</div>` + (Object.keys(OBJ).length ? `<div class="objets-h">Ses objets, en plus <span>Avec une création ci-dessus · fabriqués par notre atelier objets, livrés à part, livraison comprise</span></div><div class="crea-l">` +
+        Object.keys(OBJ).map(k => { const on = objetsChoisis().includes(k); return `<div class="crea-c ${on ? 'on' : ''}"><button type="button" class="crea-h" data-objet="${k}">
+        <span class="emo">${OBJ_INFO[k].emo}</span><span class="crea-t"><b>${OBJ_INFO[k].court}</b><span>${OBJ_INFO[k].txt}</span><span class="crea-px">${eur2(OBJ[k].prix)}, livraison comprise</span></span><i class="crea-ok">${on ? '✓' : '+'}</i></button></div>`; }).join('') + `</div>` : '');
   }
   function panelCalendrier() {
     const pr = esc((S.enfant.prenom || 'votre enfant').trim());
@@ -666,8 +679,9 @@
     if (P.livres) ch.push(`📚 ${esc((PLANS.find(p => p.id === c.pack) || {}).nom || '')}`);
     if (P.calendrier) ch.push(`📅 Calendrier ${esc(anneeCal())}`);
     if (P.coloriage) ch.push('🖍️ Cahier de coloriage');
+    objetsChoisis().forEach(k => ch.push(`${OBJ_INFO[k].emo} ${OBJ_INFO[k].court}`));
     const pr = esc((S.enfant.prenom || 'votre enfant').trim());
-    const offre = (k, img, titre, txt, prixHtml, bouton) => `<div class="offre"><img src="${img}" alt=""><div class="offre-t"><b>${titre}</b><span>${txt}</span><span class="offre-px">${prixHtml}</span></div>${bouton}</div>`;
+    const offre = (k, img, titre, txt, prixHtml, bouton) => `<div class="offre">${img.startsWith('emo:') ? `<span class="emo">${img.slice(4)}</span>` : `<img src="${img}" alt="">`}<div class="offre-t"><b>${titre}</b><span>${txt}</span><span class="offre-px">${prixHtml}</span></div>${bouton}</div>`;
     const ajout = k => `<button type="button" class="btn" data-ajout="${k}">Ajouter</button>`;
     const offres = [];
     if (!P.livres) offres.push(offre('livres', '/static/vitrine/couv_jade.webp', `Ses livres d'aventures`, `${pr} en héros d'une vraie histoire illustrée, couverture rigide.`,
@@ -676,18 +690,21 @@
       `<b>+ ${eur2(GR.calendrier.ajout)}</b> <s>${eur2(GR.calendrier.seul)}</s>`, ajout('calendrier')));
     if (!P.coloriage) offres.push(offre('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 dessins à colorier où il est le héros.',
       `<b>+ ${eur2(GR.coloriage.ajout)}</b> <s>${eur2(GR.coloriage.seul)}</s>`, ajout('coloriage')));
+    Object.keys(OBJ).filter(k => !objetsChoisis().includes(k)).forEach(k => offres.push(offre(k, 'emo:' + OBJ_INFO[k].emo, OBJ_INFO[k].court,
+      OBJ_INFO[k].txt + ' Livré à part.', `<b>+ ${eur2(OBJ[k].prix)}</b> livraison comprise`, `<button type="button" class="btn" data-objet-ajout="${k}">Ajouter</button>`)));
     const retirer = k => nbCrea() > 1 ? ` <button type="button" class="lien petit" data-retirer="${k}">retirer</button>` : '';
     return `<div class="moncolis"><div><b>Votre commande</b><span>${ch.join(' · ')}</span></div><button type="button" class="lien" data-t="creations">Modifier</button></div>` +
       (() => { const f = F[c.formule], pt = port(), n = f.livres;
         return `<div class="recap">` + (n ? `<div><span>${n} livre${n > 1 ? 's' : ''} × ${eur2(f.prix_livre)}${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : '') +
           (isCal() ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(f.prix)}</span></div>` : c.cal_ajout ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(GR.calendrier.ajout)}</span></div>` : '') +
           (isColo() ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(f.prix)}</span></div>` : c.colo_ajout ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(GR.coloriage.ajout)}</span></div>` : '') +
+          objetsChoisis().map(k => `<div><span>${OBJ_INFO[k].court} <small>(livraison comprise)</small> <button type="button" class="lien petit" data-objet="${k}">retirer</button></span><span style="white-space:nowrap">${eur2(OBJ[k].prix)}</span></div>`).join('') +
           `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>` +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
           (n && n < 6 ? `<p class="astuce">Livraison offerte et ${eur2(F.pack6.prix_livre)} le livre à partir de 6 livres.</p>` : '') + `</div>`; })() +
-      (offres.length ? `<div class="offres"><div class="offres-h">✨ Pour compléter l'univers de ${pr} <span>même colis, sans frais de port en plus</span></div>${offres.join('')}</div>` : '') +
+      (offres.length ? `<div class="offres"><div class="offres-h">✨ Pour compléter l'univers de ${pr} <span>créations : même colis, sans frais de port en plus · objets : livraison comprise</span></div>${offres.join('')}</div>` : '') +
       `<div class="delai"><b>Livraison estimée : ${delai()}</b>` +
-      `<span>${nbCrea() > 1 || F[c.formule].livres > 1 ? 'Création et relecture, impression, puis un seul colis' : 'Création et relecture, impression, puis expédition'} : 7 à 15 jours ouvrés.</span></div>` +
+      `<span>${nbCrea() > 1 || F[c.formule].livres > 1 ? 'Création et relecture, impression, puis un seul colis' : 'Création et relecture, impression, puis expédition'} : 7 à 15 jours ouvrés.${objetsChoisis().length ? ' Les objets arrivent dans un colis à part, dans les mêmes délais.' : ''}</span></div>` +
       `<label class="toggle" style="margin-bottom:12px"><input type="checkbox" data-chk="cadeau" ${c.cadeau ? 'checked' : ''}> C'est pour offrir</label>` +
       (c.cadeau ? `<div class="kdo">` +
         G('De la part de', inp('cadeau_de', 'Mamie Jo, Tonton Karim…', 'maxlength="40"')) +
@@ -726,6 +743,9 @@
       m.className = 'offres-ok'; m.innerHTML = `✓ Ajouté ! Réglages proposés d'office, modifiables dans l'onglet « ${lib} ».`;
       document.querySelector('.recap').after(m); return; }
     if (b.dataset.retirer) { S.produits[b.dataset.retirer] = false; return render(); }
+    if (b.dataset.objet) { const l = S.objets, i = l.indexOf(b.dataset.objet); if (i >= 0) l.splice(i, 1); else l.push(b.dataset.objet); $('err').textContent = ''; return render(); }
+    if (b.dataset.objetAjout) { if (!S.objets.includes(b.dataset.objetAjout)) S.objets.push(b.dataset.objetAjout); render();
+      const m = document.createElement('p'); m.className = 'offres-ok'; m.innerHTML = `✓ Ajouté !`; document.querySelector('.recap').after(m); return; }
     if (b.dataset.prod) { S.produits[b.dataset.prod] = !S.produits[b.dataset.prod]; $('err').textContent = ''; return render(); }
     if (b.dataset.pack) { S.commande.pack = b.dataset.pack; return render(); }
     if (b.dataset.colo) { const l = S.coloriage.pages, i = l.indexOf(b.dataset.colo); OUVERT.colo = true;
@@ -843,6 +863,7 @@
       payload.commande = { formule: c.formule, email: c.email.trim(), cgv: true,
         calendrier: { actif: avecCal(), debut: S.calendrier.debut, dates },
         coloriage: { actif: avecColo(), pages: S.coloriage.pages },
+        objets: objetsChoisis(),
         cadeau: { actif: !!c.cadeau, de: c.cadeau_de, message: c.cadeau_message },
         adresse: { nom: c.nom, adresse1: c.adresse1, adresse2: c.adresse2, code_postal: c.code_postal, ville: c.ville, pays: c.pays, telephone: c.telephone } };
     }

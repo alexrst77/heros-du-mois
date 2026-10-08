@@ -84,3 +84,63 @@ def produit(pid):
 def port(variant_id, pays="FR", cp="77000", devise="EUR"):
     return _http("POST", "/shipping/rates", {"recipient": {"country_code": pays, "zip": cp}, "items": [{"variant_id": int(variant_id), "quantity": 1}],
                                              "currency": devise, "locale": "fr_FR"})
+
+
+# ---------------------------------------------------------------- fichiers d'impression et commandes
+PLACEMENTS_PRIO = ("front", "default", "front_large", "front_dtf", "embroidery_front")
+DEFAUTS = {848: {"placement": "default", "width": 2550, "height": 1350}, 407: {"placement": "default", "width": 2550, "height": 1050},
+           389: {"placement": "front", "width": 2850, "height": 3450}}          # sans clé (essais en local) : formats indicatifs
+
+
+def specs(pid, variante=None):
+    """Variante, emplacement principal et dimensions EXACTES du fichier d'impression (en pixels), mis en cache."""
+    import budget
+    cache = budget.DATA / f"printful_specs_{int(pid)}.json"
+    if cache.exists() and time.time() - cache.stat().st_mtime < 7 * 86400:
+        d = json.loads(cache.read_text(encoding="utf-8"))
+    else:
+        info = produit(pid)
+        pf = _http("GET", f"/mockup-generator/printfiles/{int(pid)}")
+        d = {"produit": int(pid), "titre": info["titre"], "variantes": info["variantes"], "placements": pf.get("available_placements") or {},
+             "printfiles": {str(x["printfile_id"]): x for x in pf.get("printfiles") or []},
+             "par_variante": {str(v["variant_id"]): v.get("placements") or {} for v in pf.get("variant_printfiles") or []}}
+        cache.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    vid = str(variante or (d["variantes"][0]["id"] if d["variantes"] else ""))
+    pls = d["par_variante"].get(vid) or next(iter(d["par_variante"].values()), {})
+    principal = next((p for p in PLACEMENTS_PRIO if p in pls), next((p for p in pls if "mockup" not in p and "inside" not in p and "label" not in p), None))
+    if not principal:
+        raise PrintfulError(f"produit {pid} : aucun emplacement d'impression trouvé")
+    f = d["printfiles"][str(pls[principal])]
+    autres = []
+    if "all-over" in (d.get("titre") or "").lower():      # tout imprimé : les autres panneaux reçoivent une couleur unie assortie
+        autres = [{"placement": p, "width": d["printfiles"][str(i)]["width"], "height": d["printfiles"][str(i)]["height"]}
+                  for p, i in pls.items() if p != principal and "mockup" not in p and "label" not in p]
+    return {"produit": int(pid), "titre": d.get("titre"), "variante": int(vid) if vid else None, "placement": principal,
+            "width": int(f["width"]), "height": int(f["height"]), "dpi": f.get("dpi"), "autres": autres}
+
+
+def specs_ou_defaut(pid, variante=None):
+    if configured():
+        return specs(pid, variante)
+    d = DEFAUTS.get(int(pid), {"placement": "default", "width": 2400, "height": 2400})
+    return {"produit": int(pid), "titre": f"produit {pid}", "variante": variante, "autres": [], "dpi": 150, **d}
+
+
+def creer_commande(external_id, adresse, email, items, confirmer=False):
+    """UNE commande Printful (un colis) pour tous les objets d'une commande du site.
+    confirmer=False : brouillon (rien fabriqué ni facturé tant que tu ne confirmes pas chez Printful ou dans l'admin)."""
+    a = adresse or {}
+    r = {"name": a.get("nom"), "address1": a.get("adresse1"), "address2": a.get("adresse2") or None, "city": a.get("ville"),
+         "zip": a.get("code_postal"), "country_code": (a.get("pays") or "FR").upper(), "phone": a.get("telephone"), "email": email}
+    data = {"external_id": str(external_id)[:32], "shipping": "STANDARD", "recipient": r, "items": items}
+    return _http("POST", "/orders" + ("?confirm=true" if confirmer else ""), data)
+
+
+def confirmer_commande(order_id):
+    return _http("POST", f"/orders/{int(order_id)}/confirm")
+
+
+def commande(order_id):
+    o = _http("GET", f"/orders/{int(order_id)}") or {}
+    suivi = [s.get("tracking_url") for s in o.get("shipments") or [] if s.get("tracking_url")]
+    return {"statut": o.get("status"), "suivi": suivi, "cout": (o.get("costs") or {}).get("total"), "devise": (o.get("costs") or {}).get("currency")}

@@ -147,3 +147,19 @@ Un livre = 2 à 4 appels texte + 13 images (planche, couverture, 9 scènes, 2 d�
   sont binarisés (noir pur) ; plafond `BUDGET_COLORIAGE_USD` (5 $ max). Titres au prénom composés par code.
 - Impression : dans le même colis que les livres et le calendrier de la commande. « 🔎 Vérifier les fichiers chez Lulu » une
   fois avant le premier cahier. Test : `python3 tests/test_coloriage.py`.
+
+## Objets Printful : gourde, tasse, sac à dos (`objets.py`, `printful.py`)
+
+- Produits : gourde à paille CamelBak (Printful #848), tasse émaillée (#407), sac à dos (#389). Modifiables par
+  `PRINTFUL_GOURDE_ID`, `PRINTFUL_TASSE_ID`, `PRINTFUL_SAC_ID`. Prix : `PRIX_GOURDE` (5490), `PRIX_TASSE` (2690), `PRIX_SAC` (6990),
+  livraison comprise. Vendus seulement en ajout à une commande (livres, calendrier ou cahier).
+- Réglage Railway : `PRINTFUL_API_KEY` (jeton privé de la boutique « site »). `PRINTFUL_CONFIRMER=1` confirme les commandes
+  Printful dès l'envoi ; sans lui, elles partent en **brouillon** (rien fabriqué ni facturé) et se confirment depuis l'admin.
+- Fabrication : une illustration sans texte par objet (un appel, un contrôle, plafond `BUDGET_OBJET_USD` = 1,50 $), au rapport
+  du fichier d'impression ; le prénom est composé par code sur un ruban crème ; le fichier est produit aux dimensions EXACTES
+  lues dans l'API Printful (`/mockup-generator/printfiles`, cache 7 jours dans `printful_specs_<id>.json`). Sac « tout imprimé » :
+  les autres panneaux reçoivent une couleur unie assortie.
+- Envoi : bouton « Envoyer » de la commande = livres/calendrier/cahier chez Lulu (un colis) + objets chez Printful (une commande,
+  son propre colis), fichiers téléchargés par Printful via `/objet/<id>/<jeton>/impression_*.png`. Suivi : « Actualiser le suivi ».
+- Tests depuis l'admin : « Gourde / Tasse / Sac de test » sur une commande existante (≈ 0,30 $ d'IA, aucune commande Printful
+  tant que tu ne cliques pas « Envoyer »). Catalogue et prix : Réglages → carte Printful.

@@ -89,10 +89,11 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
 const usd = v => (v || 0).toFixed(2).replace('.', ',') + ' $';
 const day = t => t ? new Date(t * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
-const FORMULE = { livre: '1 livre', pack3: 'Pack 3 livres', pack6: 'Pack 6 livres', pack12: 'Pack 12 livres', fetes: '6 livres de fête', mensuel: 'Abonnement (ancien)', annuel: 'Abonnement annuel', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu', calendrier: '📅 Calendrier', coloriage: '🖍️ Cahier de coloriage' };
+const FORMULE = { livre: '1 livre', pack3: 'Pack 3 livres', pack6: 'Pack 6 livres', pack12: 'Pack 12 livres', fetes: '6 livres de fête', mensuel: 'Abonnement (ancien)', annuel: 'Abonnement annuel', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu', calendrier: '📅 Calendrier', coloriage: '🖍️ Cahier de coloriage', gourde: '🥤 Gourde', tasse: '☕ Tasse', sac: '🎒 Sac à dos' };
+const NOMX = { calendrier: 'le calendrier', coloriage: 'le cahier', gourde: 'la gourde', tasse: 'la tasse', sac: 'le sac à dos' };
 // colis = livres + calendrier de la même commande
 const NB = o => (o.pack_total || 0) + (o.pack_cal || 0), PRETS = o => (o.pack_prets || 0) + (o.pack_cal_prets || 0);
-const colis = o => [(o.pack_total ? `${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}` : '')].concat((o.pack_extras || []).map(x => x === 'calendrier' ? 'le calendrier' : 'le cahier')).filter(Boolean).join(' + ');
+const colis = o => [(o.pack_total ? `${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}` : '')].concat((o.pack_extras || []).map(x => NOMX[x] || x)).filter(Boolean).join(' + ');
 let D = null, TAB = 'accueil', FILTRE = 'actifs';
 const RES = {}, OPEN = new Set();   // résultats affichés sous un livre (restent jusqu'à ce que tu les fermes) ; menus ouverts
 
@@ -114,7 +115,8 @@ function etat(o) {
     if (o.finalise) return { k: 'pret', pill: ['p-green', '✅', 'Prêt à imprimer'], say: NB(o) > 1 ? `Tout est validé (${colis(o)}) : ça part ensemble, dans un seul colis.` : 'Figé et sauvegardé. Il ne coûtera plus jamais rien en IA.' };
     return { k: 'relire', pill: ['p-gold', '👀', 'À relire'], say: 'Ouvre le livre, regarde les pages, puis valide-le.' };
   }
-  if (o.statut === 'envoyee_impression') return { k: 'imprimeur', pill: ['p-blue', '🖨️', "Chez l'imprimeur"], say: o.lulu_statut ? 'Statut Lulu : ' + esc(o.lulu_statut) : '' };
+  if (o.statut === 'envoyee_impression' && o.printful_statut === 'draft') return { k: 'imprimeur', pill: ['p-gold', '📝', 'Brouillon Printful'], say: "Brouillon chez Printful : rien n'est fabriqué ni facturé tant que tu ne confirmes pas." };
+  if (o.statut === 'envoyee_impression') return { k: 'imprimeur', pill: ['p-blue', '🖨️', "Chez l'imprimeur"], say: o.printful_id ? 'Statut Printful : ' + esc(o.printful_statut || '') : o.lulu_statut ? 'Statut Lulu : ' + esc(o.lulu_statut) : '' };
   if (o.statut === 'expediee') return { k: 'expedie', pill: ['p-green', '📦', 'Expédié'], say: (o.suivi || []).length ? 'Colis en route.' : '' };
   if (o.statut === 'annulee') return { k: 'archive', pill: ['p-grey', '🗂️', 'Archivé'], say: o.erreur === 'données effacées' ? 'Données effacées.' : '' };
   return { k: 'autre', pill: ['p-grey', '•', o.statut], say: '' };
@@ -123,7 +125,7 @@ const AFAIRE = ['relire', 'bloque', 'pret'];
 
 function boutons(o, e) {
   const pdf = (o.fichiers || []).find(f => f.endsWith('.pdf') && !f.startsWith('impression_'));
-  const lire = pdf ? `<a class="btn" target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(pdf)}${Q}">${o.calendrier ? '📅 Voir le calendrier' : o.coloriage ? '🖍️ Voir le cahier' : '📖 Lire le livre'}</a>` : '';
+  const lire = pdf ? `<a class="btn" target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(pdf)}${Q}">${o.calendrier ? '📅 Voir le calendrier' : o.coloriage ? '🖍️ Voir le cahier' : o.objet ? '👀 Voir ' + NOMX[o.objet] : '📖 Lire le livre'}</a>` : '';
   const b = (a, t, cls = '') => `<button class="btn ${cls}" onclick="act('${o.id}','${a}',this)">${t}</button>`;
   let main = '';
   if (e.k === 'paiement' && D.config.stripe === 'simulé') main = b('valider-paiement-test', '💳 Simuler le paiement', 'main');
@@ -133,17 +135,19 @@ function boutons(o, e) {
   if (e.k === 'essai') main = lire;
   if (e.k === 'bloque' && o.budget && (o.budget.incertain > 0 || o.budget.reserve > 0) && !o.en_cours) main = b('budget', '💰 Régler l\'appel incertain', 'main');
   else if (e.k === 'bloque') main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main');
-  if (e.k === 'imprimeur') main = b('suivi', '🔄 Actualiser le suivi', 'main');
+  if (e.k === 'imprimeur') main = (o.printful_statut === 'draft' ? b('printful-confirmer', '✅ Confirmer chez Printful (payant)', 'gold') : '') + b('suivi', '🔄 Actualiser le suivi', o.printful_statut === 'draft' ? '' : 'main');
   if (e.k === 'expedie') main = (o.suivi || []).map(u => `<a class="btn main" target="_blank" href="${esc(u)}">📍 Suivre le colis</a>`).join('');
   const sec = [];
   if (!['paiement', 'archive'].includes(e.k)) sec.push(b('budget', '💰 Coût IA détaillé'));
   if (e.k === 'pret' || e.k === 'valide') sec.push(b('mail-pret', o.pack_mail ? '📧 Renvoyer le mail « prêt »' : '📧 Envoyer le mail « prêt »'));
-  if (['relire', 'pret', 'valide'].includes(e.k)) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'), b('verifier-lulu', '🔎 Vérifier les fichiers chez Lulu'));
-  if (o.extra && e.k === 'relire') sec.push(b('recomposer', '🔁 Recomposer les pages (sans IA)'));
+  if (['relire', 'pret', 'valide'].includes(e.k) && !o.objet) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'), b('verifier-lulu', '🔎 Vérifier les fichiers chez Lulu'));
+  if (o.objet && ['relire', 'pret', 'valide'].includes(e.k)) sec.push(`<a class="btn" target="_blank" href="/admin/fichier/${o.id}/impression_objet.png${Q}">🖼️ Fichier d'impression</a>`);
+  if (o.extra && e.k === 'relire') sec.push(b('recomposer', o.objet ? "🔁 Refaire le fichier d'impression (sans IA)" : '🔁 Recomposer les pages (sans IA)'));
   if (o.abonnement_id) sec.push(b('mois-suivant', '➕ Livre suivant'), b('arreter-abonnement', '⏹️ Arrêter l\'abonnement', 'danger'));
   if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai') && !o.extra) sec.push(b('essai-apercu', '🧪 Essai aperçu (≈ 1 $)'), b('essai-brouillon', '🧪 Essai brouillon (≈ 0,5 $)'));
   if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai') && !o.extra)
-    sec.push(b('test-calendrier', '🧪 Calendrier de test (≈ 1,50 $)'), b('test-coloriage', '🧪 Cahier de coloriage de test (≈ 2,50 $)'));
+    sec.push(b('test-calendrier', '🧪 Calendrier de test (≈ 1,50 $)'), b('test-coloriage', '🧪 Cahier de coloriage de test (≈ 2,50 $)'),
+             b('test-gourde', '🧪 Gourde de test (≈ 0,30 $)'), b('test-tasse', '🧪 Tasse de test (≈ 0,30 $)'), b('test-sac', '🧪 Sac de test (≈ 0,30 $)'));
   if (e.k === 'relire') sec.push(b('relancer', '♻️ Refaire tout le livre', 'danger'));
   if (['expedie', 'bloque', 'archive'].includes(e.k) && o.job_id && o.erreur !== 'données effacées') sec.push(b('effacer', '🧹 Effacer les données', 'danger'));
   if (!o.en_cours) sec.push(b('supprimer', '🗑️ Supprimer la commande', 'danger'));
@@ -152,7 +156,7 @@ function boutons(o, e) {
 
 function carte(o) {
   const e = etat(o), bt = boutons(o, e), a = o.adresse || {};
-  const titre = o.titre || (o.prenom ? `${o.calendrier ? 'Le calendrier' : o.coloriage ? 'Le cahier de coloriage' : 'Le livre'} de ${esc(o.prenom)}` : 'En préparation');
+  const titre = o.titre || (o.prenom ? `${o.calendrier ? 'Le calendrier' : o.coloriage ? 'Le cahier de coloriage' : o.objet ? NOMX[o.objet].replace(/^./, c => c.toUpperCase()) : 'Le livre'} de ${esc(o.prenom)}` : 'En préparation');
   const cov = o.vignette ? `<div class="cover"><img loading="lazy" src="/admin/vignette/${o.id}${Q}&v=${o.finalise ? 1 : 0}" alt=""></div>` : `<div class="cover">${e.k === 'fabrication' ? '🎨' : '📖'}</div>`;
   const PL = o.plafond || D.plafond, bud = o.budget ? o.budget.total : null, pct = bud != null ? Math.min(100, bud / PL * 100) : 0;
   const issues = (o.controle || []).length && e.k !== 'pret'
@@ -162,7 +166,7 @@ function carte(o) {
     + (o.job_id && o.statut !== 'attente_paiement' ? `<a href="/admin/archive/${o.id}${Q}">📦 dossier complet (zip, pour Claude)</a>` : '');
   return `<div class="book">${cov}<div>
     <div class="title">${esc(titre)}</div>
-    <div class="meta">${(o.formule || '').startsWith('essai') ? '🧪 ' : ''}${esc(FORMULE[o.formule] || o.formule)}${o.extra ? (o.pack_total ? ` · avec ${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}, même colis` : '') : o.pack_total > 1 ? ` · livre ${o.numero}/${o.pack_total}` : ''}${!o.extra && o.pack_cal ? ' · + ' + (o.pack_extras || []).map(x => x === 'calendrier' ? 'calendrier' : 'cahier').join(' + ') : ''}${o.volume_number ? ' · tome ' + o.volume_number : ''}${o.montant ? ' · ' + eur(o.montant) : ''} · ${day(o.cree)}</div>
+    <div class="meta">${(o.formule || '').startsWith('essai') ? '🧪 ' : ''}${esc(FORMULE[o.formule] || o.formule)}${o.extra ? (o.pack_total ? ` · avec ${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}${o.objet ? ', colis Printful à part' : ', même colis'}` : '') : o.pack_total > 1 ? ` · livre ${o.numero}/${o.pack_total}` : ''}${!o.extra && o.pack_cal ? ' · + ' + (o.pack_extras || []).map(x => (NOMX[x] || x).replace(/^(le|la) /, '')).join(' + ') : ''}${o.volume_number ? ' · tome ' + o.volume_number : ''}${o.montant ? ' · ' + eur(o.montant) : ''} · ${day(o.cree)}</div>
     <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>
     <div class="say">${e.say}</div>
     ${e.k === 'fabrication' ? `<div class="prog"><div class="bar big"><i style="width:${o.progression || 1}%"></i></div><b>${o.progression || 0} %</b></div>${o.etape ? `<div class="meta">${esc(o.etape)}</div>` : ''}` : ''}
@@ -174,6 +178,7 @@ function carte(o) {
       <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
       ${o.pack_mail ? `<div>📧 Mail « livre prêt » envoyé au client le ${new Date(o.pack_mail * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
       ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
+      ${o.printful_id ? `<div>🎒 Printful : commande ${esc(o.printful_id)} · ${esc(o.printful_statut || '')}${o.lulu_cout ? ' · ' + esc(o.lulu_cout) : ''}</div>` : ''}
       <div class="files">${files}</div>
       <div class="acts">${bt.sec}</div><div class="muted" style="margin-top:6px">Réf. ${o.id}</div>
     </div></details>
@@ -286,7 +291,12 @@ const CONFIRM = {
   'mois-suivant': "Fabriquer maintenant le livre suivant de cet abonnement ?",
   'mail-pret': "Envoyer au client le mail « votre livre est prêt » ?",
   'test-calendrier': 'Fabriquer un calendrier de test avec les avatars de cette commande ? (vraie fabrication, ≈ 1,50 $ d\'IA, aucun paiement)',
-  'test-coloriage': 'Fabriquer un cahier de coloriage de test avec les avatars de cette commande ? (vraie fabrication, ≈ 2,50 $ d\'IA, aucun paiement)'
+  'test-coloriage': 'Fabriquer un cahier de coloriage de test avec les avatars de cette commande ? (vraie fabrication, ≈ 2,50 $ d\'IA, aucun paiement)',
+  'test-gourde': 'Fabriquer une gourde de test (illustration + fichier Printful) avec les avatars de cette commande ? (≈ 0,30 $ d\'IA, aucune commande Printful)',
+  'test-tasse': 'Fabriquer une tasse de test (illustration + fichier Printful) avec les avatars de cette commande ? (≈ 0,30 $ d\'IA, aucune commande Printful)',
+  'test-sac': 'Fabriquer un sac à dos de test (illustration + fichier Printful) avec les avatars de cette commande ? (≈ 0,30 $ d\'IA, aucune commande Printful)',
+  'printful-confirmer': "Confirmer la commande chez Printful ? Elle sera fabriquée, expédiée et FACTURÉE sur ta carte Printful."
+
 };
 const eu = v => v == null || v === '' ? '—' : parseFloat(v).toFixed(2).replace('.', ',') + ' €';
 const LIV = { MAIL: 'économique', PRIORITY_MAIL: 'prioritaire', GROUND: 'standard', EXPEDITED: 'express', EXPRESS: 'express' };
@@ -296,7 +306,9 @@ function resultat(action, j) {
     return { cls: i.ok ? 'ok' : 'err', html: `🔎 <b>${i.ok ? 'Fichiers acceptés par Lulu' : i.en_cours ? 'Lulu vérifie encore : relance dans une minute' : 'Lulu signale un problème'}</b>
       <table><tr><td>Intérieur</td><td class="r">${L('interior')}</td></tr><tr><td>Couverture</td><td class="r">${L('cover')}</td></tr></table>
       ${i.ok && i.calendrier ? '<div class="meta">C\'est noté pour tous les produits de ce type : ils peuvent partir à l\'impression.</div>' : ''}` }; }
-  if (action === 'recomposer') return { cls: 'ok', html: '🔁 Pages recomposées : relis le calendrier.' };
+  if (action === 'recomposer') return { cls: 'ok', html: '🔁 Fichiers recomposés : vérifie le résultat.' };
+  if (action === 'imprimer' && i.printful) return { cls: 'ok', html: `🖨️ Envoyé.${i.lulu ? ' Lulu : travail ' + esc(i.lulu) + '.' : ''} Printful : commande ${esc(i.printful)} (${i.printful_statut === 'draft' ? 'brouillon : rien fabriqué ni facturé, bouton « Confirmer chez Printful » pour la lancer' : esc(i.printful_statut || '')}).` };
+  if (action === 'printful-confirmer') return { cls: 'ok', html: '✅ Commande Printful confirmée : fabrication lancée.' };
   if (action === 'cout') return { html: `<div>🏷️ <b>Prix Lulu ${i.livres + (i.calendriers || 0) > 1 ? `pour le colis (${[i.livres ? i.livres + ' livre(s)' : ''].concat(i.extras || []).filter(Boolean).join(' + ')})` : i.calendriers ? 'pour ' + esc((i.extras || [''])[0]) : 'pour ce livre'}</b> (livraison ${LIV[i.livraison] || i.livraison || ''})</div>
       <table><tr><td>Impression</td><td class="r">${eu(i.impression_ttc)}</td></tr><tr><td>Port</td><td class="r">${eu(i.port_ttc)}</td></tr>
       ${i.frais_ttc && parseFloat(i.frais_ttc) ? `<tr><td>Frais de traitement</td><td class="r">${eu(i.frais_ttc)}</td></tr>` : ''}
@@ -308,7 +320,7 @@ function resultat(action, j) {
   const T = { finaliser: '✅ Livre validé et sauvegardé.', relancer: '▶️ Fabrication relancée.', 'refaire-refusees': '🔁 Images refusées relancées.',
               imprimer: "🖨️ Envoyé à l'imprimeur.", suivi: '🔄 Suivi actualisé.', 'mail-pret': '📧 Mail envoyé à ' + esc(i.envoye_a || ''),
               'essai-apercu': '🧪 Essai aperçu lancé.', 'essai-brouillon': '🧪 Essai brouillon lancé.', 'mois-suivant': '➕ Livre suivant lancé.',
-              'arreter-abonnement': '⏹️ Abonnement arrêté.', 'test-calendrier': '🧪 Calendrier de test lancé : il apparaît dans la liste (5 à 10 minutes).', 'test-coloriage': '🧪 Cahier de test lancé : il apparaît dans la liste (10 à 15 minutes).', effacer: '🧹 Données effacées.', 'valider-paiement-test': '💳 Paiement simulé.' };
+              'arreter-abonnement': '⏹️ Abonnement arrêté.', 'test-calendrier': '🧪 Calendrier de test lancé : il apparaît dans la liste (5 à 10 minutes).', 'test-coloriage': '🧪 Cahier de test lancé : il apparaît dans la liste (10 à 15 minutes).', 'test-gourde': '🧪 Gourde de test lancée (2 à 3 minutes).', 'test-tasse': '🧪 Tasse de test lancée (2 à 3 minutes).', 'test-sac': '🧪 Sac de test lancé (2 à 3 minutes).', effacer: '🧹 Données effacées.', 'valider-paiement-test': '💳 Paiement simulé.' };
   return { cls: 'ok', html: T[action] || '✅ Fait.' };
 }
 async function act(id, action, btn) {

@@ -10,13 +10,17 @@ from flask import Blueprint, request, jsonify, send_file, abort, redirect, Respo
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
 import calendrier, coloriage
-import printful
-EXTRAS = {"calendrier": calendrier, "coloriage": coloriage}      # produits qui ne sont pas des livres
-NOMS_EXTRAS = {"calendrier": "le calendrier", "coloriage": "le cahier de coloriage"}
+import printful, objets
+EXTRAS = {"calendrier": calendrier, "coloriage": coloriage}      # produits Lulu qui ne sont pas des livres (même colis que les livres)
+OBJETS = {k: objets for k in objets.KINDS}                         # objets Printful (gourde, tasse, sac) : leur propre colis
+NON_LIVRES = {**EXTRAS, **OBJETS}
+NOMS_EXTRAS = {"calendrier": "le calendrier", "coloriage": "le cahier de coloriage", **objets.NOMS}
 
 
 def produit_de(folder):
-    """Module du produit fabriqué dans ce dossier (calendrier, coloriage), ou None pour un livre."""
+    """Module du produit fabriqué dans ce dossier (calendrier, coloriage, objet), ou None pour un livre."""
+    if (Path(folder) / "objet.json").exists() or (Path(folder) / "objet_instantane.json").exists():
+        return objets
     return next((m for k, m in EXTRAS.items() if (Path(folder) / f"{k}.json").exists()), None)
 
 
@@ -139,6 +143,9 @@ def order_create():
         if formule == "coloriage" and len([x for x in dict.fromkeys(pages) if x in coloriage.PAR_CLE]) < coloriage.NB_PAGES:
             return jsonify(erreur=f"Choisissez les {coloriage.NB_PAGES} pages du cahier de coloriage (ou complétez au hasard)."), 400
         form["coloriage"] = {"pages": coloriage.choisir(pages)}
+    objs = paiement.objets_valides([x for x in (c.get("objets") or []) if isinstance(x, str)])   # gourde, tasse, sac (en ajout)
+    if objs:
+        form["objets"] = objs
 
     oid = uuid.uuid4().hex[:12]
     folder = STORE / oid; folder.mkdir(parents=True)
@@ -147,13 +154,13 @@ def order_create():
     (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {k: p.name for k, p in guides.items()},
                                                    "apercus": {k: p.name for k, p in previews.items()}}, ensure_ascii=False), encoding="utf-8")
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
-              montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo), origine=oid,
+              montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs), origine=oid,
               numero=0 if formule in EXTRAS else 1)
     if not paiement.configured():
         return jsonify(id=oid, url=f"/creer?commande={oid}&test=1")
     try:
         sid, url = paiement.checkout(oid, formule, email, base_url(), pays=addr.get("pays"), calendrier=paiement.avec_calendrier(formule, avec_cal),
-                                     coloriage=avec_colo and formule != "coloriage")
+                                     coloriage=avec_colo and formule != "coloriage", objets=objs)
     except paiement.StripeError as e:
         db.update(oid, statut="erreur", erreur=str(e))
         return jsonify(erreur=str(e)), 502
@@ -185,7 +192,7 @@ def confirm_paid(oid, stripe_sub=None):
 def livres_du_pack(origine):
     """Livres d'une même commande (hors essais et hors calendrier), dans l'ordre des numéros."""
     return sorted([x for x in db.lister(1000) if x["origine"] == origine and not (x["formule"] or "").startswith("essai")
-                   and x["formule"] not in EXTRAS], key=lambda x: x["numero"] or 1)
+                   and x["formule"] not in NON_LIVRES], key=lambda x: x["numero"] or 1)
 
 
 def extras_du_pack(origine):
@@ -194,6 +201,21 @@ def extras_du_pack(origine):
 
 
 calendriers_du_pack = extras_du_pack
+
+
+def objets_du_pack(origine):
+    """Gourde, tasse, sac de la commande : fabriqués par Printful, dans leur propre colis."""
+    return sorted([x for x in db.lister(1000) if x["origine"] == origine and x["formule"] in OBJETS], key=lambda x: x["formule"])
+
+
+def _creer_objets(oid, o, form, ids):
+    for k in form.get("objets") or []:
+        if k in OBJETS:
+            cid = f"{oid}-{k[:3]}"
+            if not db.get(cid):
+                db.create(id=cid, formule=k, email=o["email"], adresse=o["adresse"], statut="payee", montant=0, origine=oid, numero=0)
+            ids.append(cid)
+    return ids
 
 
 def creer_pack(oid):
@@ -208,7 +230,7 @@ def creer_pack(oid):
                 if not db.get(cid):
                     db.create(id=cid, formule=k, email=o["email"], adresse=o["adresse"], statut="payee", montant=0, origine=oid, numero=0)
                 ids.append(cid)
-        return ids
+        return _creer_objets(oid, o, form, ids)
     f = paiement.FORMULES.get(o["formule"]) or {"livres": 1}
     n = f["livres"]
     form, _ = load_book(oid)
@@ -242,7 +264,7 @@ def creer_pack(oid):
             if not db.get(cid):
                 db.create(id=cid, formule=k, email=o["email"], adresse=o["adresse"], statut="payee", montant=0, origine=oid, numero=0)
             ids.append(cid)
-    return ids
+    return _creer_objets(oid, o, form, ids)
 
 
 def check_fetes(s, jour=None):
@@ -280,7 +302,7 @@ def _start_book(oid, auto=False, reprise=False):
     essai = o["formule"].split("_", 1)[1] if (o["formule"] or "").startswith("essai_") else None
     o = db.get(oid)
     form, refs = load_book(o["origine"])
-    if o["formule"] in EXTRAS:                    # calendrier, coloriage : mêmes avatars, leur propre chaîne
+    if o["formule"] in NON_LIVRES:                # calendrier, coloriage, objets : mêmes avatars, leur propre chaîne
         form = dict(form, produit=o["formule"])
     elif o["origine"] != oid:                     # livre du mois suivant : nouveau thème, nouvel univers
         n = o["numero"]
@@ -294,9 +316,9 @@ def _start_book(oid, auto=False, reprise=False):
             form["univers"] = choix["univers"]
     else:
         form = dict(form, numero=f"{o['numero']:02d}")
-    if o.get("univers") and o["formule"] not in EXTRAS:   # livre de fête : univers imposé
+    if o.get("univers") and o["formule"] not in NON_LIVRES:   # livre de fête : univers imposé
         form = dict(form, univers=o["univers"])
-    if o["formule"] not in EXTRAS and U.cle_de(form.get("univers")) == "anniversaire":   # il a un an de plus le jour J
+    if o["formule"] not in NON_LIVRES and U.cle_de(form.get("univers")) == "anniversaire":   # il a un an de plus le jour J
         try:
             depuis = int((time.time() - db.get(o["origine"] or oid)["cree"]) // (365.25 * 86400))
             form = dict(form, age=str(int(form["age"]) + 1 + depuis))
@@ -305,7 +327,7 @@ def _start_book(oid, auto=False, reprise=False):
                 form = dict(form, age=str(max(2, min(10, datetime.date.today().year + (1 if datetime.date.today().strftime("%m-%d") > (form.get("anniversaire") or "12-31") else 0) - int(form["naissance"])))))
         except (ValueError, TypeError, KeyError):
             pass
-    if o["formule"] not in EXTRAS:
+    if o["formule"] not in NON_LIVRES:
         form = dict(form, volume_number=db.assign_volume(oid))  # volumeNumber : attribué une fois, jamais changé
     job_id = o["job_id"] or oid
     if not reprise and (A.OUT / job_id).exists() and any((A.OUT / job_id).glob("*.png")):
@@ -359,9 +381,10 @@ def order_status(oid):
         f0 = load_book(o["origine"] or oid)[0]
         avec_cal = o["formule"] == "calendrier" or bool(f0.get("calendrier"))
         avec_colo = o["formule"] == "coloriage" or bool(f0.get("coloriage"))
+        objs = f0.get("objets") or []
     except Exception:
-        avec_cal = avec_colo = False
-    return jsonify(id=oid, statut=o["statut"], formule=o["formule"], job=o["job_id"], titre=o["titre"], calendrier=avec_cal, coloriage=avec_colo,
+        avec_cal = avec_colo = False; objs = []
+    return jsonify(id=oid, statut=o["statut"], formule=o["formule"], job=o["job_id"], titre=o["titre"], calendrier=avec_cal, coloriage=avec_colo, objets=objs,
                    test=not paiement.configured())
 
 
@@ -505,7 +528,8 @@ def purge_old(days=int(os.getenv("PURGE_JOURS", "30"))):
 
 # ------------------------------------------------------------------ impression
 def est_calendrier(folder):
-    return produit_de(folder) is not None
+    """Produit Lulu autre qu'un livre (calendrier, cahier de coloriage)."""
+    return produit_de(folder) in (calendrier, coloriage)
 
 
 def build_cover(oid):
@@ -513,6 +537,8 @@ def build_cover(oid):
     o = db.get(oid)
     folder = A.OUT / o["job_id"]
     mod = produit_de(folder)
+    if mod is objets:
+        raise RuntimeError("pas de couverture pour un objet Printful")
     if mod:                                       # calendrier / coloriage : couverture aux dimensions Lulu du produit
         dims = calendrier.dimensions_couverture() if mod is calendrier else coloriage.dimensions_couverture(coloriage.pages_impression(folder))
         info = mod.couverture_impression(folder, dims)
@@ -568,33 +594,52 @@ def _verifier_imprimable(b):
 
 
 def send_to_print(oid):
-    """Envoie TOUTE la commande (livres + calendrier) chez l'imprimeur en un seul travail (un seul colis).
-    Refusé tant qu'un livre ou le calendrier n'est pas prêt."""
+    """Envoie TOUTE la commande chez les imprimeurs : livres + calendrier + cahier chez Lulu (un seul colis), objets chez Printful
+    (une seule commande, son propre colis). Refusé tant qu'un produit n'est pas prêt. Ce qui est déjà parti n'est jamais renvoyé."""
     o = db.get(oid)
     if (o["formule"] or "").startswith("essai"):
         raise RuntimeError("livre d'essai : pas d'impression")
     origine = o["origine"] or oid
-    livres, cals = livres_du_pack(origine), extras_du_pack(origine)
+    livres, cals, objs = livres_du_pack(origine), extras_du_pack(origine), objets_du_pack(origine)
     tete = db.get(origine)
     attendus = (paiement.FORMULES.get(tete["formule"]) or {"livres": len(livres)})["livres"]
     if len(livres) < attendus:
         raise RuntimeError(f"pack incomplet : {len(livres)}/{attendus} livres créés")
-    tout = livres + cals
-    if any(b["statut"] in ("envoyee_impression", "expediee") for b in tout):
+    parti = lambda b: b["statut"] in ("envoyee_impression", "expediee")
+    lulu_items = livres + cals
+    a_lulu = [b for b in lulu_items if not parti(b)] if not any(parti(b) for b in lulu_items) else []
+    a_pf = [b for b in objs if not parti(b) and not b.get("printful_id")]
+    tout = a_lulu + a_pf
+    if not tout:
         raise RuntimeError("cette commande est déjà chez l'imprimeur")
     pas_prets = [b for b in tout if b["statut"] not in ("a_verifier", "erreur") or not b["job_id"]
-                 or (((A.OUT / b["job_id"] / "livre.json").exists() or est_calendrier(A.OUT / b["job_id"]))
+                 or (((A.OUT / b["job_id"] / "livre.json").exists() or produit_de(A.OUT / b["job_id"]) is not None)
                      and not fabrication.est_finalise(A.OUT / b["job_id"]))]
     if pas_prets:
         raise RuntimeError("Non finalisé (à relire) : valide-le avant l'impression." if len(tout) == 1 else
                            f"{len(tout) - len(pas_prets)}/{len(tout)} prêts : le colis part quand tout est finalisé (validé)")
-    if not lulu.configured():
+    if a_lulu and not lulu.configured():
         raise RuntimeError("Clés Lulu absentes (.env : LULU_CLIENT_KEY, LULU_CLIENT_SECRET).")
+    if a_pf and not printful.configured():
+        raise RuntimeError("PRINTFUL_API_KEY absent dans Railway : les objets ne peuvent pas partir chez Printful.")
     pub = os.getenv("PUBLIC_URL", "").rstrip("/")
     if not pub.startswith("https://"):
-        raise RuntimeError("Lulu doit télécharger les PDF : renseigne PUBLIC_URL (adresse https publique du site).")
-    for b in tout:
+        raise RuntimeError("Les imprimeurs téléchargent les fichiers : renseigne PUBLIC_URL (adresse https publique du site).")
+    for b in a_lulu:
         _verifier_imprimable(b)
+    job = {}
+    if a_lulu:
+        job = _envoyer_lulu(origine, tete, a_lulu, pub)
+    if a_pf:
+        pf = _envoyer_printful(origine, tete, a_pf, pub)
+        job = job or {"id": pf.get("id"), "printful": True}
+        job["printful_id"] = pf.get("id"); job["printful_statut"] = pf.get("status")
+    return job
+
+
+def _envoyer_lulu(origine, tete, tout, pub):
+    livres = [b for b in tout if b["formule"] not in EXTRAS]
+    cals = [b for b in tout if b["formule"] in EXTRAS]
     items = []
     for b in tout:
         jeton = b["jeton"] or secrets.token_urlsafe(24)
@@ -611,9 +656,30 @@ def send_to_print(oid):
     quoi = " + ".join(([f"{len(livres)} livre(s)"] if livres else []) + [NOMS_EXTRAS[b["formule"]] for b in cals])
     for b in tout:
         db.update(b["id"], statut="envoyee_impression", lulu_id=str(job.get("id")), lulu_statut=st,
-                  lulu_cout=f"{cost['total_ttc']} {cost['devise']} (colis : {quoi})" if b["id"] == origine else None, erreur=None)
+                  lulu_cout=f"{cost['total_ttc']} {cost['devise']} (colis : {quoi})" if b is tout[0] else None, erreur=None)
     log(f"commande {origine} ({quoi}) envoyée à Lulu ({lulu.env()}) : travail {job.get('id')}, {cost['total_ttc']} {cost['devise']}")
     return job
+
+
+def printful_confirme_auto():
+    """PRINTFUL_CONFIRMER=1 : la commande Printful est confirmée (fabriquée, facturée) dès l'envoi. Sinon : brouillon."""
+    return os.getenv("PRINTFUL_CONFIRMER", "") == "1"
+
+
+def _envoyer_printful(origine, tete, objs, pub):
+    items = []
+    for b in objs:
+        jeton = b["jeton"] or secrets.token_urlsafe(24)
+        db.update(b["id"], jeton=jeton)
+        items.append(objets.items_printful(A.OUT / b["job_id"], lambda n, b=b, j=jeton: f"{pub}/objet/{b['id']}/{j}/{n}"))
+    pf = printful.creer_commande(f"mhdm-{origine}", tete["adresse"], tete["email"], items, confirmer=printful_confirme_auto())
+    c = pf.get("costs") or {}
+    quoi = " + ".join(NOMS_EXTRAS[b["formule"]] for b in objs)
+    for b in objs:
+        db.update(b["id"], statut="envoyee_impression", printful_id=str(pf.get("id")), printful_statut=pf.get("status"),
+                  lulu_cout=f"{c.get('total')} {c.get('currency') or ''} (Printful : {quoi})" if b is objs[0] else None, erreur=None)
+    log(f"commande {origine} ({quoi}) envoyée à Printful ({pf.get('status')}) : commande {pf.get('id')}, {c.get('total')} {c.get('currency')}")
+    return pf
 
 
 def verifier_fichiers_lulu(oid, attente=55):
@@ -656,6 +722,16 @@ def verifier_fichiers_lulu(oid, attente=55):
 
 def refresh_print(oid):
     o = db.get(oid)
+    if o.get("printful_id"):                          # objet Printful : statut et suivi de la commande Printful
+        st = printful.commande(o["printful_id"])
+        kw = dict(printful_statut=st["statut"], suivi=st["suivi"] or None)
+        if st["statut"] == "fulfilled" or st["suivi"]:
+            kw["statut"] = "expediee"
+        elif st["statut"] in ("canceled", "failed", "archived"):
+            kw.update(statut="erreur", erreur=f"Printful : {st['statut']}")
+        for b in [x for x in objets_du_pack(o["origine"] or oid) if x.get("printful_id") == o["printful_id"]]:
+            db.update(b["id"], **kw)
+        return db.get(oid)
     st = lulu.status(o["lulu_id"])
     kw = dict(lulu_statut=st["statut"], suivi=st["suivi"] or None)
     if st["statut"] == "SHIPPED":
@@ -673,6 +749,16 @@ def print_file(oid, jeton, name):
         abort(404)
     p = A.OUT / o["job_id"] / f"impression_{name}"
     return send_file(p, mimetype="application/pdf") if p.exists() else abort(404)
+
+
+@bp.get("/objet/<oid>/<jeton>/<name>")
+def objet_file(oid, jeton, name):
+    """Fichiers d'impression téléchargés par Printful (lien secret propre à chaque objet)."""
+    o = db.get(oid)
+    if not o or not o["jeton"] or not secrets.compare_digest(o["jeton"], jeton) or not re.match(r"^impression_[a-z0-9_]+\.png$", name):
+        abort(404)
+    p = A.OUT / (o["job_id"] or "_") / name
+    return send_file(p, mimetype="image/png") if p.exists() else abort(404)
 
 
 # ------------------------------------------------------------------ administration
@@ -716,11 +802,12 @@ def admin_list():
         except Exception:
             r["budget"] = None
         r["refusees"] = folder.exists() and any(json.loads(f.read_text(encoding="utf-8")).get("bloquants")
-                                                for f in list(folder.glob("spread-*.json")) + list(folder.glob("cal-*.json")) + list(folder.glob("colo-*.json")))
+                                                for f in list(folder.glob("spread-*.json")) + list(folder.glob("cal-*.json")) + list(folder.glob("colo-*.json")) + list(folder.glob("obj-*.json")))
         r["calendrier"] = r["formule"] == "calendrier"
         r["coloriage"] = r["formule"] == "coloriage"
-        r["extra"] = r["formule"] in EXTRAS
-        r["plafond"] = EXTRAS[r["formule"]].PLAFOND if r["formule"] in EXTRAS else budget.PLAFOND
+        r["extra"] = r["formule"] in NON_LIVRES
+        r["objet"] = r["formule"] if r["formule"] in OBJETS else None
+        r["plafond"] = NON_LIVRES[r["formule"]].PLAFOND if r["formule"] in NON_LIVRES else budget.PLAFOND
         try:
             r["prenom"] = json.loads((STORE / r["origine"] / "livre.json").read_text(encoding="utf-8"))["form"].get("prenom")
         except Exception:
@@ -733,16 +820,17 @@ def admin_list():
         g = packs.get(r["origine"] or r["id"]) or [r]
         tete = next((x for x in g if x["id"] == (r["origine"] or r["id"])), r)
         r["pack_total"] = (paiement.FORMULES.get(tete["formule"]) or {"livres": len(g)})["livres"]
-        r["pack_prets"] = sum(1 for x in g if x.get("finalise") and x["formule"] not in EXTRAS)
-        r["pack_cal"] = sum(1 for x in g if x["formule"] in EXTRAS)
-        r["pack_cal_prets"] = sum(1 for x in g if x["formule"] in EXTRAS and x.get("finalise"))
-        r["pack_extras"] = [x["formule"] for x in g if x["formule"] in EXTRAS]
+        r["pack_prets"] = sum(1 for x in g if x.get("finalise") and x["formule"] not in NON_LIVRES)
+        r["pack_cal"] = sum(1 for x in g if x["formule"] in NON_LIVRES)
+        r["pack_cal_prets"] = sum(1 for x in g if x["formule"] in NON_LIVRES and x.get("finalise"))
+        r["pack_extras"] = [x["formule"] for x in g if x["formule"] in NON_LIVRES]
         r["pack_mail"] = tete.get("mail_pret")
     return jsonify(plafond=budget.PLAFOND, commandes=rows, abonnements=db.subs(),
                    config={"stripe": "live" if paiement.live() else "test" if paiement.configured() else "simulé",
                            "lulu": lulu.env() if lulu.configured() else "non configuré", "pod": lulu.POD_PACKAGE,
                            "pod_calendrier": calendrier.POD, "calendrier_valide": calendrier.fichiers_valides(),
                            "pod_coloriage": coloriage.POD, "coloriage_valide": coloriage.fichiers_valides(),
+                           "printful": printful.configured(), "printful_confirmer": printful_confirme_auto(),
                            "public_url": os.getenv("PUBLIC_URL", ""), "auto_impression": auto_print(),
                            "depense_jour": A.generator.spent_today(), "budget_jour": A.generator.BUDGET_JOUR})
 
@@ -752,6 +840,8 @@ def _couverture(folder):
     if a.exists():
         return a
     c = sorted(folder.glob("couverture-*.png"))
+    if not c and (folder / "apercu_objet.jpg").exists():
+        return folder / "apercu_objet.jpg"
     return c[0] if c else None
 
 
@@ -969,13 +1059,22 @@ def admin_action(oid, action):
             folder = A.OUT / (o["job_id"] or "_")
             mod = produit_de(folder)
             if not mod:
-                raise RuntimeError("seulement pour un calendrier ou un cahier de coloriage")
+                raise RuntimeError("seulement pour un calendrier, un cahier de coloriage ou un objet")
             form, _ = load_book(o["origine"])
             fab = mod.recomposer(folder, form)
             return jsonify(ok=True, info={"pdf": fab["pdf"]})
         if action == "imprimer":
             job = send_to_print(oid)
-            return jsonify(ok=True, info={"lulu": job.get("id"), "env": lulu.env()})
+            return jsonify(ok=True, info={"lulu": None if job.get("printful") else job.get("id"), "env": lulu.env(),
+                                          "printful": job.get("printful_id"), "printful_statut": job.get("printful_statut")})
+        if action == "printful-confirmer":         # brouillon Printful -> vraie commande (fabriquée et facturée par Printful)
+            if not o.get("printful_id"):
+                raise RuntimeError("pas de commande Printful pour cet objet")
+            r = printful.confirmer_commande(o["printful_id"])
+            for b in [x for x in objets_du_pack(o["origine"] or oid) if x.get("printful_id") == o["printful_id"]]:
+                db.update(b["id"], printful_statut=(r or {}).get("status") or "pending")
+            log(f"commande Printful {o['printful_id']} confirmée")
+            return jsonify(ok=True, info={"printful_statut": (r or {}).get("status")})
         if action == "suivi":
             return jsonify(ok=True, info=refresh_print(oid))
         if action == "relancer":
@@ -1003,7 +1102,7 @@ def admin_action(oid, action):
             if A.JOBS.get(o["job_id"] or "", {}).get("etat") in ("en_cours", "validation"):
                 raise RuntimeError("fabrication en cours")
             arch = folder / "refusees" / time.strftime("%Y%m%d-%H%M%S"); n = 0
-            for rp in list(folder.glob("spread-*.json")) + list(folder.glob("cal-*.json")) + list(folder.glob("colo-*.json")):
+            for rp in list(folder.glob("spread-*.json")) + list(folder.glob("cal-*.json")) + list(folder.glob("colo-*.json")) + list(folder.glob("obj-*.json")):
                 if json.loads(rp.read_text(encoding="utf-8")).get("bloquants"):
                     arch.mkdir(parents=True, exist_ok=True)
                     for f in (rp, rp.with_suffix(".png")):
@@ -1026,14 +1125,14 @@ def admin_action(oid, action):
             folder = A.OUT / (o["job_id"] or "_")
             lid = procede.livre_id(folder) if folder.exists() else oid
             bj = folder / "budget.json"
-            pl = EXTRAS[o["formule"]].PLAFOND if o["formule"] in EXTRAS else budget.PLAFOND
+            pl = NON_LIVRES[o["formule"]].PLAFOND if o["formule"] in NON_LIVRES else budget.PLAFOND
             return jsonify(ok=True, info={"livre": lid, "plafond": pl, "depense": budget.depense(lid), "appels": budget.appels(lid),
                                           "borne": json.loads(bj.read_text(encoding="utf-8")) if bj.exists() else None,
                                           "tarifs": budget.etat_tarifs()})
         if action == "valider-paiement-test" and not paiement.configured():
             confirm_paid(oid)
             return jsonify(ok=True)
-        if action in ("test-calendrier", "test-coloriage"):
+        if action in ("test-calendrier", "test-coloriage", "test-gourde", "test-tasse", "test-sac"):
             # calendrier / cahier de TEST à partir des avatars de cette commande : vraie fabrication (coût IA réel), aucun paiement,
             # une commande à part (elle ne rejoint pas le colis du client) ; imprimable comme une vraie commande pour un exemplaire test
             import datetime
@@ -1042,21 +1141,21 @@ def admin_action(oid, action):
             tid = uuid.uuid4().hex[:12]
             shutil.copytree(STORE / (o["origine"] or oid), STORE / tid)
             d = json.loads((STORE / tid / "livre.json").read_text(encoding="utf-8"))
-            for x in EXTRAS:
+            for x in list(EXTRAS) + ["objets"]:
                 d["form"].pop(x, None)
             d["form"].pop("cadeau_de", None); d["form"].pop("cadeau_message", None)
             if k == "calendrier":
                 d["form"]["calendrier"] = {"debut": calendrier.debut_par_defaut(), "dates": [], "pays": (o["adresse"] or {}).get("pays", "FR"),
                                            "commande_le": datetime.date.today().isoformat()}
-            else:
+            elif k == "coloriage":
                 d["form"]["coloriage"] = {"pages": coloriage.choisir([])}
             d["form"]["formule"] = k
             (STORE / tid / "livre.json").write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
             db.create(id=tid, formule=k, email=o["email"], adresse=o["adresse"], statut="payee", montant=0, origine=tid, numero=0)
             start_book(tid, auto=True)
             return jsonify(ok=True, info={"test": tid, "produit": k})
-        if action in ("essai-brouillon", "essai-apercu") and o["formule"] in EXTRAS:
-            raise RuntimeError("pas d'essai pour un calendrier ou un cahier de coloriage")
+        if action in ("essai-brouillon", "essai-apercu") and o["formule"] in NON_LIVRES:
+            raise RuntimeError("pas d'essai pour un calendrier, un cahier de coloriage ou un objet")
         if action in ("essai-brouillon", "essai-apercu"):
             # livre d'essai à partir de la même configuration, sans paiement ni impression
             tid = uuid.uuid4().hex[:12]
@@ -1183,7 +1282,7 @@ def mail_livre_pret(oid):
     tete = db.get(origine) or o
     if (tete["formule"] or "").startswith("essai") or not tete.get("email"):
         return False
-    livres, cals = livres_du_pack(origine), extras_du_pack(origine)
+    livres, cals = livres_du_pack(origine), extras_du_pack(origine) + objets_du_pack(origine)
     attendus = (paiement.FORMULES.get(tete["formule"]) or {"livres": 1})["livres"]
     if len(livres) < attendus or not all(b["job_id"] and fabrication.est_finalise(A.OUT / b["job_id"]) for b in livres + cals):
         return False                                      # la commande n'est pas encore complète : le mail part avec le dernier
@@ -1205,6 +1304,8 @@ def mail_livre_pret(oid):
             folder = A.OUT / b["job_id"]
             man = json.loads((folder / "final.json").read_text(encoding="utf-8"))
             src = folder / "apercus" / "couverture.png"
+            if not src.exists() and (folder / "apercu_objet.jpg").exists():
+                src = folder / "apercu_objet.jpg"
             img = folder / "_mail_couverture.jpg"
             if src.exists() and not img.exists():
                 im = Image.open(src).convert("RGB"); im.thumbnail((640, 640)); im.save(img, quality=88)
@@ -1212,14 +1313,19 @@ def mail_livre_pret(oid):
             if img.exists():
                 images[cid] = img; urls[cid] = f"{site}/api/livres/{b['job_id']}/apercu/couverture.png"
             fiches.append({"titre": man.get("titre") or b.get("titre") or "son livre", "n": man.get("volumeNumber") or b.get("volume_number") or i + 1,
-                           "cid": cid if img.exists() else None, "cal": b["formule"] in EXTRAS, "formule": b["formule"]})
+                           "cid": cid if img.exists() else None, "cal": b["formule"] in NON_LIVRES, "formule": b["formule"]})
         un = len(fiches) == 1
+        deux_colis = any(b["formule"] in OBJETS for b in cals) and len(fiches) > sum(1 for b in cals if b["formule"] in OBJETS)
+        colis = "en deux colis (les objets sont fabriqués par un autre atelier)" if deux_colis else "dans un seul colis"
+        SOUS = {"calendrier": "Calendrier mural · 12 mois illustrés", "coloriage": "Cahier de coloriage · 30 dessins à colorier",
+                **{k: v["titre"] + " personnalisée" if k != "sac" else v["titre"] + " personnalisé" for k, v in objets.KINDS.items()}}
+        EMO = {"calendrier": "📅", "coloriage": "🖍️", **{k: v["emoji"] for k, v in objets.KINDS.items()}}
         nl = len(livres)
         noms = ([("le livre" if nl == 1 else f"les {nl} livres")] if nl else []) + [NOMS_EXTRAS[b["formule"]] for b in cals]
         quoi = noms[0] if len(noms) == 1 else ", ".join(noms[:-1]) + " et " + noms[-1]
         titre_mail = (quoi[0].upper() + quoi[1:] + f" de {prenom} " + ("est prêt" if un else "sont prêts"))
         texte = (f"Bonjour,\n\n{titre_mail} :\n" + "\n".join(f"– « {f['titre']} »" + ("" if f["cal"] else f" (livre n° {f['n']})") for f in fiches) +
-                 f"\n\n{'Il a été relu et part' if un else 'Ils ont été relus et partent'} maintenant à l'impression, dans un seul colis. "
+                 f"\n\n{'Il a été relu et part' if un else 'Ils ont été relus et partent'} maintenant à l'impression, {colis}. "
                  f"Livraison estimée entre le {_date_fr(d1)} et le {_date_fr(d2)}.\n\nUne question ? Répondez simplement à ce mail.\n\n"
                  f"À très vite,\nL'équipe Mon Héros du Mois\n{site}")
         if un:
@@ -1228,12 +1334,12 @@ def mail_livre_pret(oid):
                        f'box-shadow:0 8px 24px rgba(31,37,87,.25)">' if f["cid"] else "") + \
                       f'<p style="font-size:19px;text-align:center;margin:0 0 4px"><b>« {escape(f["titre"])} »</b></p>' \
                       f'<p style="font:14px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 22px">' \
-                      f'{("Calendrier mural · 12 mois illustrés" if f["formule"] == "calendrier" else "Cahier de coloriage · 30 dessins à colorier") if f["cal"] else "Livre n° " + str(f["n"]) + " de sa collection"}' \
+                      f'{SOUS.get(f["formule"], "") if f["cal"] else "Livre n° " + str(f["n"]) + " de sa collection"}' \
                       f'{(" · offert par " + escape(cadeau_de)) if cadeau_de else ""}</p>'
         else:
             cases = "".join(f'<td style="width:50%;padding:6px;vertical-align:top;text-align:center">'
                             + (f'<img src="cid:{f["cid"]}" alt="" width="250" style="width:100%;max-width:250px;border-radius:8px;box-shadow:0 6px 16px rgba(31,37,87,.2)">' if f["cid"] else "")
-                            + f'<div style="font:600 13px system-ui,sans-serif;margin-top:6px">{("📅" if f["formule"] == "calendrier" else "🖍️") if f["cal"] else "n° " + str(f["n"]) + " ·"} {escape(f["titre"])}</div></td>'
+                            + f'<div style="font:600 13px system-ui,sans-serif;margin-top:6px">{EMO.get(f["formule"], "") if f["cal"] else "n° " + str(f["n"]) + " ·"} {escape(f["titre"])}</div></td>'
                             + ("</tr><tr>" if i % 2 == 1 else "") for i, f in enumerate(fiches))
             visuels = (f'<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 18px"><tr>{cases}</tr></table>'
                        + (f'<p style="font:14px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 22px">Offert par {escape(cadeau_de)}</p>' if cadeau_de else ""))
@@ -1244,7 +1350,7 @@ def mail_livre_pret(oid):
  {visuels}
  <div style="background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.5 system-ui,sans-serif">
   <p style="margin:0 0 8px">✅ {escape(quoi[0].upper() + quoi[1:])} {'a été créé et relu' if un else 'ont été créés et relus'} avec soin.</p>
-  <p style="margin:0 0 8px">🖨️ {'Il part' if un else 'Ils partent'} maintenant à l'impression, dans un seul colis.</p>
+  <p style="margin:0 0 8px">🖨️ {'Il part' if un else 'Ils partent'} maintenant à l'impression, {colis}.</p>
   <p style="margin:0">📦 Livraison estimée <b>entre le {_date_fr(d1)} et le {_date_fr(d2)}</b>.</p>
  </div>
  <p style="font:14px system-ui,sans-serif;color:#6B6F8E;text-align:center;margin:22px 0 0">Une question&nbsp;? Répondez simplement à ce mail.<br><a href="{site}" style="color:#3D6BD8">{site.replace('https://', '')}</a></p>

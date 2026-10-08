@@ -5,7 +5,7 @@
 3. Planche personnages          -> character_sheet (à partir des avatars du formulaire + planche de style), validée par le parent
 4. Couverture, 9 scènes, décors -> draw_* (la planche validée et la planche de style sont passées en images de référence)
 Les règles graphiques viennent de art.py."""
-import os, json, time, base64, re, shutil
+import os, json, time, base64, re, shutil, threading
 import numpy as np
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
@@ -950,7 +950,9 @@ def recolor_model(kind, cfg):
         if True:                                                 # même calcul que l'aperçu du navigateur (static/avatar.js)
             import avatar_paint
             fg = avatar_paint.paint(name, t)
-            bg = Image.new("RGB", fg.size, (246, 238, 222)); bg.paste(fg, (0, 0), fg); bg.save(out)
+            bg = Image.new("RGB", fg.size, (246, 238, 222)); bg.paste(fg, (0, 0), fg)
+            tmp = out.with_name(f"{out.stem}.{os.getpid()}.{threading.get_ident()}.tmp.png")   # écriture atomique : deux
+            bg.save(tmp); os.replace(tmp, out)                                                    # fabrications en parallèle
             return out
         im = Image.open(AV_STATIC / f"{name}.webp").convert("RGBA")
         px = np.asarray(im).astype(np.float32) / 255

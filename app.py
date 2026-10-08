@@ -131,9 +131,9 @@ def run(job_id, form, refs):
         generator.MODE.set(generator.BROUILLON)
     try:
         if os.getenv("PROCEDE", "kit") == "kit":       # procédé des livres Mila et Noé (kit) : voir procede.py
-            if form.get("produit") in ("calendrier", "coloriage"):     # calendrier mural, cahier de coloriage
+            if form.get("produit") in ("calendrier", "coloriage", "gourde", "tasse", "sac"):   # calendrier, coloriage, objets Printful
                 import importlib
-                mod = importlib.import_module(form["produit"])
+                mod = importlib.import_module("objets" if form["produit"] in ("gourde", "tasse", "sac") else form["produit"])
                 cfg = generator.build_config(form); save("config.json", cfg)
                 if form.get("demo") or not os.getenv("OPENAI_API_KEY"):
                     res = mod.demo(form, cfg, folder, job, progress)
