@@ -943,6 +943,28 @@ def admin_action(oid, action):
         if action == "valider-paiement-test" and not paiement.configured():
             confirm_paid(oid)
             return jsonify(ok=True)
+        if action in ("test-calendrier", "test-coloriage"):
+            # calendrier / cahier de TEST à partir des avatars de cette commande : vraie fabrication (coût IA réel), aucun paiement,
+            # une commande à part (elle ne rejoint pas le colis du client) ; imprimable comme une vraie commande pour un exemplaire test
+            import datetime
+            k = action.split("-")[1]
+            form, _ = load_book(o["origine"] or oid)
+            tid = uuid.uuid4().hex[:12]
+            shutil.copytree(STORE / (o["origine"] or oid), STORE / tid)
+            d = json.loads((STORE / tid / "livre.json").read_text(encoding="utf-8"))
+            for x in EXTRAS:
+                d["form"].pop(x, None)
+            d["form"].pop("cadeau_de", None); d["form"].pop("cadeau_message", None)
+            if k == "calendrier":
+                d["form"]["calendrier"] = {"debut": calendrier.debut_par_defaut(), "dates": [], "pays": (o["adresse"] or {}).get("pays", "FR"),
+                                           "commande_le": datetime.date.today().isoformat()}
+            else:
+                d["form"]["coloriage"] = {"pages": coloriage.choisir([])}
+            d["form"]["formule"] = k
+            (STORE / tid / "livre.json").write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+            db.create(id=tid, formule=k, email=o["email"], adresse=o["adresse"], statut="payee", montant=0, origine=tid, numero=0)
+            start_book(tid, auto=True)
+            return jsonify(ok=True, info={"test": tid, "produit": k})
         if action in ("essai-brouillon", "essai-apercu") and o["formule"] in EXTRAS:
             raise RuntimeError("pas d'essai pour un calendrier ou un cahier de coloriage")
         if action in ("essai-brouillon", "essai-apercu"):

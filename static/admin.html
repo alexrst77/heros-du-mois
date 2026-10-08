@@ -139,6 +139,8 @@ function boutons(o, e) {
   if (o.extra && e.k === 'relire') sec.push(b('recomposer', '🔁 Recomposer les pages (sans IA)'));
   if (o.abonnement_id) sec.push(b('mois-suivant', '➕ Livre suivant'), b('arreter-abonnement', '⏹️ Arrêter l\'abonnement', 'danger'));
   if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai') && !o.extra) sec.push(b('essai-apercu', '🧪 Essai aperçu (≈ 1 $)'), b('essai-brouillon', '🧪 Essai brouillon (≈ 0,5 $)'));
+  if (!['paiement', 'archive'].includes(e.k) && !(o.formule || '').startsWith('essai') && !o.extra)
+    sec.push(b('test-calendrier', '🧪 Calendrier de test (≈ 1,50 $)'), b('test-coloriage', '🧪 Cahier de coloriage de test (≈ 2,50 $)'));
   if (e.k === 'relire') sec.push(b('relancer', '♻️ Refaire tout le livre', 'danger'));
   if (['expedie', 'bloque', 'archive'].includes(e.k) && o.job_id && o.erreur !== 'données effacées') sec.push(b('effacer', '🧹 Effacer les données', 'danger'));
   return { main, sec: sec.join('') };
@@ -269,7 +271,9 @@ const CONFIRM = {
   'essai-apercu': "Lancer un essai aperçu (couverture + 1 double page, ≈ 1 $) ?",
   'essai-brouillon': "Lancer un essai brouillon (tout le livre en petite qualité, ≈ 0,5 $) ?",
   'mois-suivant': "Fabriquer maintenant le livre suivant de cet abonnement ?",
-  'mail-pret': "Envoyer au client le mail « votre livre est prêt » ?"
+  'mail-pret': "Envoyer au client le mail « votre livre est prêt » ?",
+  'test-calendrier': 'Fabriquer un calendrier de test avec les avatars de cette commande ? (vraie fabrication, ≈ 1,50 $ d\'IA, aucun paiement)',
+  'test-coloriage': 'Fabriquer un cahier de coloriage de test avec les avatars de cette commande ? (vraie fabrication, ≈ 2,50 $ d\'IA, aucun paiement)'
 };
 const eu = v => v == null || v === '' ? '—' : parseFloat(v).toFixed(2).replace('.', ',') + ' €';
 const LIV = { MAIL: 'économique', PRIORITY_MAIL: 'prioritaire', GROUND: 'standard', EXPEDITED: 'express', EXPRESS: 'express' };
@@ -291,7 +295,7 @@ function resultat(action, j) {
   const T = { finaliser: '✅ Livre validé et sauvegardé.', relancer: '▶️ Fabrication relancée.', 'refaire-refusees': '🔁 Images refusées relancées.',
               imprimer: "🖨️ Envoyé à l'imprimeur.", suivi: '🔄 Suivi actualisé.', 'mail-pret': '📧 Mail envoyé à ' + esc(i.envoye_a || ''),
               'essai-apercu': '🧪 Essai aperçu lancé.', 'essai-brouillon': '🧪 Essai brouillon lancé.', 'mois-suivant': '➕ Livre suivant lancé.',
-              'arreter-abonnement': '⏹️ Abonnement arrêté.', effacer: '🧹 Données effacées.', 'valider-paiement-test': '💳 Paiement simulé.' };
+              'arreter-abonnement': '⏹️ Abonnement arrêté.', 'test-calendrier': '🧪 Calendrier de test lancé : il apparaît dans la liste (5 à 10 minutes).', 'test-coloriage': '🧪 Cahier de test lancé : il apparaît dans la liste (10 à 15 minutes).', effacer: '🧹 Données effacées.', 'valider-paiement-test': '💳 Paiement simulé.' };
   return { cls: 'ok', html: T[action] || '✅ Fait.' };
 }
 async function act(id, action, btn) {
