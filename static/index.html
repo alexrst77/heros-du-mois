@@ -100,6 +100,19 @@
   .crea-c.on .crea-ok { background:var(--encre); border-color:var(--encre); color:#fff; }
   .crea-b { padding:0 12px 12px; }
   @media (max-width:520px) { .crea-h { grid-template-columns:72px 1fr 30px; gap:10px; } .crea-h img { width:72px; height:72px; } }
+  .offres { border:2px dashed #F2CF6E; background:#FFFBEF; border-radius:18px; padding:12px 14px 4px; margin:4px 0 16px; }
+  .offres-h { font:800 15px var(--texte); margin-bottom:8px; } .offres-h span { display:block; font-weight:600; font-size:13px; color:var(--encre-2); }
+  .offre { display:grid; grid-template-columns:64px 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid #F3E3B5; }
+  .offre img { width:64px; height:64px; object-fit:cover; border-radius:10px; }
+  .offre-t { display:grid; gap:2px; } .offre-t b { font:400 17px/1.2 var(--titre); } .offre-t > span { font-size:13px; color:var(--encre-2); }
+  .offre-t .offre-px { color:var(--encre); font-size:14px; } .offre-t s { color:var(--encre-2); }
+  .offre .btn { padding:9px 16px; font-size:14px; }
+  .offre .mini { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+  .offre .mini button { border:2px solid var(--trait); background:#fff; border-radius:999px; padding:5px 10px; font:700 12px var(--texte); color:var(--encre); cursor:pointer; }
+  .offre .mini button:hover { border-color:var(--encre); }
+  .offres-ok { margin:-4px 0 14px; color:var(--mousse); font-weight:700; font-size:14px; }
+  .lien.petit { font-size:12px; color:var(--encre-2); margin-left:6px; }
+  @media (max-width:520px) { .offre { grid-template-columns:52px 1fr; } .offre img { width:52px; height:52px; } .offre > .btn { grid-column:2; justify-self:start; } }
   .moncolis { display:flex; gap:12px; align-items:center; justify-content:space-between; background:#FFFBEF; border:1px solid #F2CF6E; border-radius:14px; padding:12px 16px; margin-bottom:10px; }
   .moncolis b { display:block; font:800 15px var(--texte); } .moncolis span { font-size:14px; color:var(--encre-2); }
   .couvnote { margin:8px 4px 0; font:italic 500 12px/1.35 var(--texte); color:var(--encre-2); text-align:center; opacity:.85; }
@@ -645,14 +658,26 @@
     if (P.livres) ch.push(`📚 ${esc((PLANS.find(p => p.id === c.pack) || {}).nom || '')}`);
     if (P.calendrier) ch.push(`📅 Calendrier ${esc(anneeCal())}`);
     if (P.coloriage) ch.push('🖍️ Cahier de coloriage');
+    const pr = esc((S.enfant.prenom || 'votre enfant').trim());
+    const offre = (k, img, titre, txt, prixHtml, bouton) => `<div class="offre"><img src="${img}" alt=""><div class="offre-t"><b>${titre}</b><span>${txt}</span><span class="offre-px">${prixHtml}</span></div>${bouton}</div>`;
+    const ajout = k => `<button type="button" class="btn" data-ajout="${k}">Ajouter</button>`;
+    const offres = [];
+    if (!P.livres) offres.push(offre('livres', '/static/vitrine/couv_jade.webp', `Ses livres d'aventures`, `${pr} en héros d'une vraie histoire illustrée, couverture rigide.`,
+      `<span class="mini">${PLANS.filter(p => p.id !== 'fetes').map(p => `<button type="button" data-ajout="livres" data-pack="${p.id}">${p.nom} · ${p.px}</button>`).join('')}</span>`, ''));
+    if (!P.calendrier) offres.push(offre('calendrier', '/static/vitrine/cal_photo_2.webp', `Son calendrier ${esc(anneeCal())}`, '12 mois illustrés avec lui, ses fêtes et vos dates de famille.',
+      `<b>+ ${eur2(GR.calendrier.ajout)}</b> <s>${eur2(GR.calendrier.seul)}</s>`, ajout('calendrier')));
+    if (!P.coloriage) offres.push(offre('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 dessins à colorier où il est le héros.',
+      `<b>+ ${eur2(GR.coloriage.ajout)}</b> <s>${eur2(GR.coloriage.seul)}</s>`, ajout('coloriage')));
+    const retirer = k => nbCrea() > 1 ? ` <button type="button" class="lien petit" data-retirer="${k}">retirer</button>` : '';
     return `<div class="moncolis"><div><b>Votre commande</b><span>${ch.join(' · ')}</span></div><button type="button" class="lien" data-t="creations">Modifier</button></div>` +
       (() => { const f = F[c.formule], pt = port(), n = f.livres;
-        return `<div class="recap">` + (n ? `<div><span>${n} livre${n > 1 ? 's' : ''} × ${eur2(f.prix_livre)}</span><span>${eur2(f.prix)}</span></div>` : '') +
-          (isCal() ? `<div><span>Calendrier ${esc(anneeCal())}</span><span>${eur2(f.prix)}</span></div>` : c.cal_ajout ? `<div><span>Calendrier ${esc(anneeCal())}</span><span>${eur2(GR.calendrier.ajout)}</span></div>` : '') +
-          (isColo() ? `<div><span>Cahier de coloriage</span><span>${eur2(f.prix)}</span></div>` : c.colo_ajout ? `<div><span>Cahier de coloriage</span><span>${eur2(GR.coloriage.ajout)}</span></div>` : '') +
+        return `<div class="recap">` + (n ? `<div><span>${n} livre${n > 1 ? 's' : ''} × ${eur2(f.prix_livre)}${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : '') +
+          (isCal() ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(f.prix)}</span></div>` : c.cal_ajout ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(GR.calendrier.ajout)}</span></div>` : '') +
+          (isColo() ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(f.prix)}</span></div>` : c.colo_ajout ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(GR.coloriage.ajout)}</span></div>` : '') +
           `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>` +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
           (n && n < 6 ? `<p class="astuce">Livraison offerte et ${eur2(F.pack6.prix_livre)} le livre à partir de 6 livres.</p>` : '') + `</div>`; })() +
+      (offres.length ? `<div class="offres"><div class="offres-h">✨ Pour compléter l'univers de ${pr} <span>même colis, sans frais de port en plus</span></div>${offres.join('')}</div>` : '') +
       `<div class="delai"><b>Livraison estimée : ${delai()}</b>` +
       `<span>${nbCrea() > 1 || F[c.formule].livres > 1 ? 'Création et relecture, impression, puis un seul colis' : 'Création et relecture, impression, puis expédition'} : 7 à 15 jours ouvrés.</span></div>` +
       `<label class="toggle" style="margin-bottom:12px"><input type="checkbox" data-chk="cadeau" ${c.cadeau ? 'checked' : ''}> C'est pour offrir</label>` +
@@ -686,6 +711,13 @@
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button'); if (!b) return;
     if (b.dataset.hasard) { hasard(); OUVERT.suite = true; return render(); }
+    if (b.dataset.ajout) {               // proposition à l'étape commande : la création rejoint le colis
+      S.produits[b.dataset.ajout] = true; if (b.dataset.pack) S.commande.pack = b.dataset.pack;
+      const lib = { livres: 'Ses livres', calendrier: 'Le calendrier', coloriage: 'Le coloriage' }[b.dataset.ajout];
+      render(); $('err').textContent = ''; const m = document.querySelector('.offres-ok') || document.createElement('p');
+      m.className = 'offres-ok'; m.innerHTML = `✓ Ajouté ! Réglages proposés d'office, modifiables dans l'onglet « ${lib} ».`;
+      document.querySelector('.recap').after(m); return; }
+    if (b.dataset.retirer) { S.produits[b.dataset.retirer] = false; return render(); }
     if (b.dataset.prod) { S.produits[b.dataset.prod] = !S.produits[b.dataset.prod]; $('err').textContent = ''; return render(); }
     if (b.dataset.pack) { S.commande.pack = b.dataset.pack; return render(); }
     if (b.dataset.colo) { const l = S.coloriage.pages, i = l.indexOf(b.dataset.colo); OUVERT.colo = true;
