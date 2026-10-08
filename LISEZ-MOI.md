@@ -151,7 +151,7 @@ Un livre = 2 à 4 appels texte + 13 images (planche, couverture, 9 scènes, 2 d�
 ## Objets Printful : gourde, tasse, sac à dos (`objets.py`, `printful.py`)
 
 - Produits : gourde à paille CamelBak (Printful #848), tasse émaillée (#407), sac à dos (#389). Modifiables par
-  `PRINTFUL_GOURDE_ID`, `PRINTFUL_TASSE_ID`, `PRINTFUL_SAC_ID`. Prix : `PRIX_GOURDE` (5490), `PRIX_TASSE` (2690), `PRIX_SAC` (6990),
+  `PRINTFUL_GOURDE_ID`, `PRINTFUL_TASSE_ID`, `PRINTFUL_SAC_ID`. Prix : `PRIX_GOURDE` (4990), `PRIX_TASSE` (2490), `PRIX_SAC` (6490),
   livraison comprise. Vendus seulement en ajout à une commande (livres, calendrier ou cahier).
 - Réglage Railway : `PRINTFUL_API_KEY` (jeton privé de la boutique « site »). `PRINTFUL_CONFIRMER=1` confirme les commandes
   Printful dès l'envoi ; sans lui, elles partent en **brouillon** (rien fabriqué ni facturé) et se confirment depuis l'admin.

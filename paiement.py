@@ -23,9 +23,9 @@ PRIX_COLORIAGE_AJOUT = int(os.getenv("PRIX_COLORIAGE_AJOUT", "1990"))
 FORMULES["coloriage"] = {"nom": "Le cahier de coloriage", "livres": 0, "prix_livre": 0, "prix": PRIX_COLORIAGE, "mode": "payment"}
 EXTRAS = ("calendrier", "coloriage")         # produits qui ne sont pas des livres (seuls, ou ajoutés à une commande)
 # Objets Printful (gourde, tasse, sac à dos) : seulement en ajout à une commande, livraison comprise (colis Printful à part)
-OBJETS = {"gourde": {"nom": "Gourde à paille personnalisée", "prix": int(os.getenv("PRIX_GOURDE", "5490"))},
-          "tasse": {"nom": "Tasse émaillée personnalisée", "prix": int(os.getenv("PRIX_TASSE", "2690"))},
-          "sac": {"nom": "Sac à dos personnalisé", "prix": int(os.getenv("PRIX_SAC", "6990"))}}
+OBJETS = {"gourde": {"nom": "Gourde à paille personnalisée", "prix": int(os.getenv("PRIX_GOURDE", "4990"))},
+          "tasse": {"nom": "Tasse émaillée personnalisée", "prix": int(os.getenv("PRIX_TASSE", "2490"))},
+          "sac": {"nom": "Sac à dos personnalisé", "prix": int(os.getenv("PRIX_SAC", "6490"))}}
 
 
 def objets_valides(objets):
