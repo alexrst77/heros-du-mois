@@ -63,8 +63,32 @@
   .dates .dl button { border:0; background:none; font-size:20px; color:var(--encre-2); cursor:pointer; }
   @media (max-width:520px) { .dates .dl { grid-template-columns:62px 1fr 34px; } .dates .dl input { grid-column:1/3; } }
   .ajoutcal { border:2px solid #F2CF6E; background:#FFF8E4; border-radius:16px; padding:14px 16px 6px; margin:4px 0 16px; }
-  .ajoutcal .toggle { margin-bottom:6px; } .ajoutcal .px { font-weight:800; margin-left:auto; }
+  .ajoutcal .toggle { margin-bottom:6px; } .ajoutcal .px { font-weight:800; margin-left:auto; white-space:nowrap; }
   .ajoutcal p.hint { margin:0 0 12px; }
+  /* cahier de coloriage : aperçu portrait, spirale à gauche, fond « à colorier » */
+  .scene.colo { aspect-ratio:.773/1; border-radius:4px 14px 14px 4px; background:#fff; }
+  .scene.colo .decor { inset:0; filter:blur(1.5px); transform:none; opacity:.28; background-size:cover; }
+  .scene.colo::after { background:linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.75) 30%, rgba(255,255,255,0) 50%); }
+  .scene.colo::before { content:""; position:absolute; z-index:6; top:3%; bottom:3%; left:-8px; width:16px;
+    background:repeating-linear-gradient(180deg, transparent 0 4px, #5C6070 4px 8px, transparent 8px 13px); }
+  .scene.colo .dos { display:none; }
+  .scene.colo .ctitre { color:var(--encre); text-shadow:none; top:5%; }
+  .scene.colo .ctitre .p { text-transform:uppercase; color:var(--encre); font-size:clamp(30px,5.2vw,48px); letter-spacing:2px; }
+  .scene.colo .ctitre .t { color:var(--encre); font-size:clamp(15px,2.3vw,21px); }
+  .scene.colo .big { height:56%; } .scene.colo .group { height:60%; }
+  .pickbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px; }
+  .pickbar .compte { font:800 18px var(--texte); margin-right:auto; } .pickbar .compte.ok { color:var(--mousse); }
+  .pickbar .btn { padding:9px 14px; font-size:14px; box-shadow:none; }
+  .cats { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .cats button { border:2px solid var(--trait); background:#fff; border-radius:999px; padding:6px 12px; font:700 13px var(--texte); color:var(--encre); cursor:pointer; }
+  .cats button.on { background:var(--encre); border-color:var(--encre); color:#fff; }
+  .pages { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; max-height:520px; overflow:auto; padding:2px; }
+  .pages button { position:relative; text-align:left; border:2px solid var(--trait); background:#fff; border-radius:14px; padding:10px 10px 10px 40px; cursor:pointer;
+    font:700 13px/1.25 var(--texte); color:var(--encre); min-height:58px; }
+  .pages button i { position:absolute; left:10px; top:10px; font-style:normal; font-size:20px; }
+  .pages button.on { border-color:var(--encre); background:#FFF3D1; }
+  .pages button.on b { position:absolute; right:-6px; top:-6px; background:var(--encre); color:#fff; border-radius:999px; min-width:22px; height:22px;
+    font:800 11px/22px var(--texte); text-align:center; padding:0 5px; }
   .couvnote { margin:8px 4px 0; font:italic 500 12px/1.35 var(--texte); color:var(--encre-2); text-align:center; opacity:.85; }
   .couv .dos i { font-style:normal; color:#F2D58A; font-size:11px; }
   .couv .dos b { width:18px; height:18px; border-radius:50%; background:#E8C25A; color:#1A1F4A; font:800 11px/18px var(--texte); text-align:center; box-shadow:0 0 0 1px #9C7A2B; }
@@ -243,10 +267,11 @@
     { id: 'fetes', nom: 'Les 6 livres de fête', txt: `Son anniversaire et 5 fêtes de votre choix · ${eur2(F.fetes.prix_livre)} le livre · livraison offerte` }]
     .map(p => Object.assign(p, { px: eur2(F[p.id].prix), livres: F[p.id].livres }));
   const port = () => { const f = F[S.commande.formule] || F.pack6, n = f.livres;
-    const base = S.commande.formule === 'calendrier' ? GR.calendrier.port : n >= GR.port_offert_des ? 0 : (GR.port_fr[String(n)] ?? GR.port_fr['3']);
+    const base = S.commande.formule === 'calendrier' ? GR.calendrier.port : S.commande.formule === 'coloriage' ? GR.coloriage.port : n >= GR.port_offert_des ? 0 : (GR.port_fr[String(n)] ?? GR.port_fr['3']);
     return base + (GR.supplement_pays[S.commande.pays] ?? GR.supplement_pays.BE); };
   const prixCalAjout = () => S.commande.formule !== 'calendrier' && S.commande.cal_ajout ? GR.calendrier.ajout : 0;
-  const totalC = () => (F[S.commande.formule] || F.pack6).prix + prixCalAjout() + port();
+  const prixColoAjout = () => S.commande.formule !== 'coloriage' && S.commande.colo_ajout ? GR.coloriage.ajout : 0;
+  const totalC = () => (F[S.commande.formule] || F.pack6).prix + prixCalAjout() + prixColoAjout() + port();
   const THEMES = ["Accepter la différence", "Aller chez le dentiste", "Aller chez le médecin", "Apprendre à attendre", "Apprendre à partager", "Devenir propre", "Dire au revoir à la tétine", "Dire la vérité", "Dormir dans son grand lit", "Gérer la colère", "Goûter de nouveaux aliments", "La confiance en soi", "La peur du noir", "La politesse", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Le premier jour à la crèche", "Les cauchemars", "Les écrans : savoir s'arrêter", "Les émotions", "Oser se faire des amis", "Partir en vacances", "Prendre soin de la nature", "Quand papa et maman se séparent", "Ranger sa chambre", "Se brosser les dents", "S'habiller tout seul", "Un déménagement", "Une aventure pour rire"].sort((a, b) => a.localeCompare(b, 'fr'));
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const anniv = () => S.enfant.anniv_j && S.enfant.anniv_m ? `${String(S.enfant.anniv_m).padStart(2, '0')}-${String(S.enfant.anniv_j).padStart(2, '0')}` : '';
@@ -259,7 +284,8 @@
     animaux: [],
     histoire: { theme: 'La peur du noir', univers: UNIVERS[0], fetes: ['anniversaire', 'noel'], heros_livre: 'enfant', passions: '', precision: '', numero: '01', code: '', demo: false },
     calendrier: { debut: '', dates: [] },
-    commande: { formule: 'pack6', cal_ajout: false, email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
+    coloriage: { pages: null },
+    commande: { formule: 'pack6', cal_ajout: false, colo_ajout: false, email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
   };
   let S;
   try { S = JSON.parse(localStorage.getItem('heros-avatar')) || null; } catch (_) { S = null; }
@@ -270,7 +296,14 @@
   if (!Array.isArray(S.histoire.fetes)) S.histoire.fetes = ['anniversaire', 'noel'];
   if (['sweat', 'robe'].includes(S.enfant.tenue)) S.enfant.tenue = 'tshirt';
   if (!PLANS_IDS().includes(S.commande.formule)) S.commande.formule = 'pack6';   // anciennes formules (abonnement) : le pack de 6
-  function PLANS_IDS() { return ['livre', 'pack3', 'pack6', 'pack12', 'fetes', 'calendrier']; }
+  function PLANS_IDS() { return ['livre', 'pack3', 'pack6', 'pack12', 'fetes', 'calendrier', 'coloriage']; }
+  const COLO = await (await fetch('/api/coloriage')).json();        // catalogue des pages à colorier (coloriage.py)
+  const COLO_PAR = Object.fromEntries(COLO.themes.map(t => [t.cle, t]));
+  if (!S.coloriage || !Array.isArray(S.coloriage.pages)) S.coloriage = { pages: COLO.par_defaut.slice() };
+  S.coloriage.pages = S.coloriage.pages.filter(c => COLO_PAR[c]).slice(0, COLO.nombre);
+  const isColo = () => S.commande.formule === 'coloriage';
+  const avecColo = () => isColo() || !!S.commande.colo_ajout;
+  let CATF = '';
   if (!S.calendrier || !Array.isArray(S.calendrier.dates)) S.calendrier = { debut: '', dates: [] };
   /* calendrier : premiers mois possibles (à partir du mois prochain), janvier prochain par défaut dès septembre */
   const DEBUTS = (() => { const d = new Date(), l = []; for (let i = 1; i <= 14; i++) { const t = new Date(d.getFullYear(), d.getMonth() + i, 1); l.push(`${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`); } return l; })();
@@ -364,8 +397,14 @@
   function titreCouv() {             // même hiérarchie que la vraie couverture : « Mon Héros du Mois », prénom, titre
     const e = S.enfant, h = S.histoire;
     document.querySelector('.scene').classList.toggle('cal', isCal());
-    $('h1').textContent = isCal() ? 'Créez le calendrier de son année' : 'Créez le héros de son livre';
-    $('t4').textContent = isCal() ? 'Le calendrier' : "L'aventure";
+    document.querySelector('.scene').classList.toggle('colo', isColo());
+    $('h1').textContent = isCal() ? 'Créez le calendrier de son année' : isColo() ? 'Créez son cahier de coloriage' : 'Créez le héros de son livre';
+    $('t4').textContent = isCal() ? 'Le calendrier' : isColo() ? 'Les pages' : "L'aventure";
+    if (isColo()) {
+      $('decor').style.backgroundImage = 'url("/static/vitrine/colo_fond.webp")';
+      $('ctitre').innerHTML = `<div class="p">${esc((e.prenom || '').trim() || 'Votre héros')}</div><div class="t">Mon cahier de coloriage</div>`;
+      return;
+    }
     if (isCal()) {
       const pr = (e.prenom || '').trim();
       $('decor').style.backgroundImage = 'url("/static/vitrine/cal_fond.webp")';
@@ -519,6 +558,21 @@
         (c.dates.length < 15 ? `<button type="button" class="btn ghost" data-cadd="1" style="padding:9px 16px;font-size:14px">+ Ajouter une date</button>` : '') + `</div>` +
         `<p class="hint">Anniversaires de la famille, rentrée, vacances, spectacle… Ils reviennent chaque année à la même date.</p>`, 'facultatif');
   }
+  function titreColo(t) { return t.titre.replace('{p}', (S.enfant.prenom || '').trim().replace(/^./, c => c.toUpperCase()) || 'Votre enfant'); }
+  function pickerColoriage() {      // 30 pages à choisir dans le catalogue, sélection de l'équipe proposée d'office
+    const sel = S.coloriage.pages, n = sel.length, N = COLO.nombre;
+    const liste = COLO.themes.filter(t => !CATF || t.cat === CATF);
+    return `<div class="pickbar"><span class="compte ${n === N ? 'ok' : ''}">${n}/${N} pages choisies</span>` +
+      `<button type="button" class="btn" data-colo-hasard="1" style="background:var(--luciole);color:var(--encre)">🎲 ${n ? 'Compléter' : 'Choisir'} au hasard</button>` +
+      `<button type="button" class="btn ghost" data-colo-vider="1">Tout retirer</button></div>` +
+      `<div class="cats"><button type="button" data-cat="" class="${CATF ? '' : 'on'}">Toutes</button>${COLO.categories.map(c => `<button type="button" data-cat="${c.cle}" class="${CATF === c.cle ? 'on' : ''}">${esc(c.nom)}</button>`).join('')}</div>` +
+      `<div class="pages">${liste.map(t => { const i = sel.indexOf(t.cle); return `<button type="button" data-colo="${t.cle}" class="${i >= 0 ? 'on' : ''}"><i>${t.emoji}</i>${esc(titreColo(t))}${i >= 0 ? `<b>${i + 1}</b>` : ''}</button>`; }).join('')}</div>` +
+      `<p class="hint">Touchez une page pour l'ajouter ou la retirer. En plus, offertes : la page « Ce cahier appartient à ${esc((S.enfant.prenom || 'votre enfant').trim())} » et 4 pages « Dessine… » (${S.doudou.actif ? 'son doudou' : 'son jouet préféré'}, sa maison…).</p>`;
+  }
+  function panelColoriage() {
+    const pr = esc((S.enfant.prenom || 'votre enfant').trim());
+    return `<div class="occasion" style="margin-bottom:16px;display:block">🖍️ <b>30 dessins à colorier avec ${pr}</b>${S.doudou.actif ? ', son doudou' : ''}${S.animaux.length ? ' et ses animaux' : ''}, en grand format 21,6 × 27,9 cm à spirale, imprimés au recto seulement : les feutres ne traversent pas. Nous avons préparé une sélection : changez ce que vous voulez.</div>` + pickerColoriage();
+  }
   function panelCalendrier() {
     const pr = esc((S.enfant.prenom || 'votre enfant').trim());
     return `<div class="occasion" style="margin-bottom:18px;display:block">📅 <b>12 illustrations de saison avec ${pr}</b>${S.doudou.actif ? ', son doudou' : ''}${S.animaux.length ? ' et ses animaux' : ''} : la neige en janvier, les flaques d'avril, la plage en juillet, les feuilles d'automne… Format paysage 28 × 22 cm, à spirale, à accrocher au mur.</div>` + optionsCalendrier();
@@ -546,27 +600,35 @@
   function panelCommande() {
     const c = S.commande, inp = (k, ph, extra) => `<input type="text" data-in="${k}" value="${esc(c[k])}" placeholder="${ph}" ${extra || ''}>`;
     const calPlan = { id: 'calendrier', nom: 'Le calendrier seul', txt: '12 mois illustrés, à son prénom', px: eur2(GR.calendrier.seul) };
-    const liste = isCal() ? [calPlan].concat(PLANS.map(p => Object.assign({}, p, { txt: p.txt + ` · calendrier à ${eur2(GR.calendrier.ajout)} en plus` }))) : PLANS.concat([calPlan]);
-    return (isCal() ? `<p class="hint" style="margin:0 0 10px">Avec des livres, le calendrier passe à ${eur2(GR.calendrier.ajout)} et tout arrive dans le même colis.</p>` : '') +
+    const coloPlan = { id: 'coloriage', nom: 'Le cahier de coloriage seul', txt: '30 dessins à colorier, à son prénom', px: eur2(GR.coloriage.seul) };
+    const liste = isCal() ? [calPlan].concat(PLANS.map(p => Object.assign({}, p, { txt: p.txt + ` · calendrier à ${eur2(GR.calendrier.ajout)} en plus` })), [coloPlan])
+      : isColo() ? [coloPlan].concat(PLANS.map(p => Object.assign({}, p, { txt: p.txt + ` · cahier à ${eur2(GR.coloriage.ajout)} en plus` })), [calPlan])
+      : PLANS.concat([calPlan, coloPlan]);
+    const optColo = !isColo() ? `<div class="ajoutcal"><label class="toggle"><input type="checkbox" data-chk="colo_ajout" ${c.colo_ajout ? 'checked' : ''}> 🖍️ Ajouter le cahier de coloriage de ${esc((S.enfant.prenom || 'votre enfant').trim())}<span class="px">+ ${eur2(GR.coloriage.ajout)}</span></label>` +
+        `<p class="hint">30 dessins à colorier avec les mêmes personnages, grand format à spirale. Même colis, sans frais de port en plus.</p>` +
+        (c.colo_ajout ? `<details class="multi" ${OUVERT.colo ? 'open' : ''} ontoggle="void 0"><summary>Les 30 pages : ${S.coloriage.pages.length === COLO.nombre ? 'notre sélection, modifiable' : S.coloriage.pages.length + '/' + COLO.nombre + ' choisies (complétées pour vous)'}</summary><div style="padding:12px">${pickerColoriage()}</div></details>` : '') + `</div>` : '';
+    return (isCal() ? `<p class="hint" style="margin:0 0 10px">Avec des livres, le calendrier passe à ${eur2(GR.calendrier.ajout)} et tout arrive dans le même colis.</p>` :
+            isColo() ? `<p class="hint" style="margin:0 0 10px">Avec des livres, le cahier passe à ${eur2(GR.coloriage.ajout)} et tout arrive dans le même colis.</p>` : '') +
       `<div class="plans">` + liste.map(p => `<button type="button" class="plan ${c.formule === p.id ? 'on' : ''}" data-k="formule" data-v="${p.id}">
         <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>` +
       (!isCal() ? `<div class="ajoutcal"><label class="toggle"><input type="checkbox" data-chk="cal_ajout" ${c.cal_ajout ? 'checked' : ''}> 📅 Ajouter le calendrier ${esc(anneeCal())} de ${esc((S.enfant.prenom || 'votre enfant').trim())}<span class="px">+ ${eur2(GR.calendrier.ajout)}</span></label>` +
         `<p class="hint">12 illustrations de saison avec les mêmes personnages, ses fêtes et vos dates de famille. Même colis, sans frais de port en plus.</p>` +
-        (c.cal_ajout ? optionsCalendrier() : '') + `</div>` : '') +
+        (c.cal_ajout ? optionsCalendrier() : '') + `</div>` : '') + optColo +
       (() => { const f = F[c.formule], pt = port(), n = f.livres;
         return `<div class="recap">` + (n ? `<div><span>${n} livre${n > 1 ? 's' : ''} × ${eur2(f.prix_livre)}</span><span>${eur2(f.prix)}</span></div>` : '') +
           (isCal() ? `<div><span>Calendrier ${esc(anneeCal())}</span><span>${eur2(f.prix)}</span></div>` : c.cal_ajout ? `<div><span>Calendrier ${esc(anneeCal())}</span><span>${eur2(GR.calendrier.ajout)}</span></div>` : '') +
+          (isColo() ? `<div><span>Cahier de coloriage</span><span>${eur2(f.prix)}</span></div>` : c.colo_ajout ? `<div><span>Cahier de coloriage</span><span>${eur2(GR.coloriage.ajout)}</span></div>` : '') +
           `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>` +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
           (n && n < 6 ? `<p class="astuce">Livraison offerte et ${eur2(F.pack6.prix_livre)} le livre à partir de 6 livres.</p>` : '') + `</div>`; })() +
       suiteHTML() +
       `<div class="delai"><b>Livraison estimée : ${delai()}</b>` +
-      `<span>${isCal() ? 'Création et relecture du calendrier, impression, puis expédition' : (F[c.formule].livres > 1 || c.cal_ajout ? 'Création et relecture, impression, puis un seul colis' : 'Création et relecture du livre, impression, puis expédition')} : 7 à 15 jours ouvrés.</span></div>` +
+      `<span>${isCal() ? 'Création et relecture du calendrier, impression, puis expédition' : isColo() && !c.cal_ajout ? 'Création et relecture du cahier, impression, puis expédition' : (F[c.formule].livres > 1 || c.cal_ajout || c.colo_ajout ? 'Création et relecture, impression, puis un seul colis' : 'Création et relecture du livre, impression, puis expédition')} : 7 à 15 jours ouvrés.</span></div>` +
       `<label class="toggle" style="margin-bottom:12px"><input type="checkbox" data-chk="cadeau" ${c.cadeau ? 'checked' : ''}> C'est pour offrir</label>` +
       (c.cadeau ? `<div class="kdo">` +
         G('De la part de', inp('cadeau_de', 'Mamie Jo, Tonton Karim…', 'maxlength="40"')) +
         G('Un petit mot', `<textarea data-in="cadeau_message" maxlength="160" placeholder="Pour ma petite étoile, plein d'aventures à lire ensemble !">${esc(c.cadeau_message)}</textarea>`, 'facultatif') +
-        `<p class="hint">${isCal() ? 'Le petit mot est imprimé au dos du calendrier.' : c.formule === 'livre' ? 'Le petit mot est imprimé au dos du livre.' : 'Le petit mot est imprimé au dos de chaque livre.'}</p></div>` : '') +
+        `<p class="hint">${isCal() ? 'Le petit mot est imprimé au dos du calendrier.' : isColo() ? 'Le petit mot est imprimé au dos du cahier.' : c.formule === 'livre' ? 'Le petit mot est imprimé au dos du livre.' : 'Le petit mot est imprimé au dos de chaque livre.'}</p></div>` : '') +
       G('E-mail', inp('email', c.cadeau ? 'pour suivre la commande (la vôtre)' : 'pour suivre la commande', 'type="email" autocomplete="email"')) +
       G('Nom et prénom', inp('nom', c.cadeau ? 'destinataire du colis (l\'enfant ou ses parents)' : 'destinataire du colis', 'autocomplete="name"')) +
       G('Adresse', inp('adresse1', 'numéro et rue', 'autocomplete="address-line1"') + '<div style="height:8px"></div>' + inp('adresse2', 'bâtiment, étage (facultatif)', 'autocomplete="address-line2"')) +
@@ -578,7 +640,7 @@
 
   function render() {
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
-    $('body').innerHTML = { enfant: panelEnfant, doudou: panelDoudou, animaux: panelAnimaux, histoire: isCal() ? panelCalendrier : panelHistoire, commande: panelCommande }[tab]();
+    $('body').innerHTML = { enfant: panelEnfant, doudou: panelDoudou, animaux: panelAnimaux, histoire: isCal() ? panelCalendrier : isColo() ? panelColoriage : panelHistoire, commande: panelCommande }[tab]();
     $('prev').style.visibility = tab === 'enfant' ? 'hidden' : 'visible';
     const plan = PLANS.find(p => p.id === S.commande.formule) || PLANS[0];
     $('next').textContent = tab === 'commande' ? `Payer ${eur2(totalC())}` : (tab === 'histoire' && S.histoire.demo) ? 'Créer le livre démo' : 'Suivant';
@@ -589,6 +651,17 @@
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button'); if (!b) return;
     if (b.dataset.hasard) { hasard(); OUVERT.suite = true; return render(); }
+    if (b.dataset.colo) { const l = S.coloriage.pages, i = l.indexOf(b.dataset.colo); OUVERT.colo = true;
+      if (i >= 0) l.splice(i, 1); else if (l.length >= COLO.nombre) { $('err').textContent = `${COLO.nombre} pages au maximum : retirez-en une avant d'en ajouter une autre.`; return; } else l.push(b.dataset.colo);
+      $('err').textContent = ''; return render(); }
+    if (b.dataset.coloHasard) { const l = S.coloriage.pages; OUVERT.colo = true;
+      const reste = melange(COLO.themes.map(t => t.cle).filter(c => !l.includes(c)));
+      const parCat = {}; reste.forEach(c => (parCat[COLO_PAR[c].cat] = parCat[COLO_PAR[c].cat] || []).push(c));      // un peu de chaque catégorie
+      const cats = Object.keys(parCat); let k = 0;
+      while (l.length < COLO.nombre && cats.some(x => parCat[x].length)) { const x = cats[k++ % cats.length]; if (parCat[x].length) l.push(parCat[x].shift()); }
+      return render(); }
+    if (b.dataset.coloVider) { S.coloriage.pages = []; OUVERT.colo = true; return render(); }
+    if (b.dataset.cat !== undefined) { CATF = b.dataset.cat; OUVERT.colo = true; return render(); }
     if (b.dataset.cadd) { S.calendrier.dates.push({ j: '', m: '', texte: '' }); return render(); }
     if (b.dataset.cdel !== undefined) { S.calendrier.dates.splice(+b.dataset.cdel, 1); return render(); }
     if (b.dataset.occ) { S.histoire.occasion = ''; return render(); }
@@ -598,7 +671,12 @@
     if (b.dataset.delpet) { S.animaux.splice(pet, 1); pet = Math.max(0, pet - 1); return render(); }
     if (b.dataset.pet !== undefined && b.closest('.pets')) { pet = +b.dataset.pet; return render(); }
     if (b.dataset.k) {
-      const o = target(); o[b.dataset.k] = b.dataset.v;
+      const o = target(), avant = o[b.dataset.k]; o[b.dataset.k] = b.dataset.v;
+      if (tab === 'commande' && b.dataset.k === 'formule' && avant !== b.dataset.v) {      // le produit choisi au départ reste dans la commande
+        const AJ = { calendrier: 'cal_ajout', coloriage: 'colo_ajout' };
+        if (AJ[avant]) o[AJ[avant]] = true;
+        if (AJ[b.dataset.v]) o[AJ[b.dataset.v]] = false;
+      }
       if (tab === 'enfant' && b.dataset.k === 'genre' && !COIF[o.genre].includes(o.coiffure)) o.coiffure = COIF[o.genre][0];
       if (tab === 'animaux' && b.dataset.k === 'type') {      // on ne remplace que les réglages que le parent n'a pas encore touchés
         const base = OPT.modeles.animal[o.type]; o._choisi = o._choisi || [];
@@ -662,6 +740,7 @@
       if (S.commande.formule === 'fetes') { tab = 'enfant'; render(); $('err').textContent = "Pour le livre d'anniversaire, indiquez sa date (jour et mois), ou choisissez une autre fête."; return; }
       S.histoire.fetes = S.histoire.fetes.filter(f => f !== 'anniversaire');
     }
+    if (isColo() && S.coloriage.pages.length < COLO.nombre) { tab = 'histoire'; render(); $('err').textContent = `Choisissez ${COLO.nombre} pages (${S.coloriage.pages.length} pour l'instant), ou cliquez sur « Compléter au hasard ».`; return; }
     const h = S.histoire, e = S.enfant;
     const payload = {
       prenom: e.prenom.trim(), age: e.age, genre: e.genre, theme: h.theme, univers: (h.occasion && S.commande.formule !== 'fetes' && FETES.find(u => u.cle === h.occasion)) ? FETES.find(u => u.cle === h.occasion).nom : h.univers, fetes: h.fetes.join(','), anniversaire: anniv(), heros_livre: (herosChoix(), h.heros_livre), passions: h.passions,
@@ -683,6 +762,7 @@
       const dates = S.calendrier.dates.filter(x => x.j && x.m && (x.texte || '').trim()).map(x => ({ date: `${String(x.m).padStart(2, '0')}-${String(x.j).padStart(2, '0')}`, texte: x.texte.trim() }));
       payload.commande = { formule: c.formule, email: c.email.trim(), cgv: true,
         calendrier: { actif: avecCal(), debut: S.calendrier.debut, dates },
+        coloriage: { actif: avecColo(), pages: S.coloriage.pages },
         cadeau: { actif: !!c.cadeau, de: c.cadeau_de, message: c.cadeau_message },
         adresse: { nom: c.nom, adresse1: c.adresse1, adresse2: c.adresse2, code_postal: c.code_postal, ville: c.ville, pays: c.pays, telephone: c.telephone } };
     }
@@ -774,9 +854,10 @@
         $('pct').style.width = '100%';
         const pn = esc(e.prenom ? e.prenom.trim().replace(/^./, c => c.toUpperCase()) : 'votre enfant');
         const nl = (F[o.formule] || { livres: 1 }).livres;
-        $('etape').innerHTML = o.formule === 'calendrier'
-          ? `Nous créons maintenant le calendrier de <b>${pn}</b>. Il est relu avant l'impression, puis expédié chez vous : livraison estimée ${delai()}.`
-          : o.calendrier ? `Nous créons maintenant ${nl > 1 ? `les ${nl} livres` : 'le livre'} et le calendrier de <b>${pn}</b>. Tout est relu avant l'impression, puis part dans un seul colis : livraison estimée ${delai()}.`
+        const quoi = [nl ? (nl > 1 ? `les ${nl} livres` : 'le livre') : '', o.calendrier ? 'le calendrier' : '', o.coloriage ? 'le cahier de coloriage' : ''].filter(Boolean);
+        const quoiTxt = quoi.length > 1 ? quoi.slice(0, -1).join(', ') + ' et ' + quoi[quoi.length - 1] : quoi[0];
+        $('etape').innerHTML = quoi.length > 1 || !nl
+          ? `Nous créons maintenant ${quoiTxt} de <b>${pn}</b>. Tout est relu avant l'impression, puis expédié chez vous${quoi.length > 1 ? ' dans un seul colis' : ''} : livraison estimée ${delai()}.`
           : (nl > 1
           ? `Nous créons maintenant les ${nl} livres de <b>${pn}</b>. Chacun est relu avant l'impression, puis ils partent ensemble dans un seul colis : livraison estimée ${delai()}.`
           : `Nous créons maintenant le livre de <b>${pn}</b>. Il est relu avant l'impression, puis expédié chez vous : livraison estimée ${delai()}.`) +
@@ -792,7 +873,7 @@
   { const q = new URLSearchParams(location.search);       // venant de la vitrine : prénom tapé, formule choisie
     if (q.get('prenom')) { S.enfant.prenom = q.get('prenom').trim().slice(0, 20).replace(/^./, c => c.toUpperCase()); save(); }
     if (PLANS_IDS().includes(q.get('formule'))) { S.commande.formule = q.get('formule'); save(); }
-    if (q.get('produit') === 'calendrier') { S.commande.formule = 'calendrier'; save(); }
+    if (['calendrier', 'coloriage'].includes(q.get('produit'))) { S.commande.formule = q.get('produit'); save(); }
     else if (q.get('formule') === 'mensuel') { S.commande.formule = 'pack6'; save(); }
     const u = UNIV.find(x => !x.fete && x.cle === q.get('univers'));                 // carte « univers » de l'accueil
     if (u) { S.histoire.univers = u.nom; S.histoire.occasion = ''; save(); }

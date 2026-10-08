@@ -329,6 +329,11 @@
   .cal .prix-cal b { font:800 34px/1 var(--texte); } .cal .prix-cal span { color:var(--encre-2); font-size:15px; }
   .cal .prix-cal .avec { flex-basis:100%; font-weight:700; color:#8A5A00; }
   @media (max-width:860px) { .cal { grid-template-columns:1fr; gap:32px; } }
+  .coloriage { background:linear-gradient(180deg, var(--ciel), #EEF2FA 55%, var(--ciel)); }
+  .colo-photos { display:grid; grid-template-columns:1fr; gap:12px; }
+  .colo-photos img { width:100%; height:auto; display:block; border-radius:18px; box-shadow:0 24px 44px -26px rgba(31,37,87,.55); }
+  .colo-photos .quatre { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+  .colo-photos .quatre img { aspect-ratio:3/4; object-fit:cover; border-radius:14px; }
   .fetes-bande { margin-top:16px; background:var(--papier); border:1px dashed var(--trait); border-radius:22px; padding:18px 22px; display:flex; flex-wrap:wrap; gap:12px 24px; align-items:center; }
   .fetes-bande > div:first-child { flex:1 1 320px; min-width:0; } .fetes-bande h3 { font:400 22px/1.2 var(--titre); margin:0 0 2px; }
   .fetes-bande p { margin:0; color:var(--encre-2); font-size:15px; } .fetes-bande .prix { font:800 28px/1 var(--texte); }
@@ -361,7 +366,7 @@
   <div class="in wrap">
     <a href="/" class="logo" aria-label="Mon Héros du Mois, accueil"><span class="logo-mark" aria-hidden="true"></span>Mon Héros du Mois</a>
     <nav aria-label="Navigation principale">
-      <a href="#feuilleter">Feuilleter</a><a href="#comment">Comment ça marche</a><a href="#univers">Univers</a><a href="#collection">Collection</a><a href="#calendrier">Calendrier</a><a href="#formules">Formules</a><a href="#questions">Questions</a>
+      <a href="#feuilleter">Feuilleter</a><a href="#comment">Comment ça marche</a><a href="#univers">Univers</a><a href="#calendrier">Calendrier</a><a href="#coloriage">Coloriage</a><a href="#formules">Formules</a><a href="#questions">Questions</a>
     </nav>
     <a class="btn petit" href="/creer">Créer son livre</a>
   </div>
@@ -500,6 +505,31 @@
   </div>
 </section>
 
+<section class="bloc coloriage" id="coloriage">
+  <div class="wrap cal">
+    <div>
+      <h2>Son cahier de coloriage</h2>
+      <p class="sous">30 dessins à colorier où votre enfant est le héros, avec son doudou et ses animaux : astronaute, pompier, pirate, à la plage, à Noël… Vous choisissez les pages parmi près de 70 idées, ou vous gardez notre sélection.</p>
+      <ul class="points">
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20l4-1 10-10-3-3L5 16z"/><path d="M14 6l3 3"/></svg></span><div><b>30 pages, choisies par vous</b><span>Aventures, vie de tous les jours, fêtes, métiers, sports, animaux. Chaque page porte un titre à son prénom.</span></div></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h5"/></svg></span><div><b>Des pages « Dessine… »</b><span>Dessine Nino, ton doudou ; dessine ta maison… Et la première page : « Ce cahier appartient à », son prénom en lettres à colorier.</span></div></li>
+        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 7l2-3h12l2 3M5 7v12h14V7"/></svg></span><div><b>Grand format, à spirale</b><span>21,6 × 27,9 cm, il reste bien à plat. Imprimé au recto seulement : les feutres ne traversent pas sur le dessin suivant.</span></div></li>
+      </ul>
+      <div class="prix-cal"><b>24,90 €</b><span>+ livraison 7,90 €</span><span class="avec">19,90 € avec des livres ou le calendrier, dans le même colis</span></div>
+      <a class="btn" href="/creer?produit=coloriage">Créer son cahier de coloriage</a>
+    </div>
+    <div class="colo-photos">
+      <img src="/static/vitrine/colo_photo_1.webp" alt="Le cahier de coloriage ouvert : une page déjà coloriée par l'enfant et une page à colorier avec son doudou" loading="lazy" width="1300" height="1052">
+      <div class="quatre">
+        <img src="/static/vitrine/colo_photo_3.webp" alt="Le cahier de coloriage de Léo posé sur une table, avec des crayons de couleur" loading="lazy" width="1004" height="1300">
+        <img src="/static/vitrine/colo_photo_2.webp" alt="Léo montre fièrement son cahier de coloriage" loading="lazy" width="867" height="1300">
+        <img src="/static/vitrine/colo_photo_4.webp" alt="Le cahier de coloriage de Léa, au jardin avec son ours en peluche" loading="lazy" width="867" height="1300">
+        <img src="/static/vitrine/colo_photo_5.webp" alt="Léa tient son cahier de coloriage" loading="lazy" width="867" height="1300">
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="bloc etoiles-fines mondes" id="univers">
   <div class="wrap">
     <h2>Dans quel monde partira votre enfant ?</h2>
@@ -604,7 +634,12 @@
       <div class="prix">29,90 € <small>avec des livres</small></div>
       <a class="btn clair" href="/creer?produit=calendrier">Créer son calendrier</a>
     </div>
-    <p class="sous petit-note">Prix TTC. Calendrier seul : 34,90 € + livraison 7,90 €. Livraison en France ; Belgique, Luxembourg et Monaco : + 4 € ; Suisse : + 9 € (frais de douane inclus dans le supplément).</p>
+    <div class="fetes-bande">
+      <div><h3>🖍️ Son cahier de coloriage</h3><p>30 dessins à colorier où il est le héros, avec son doudou et ses animaux. Les pages, c'est vous qui les choisissez.</p></div>
+      <div class="prix">19,90 € <small>avec des livres</small></div>
+      <a class="btn clair" href="/creer?produit=coloriage">Créer son cahier</a>
+    </div>
+    <p class="sous petit-note">Prix TTC. Calendrier seul : 34,90 € + livraison 7,90 €. Cahier de coloriage seul : 24,90 € + livraison 7,90 €. Livraison en France ; Belgique, Luxembourg et Monaco : + 4 € ; Suisse : + 9 € (frais de douane inclus dans le supplément).</p>
   </div>
 </section>
 
@@ -624,6 +659,7 @@
       <details><summary>Comment sont créés le texte et les illustrations ?</summary><p>Avec l'aide de l'intelligence artificielle, à partir de l'avatar et du thème que vous choisissez. Chaque livre est ensuite relu par nous avant l'impression : si une page ne va pas, nous la refaisons.</p></details>
       <details><summary>Comment arrivent les livres d'un pack ?</summary><p>Tous les livres de la commande sont créés, relus un par un, puis imprimés et expédiés ensemble dans un seul colis. Ils sont numérotés à la suite sur la tranche, pour sa collection.</p></details>
       <details><summary>Comment fonctionne le calendrier ?</summary><p>Vous choisissez le premier mois (janvier, ou n'importe quel mois à venir) : il couvre les 12 mois suivants. Chaque mois a son illustration avec votre enfant, son doudou et ses animaux. Son anniversaire, les fêtes que vous cochez, les jours fériés et vos dates de famille sont imprimés sur la grille. Il peut être commandé seul ou avec des livres, dans le même colis.</p></details>
+      <details><summary>Comment choisir les pages du cahier de coloriage ?</summary><p>À la création, nous vous proposons une sélection de 30 pages variées. Vous retirez et ajoutez ce que vous voulez parmi près de 70 idées (astronaute, pompier, plage, Noël, football, chatons…), ou vous complétez au hasard. Chaque page est dessinée avec votre enfant, son doudou et ses animaux, et titrée à son prénom.</p></details>
       <details><summary>Que deviennent les informations sur mon enfant ?</summary><p>Elles servent uniquement à créer ses livres. Nous ne les partageons pas et nous les effaçons après la livraison du dernier livre.</p></details>
       <details><summary>Le livre arrive abîmé, que se passe-t-il ?</summary><p>Envoyez-nous une photo dans les 30 jours via le formulaire ci-dessous : nous le réimprimons sans frais.</p></details>
       <details><summary>Je veux l'offrir, comment faire ?</summary><p>Cochez « C'est pour offrir » à la commande : votre petit mot est imprimé au dos de chaque livre.</p></details>

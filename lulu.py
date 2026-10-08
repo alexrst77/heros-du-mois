@@ -158,11 +158,17 @@ CALENDRIERS = [   # codes possibles (non documentés publiquement) : on demande 
 ]
 
 
-def tester_calendriers(addr, email):
-    """Devis (aucune commande) pour chaque code de calendrier possible et 26 ou 28 pages : dit ce que l'API accepte."""
+COLORIAGES = [   # Lettre US à spirale, noir et blanc (codes possibles, vérifiés par devis)
+    "0850X1100BWSTDCO060UW444MXX", "0850X1100BWSTDCO060UW444GXX", "0850X1100BWPRECO060UW444MXX", "0850X1100BWSTDCO080CW444MXX",
+    "0850X1100BWSTDPB060UW444MXX", "0850X0850BWSTDCO060UW444MXX",
+]
+
+
+def tester_calendriers(addr, email, codes=None, pages_list=(26, 28)):
+    """Devis (aucune commande) pour chaque code possible et nombre de pages : dit ce que l'API accepte."""
     out = []
-    for pod in CALENDRIERS:
-        for pages in (26, 28):
+    for pod in codes or CALENDRIERS:
+        for pages in pages_list:
             try:
                 r = api("POST", "/print-job-cost-calculations/", {
                     "line_items": [{"page_count": pages, "pod_package_id": pod, "quantity": 1}],

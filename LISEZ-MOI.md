@@ -132,3 +132,18 @@ Un livre = 2 à 4 appels texte + 13 images (planche, couverture, 9 scènes, 2 d�
   des pages au dos des feuillets).
 - Admin : « 🔁 Recomposer les pages (sans IA) » refait grilles et PDF à partir des 13 images enregistrées.
 - Test : `python3 tests/test_calendrier.py` (OpenAI, Stripe, Lulu simulés).
+
+## Cahier de coloriage (`coloriage.py`)
+
+- Produit : Lulu Lettre US 8,5 × 11 po à spirale, intérieur noir et blanc imprimé au recto seul (70 pages imprimées :
+  « Ce cahier appartient à » + 30 dessins + 4 pages « Dessine… », chacune suivie d'un verso blanc), couverture couleur.
+  Code produit `LULU_COLO_POD` (défaut `0850X1100BWSTDCO060UW444MXX`, à confirmer avec le bouton « 🖍️ Cahiers de coloriage
+  Lulu (test) » des réglages de l'admin, qui demande des devis pour plusieurs codes possibles).
+- Prix : 24,90 € seul + livraison 7,90 € (`PRIX_COLORIAGE`) ; 19,90 € ajouté à des livres ou un calendrier (`PRIX_COLORIAGE_AJOUT`).
+- Création : `/creer?produit=coloriage` (mêmes avatars), étape « Les pages » : 30 pages parmi 68 thèmes en 6 catégories,
+  sélection de l'équipe proposée d'office, « Compléter au hasard » ; ou case « Ajouter le cahier » à l'étape commande.
+- Fabrication : couverture couleur + 30 pages au trait (`OPENAI_COLO_SIZE` 1024x1536), références : fiche des personnages +
+  `kit/style/coloriage-trait.jpg` (rendu du trait), un contrôle visuel par image, aucune régénération automatique ; les traits
+  sont binarisés (noir pur) ; plafond `BUDGET_COLORIAGE_USD` (5 $ max). Titres au prénom composés par code.
+- Impression : dans le même colis que les livres et le calendrier de la commande. « 🔎 Vérifier les fichiers chez Lulu » une
+  fois avant le premier cahier. Test : `python3 tests/test_coloriage.py`.

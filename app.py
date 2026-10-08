@@ -131,13 +131,14 @@ def run(job_id, form, refs):
         generator.MODE.set(generator.BROUILLON)
     try:
         if os.getenv("PROCEDE", "kit") == "kit":       # procédé des livres Mila et Noé (kit) : voir procede.py
-            if form.get("produit") == "calendrier":            # calendrier mural : voir calendrier.py
-                import calendrier
+            if form.get("produit") in ("calendrier", "coloriage"):     # calendrier mural, cahier de coloriage
+                import importlib
+                mod = importlib.import_module(form["produit"])
                 cfg = generator.build_config(form); save("config.json", cfg)
                 if form.get("demo") or not os.getenv("OPENAI_API_KEY"):
-                    res = calendrier.demo(form, cfg, folder, job, progress)
+                    res = mod.demo(form, cfg, folder, job, progress)
                 else:
-                    res = calendrier.run(form, cfg, refs, folder, job, progress)
+                    res = mod.run(form, cfg, refs, folder, job, progress)
             elif form.get("demo") or not os.getenv("OPENAI_API_KEY"):
                 res = procede.demo(folder, progress)
             else:
@@ -315,6 +316,12 @@ def vignette(cle):
 def api_tarifs():
     import paiement
     return jsonify(paiement.grille())
+
+
+@app.get("/api/coloriage")
+def api_coloriage():
+    import coloriage
+    return jsonify(coloriage.public())
 
 
 @app.get("/api/univers")

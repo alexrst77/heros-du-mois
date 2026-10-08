@@ -17,6 +17,11 @@ for _f in FORMULES.values():
 PRIX_CALENDRIER = int(os.getenv("PRIX_CALENDRIER", "3490"))
 PRIX_CALENDRIER_AJOUT = int(os.getenv("PRIX_CALENDRIER_AJOUT", "2990"))
 FORMULES["calendrier"] = {"nom": "Le calendrier de son année", "livres": 0, "prix_livre": 0, "prix": PRIX_CALENDRIER, "mode": "payment"}
+# Cahier de coloriage personnalisé : même principe (seul, ou ajouté à une commande)
+PRIX_COLORIAGE = int(os.getenv("PRIX_COLORIAGE", "2490"))
+PRIX_COLORIAGE_AJOUT = int(os.getenv("PRIX_COLORIAGE_AJOUT", "1990"))
+FORMULES["coloriage"] = {"nom": "Le cahier de coloriage", "livres": 0, "prix_livre": 0, "prix": PRIX_COLORIAGE, "mode": "payment"}
+EXTRAS = ("calendrier", "coloriage")         # produits qui ne sont pas des livres (seuls, ou ajoutés à une commande)
 
 # Livraison (centimes), un seul colis par commande. Offerte dès 6 livres en France ; supplément pour les autres pays.
 PORT_FR = {1: int(os.getenv("PORT_1", "790")), 3: int(os.getenv("PORT_3", "990"))}
@@ -26,7 +31,7 @@ SUPPLEMENT_PAYS = {"FR": 0, "BE": int(os.getenv("PORT_SUPPL_UE", "400")), "LU": 
 
 def frais_port(formule, pays="FR"):
     n = FORMULES[formule]["livres"]
-    base = PORT_FR[1] if formule == "calendrier" else 0 if n >= 6 else PORT_FR.get(n, PORT_FR[3])
+    base = PORT_FR[1] if formule in EXTRAS else 0 if n >= 6 else PORT_FR.get(n, PORT_FR[3])
     return base + SUPPLEMENT_PAYS.get((pays or "FR").upper(), SUPPLEMENT_PAYS["BE"])
 
 
@@ -35,15 +40,17 @@ def avec_calendrier(formule, calendrier):
     return bool(calendrier) and formule != "calendrier"
 
 
-def total(formule, pays="FR", calendrier=False):
-    return FORMULES[formule]["prix"] + (PRIX_CALENDRIER_AJOUT if avec_calendrier(formule, calendrier) else 0) + frais_port(formule, pays)
+def total(formule, pays="FR", calendrier=False, coloriage=False):
+    return (FORMULES[formule]["prix"] + (PRIX_CALENDRIER_AJOUT if avec_calendrier(formule, calendrier) else 0)
+            + (PRIX_COLORIAGE_AJOUT if coloriage and formule != "coloriage" else 0) + frais_port(formule, pays))
 
 
 def grille():
     """Prix affichés par le site (en centimes) : une seule source pour la page d'accueil et la commande."""
     return {"formules": {k: {"nom": f["nom"], "livres": f["livres"], "prix_livre": f["prix_livre"], "prix": f["prix"]} for k, f in FORMULES.items()},
             "port_fr": {str(k): v for k, v in PORT_FR.items()}, "port_offert_des": 6, "supplement_pays": SUPPLEMENT_PAYS,
-            "calendrier": {"seul": PRIX_CALENDRIER, "ajout": PRIX_CALENDRIER_AJOUT, "port": PORT_FR[1]}}
+            "calendrier": {"seul": PRIX_CALENDRIER, "ajout": PRIX_CALENDRIER_AJOUT, "port": PORT_FR[1]},
+            "coloriage": {"seul": PRIX_COLORIAGE, "ajout": PRIX_COLORIAGE_AJOUT, "port": PORT_FR[1]}}
 
 
 class StripeError(Exception):
@@ -87,7 +94,7 @@ def _api(method, path, data=None):
         raise StripeError(f"Stripe : {msg}")
 
 
-def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False):
+def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, coloriage=False):
     """Paiement unique : les livres (quantité × prix du livre), le calendrier s'il y en a un, puis la livraison sur une ligne
     à part (si elle n'est pas offerte)."""
     f = FORMULES[formule]
@@ -99,6 +106,10 @@ def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False):
         prix = PRIX_CALENDRIER if formule == "calendrier" else PRIX_CALENDRIER_AJOUT
         items.append({"price_data": {"currency": "eur", "unit_amount": prix,
                                      "product_data": {"name": "Mon Héros du Mois – calendrier mural personnalisé (12 mois)"}}, "quantity": 1})
+    if formule == "coloriage" or coloriage:
+        prix = PRIX_COLORIAGE if formule == "coloriage" else PRIX_COLORIAGE_AJOUT
+        items.append({"price_data": {"currency": "eur", "unit_amount": prix,
+                                     "product_data": {"name": "Mon Héros du Mois – cahier de coloriage personnalisé (30 pages)"}}, "quantity": 1})
     port = frais_port(formule, pays)
     if port:
         items.append({"price_data": {"currency": "eur", "unit_amount": port, "product_data": {"name": "Livraison (un seul colis)"}}, "quantity": 1})
