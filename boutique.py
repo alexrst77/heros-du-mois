@@ -938,7 +938,8 @@ def admin_action(oid, action):
             folder = A.OUT / (o["job_id"] or "_")
             lid = procede.livre_id(folder) if folder.exists() else oid
             bj = folder / "budget.json"
-            return jsonify(ok=True, info={"livre": lid, "plafond": budget.PLAFOND, "depense": budget.depense(lid), "appels": budget.appels(lid),
+            pl = EXTRAS[o["formule"]].PLAFOND if o["formule"] in EXTRAS else budget.PLAFOND
+            return jsonify(ok=True, info={"livre": lid, "plafond": pl, "depense": budget.depense(lid), "appels": budget.appels(lid),
                                           "borne": json.loads(bj.read_text(encoding="utf-8")) if bj.exists() else None,
                                           "tarifs": budget.etat_tarifs()})
         if action == "valider-paiement-test" and not paiement.configured():

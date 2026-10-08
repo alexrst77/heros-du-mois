@@ -131,7 +131,7 @@ function boutons(o, e) {
   if (e.k === 'pret') main = lire + b('imprimer', NB(o) > 1 ? `🖨️ Envoyer le colis (${colis(o)})` : "🖨️ Envoyer à l'impression", 'gold');
   if (e.k === 'valide') main = lire;
   if (e.k === 'essai') main = lire;
-  if (e.k === 'bloque' && /incertain/.test(o.erreur || '')) main = b('budget', '💰 Régler l\'appel incertain', 'main');
+  if (e.k === 'bloque' && o.budget && (o.budget.incertain > 0 || o.budget.reserve > 0) && !o.en_cours) main = b('budget', '💰 Régler l\'appel incertain', 'main');
   else if (e.k === 'bloque') main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main');
   if (e.k === 'imprimeur') main = b('suivi', '🔄 Actualiser le suivi', 'main');
   if (e.k === 'expedie') main = (o.suivi || []).map(u => `<a class="btn main" target="_blank" href="${esc(u)}">📍 Suivre le colis</a>`).join('');
