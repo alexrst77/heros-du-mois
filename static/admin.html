@@ -333,7 +333,8 @@ async function act(id, action, btn) {
   btn.disabled = true; const t = btn.innerHTML; btn.innerHTML = '⏳ ' + t;
   try {
     const r = await fetch(`/admin/api/${id}/${action}${Q}`, { method: 'POST', headers: H });
-    const j = await r.json();
+    const txt = await r.text(); let j;
+    try { j = JSON.parse(txt); } catch (_) { j = { erreur: `Erreur du serveur (${r.status}) : réessaie dans une minute, ou envoie-moi une capture.` }; }
     if (j.erreur) RES[id] = { cls: 'err', html: '⚠️ ' + esc(j.erreur) };
     else if (action === 'supprimer') { delete RES[id]; await load(); return; }
     else if (action === 'budget') { budgetDlg(j.info); btn.disabled = false; btn.innerHTML = t; return; }

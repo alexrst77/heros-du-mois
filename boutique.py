@@ -1209,7 +1209,7 @@ def admin_action(oid, action):
                     shutil.rmtree(STORE / ori, ignore_errors=True)
             return jsonify(ok=True)
         abort(404)
-    except (RuntimeError, lulu.LuluError, paiement.StripeError, budget.BudgetLivreError) as e:
+    except (RuntimeError, lulu.LuluError, paiement.StripeError, budget.BudgetLivreError, printful.PrintfulError, procede.ProcedeError) as e:
         return jsonify(erreur=str(e)), 400
 
 

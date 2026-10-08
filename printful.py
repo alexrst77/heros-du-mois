@@ -151,7 +151,12 @@ def maquettes(pid, variante, files, attente=90):
     data = {"variant_ids": [int(variante)], "format": "jpg",
             "files": [{"placement": p, "image_url": u, "position": {"area_width": w, "area_height": h, "width": w, "height": h, "top": 0, "left": 0}}
                       for p, u, w, h in files]}
-    t = _http("POST", f"/mockup-generator/create-task/{int(pid)}", data) or {}
+    try:
+        t = _http("POST", f"/mockup-generator/create-task/{int(pid)}", data) or {}
+    except PrintfulError:                       # certains produits refusent la position explicite : Printful centre le fichier lui-même
+        for f in data["files"]:
+            f.pop("position", None)
+        t = _http("POST", f"/mockup-generator/create-task/{int(pid)}", data) or {}
     key, t0 = t.get("task_key"), time.time()
     while key and time.time() - t0 < attente:
         time.sleep(4)
