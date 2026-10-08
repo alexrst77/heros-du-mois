@@ -113,34 +113,14 @@ def couverture_a_plat(book, out, base, numero, prenom, dims=None):
         sombre = Image.new("RGB", bande.size, (16, 22, 52)); bande = Image.blend(bande, sombre, .45)
         c.drawImage(ImageReader(bande), x0, 0, dos, H)
         cx = x0 + dos / 2
-        # filets dorés en haut et en bas du dos
-        c.setStrokeColor(HexColor('#D9B45A')); c.setLineWidth(.6)
-        for y in (m + 26, m + TRIM - 26): c.line(x0 + 2, y, x0 + dos - 2, y)
-        # petit motif : étoile
-        _etoile(c, cx, m + TRIM - 44, min(5.5, dos * .28))
-        # prénom + titre dans le sens de lecture de la collection, seulement si le dos est assez large
-        if dos >= 36:
-            c.saveState(); c.translate(cx + 4, m + TRIM / 2); c.rotate(-90)
-            c.setFillColor(HexColor('#FFF1CF')); c.setFont('StoryBold', min(14, dos * .38))
-            c.drawCentredString(0, 0, f"{prenom} – {book['title']}"[:60]); c.restoreState()
-        # numéro de collection : pastille dorée, toujours à la même hauteur
-        r = min(7.5, dos * .42); cy = m + NUM_Y_DEPUIS_BAS
-        c.setFillColor(HexColor('#E8C25A')); c.circle(cx, cy, r, stroke=0, fill=1)
-        c.setStrokeColor(HexColor('#9C7A2B')); c.setLineWidth(.4); c.circle(cx, cy, r, stroke=1, fill=0)
-        fs = r * (1.25 if numero < 10 else .95)
-        c.setFillColor(HexColor('#1A1F4A')); c.setFont('StoryBold', fs)
-        c.drawCentredString(cx, cy - fs * .36, str(numero))
+        # aucun texte ni motif sur le dos : Lulu les refuse sous 85 pages (dos de 0,25 po, décalage possible de 1/8 po).
+        # Le numéro de collection est sur la 1re de couverture (pastille) et sur la 4e.
     c.showPage(); c.save()
     probs = []
     if not dims.get("confirme"):
         probs.append("Dimensions non confirmées : clés Lulu absentes, maquette d'après le guide Lulu (pas prêt à imprimer).")
     if dims.get("confirme") and dos < 9:
         probs.append(f"Gabarit de l'imprimeur incohérent avec ce calcul (dos de {dos:.1f} pt) : vérifier le gabarit téléchargé chez Lulu.")
-    if PAGES_IMPRESSION < LULU_TEXTE_DOS_MIN_PAGES and os.getenv("DOS_NUMERO_VALIDE_IMPRIMEUR") != "1":
-        probs.append(f"Lulu (guide de création) : pas de texte sur le dos à {PAGES_IMPRESSION} pages (minimum {LULU_TEXTE_DOS_MIN_PAGES}). "
-                     "Le numéro est composé sur le dos, mais Lulu ne garantit pas son placement sur un dos de 0,25 po : "
-                     "fichier NON prêt à imprimer tant que l'imprimeur ne l'a pas validé par écrit "
-                     "(alors seulement : variable DOS_NUMERO_VALIDE_IMPRIMEUR=1).")
     return {"largeur": round(W, 2), "hauteur": round(H, 2), "dos": round(dos, 2), "marge": round(m, 2), "source": dims["source"],
             "numero": numero, "numero_y": NUM_Y_DEPUIS_BAS, "pret_a_imprimer": not probs, "problemes": probs}
 

@@ -107,8 +107,8 @@ Un livre = 2 à 4 appels texte + 13 images (planche, couverture, 9 scènes, 2 d�
 - PDF de lecture : 20 faces (couverture + 18 pages + 4e). Intérieur imprimeur : 24 pages 8,5 po + fond perdu 0,125 po
   (minimum Lulu en couverture rigide), les doubles pages tombent sur de vraies doubles pages.
 - Couverture à plat 4e | dos | 1re aux dimensions de l'API Lulu (sinon maquette marquée « non confirmée »).
-- **volumeNumber** : numéro du livre dans la collection (1, 2, 3…), attribué une fois (sans doublon), composé par code en bas du
-  dos, toujours au même endroit, et repris sur la 4e et la dernière page.
+- **volumeNumber** : numéro du livre dans la collection (1, 2, 3…), attribué une fois (sans doublon), en pastille dorée en bas à
+  droite de la 1re de couverture, repris sur la 4e et la dernière page. Rien sur le dos (Lulu, ticket 950442 : refusé sous 85 pages).
 - **Limite Lulu** : pas de texte sur le dos en dessous de 81 pages (dos de 0,25 po à 24 pages). Le numéro est composé quand même,
   mais le fichier est marqué NON prêt à imprimer et l'envoi est bloqué. Quand l'imprimeur a validé par écrit : `DOS_NUMERO_VALIDE_IMPRIMEUR=1`.
 - Aperçus (`apercus/`) : couverture, couverture à plat, détail du dos, doubles pages, album sur l'étagère, tous tirés des PDF réels.

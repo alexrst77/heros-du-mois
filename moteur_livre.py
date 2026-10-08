@@ -119,6 +119,21 @@ def page_couverture(c, cover, book):
     if book.get('coverTitle'):
         _cover_title(c, book['coverTitle'])
         _serie(c, book['coverTitle'])
+        _pastille(c, book['coverTitle'])
+
+
+def _pastille(c, t):
+    """Numéro de collection sur la 1re de couverture (coin bas droit, dans la zone sûre de l'imprimeur) : Lulu refuse
+    tout texte sur un dos de 0,25 po. Pas de pastille quand la série est déjà affichée (« Livre 1 sur 6 »)."""
+    if (t.get('serie') or {}).get('total') or not t.get('numero'):
+        return
+    n, r, cx, cy = int(t['numero']), 17, S - 58, 58
+    c.setFillColor(HexColor('#0B1530')); c.setFillAlpha(.35); c.circle(cx + 1.2, cy - 1.5, r + 1, fill=1, stroke=0); c.setFillAlpha(1)
+    c.setFillColor(HexColor('#E8C25A')); c.circle(cx, cy, r, fill=1, stroke=0)
+    c.setStrokeColor(HexColor('#9C7A2B')); c.setLineWidth(.8); c.circle(cx, cy, r, fill=0, stroke=1)
+    c.setStrokeColor(HexColor('#FFF1CF')); c.setLineWidth(.6); c.circle(cx, cy, r - 3, fill=0, stroke=1)
+    fs = 15 if n < 10 else 12
+    c.setFillColor(HexColor('#1A1F4A')); c.setFont('StoryBold', fs); c.drawCentredString(cx, cy - fs * .36, str(n))
 
 
 def page_histoire(c, idx, txt, p, book, folio_y=19):
