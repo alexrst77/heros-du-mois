@@ -1062,6 +1062,19 @@ def admin_action(oid, action):
                     shutil.rmtree(STORE / o["origine"], ignore_errors=True)
             db.update(oid, statut="annulee" if o["statut"] != "expediee" else "expediee", pdf=None, erreur="données effacées")
             return jsonify(ok=True)
+        if action == "supprimer":                 # suppression définitive (commande de test, doublon…) : ligne + fichiers
+            if A.JOBS.get(o["job_id"] or "", {}).get("etat") in ("en_cours", "validation"):
+                raise RuntimeError("fabrication en cours : attends la fin avant de supprimer")
+            if o["job_id"]:
+                shutil.rmtree(A.OUT / o["job_id"], ignore_errors=True)
+                A.JOBS.pop(o["job_id"], None)
+            db.supprimer(oid)
+            ori = o["origine"]
+            if ori and not any(x["origine"] == ori for x in db.lister(100000)):
+                s = db.sub_get(o["abonnement_id"] or "")
+                if not s or s["statut"] != "actif":
+                    shutil.rmtree(STORE / ori, ignore_errors=True)
+            return jsonify(ok=True)
         abort(404)
     except (RuntimeError, lulu.LuluError, paiement.StripeError, budget.BudgetLivreError) as e:
         return jsonify(erreur=str(e)), 400

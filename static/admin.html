@@ -146,6 +146,7 @@ function boutons(o, e) {
     sec.push(b('test-calendrier', '🧪 Calendrier de test (≈ 1,50 $)'), b('test-coloriage', '🧪 Cahier de coloriage de test (≈ 2,50 $)'));
   if (e.k === 'relire') sec.push(b('relancer', '♻️ Refaire tout le livre', 'danger'));
   if (['expedie', 'bloque', 'archive'].includes(e.k) && o.job_id && o.erreur !== 'données effacées') sec.push(b('effacer', '🧹 Effacer les données', 'danger'));
+  if (!o.en_cours) sec.push(b('supprimer', '🗑️ Supprimer la commande', 'danger'));
   return { main, sec: sec.join('') };
 }
 
@@ -307,12 +308,16 @@ function resultat(action, j) {
   return { cls: 'ok', html: T[action] || '✅ Fait.' };
 }
 async function act(id, action, btn) {
-  if (CONFIRM[action] && !confirm(CONFIRM[action])) return;
+  if (action === 'supprimer') {
+    if (!confirm("Supprimer DÉFINITIVEMENT cette commande et tous ses fichiers ?\n\nRien n'est remboursé sur Stripe et rien n'est annulé chez Lulu : fais-le à part si besoin.")) return;
+    if (prompt('Pour confirmer, tape SUPPRIMER') !== 'SUPPRIMER') return;
+  } else if (CONFIRM[action] && !confirm(CONFIRM[action])) return;
   btn.disabled = true; const t = btn.innerHTML; btn.innerHTML = '⏳ ' + t;
   try {
     const r = await fetch(`/admin/api/${id}/${action}${Q}`, { method: 'POST', headers: H });
     const j = await r.json();
     if (j.erreur) RES[id] = { cls: 'err', html: '⚠️ ' + esc(j.erreur) };
+    else if (action === 'supprimer') { delete RES[id]; await load(); return; }
     else if (action === 'budget') { budgetDlg(j.info); btn.disabled = false; btn.innerHTML = t; return; }
     else { const x = resultat(action, j); x.html = x.html.replace(/__ID__/g, id); RES[id] = x; }
   } catch (e) { RES[id] = { cls: 'err', html: '⚠️ ' + esc(e.message) }; }

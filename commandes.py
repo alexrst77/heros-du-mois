@@ -87,6 +87,11 @@ def transition(cid, old, new, **kw):
         return cur.rowcount == 1
 
 
+def supprimer(cid):
+    with _lock, _db() as c:
+        c.execute("delete from commandes where id=?", (cid,))
+
+
 def lister(limit=200, statut=None):
     with _db() as c:
         q = "select * from commandes" + (" where statut=?" if statut else "") + " order by cree desc limit ?"
