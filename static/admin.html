@@ -364,6 +364,7 @@ async function printfulCat(b) {
     <div style="max-height:60vh;overflow:auto"><table>${r.produits.map(p => `<tr style="cursor:pointer" onclick="printfulProd(${p.id},this)"><td>${p.image ? `<img src="${esc(p.image)}" style="width:54px;height:54px;object-fit:cover;border-radius:6px">` : ''}</td><td><b>${esc(p.titre)}</b><br><small class="meta">#${p.id} · ${esc(p.type || '')} · ${p.variantes} variantes</small><div class="pfd"></div></td></tr>`).join('')}</table></div>
     <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
   document.getElementById('dlg').showModal();
+  if (r.produits.length <= 25) for (const tr of document.querySelectorAll('#dlgIn tr[onclick^="printfulProd"]')) { tr.onclick(); await new Promise(z => setTimeout(z, 700)); }
 }
 async function printfulProd(id, tr) {
   const d = tr.querySelector('.pfd'); if (d.innerHTML) { d.innerHTML = ''; return; } d.innerHTML = '<small>⏳</small>';
