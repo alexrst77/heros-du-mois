@@ -527,6 +527,7 @@ def plan(cfg, folder, snap=None, portraits=None):
 
 
 def _dessiner(etape, pg, refs, path, q, size, snap, folder):
+    P.image_ok(path)                                # image tronquée (coupure, disque plein) : mise de côté et refaite
     rapport_p = path.with_suffix(".json")
     if path.exists() and rapport_p.exists():
         return json.loads(rapport_p.read_text(encoding="utf-8"))
@@ -568,6 +569,7 @@ def _run(form, cfg, refs, folder, job, progress, livre):
     def save(name, data):
         (folder / name).write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     etat("queued", "Instantané du cahier de coloriage", 2)
+    P.disque_ok(folder)
     dep = BU.depense(livre)
     if dep["incertain"] > 0 or dep["reserve"] > 0:
         raise P.ProcedeError("Appel(s) au résultat incertain pour ce cahier : règle-les dans l'admin avant toute reprise.")

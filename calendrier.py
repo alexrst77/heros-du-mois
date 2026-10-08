@@ -769,6 +769,7 @@ def plan(cfg, folder, snap=None, portraits=None):
 
 def _dessiner(etape, scene, refs, path, q, snap, folder):
     """UNE image (si elle n'existe pas déjà) et UN contrôle (mémorisé). Jamais de seconde tentative."""
+    P.image_ok(path)                                # image tronquée (coupure, disque plein) : mise de côté et refaite
     rapport_p = path.with_suffix(".json")
     if path.exists() and rapport_p.exists():
         return json.loads(rapport_p.read_text(encoding="utf-8"))
@@ -810,6 +811,7 @@ def _run(form, cfg, refs, folder, job, progress, livre):
     m = P.model()
     if IMG_SIZE not in {"1024x1024", "1536x1024", "1024x1536"} and not P.custom_sizes_ok(m):
         raise P.ProcedeError(f"Le modèle image « {m} » ne produit pas le format {IMG_SIZE} du calendrier (gpt-image-2 requis).")
+    P.disque_ok(folder)
     dep = BU.depense(livre)
     if dep["incertain"] > 0 or dep["reserve"] > 0:
         raise P.ProcedeError("Appel(s) au résultat incertain pour ce calendrier : règle-les dans l'admin avant toute reprise.")

@@ -71,6 +71,36 @@ def check_model():
         raise ProcedeError(f"OPENAI_PANO_SIZE={PANO_SIZE} n'est pas un 2:1")
 
 
+MIN_LIBRE_MO = int(os.getenv("DISQUE_MIN_LIBRE_MO", "400"))
+
+
+def disque_ok(folder):
+    """Refuse de lancer (avant toute dépense) s'il ne reste pas assez de place pour enregistrer les images."""
+    try:
+        libre = shutil.disk_usage(folder).free / 1e6
+    except OSError:
+        return
+    if libre < MIN_LIBRE_MO:
+        raise ProcedeError(f"Disque presque plein ({int(libre)} Mo libres, {MIN_LIBRE_MO} Mo nécessaires) : rien n'est lancé. "
+                           "Admin > Réglages > « Libérer de la place », ou agrandis le volume Railway, puis relance.")
+
+
+def image_ok(path):
+    """Une image enregistrée est-elle lisible jusqu'au bout ? Sinon (coupure, disque plein) elle est mise de côté pour être refaite."""
+    p = Path(path)
+    if not p.exists():
+        return False
+    try:
+        with Image.open(p) as im:
+            im.load()
+        return True
+    except Exception:
+        d = p.parent / "corrompues"; d.mkdir(exist_ok=True)
+        p.rename(d / p.name)
+        p.with_suffix(".json").unlink(missing_ok=True)
+        return False
+
+
 def sha(b):
     return hashlib.sha256(b if isinstance(b, bytes) else json.dumps(b, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
@@ -540,7 +570,8 @@ def image(prompt, refs, path, size, quality, trace, etape=None):
     else:
         r = call()
     G._count("image", m, getattr(r, "usage", None))
-    Path(path).write_bytes(base64.b64decode(r.data[0].b64_json))          # sauvegardé dès réception
+    tmp = Path(path).with_name(f".{Path(path).name}.{os.getpid()}.tmp")   # écriture atomique : jamais d'image tronquée (disque plein…)
+    tmp.write_bytes(base64.b64decode(r.data[0].b64_json)); os.replace(tmp, path)
     dims = _decode_check(path, size)
     with open(Path(path).parent / "references_transmises.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps({"image": Path(path).name, "modele": m, "taille_demandee": size, "taille_recue": list(dims), "qualite": quality,
@@ -616,6 +647,7 @@ def draw_spread(s, snap, b, portraits, cover, folder, quality):
     """Un panorama : clé de cache complète, UNE génération, UN contrôle. Écart bloquant -> livre « à relire », jamais regénéré
     automatiquement. Déjà fait avec les mêmes entrées -> réutilisé sans appel."""
     refs, path = spread_target(s, snap, portraits, cover, folder, quality)
+    image_ok(path)
     rapport_p = path.with_suffix(".json")
     if path.exists() and rapport_p.exists():
         return path, json.loads(rapport_p.read_text())
@@ -761,6 +793,7 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
     old = lambda n: json.loads((folder / n).read_text(encoding="utf-8")) if (folder / n).exists() else None
 
     etat("queued", "Instantané de la configuration", 2)
+    disque_ok(folder)
     check_model()
     dep = BU.depense(livre)
     if dep["incertain"] > 0 or dep["reserve"] > 0:
