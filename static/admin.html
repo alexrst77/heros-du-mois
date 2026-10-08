@@ -45,6 +45,8 @@
   .bar { height:8px; background:var(--grey-soft); border-radius:99px; overflow:hidden; margin-top:8px; max-width:420px; }
   .bar i { display:block; height:100%; background:linear-gradient(90deg, var(--blue), var(--violet)); border-radius:99px; transition:width .6s; }
   .money { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--soft); margin-top:8px; }
+  .prog { display:flex; align-items:center; gap:10px; max-width:460px; margin-top:8px; } .prog .bar { flex:1; margin:0; }
+  .bar.big { height:12px; } .prog b { font:800 15px system-ui; min-width:46px; text-align:right; }
   .money .bar { width:120px; height:6px; margin:0; } .money .bar i { background:var(--green); }
   .money .bar i.warn { background:var(--gold); }
   .acts { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
@@ -161,7 +163,7 @@ function carte(o) {
     <div class="meta">${(o.formule || '').startsWith('essai') ? '🧪 ' : ''}${esc(FORMULE[o.formule] || o.formule)}${o.extra ? (o.pack_total ? ` · avec ${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}, même colis` : '') : o.pack_total > 1 ? ` · livre ${o.numero}/${o.pack_total}` : ''}${!o.extra && o.pack_cal ? ' · + ' + (o.pack_extras || []).map(x => x === 'calendrier' ? 'calendrier' : 'cahier').join(' + ') : ''}${o.volume_number ? ' · tome ' + o.volume_number : ''}${o.montant ? ' · ' + eur(o.montant) : ''} · ${day(o.cree)}</div>
     <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>
     <div class="say">${e.say}</div>
-    ${e.k === 'fabrication' ? `<div class="bar"><i style="width:${o.progression || 3}%"></i></div>` : ''}
+    ${e.k === 'fabrication' ? `<div class="prog"><div class="bar big"><i style="width:${o.progression || 1}%"></i></div><b>${o.progression || 0} %</b></div>${o.etape ? `<div class="meta">${esc(o.etape)}</div>` : ''}` : ''}
     ${bud ? `<div class="money">IA : <b>${usd(bud)}</b> / ${D.plafond} $ <span class="bar"><i class="${pct > 80 ? 'warn' : ''}" style="width:${pct}%"></i></span></div>` : ''}
     ${err}${issues}
     <div class="acts">${bt.main}</div>
@@ -376,7 +378,8 @@ async function load() {
   document.getElementById('hi').textContent = `${h < 18 ? 'Bonjour' : 'Bonsoir'} Alex · ${nb ? nb + ' chose(s) à faire' : 'tout roule'}`;
   if (!document.getElementById('dlg').open) render();
 }
-load(); setInterval(load, 15000);
+load(); setInterval(() => { if (!document.hidden) load(); }, (D && D.commandes || []).some(o => o.en_cours) ? 4000 : 15000);
+setInterval(() => { if (!document.hidden && D && (D.commandes || []).some(o => o.en_cours)) load(); }, 4000);
 </script>
 </body>
 </html>
