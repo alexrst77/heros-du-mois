@@ -30,6 +30,8 @@ MAX_CORR = 0                                  # aucune régénération automatiq
 PROMPT_IMAGE_MAX = 6000                       # octets : au-delà, le prompt est refusé avant tout appel (borne de coût)
 REVIEW_MAX_TOKENS = 1000          # écarts en anglais (consignes) + leur traduction française (relecture)
 TEXTE_MAX = 16000                             # octets du brief de l'histoire (borne de coût)
+RALLONGE_MAX = 24000                          # octets de la demande « rallonger les textes » (borne de coût)
+RALLONGE_TOKENS = 4000
 REVISION_MAX = 56000                          # octets de la demande de révision (brief + version précédente + problèmes)
 FICHE_MAX = 6000                              # octets de la fiche envoyée avec une image à contrôler
 MAX_INVENTES = 1                              # personnages inventés récurrents prévus au budget (portrait de référence)
@@ -285,7 +287,7 @@ def group_sheet(ids, portraits, folder):
 # ====================================================================== 3. récit et storyboard
 def word_range(age):
     a = int(age or 5)
-    return (20, 32) if a <= 4 else (26, 40) if a <= 7 else (34, 50)
+    return (20, 32) if a <= 4 else (26, 38) if a <= 7 else (32, 46)
 
 
 STORY_RULES = """
@@ -314,7 +316,9 @@ LANGUE TRÈS SIMPLE (priorité absolue : l'histoire est lue à voix haute à un 
 - une seule action importante par page, un seul problème dans l'histoire, des rebondissements faciles à suivre ;
 - répétitions et onomatopées bienvenues (Plouf ! Zou !), émotions nommées simplement (content, un peu peur, fier) ;
 - pas plus de 3 personnages qui parlent sur une même double page.
-Longueur : {mots} mots par page, jamais plus de 7 lignes. Typographie française (espaces avant ! ? : ;, guillemets « »).
+Longueur OBLIGATOIRE : {mots} mots par page, soit 3 ou 4 phrases courtes (jamais une ou deux phrases seulement) : on ajoute un détail
+que l'enfant voit sur l'image, un bruit, ce que ressent un personnage ou une petite réplique. Phrases courtes ne veut pas dire page courte.
+Jamais plus de 7 lignes. Typographie française (espaces avant ! ? : ;, guillemets « »).
 """
 
 
@@ -346,7 +350,8 @@ def check_board(b, snap):
         for side in ("leftText", "rightText"):
             t = str(s.get(side) or "")
             n = len(t.split())
-            if not lo - 6 <= n <= hi + 6: probs.append(f"Double page {i + 1}, {side} : {n} mots (attendu {lo}–{hi}).")
+            if n < lo - 3: probs.append(f"Double page {i + 1}, {side} : {n} mots, trop court (attendu {lo}–{hi}) : ajoute 1 ou 2 phrases simples (un détail visible, un bruit, une émotion).")
+            elif n > hi + 6: probs.append(f"Double page {i + 1}, {side} : {n} mots (attendu {lo}–{hi}).")
             if M.text_height(t) > M.TEXT_MAX: probs.append(f"Double page {i + 1}, {side} : texte trop long pour la page (plus de 7 lignes), raccourcis-le.")
             if re.search(r"\[|\]|\{|\}|TODO|XXX|Prénom|placeholder", t): probs.append(f"Double page {i + 1}, {side} : texte provisoire.")
             longues = [p for p in re.split(r"[.!?…]+", t) if len(p.split()) > 16]
@@ -374,6 +379,66 @@ def check_board(b, snap):
     if sum(pr in (s.get("presentCharacterIds") or []) for s in sp) < 7:
         probs.append(f"Le héros du livre ({pr}) doit être présent sur au moins 7 doubles pages.")
     return probs
+
+
+def pages_courtes(b, snap):
+    """Pages dont le texte (final) est trop court pour l'âge, tant qu'on ne les a pas déjà rallongées une fois."""
+    if not b or not snap or b.get("_rallonge"):
+        return []
+    lo, _ = word_range(snap["age"])
+    out = []
+    for s in b.get("spreads") or []:
+        for side, key in (("left", "leftText"), ("right", "rightText")):
+            t = (s.get("texte_livre") or {}).get(side) or s.get(key) or ""
+            if len(t.split()) < lo - 3:
+                out.append((s.get("id"), side))
+    return out
+
+
+RALLONGE_SYSTEM = """Tu es l'auteur d'un album jeunesse lu à voix haute à un enfant de {age} ans. Les illustrations sont DÉJÀ peintes.
+Réécris le texte de chaque page pour qu'il fasse {lo} à {hi} mots : 3 ou 4 phrases courtes (6 à 12 mots), au présent, avec des mots
+de tous les jours. Garde EXACTEMENT les mêmes événements, le même ordre, les mêmes répliques importantes et les mêmes personnages
+(n'ajoute aucun personnage, aucun objet important, aucun lieu nouveau). Pour rallonger, ajoute ce qui se voit déjà dans la scène
+(décrite en anglais dans « scene »), un bruit, une émotion simple ou une petite réplique. Typographie française (espaces avant ! ? : ;,
+guillemets « »). Réponds UNIQUEMENT en JSON : {{"pages": [{{"id": 1, "left": "…", "right": "…"}}, …]}} pour les 9 doubles pages."""
+
+
+def rallonger(b, snap):
+    """Rallonge les textes trop courts SANS toucher aux illustrations (texte_livre, hors des clés de cache des images).
+    Une page n'est remplacée que si le nouveau texte est valide (longueur, 7 lignes au plus, aucun nouveau personnage nommé)."""
+    lo, hi = word_range(snap["age"])
+    sp = b.get("spreads") or []
+    data = [{"id": s.get("id"), "left": s.get("leftText"), "right": s.get("rightText"), "scene": s.get("scene"),
+             "personnages": [next((p["nom"] for p in snap["personnages"] if p["id"] == x), x) for x in s.get("presentCharacterIds") or []]} for s in sp]
+    system = RALLONGE_SYSTEM.format(age=snap["age"], lo=lo, hi=hi)
+    user = json.dumps({"enfant": snap["prenom"], "pages": data}, ensure_ascii=False)
+    if len((system + user).encode()) > RALLONGE_MAX:
+        return dict(b, _rallonge="trop long pour la borne de coût : textes gardés")
+    try:
+        r = G._chat_json(system, user, etape="textes rallongés", max_tokens=RALLONGE_TOKENS)
+    except (G.BudgetError, BU.BudgetLivreError, BU.AppelIncertain):
+        raise
+    except Exception as e:
+        return dict(b, _rallonge=f"impossible : {str(e)[:120]}")
+    noms = {G._fold(p["nom"]) for p in snap["personnages"]}
+    par_id = {x.get("id"): x for x in (r.get("pages") or []) if isinstance(x, dict)}
+    b = json.loads(json.dumps(b)); n = 0
+    for s in b.get("spreads") or []:
+        x = par_id.get(s.get("id")) or {}
+        tl = dict(s.get("texte_livre") or {})
+        for side, key in (("left", "leftText"), ("right", "rightText")):
+            t = re.sub(r"\s+", " ", str(x.get(side) or "")).strip()
+            avant = len(str(s.get(key) or "").split())
+            if not t or len(t.split()) <= avant or not lo - 4 <= len(t.split()) <= hi + 6 or M.text_height(t) > M.TEXT_MAX:
+                continue
+            present = {G._fold(nm) for nm in [next((p["nom"] for p in snap["personnages"] if p["id"] == i), "") for i in s.get("presentCharacterIds") or []] if nm}
+            if any(nm in G._fold(t) and nm not in present and nm not in G._fold(str(s.get(key))) for nm in noms):
+                continue                                   # un personnage absent de l'image : on garde l'ancien texte
+            tl[side] = t; n += 1
+        if tl:
+            s["texte_livre"] = tl
+    b["_rallonge"] = f"{n} pages rallongées"
+    return b
 
 
 def fix_board(b, snap):
@@ -627,6 +692,7 @@ Compare l'image à la fiche. BLOQUANTS (l'image est refaite) — uniquement :
 - espèce ou couleur principale fausse ; accessoire manquant ou présent alors que la fiche dit « aucun » ;
 - la peluche dessinée comme un animal vivant ; des lunettes sur un animal ou la peluche ;
 - un visage, une tête d'animal ou l'action essentielle coupé par la pliure (bande de 44 à 56 % de la largeur) ;
+- la tête d'un personnage (même petit : peluche, chat, bébé animal) dans le quart bas de l'image, où le texte la cachera ;
 - un détail obligatoire de l'histoire absent ; du texte, des lettres ou un cadre dans l'image ; une anatomie très fausse.
 MINEURS : nuances, détails de vêtements, zone basse un peu chargée, lumière.
 Une teinte due à la lumière de la scène (reflet bleuté, lumière dorée) n'est PAS une couleur fausse. Une peluche tenue, assise ou
@@ -677,8 +743,10 @@ def cache_key(*parts):
 
 
 def spread_target(s, snap, portraits, cover, folder, quality):
-    """Références et fichier d'un panorama (la clé de cache dit si l'image existe déjà : rien n'est refait ni refacturé)."""
+    """Références et fichier d'un panorama (la clé de cache dit si l'image existe déjà : rien n'est refait ni refacturé).
+    Le texte rallongé (texte_livre) n'entre pas dans la clé : rallonger le texte ne refait jamais une image."""
     refs = refs_for(s["presentCharacterIds"], portraits, cover, folder, s["light"])
+    s = {k: v for k, v in s.items() if k != "texte_livre"}
     key = cache_key(snap["empreinte"], s, [fsha(f) for _, f in refs], PANO_SIZE, quality)
     return refs, Path(folder) / f"spread-{s['id']}-{key}.png"
 
@@ -735,6 +803,8 @@ def plan_livre(cfg, folder, essai=None, b=None, snap=None, quality=None, quality
             plan.append(_p_image(f"portrait {c['id']}", 3, "1024x1024", q_portrait))
         if not G.portrait_en_cache(c) or not Path(str(G.portrait_path(c)) + ".controle.json").exists():
             plan.append(_p_controle(f"contrôle portrait {c['id']}", SYSTEM_REF, "1024x1024"))
+    if b is None or pages_courtes(b, snap):
+        plan.append({"type": "chat", "etape": "textes rallongés", "modele": G.TEXT_MODEL, "textes": ["x" * RALLONGE_MAX], "max_tokens": RALLONGE_TOKENS})
     if b is None:
         plan.append({"type": "chat", "etape": "histoire", "modele": G.TEXT_MODEL, "textes": ["x" * TEXTE_MAX], "max_tokens": G.TEXT_MAX_TOKENS})
         plan.append({"type": "chat", "etape": "histoire (révision)", "modele": G.TEXT_MODEL, "textes": ["x" * REVISION_MAX], "max_tokens": G.TEXT_MAX_TOKENS})
@@ -867,6 +937,10 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
     etat("storyboard", "Histoire et storyboard (9 doubles pages)", 14)
     if not b:
         b = storyboard(snap); b["_empreinte"] = snap["empreinte"]; save("storyboard.json", b)
+    if pages_courtes(b, snap):                         # textes trop courts (même après révision) : UN appel pour les rallonger
+        if not (folder / "storyboard_avant_rallonge.json").exists():
+            save("storyboard_avant_rallonge.json", b)
+        b = rallonger(b, snap); save("storyboard.json", b)
 
     inventes = _inventes(b)
     if len(inventes) > MAX_INVENTES:
@@ -932,7 +1006,7 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
         path = results[s["id"]][0]
         for side, key in (("left", "leftText"), ("right", "rightText")):
             t = reading_theme(path, s, snap, side)
-            pages.append({"text": s[key], "veil": t["veil"], "ink": t["ink"], "theme": t})
+            pages.append({"text": (s.get("texte_livre") or {}).get(side) or s[key], "veil": t["veil"], "ink": t["ink"], "theme": t})
     titre = b["title"]
     lines = [x for x in b.get("coverTitleLines") or [] if str(x).strip()] or [titre]
     book = {"title": titre, "collection": "Mon Héros du Mois", "ageLabel": b.get("ageLabel") or "4–7 ans",

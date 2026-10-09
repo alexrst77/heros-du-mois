@@ -26,7 +26,7 @@ from reportlab.lib.colors import HexColor
 KIT = Path(__file__).parent / "kit"
 S = 595.2756
 TEXT_MAX = 147
-VERSION = "kit-2026-10-02"
+VERSION = "kit-2026-10-02"          # entre dans l'empreinte des livres : ne pas changer (tout serait refait)
 
 _fonts = []
 
@@ -49,13 +49,19 @@ def text_height(txt):
     return ph
 
 
-def _veil(color):
+def voile_hauteur(ph):
+    """Hauteur du voile d'une page d'histoire : le texte (posé à 43 pt) + 70 pt de fondu au-dessus, entre 150 et 225 pt."""
+    return max(150, min(225, 43 + ph + 70))
+
+
+def _veil(color, h=225):
     # Continuous, smoothly fading local veil; no rectangular text panel.  (code du kit)
+    # h : hauteur du voile (pt). Plein jusqu'à h - 90, puis fondu sur 90 pt (comme le kit pour h = 225).
     veil = Image.new('RGBA', (2, 900))
     rgb = tuple(int(color[k:k + 2], 16) for k in (1, 3, 5))
     for row in range(900):
-        y = 225 * (1 - row / 899)
-        t = max(0, min(1, (y - 135) / 90))
+        y = h * (1 - row / 899)
+        t = max(0, min(1, (y - (h - 90)) / 90))
         alpha = .96 * (1 - t * t * (3 - 2 * t))
         for col in range(2):
             veil.putpixel((col, row), rgb + (round(alpha * 255),))
@@ -143,9 +149,10 @@ def page_histoire(c, idx, txt, p, book, folio_y=19):
     scale = max(2 * S / w, S / h); dw, dh = w * scale, h * scale
     c.drawImage(p, (2 * S - dw) / 2 - half * S, (S - dh) / 2, dw, dh)
     color = book['pages'][idx]['veil']; ink = book['pages'][idx]['ink']
-    c.drawImage(ImageReader(_veil(color)), 0, 0, S, 225, mask='auto')
-    c.setFillAlpha(1)
     para = Paragraph(escape(txt), body_style(ink)); pw, ph = para.wrap(S - 90, 160)
+    hv = voile_hauteur(ph)                        # voile à la mesure du texte : il ne cache pas les personnages pour rien
+    c.drawImage(ImageReader(_veil(color, hv)), 0, 0, S, hv, mask='auto')
+    c.setFillAlpha(1)
     if ph > TEXT_MAX: raise ValueError(f'Text overflow on page {idx + 2}; shorten text, do not shrink type')
     para.drawOn(c, 45, 43)
     c.setFillColor(HexColor(ink)); c.setFont('Story', 8); c.drawCentredString(S / 2, folio_y, str(idx + 2))
