@@ -2,20 +2,20 @@
 @font-face { font-family: "Young Serif"; src: url("/static/fonts/YoungSerif-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Nunito"; src: url("/static/fonts/Nunito.woff") format("woff"); font-weight: 200 1000; font-display: swap; }
 :root {
-  /* « Fête foraine du soir » : décors de nos livres + bonbons fluo */
-  --ciel: #FFF3FB;      /* fond : blanc rosé */
+  /* « Fête foraine du soir » : les couleurs des livres (nuit prune, corail, lagon, lucioles) */
+  --ciel: #F7F2FF;      /* fond : lavande très pâle */
   --papier: #FFFFFF;    /* pages, cartes */
-  --encre: #1E1240;     /* texte, contours des boutons « autocollants » */
-  --encre-2: #4C3F7A;   /* texte secondaire */
-  --nuit: #3A12B8;      /* bandes violet électrique */
-  --luciole: #B4FF1F;   /* vert fluo : boutons principaux */
-  --rose: #FF2E97;      /* rose fluo : ombres, badges, soulignés */
-  --violet: #6A2CFF;
-  --soleil: #FFE52E;
-  --cyan: #2DE2FF;
-  --mousse: #0C9A6A;    /* coches, détails */
-  --joue: #FF2E97;
-  --trait: #F2D3EA;
+  --encre: #24184D;     /* texte, contours des boutons « autocollants » */
+  --encre-2: #514672;   /* texte secondaire */
+  --nuit: #2E1A6E;      /* bandes prune, comme le ciel des livres */
+  --luciole: #FFC23D;   /* jaune lucioles : boutons principaux */
+  --rose: #F2557A;      /* corail framboise : ombres, badges, soulignés */
+  --violet: #5A33C9;
+  --soleil: #FFD95E;
+  --cyan: #1FB5A8;      /* lagon */
+  --mousse: #138A6E;    /* coches, détails */
+  --joue: #F2557A;
+  --trait: #E6DAF7;
   --erreur: #C4122F;
   --titre: "Young Serif", Georgia, serif;
   --texte: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -31,12 +31,12 @@ a { color: var(--encre); }
 h2 { font: 400 clamp(30px, 3.8vw, 44px)/1.1 var(--titre); margin: 0 0 12px; letter-spacing: -.3px; max-width: 22ch; }
 .sous { color: var(--encre-2); font-size: 18px; margin: 0; max-width: 60ch; }
 .bloc { padding: 84px 0; }
-.bloc.doux { background: linear-gradient(180deg, rgba(255,243,251,0), #FFE2F3 50%, rgba(255,243,251,0)); }
+.bloc.doux { background: linear-gradient(180deg, rgba(247,242,255,0), #FBE7EE 50%, rgba(247,242,255,0)); }
 /* touches féeriques discrètes : quelques étoiles fines dorées (aucune animation) */
 .etoiles-fines { position: relative; }
 .etoiles-fines::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .55;
   background:
-    radial-gradient(1.6px 1.6px at 6% 14%, #FF2E97 50%, transparent 52%), radial-gradient(1.2px 1.2px at 13% 30%, #E2B653 50%, transparent 52%),
+    radial-gradient(1.6px 1.6px at 6% 14%, #F2557A 50%, transparent 52%), radial-gradient(1.2px 1.2px at 13% 30%, #E2B653 50%, transparent 52%),
     radial-gradient(1.4px 1.4px at 92% 10%, #E2B653 50%, transparent 52%), radial-gradient(1px 1px at 86% 26%, #E2B653 50%, transparent 52%),
     radial-gradient(1.2px 1.2px at 96% 46%, #E2B653 50%, transparent 52%), radial-gradient(1px 1px at 3% 62%, #E2B653 50%, transparent 52%),
     radial-gradient(60px 60px at 94% 12%, rgba(255,201,74,.16), transparent 70%), radial-gradient(70px 70px at 5% 70%, rgba(255,201,74,.12), transparent 70%); }
@@ -46,7 +46,7 @@ h2 { font: 400 clamp(30px, 3.8vw, 44px)/1.1 var(--titre); margin: 0 0 12px; lett
 .logo-mark { width: 40px; height: 40px; background: url("/static/marque/etoile-128.png") center/contain no-repeat; flex: none; }
 .logo-full { display: block; width: 180px; height: auto; margin: 0 auto 10px; }
 
-/* boutons « autocollants » : vert fluo, contour encre, ombre rose décalée */
+/* boutons « autocollants » : jaune lucioles, contour encre, ombre corail décalée */
 .btn { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 2.5px solid var(--encre); border-radius: 999px; padding: 13px 24px;
        font: 900 16px/1 var(--texte); text-decoration: none; white-space: nowrap; cursor: pointer; background: var(--luciole); color: var(--encre);
        box-shadow: 4px 4px 0 var(--rose); transition: transform .12s, box-shadow .12s; }
