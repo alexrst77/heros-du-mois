@@ -419,28 +419,46 @@ function vueRentabilite() {
 }
 
 /* ================================================================ réglages : mon entreprise, RGPD */
-let VEND = null;
+let VEND = null, BROUILLON = {}, SAUVE = {};
 function carteEntreprise() {
   if (!VEND) { fetch('/admin/api/vendeur' + Q, { headers: H }).then(r => r.json()).then(v => { VEND = v; render(); }); return '<div class="card">Chargement…</div>'; }
-  const v = VEND.vendeur, ch = VEND.champs;
+  const v = Object.assign({}, VEND.vendeur, BROUILLON), ch = VEND.champs; v.taux_tva = Object.assign({}, VEND.vendeur.taux_tva, BROUILLON.taux_tva || {});
   const inp = k => k === 'regime_tva'
-    ? `<label class="champ req"><span>${esc(ch[k].libelle.replace(' (franchise ou reel)', ''))}</span><select id="v_${k}"><option value="franchise" ${v[k] === 'franchise' ? 'selected' : ''}>Franchise en base (pas de TVA)</option><option value="reel" ${v[k] === 'reel' ? 'selected' : ''}>Régime réel (TVA facturée)</option></select></label>`
-    : `<label class="champ ${ch[k].obligatoire ? 'req' : ''}"><span>${esc(ch[k].libelle)}</span><input id="v_${k}" value="${esc(v[k] || '')}"></label>`;
-  return `<div class="card"><h3>🏢 Mon entreprise</h3>
+    ? `<label class="champ req"><span>${esc(ch[k].libelle.replace(' (franchise ou reel)', ''))}</span><select id="v_${k}" onchange="noter('${k}',this.value)"><option value="franchise" ${v[k] === 'franchise' ? 'selected' : ''}>Franchise en base (pas de TVA)</option><option value="reel" ${v[k] === 'reel' ? 'selected' : ''}>Régime réel (TVA facturée)</option></select></label>`
+    : `<label class="champ ${ch[k].obligatoire ? 'req' : ''}"><span>${esc(ch[k].libelle)}</span><input id="v_${k}" value="${esc(v[k] || '')}" oninput="noter('${k}',this.value)"></label>`;
+  const etatSv = SAUVE.erreur ? `<span class="ko-c">⚠️ ${esc(SAUVE.erreur)}</span>` : Object.keys(BROUILLON).length ? '<span class="mid-c">● Modifications non enregistrées</span>' : SAUVE.le ? `<span class="ok-c">✓ Enregistré à ${SAUVE.le}</span>` : '';
+  return `<div class="card" id="carteEnt"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0">🏢 Mon entreprise</h3><div style="display:flex;gap:10px;align-items:center"><span id="etatSv" class="meta">${etatSv}</span><button class="btn main" onclick="enregistrerVendeur(this)">💾 Enregistrer</button></div></div>
     <p class="meta" style="margin:0 0 12px">Une seule fois : ces informations remplissent les CGV, les mentions légales, la politique de confidentialité et les factures. ${VEND.manquants.length ? `<span class="ko-c">Il manque ${VEND.manquants.length} information(s).</span>` : '<span class="ok-c">Tout est complet.</span>'}</p>
     <div class="form">${['raison_sociale','forme','capital','adresse','siret','rcs','tva_intra','regime_tva','directeur_publication','email','telephone','mediateur_nom','mediateur_url','hebergeur','hebergeur_adresse','hebergeur_contact'].filter(k => ch[k]).concat(Object.keys(ch).filter(k => !['raison_sociale','forme','capital','adresse','siret','rcs','tva_intra','regime_tva','directeur_publication','email','telephone','mediateur_nom','mediateur_url','hebergeur','hebergeur_adresse','hebergeur_contact'].includes(k))).map(inp).join('')}</div>
     <h3 style="margin-top:16px">Taux de TVA par produit (régime réel seulement)</h3>
-    <div class="form">${Object.entries(v.taux_tva).map(([k, t]) => `<label class="champ"><span>${{ livre: 'Livres', coloriage: 'Cahiers de coloriage', calendrier: 'Calendriers', objet: 'Objets' }[k] || k} (%)</span><input id="t_${k}" type="number" step="0.1" value="${t}"></label>`).join('')}</div>
+    <div class="form">${Object.entries(v.taux_tva).map(([k, t]) => `<label class="champ"><span>${{ livre: 'Livres', coloriage: 'Cahiers de coloriage', calendrier: 'Calendriers', objet: 'Objets' }[k] || k} (%)</span><input id="t_${k}" type="number" step="0.1" value="${t}" oninput="noter('${k}',this.value,1)"></label>`).join('')}</div>
     <p class="meta">À faire confirmer par ton comptable (le taux des livres personnalisés notamment).</p>
-    <div class="acts"><button class="btn main" onclick="enregistrerVendeur(this)">Enregistrer</button><a class="btn" target="_blank" href="/mentions-legales">Voir les mentions légales</a><a class="btn" target="_blank" href="/cgv">Voir les CGV</a><a class="btn" target="_blank" href="/confidentialite">Voir la confidentialité</a></div></div>`;
+    <div class="acts"><button class="btn main" onclick="enregistrerVendeur(this)">💾 Enregistrer mes infos</button><a class="btn" target="_blank" href="/mentions-legales">Voir les mentions légales</a><a class="btn" target="_blank" href="/cgv">Voir les CGV</a><a class="btn" target="_blank" href="/confidentialite">Voir la confidentialité</a></div></div>`;
 }
-async function enregistrerVendeur(b) {
+function noter(k, val, taux) {
+  if (taux) { BROUILLON.taux_tva = BROUILLON.taux_tva || {}; BROUILLON.taux_tva[k] = val; } else BROUILLON[k] = val;
+  SAUVE.erreur = ''; const e = document.getElementById('etatSv'); if (e) e.innerHTML = '<span class="mid-c">● Modifications non enregistrées</span>';
+  clearTimeout(window._sv); window._sv = setTimeout(() => enregistrerVendeur(null, true), 2500);   // enregistrement automatique
+}
+async function enregistrerVendeur(b, auto) {
+  clearTimeout(window._sv);
   const d = { taux_tva: {} };
-  Object.keys(VEND.champs).forEach(k => { const e = document.getElementById('v_' + k); if (e) d[k] = e.value; });
-  Object.keys(VEND.vendeur.taux_tva).forEach(k => { d.taux_tva[k] = document.getElementById('t_' + k).value; });
-  b.disabled = true;
-  VEND = await (await fetch('/admin/api/vendeur' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify(d) })).json();
-  toast('✅ Enregistré'); RENTA = null; FAC = null; load();
+  Object.keys(VEND.champs).forEach(k => { const e = document.getElementById('v_' + k); d[k] = e ? e.value : (BROUILLON[k] ?? VEND.vendeur[k]); });
+  Object.keys(VEND.vendeur.taux_tva).forEach(k => { const e = document.getElementById('t_' + k); d.taux_tva[k] = e ? e.value : ((BROUILLON.taux_tva || {})[k] ?? VEND.vendeur.taux_tva[k]); });
+  const envoye = JSON.stringify(BROUILLON);
+  if (b) { b.disabled = true; b.textContent = '⏳ Enregistrement…'; }
+  try {
+    const r = await fetch('/admin/api/vendeur' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
+    if (!r.ok) throw new Error(r.status === 403 ? 'accès refusé (code admin absent de l\'adresse ?)' : 'erreur serveur ' + r.status);
+    VEND = await r.json();
+    if (JSON.stringify(BROUILLON) === envoye) BROUILLON = {};   // rien tapé pendant l'envoi
+    SAUVE = { le: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }), erreur: '' };
+    if (!auto) toast(VEND.manquants.length ? `✅ Enregistré · il manque encore : ${VEND.manquants.join(', ')}` : '✅ Enregistré · tout est complet');
+    RENTA = null; FAC = null; load();
+  } catch (e) {
+    SAUVE.erreur = 'Non enregistré : ' + e.message; toast('⚠️ ' + SAUVE.erreur);
+    const z = document.getElementById('etatSv'); if (z) z.innerHTML = `<span class="ko-c">⚠️ ${esc(SAUVE.erreur)}</span>`;
+  } finally { if (b) { b.disabled = false; b.textContent = '💾 Enregistrer'; } }
 }
 async function purgeRgpd(b) {
   if (!confirm("Effacer les données des enfants et les fichiers de fabrication des commandes expédiées depuis plus de 30 jours ?\n\nLes factures restent (obligation légale). C'est définitif.")) return;
@@ -662,6 +680,7 @@ function render() {
   document.getElementById('titre').textContent = (TABS.find(x => x[0] === TAB) || TABS[0])[2];
   document.getElementById('teteActs').innerHTML = TAB === 'commandes' || TAB === 'tableau' ? `<button class="btn" onclick="load()">↻ Actualiser</button>` : TAB === 'rentabilite' ? `<button class="btn" onclick="RENTA=null;render()">↻ Recharger les ventes</button>` : '';
   const y = scrollY, f = document.activeElement && document.activeElement.id;
+  if (TAB === 'reglages' && f && /^(v_|t_|pfq)/.test(f)) return;   // saisie en cours : on ne touche à rien
   if (TAB === 'rentabilite' && RENTA && document.getElementById('simRes') && f && f.startsWith('h_')) return;   // ne pas casser la saisie
   document.getElementById('view').innerHTML = VUES[TAB]();
   if (TAB === 'reglages') chargerDisque();
