@@ -21,6 +21,10 @@ FONTS = Path(__file__).parent / "fonts"
 with db._db() as _c:
     _c.execute("create table if not exists apercus (id text primary key, visiteur text, cree real, statut text, etape text, erreur text, "
                "signature text, univers text, prenom text, cout real)")
+    try:
+        _c.execute("alter table apercus add column pct integer default 0")      # avancement affiché dans le rond
+    except Exception:
+        pass
 
 
 def _ligne(pid):
@@ -55,8 +59,13 @@ def fichier(pid):
 
 
 def lancer(A, data, vis):
-    """Vérifie, enregistre et lance un aperçu en tâche de fond. Renvoie (réponse, code HTTP)."""
-    import generator as G
+    """Vérifie, enregistre et lance un aperçu en tâche de fond. Renvoie (réponse, code HTTP).
+    Réservé aux visiteurs connectés (compte client) : les 2 essais sont comptés par compte."""
+    import generator as G, comptes
+    cl = comptes.client_courant()
+    if not cl:
+        return {"erreur": "Connectez-vous (gratuit, sans mot de passe) pour voir sa couverture.", "connexion": True}, 401
+    vis = "c:" + cl["id"]
     if restants(vis) <= 0:
         return {"erreur": f"Vous avez utilisé vos {MAX_VISITEUR} aperçus pour aujourd'hui : la couverture finale sera créée à la commande."}, 429
     with db._db() as c:
@@ -78,7 +87,7 @@ def lancer(A, data, vis):
     previews = A.save_previews(data.get("apercus") or {}, folder)
     refs = A.browser_refs(guides, previews)
     with db._lock, db._db() as c:
-        c.execute("insert into apercus values (?,?,?,?,?,?,?,?,?,?)", (pid, vis, time.time(), "en_cours", "Préparation", None,
+        c.execute("insert into apercus (id, visiteur, cree, statut, etape, erreur, signature, univers, prenom, cout) values (?,?,?,?,?,?,?,?,?,?)", (pid, vis, time.time(), "en_cours", "Préparation", None,
                                                                       signature(cfg, form.get("univers")), form.get("univers"), form["prenom"], 0))
     threading.Thread(target=_run, args=(pid, form, cfg, refs, folder), daemon=True).start()
     return {"id": pid, "restants": restants(vis)}, 200
@@ -92,8 +101,11 @@ def _run(pid, form, cfg, refs, folder):
     try:
         G.check_budget()
         snap = P.snapshot(form, cfg)
-        _maj(pid, etape="Portraits des personnages")
-        portraits, _ = P.references(snap, cfg, refs, folder, lambda s: _maj(pid, etape=s))
+        _maj(pid, etape="Portraits des personnages", pct=5)
+        n, fait = max(1, len(cfg["personnages"])), [0]
+        def avance(s):                                   # un portrait par personnage : de 5 à 60 %
+            _maj(pid, etape=s, pct=5 + int(55 * fait[0] / n)); fait[0] += 1
+        portraits, _ = P.references(snap, cfg, refs, folder, avance)
         ordre = sorted(cfg["personnages"], key=lambda c: (c["id"] != snap.get("protagoniste", "heros"), c["id"] != "heros",
                                                            {"doudou": 0, "enfant": 1, "animal": 2}.get(c["type"], 3)))
         ids = [c["id"] for c in ordre][:4]
@@ -101,13 +113,13 @@ def _run(pid, form, cfg, refs, folder):
         b = {"coverCharacterIds": ids, "characterBible": [],
              "coverBrief": f"{prenom.upper()} and companions at the heart of this world, at the very start of a wonderful adventure: a joyful, "
                            "wonder-filled moment full of warm magical light; every character clearly visible, recognisable and facing the viewer."}
-        _maj(pid, etape="Illustration de la couverture")
+        _maj(pid, etape="Illustration de la couverture", pct=62)
         crefs = P.refs_for(ids, portraits, None, folder, "couverture")
         prompt = P.cover_prompt(b, snap, crefs)
         (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
         P.image(prompt, crefs, fichier(pid), P.COVER_SIZE, G._m("q_main", G.IMAGE_QUALITY), "prompt.txt", etape="couverture (aperçu)")
         titrer(fichier(pid), folder / "apercu.jpg", prenom, form.get("univers"))
-        _maj(pid, statut="pret", etape="Prête", cout=round(BU.depense(livre)["total"], 4))
+        _maj(pid, statut="pret", etape="Prête", pct=100, cout=round(BU.depense(livre)["total"], 4))
         B.log(f"aperçu {pid} ({prenom}) prêt : {BU.depense(livre)['total']:.2f} $")
     except Exception as e:
         msg = "Le budget d'aperçus du jour est atteint : réessayez demain." if "Budget" in type(e).__name__ or "budget" in str(e).lower() else \
@@ -163,7 +175,7 @@ def etat(pid):
     r = _ligne(pid)
     if not r:
         return None
-    return {"id": pid, "statut": r["statut"], "etape": r["etape"], "erreur": r["erreur"],
+    return {"id": pid, "statut": r["statut"], "etape": r["etape"], "erreur": r["erreur"], "pct": r.get("pct") or 0,
             "image": f"/api/apercu/{pid}/image.jpg" if r["statut"] == "pret" else None}
 
 

@@ -52,9 +52,12 @@
   .ap-c.ok img { width:150px; height:150px; border-radius:10px 16px 16px 10px; object-fit:cover; flex:none; box-shadow:0 10px 22px -10px rgba(36,24,77,.6); }
   .ap-a { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; } .ap-n { font-size:13px !important; margin:0 !important; }
   .ap-err { color:var(--erreur) !important; font-weight:700; }
-  .ap-wait { display:flex; gap:14px; align-items:center; } .ap-wait i { width:38px; height:38px; flex:none; border-radius:50%; border:4px solid var(--trait); border-top-color:var(--rose); animation:tourne 1s linear infinite; }
+  .ap-wait { display:flex; gap:14px; align-items:center; }
+  .ap-c .ap-rond { position:relative; width:64px; height:64px; flex:none; display:grid; place-items:center; margin:0 auto; }
+  .ap-rond i { position:absolute; inset:0; border-radius:50%; border:5px solid var(--trait); border-top-color:var(--rose); animation:tourne 1s linear infinite; }
+  .ap-rond b { font:900 15px var(--texte); color:var(--encre); }
   @keyframes tourne { to { transform:rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .ap-wait i { animation:none; } }
+  @media (prefers-reduced-motion: reduce) { .ap-rond i { animation:none; } }
   @media (max-width:520px) { .ap-c { flex-direction:column; text-align:center; } .ap-c.ok img { width:100%; height:auto; aspect-ratio:1; } .ap-a { justify-content:center; } }
   .livres-l { display:grid; gap:6px; margin:0 0 14px; }
   .livres-l .ln { display:grid; grid-template-columns:64px 1fr 1fr; gap:8px; align-items:center; }
@@ -847,9 +850,10 @@
   fetch('/api/apercu/restants').then(r => r.json()).then(j => { APR.restants = j.restants; APR.max = j.max; if (tab === 'creations') render(); }).catch(() => {});
   function apercuHTML() {
     const a = S.apercu, pr = esc((S.enfant.prenom || 'votre enfant').trim()), reste = APR.restants;
-    const bouton = (txt) => reste === 0 ? `<p class="hint" style="margin:8px 0 0">Vos ${APR.max || 2} aperçus du jour sont utilisés : la couverture finale sera créée à la commande.</p>`
+    const bouton = (txt) => !ME.connecte ? `<a class="btn petit" href="/compte?suite=${encodeURIComponent('/creer?etape=creations')}">Se connecter pour voir sa couverture</a><span class="ap-n">gratuit, sans mot de passe</span>`
+      : reste === 0 ? `<p class="hint" style="margin:8px 0 0">Vos ${APR.max || 2} aperçus du jour sont utilisés : la couverture finale sera créée à la commande.</p>`
       : `<button type="button" class="btn petit" data-apercu="1">${txt}</button><span class="ap-n">${reste == null ? '' : reste + ' essai' + (reste > 1 ? 's' : '') + ' restant' + (reste > 1 ? 's' : '')}</span>`;
-    if (a && a.statut === 'en_cours') return `<div class="ap-c"><div class="ap-wait"><i></i><div><b>Nous peignons la couverture de ${pr}…</b><span>${esc(a.etape || 'Préparation')} · environ 1 à 2 minutes, vous pouvez continuer.</span></div></div></div>`;
+    if (a && a.statut === 'en_cours') return `<div class="ap-c"><div class="ap-wait"><span class="ap-rond"><i></i><b id="apPct">${apPct()} %</b></span><div><b>Nous peignons la couverture de ${pr}…</b><span>${esc(a.etape || 'Préparation')} · environ 1 à 2 minutes, vous pouvez continuer.</span></div></div></div>`;
     if (a && a.statut === 'pret') return `<div class="ap-c ok"><img src="${a.image}" alt="Aperçu de la couverture de ${pr}"><div><b>La couverture de ${pr}</b><span>C'est cette illustration qui sera sur son livre 1, si vous gardez ces personnages et cet univers.</span><div class="ap-a">${bouton('🎨 Une autre version')}</div></div></div>`;
     return `<div class="ap-c"><div class="ap-ico">✨</div><div><b>Voir sa vraie couverture avant de commander</b><span>Nous peignons ${pr} et ses compagnons dans l'univers du livre 1. C'est gratuit.</span>` +
       (a && a.erreur ? `<span class="ap-err">${esc(a.erreur)}</span>` : '') + `<div class="ap-a">${bouton('Voir sa couverture')}</div></div></div>`;
@@ -864,7 +868,14 @@
       APR.restants = j.restants; S.apercu = { id: j.id, statut: 'en_cours', etape: 'Préparation' }; save(); render(); suivreApercu();
     } catch (_) { S.apercu = { statut: 'erreur', erreur: 'Connexion perdue, réessayez.' }; render(); }
   }
-  let APT = null;
+  let APT = null, APV = 0;
+  function apPct() {                 // avancement : celui du serveur, et entre deux étapes il avance doucement (jamais au-delà de l'étape suivante)
+    const a = S.apercu || {}, srv = +a.pct || 0, plafond = srv < 60 ? 60 : 97;
+    APV = Math.max(APV, srv); return Math.min(Math.round(APV), plafond);
+  }
+  setInterval(() => { const a = S.apercu; if (!a || a.statut !== 'en_cours') { APV = 0; return; }
+    const plafond = (+a.pct || 0) < 60 ? 59 : 96; if (APV < plafond) APV += (plafond - APV) * .04 + .15;
+    const el = document.getElementById('apPct'); if (el) el.textContent = apPct() + ' %'; }, 1000);
   function suivreApercu() {
     clearTimeout(APT);
     if (!S.apercu || S.apercu.statut !== 'en_cours') return;
@@ -1283,6 +1294,7 @@
       S.produits = { livres: false, calendrier: false, coloriage: false };     // l'objet seul (le reste s'ajoute à l'étape 3)
       S.objets = [q.get('produit')]; vueFoc = 'obj:' + q.get('produit');
       save(); }
+    if (['enfant', 'compagnons', 'creations', 'commande'].includes(q.get('etape'))) tab = q.get('etape');   // retour de « Mon compte »
     const u = UNIV.find(x => !x.fete && x.cle === q.get('univers'));                 // carte « univers » de l'accueil
     if (u) { S.histoire.univers = u.nom; S.histoire.occasion = ''; save(); }
     const f = UNIV.find(x => x.fete && x.cle === q.get('fete'));                     // carte « occasion spéciale » de l'accueil
