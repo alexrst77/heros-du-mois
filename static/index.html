@@ -306,14 +306,16 @@
   @media (max-width:600px) { .panel { box-shadow:5px 5px 0 var(--luciole); } .stage { box-shadow:5px 5px 0 var(--rose); } }
 
   /* objets : la tasse, la gourde ou le sac, avec l'équipe imprimée dessus */
-  .scene.objet { overflow:visible; background:#2E1A6E; box-shadow:none; }
-  .scene.objet .decor { inset:0; filter:saturate(1.1) brightness(.9); transform:none; border-radius:inherit; }
+  .scene.objet { overflow:visible; background:linear-gradient(90deg, #E9ECF1 0%, #FFFFFF 38%, #FFFFFF 62%, #DDE1E8 100%); box-shadow:none; }
+  .scene.objet .decor, .scene.objet .fl { display:none; }
+  .scene.obj-sac { background:linear-gradient(90deg, #E2DAF0 0%, #F4F0FB 40%, #F4F0FB 60%, #D9CFEA 100%) !important; }
   .scene.objet::after { display:none; }
   .scene.objet .dos { display:none; }
   .scene.objet .ctitre { top:auto; bottom:5%; left:0; right:0; z-index:5; }
-  .scene.objet .ruban { display:inline-block; background:#FFF6E2; color:#2E1A6E; font:400 clamp(18px,3vw,26px)/1 var(--titre); padding:7px 18px 8px; border-radius:999px;
+  .scene.objet .ruban { display:inline-block; background:#2E1A6E; color:#FFF6E2; font:400 clamp(18px,3vw,26px)/1 var(--titre); padding:7px 18px 8px; border-radius:999px;
                         box-shadow:0 4px 12px rgba(20,10,50,.35); text-shadow:none; }
-  .scene.objet .big, .scene.objet .group { height:70%; margin-bottom:12%; }
+  .scene.objet { align-items:center; }
+  .scene.objet .big, .scene.objet .group { height:auto; width:90%; margin:0 auto 6%; }
   .scene.obj-tasse { aspect-ratio:1.3/1; width:80%; margin:18px 0 14px 4%; border-radius:12px 12px 26px 26px;
                      box-shadow:inset 0 10px 0 #D9DDE3, inset 0 13px 0 #A9AFB8, inset -14px 0 22px rgba(0,0,0,.25), 0 22px 26px -18px rgba(20,10,50,.6); }
   .scene.obj-tasse::before { content:""; position:absolute; right:-21%; top:20%; width:24%; height:50%; border:clamp(10px,2.4vw,16px) solid #E6E9EE; border-left:0;
@@ -322,7 +324,7 @@
                       box-shadow:inset -12px 0 20px rgba(0,0,0,.28), inset 10px 0 14px rgba(255,255,255,.18), 0 22px 26px -18px rgba(20,10,50,.6); }
   .scene.obj-gourde::before { content:""; position:absolute; left:22%; right:22%; top:-15%; height:15%; background:linear-gradient(90deg,#2B2B33,#4A4A55 45%,#2B2B33);
                               border-radius:16px 16px 4px 4px; }
-  .scene.obj-gourde .big, .scene.obj-gourde .group { height:52%; margin-bottom:28%; } .scene.obj-gourde .ruban { font-size:clamp(14px,2.4vw,20px); padding:6px 12px; }
+  .scene.obj-gourde .big, .scene.obj-gourde .group { width:100%; margin-bottom:10%; } .scene.obj-gourde .ruban { font-size:clamp(14px,2.4vw,20px); padding:6px 12px; }
   .scene.obj-sac { aspect-ratio:.8/1; width:76%; margin:40px auto 10px; border-radius:42% 42% 18px 18px / 24% 24% 18px 18px;
                    box-shadow:inset 0 0 0 7px #3E3550, inset -12px -6px 20px rgba(0,0,0,.25), 0 22px 26px -18px rgba(20,10,50,.6); }
   .scene.obj-sac::before { content:""; position:absolute; left:38%; right:38%; top:-11%; height:13%; border:8px solid #3E3550; border-bottom:0; border-radius:22px 22px 0 0; }
