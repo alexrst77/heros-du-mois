@@ -157,6 +157,18 @@ def sans(type_id):
     return set(t.get("sans") or [])
 
 
+def type_animal(type_id):
+    return next((o for o in OPTIONS["animal"]["type"] if o["id"] == type_id), {})
+
+
+def couleur_permise(a):
+    """Couleur proposée pour cette espèce / race (sinon celle du modèle peint)."""
+    t = type_animal(a.get("type"))
+    if t.get("couleurs") and a.get("couleur") not in t["couleurs"]:
+        return OPTIONS["modeles"]["animal"].get(a.get("type"), {}).get("couleur", t["couleurs"][0])
+    return a.get("couleur")
+
+
 def est_chien(type_id):
     return type_id == "chien" or any(o["id"] == type_id and o.get("race") == "chien" for o in OPTIONS["animal"]["type"])
 
@@ -191,6 +203,7 @@ def sanitize_avatar(av, prenom, age, problems=None):
     for i, a in enumerate((av.get("animaux") or [])[:3]):
         if isinstance(a, dict):
             x = _pick("animal", a, f"animal {i + 1}", problems)
+            x["couleur"] = couleur_permise(x)
             if x["type"] in ("chien", "lapin"):          # les oreilles suivent le modèle peint de l'aperçu (pas encore de variante)
                 x["oreilles"] = OPTIONS["modeles"]["animal"][x["type"]]["oreilles"]
             x["nom"] = _name(a.get("nom"))
@@ -252,8 +265,12 @@ def avatar_descriptions(av):
         hors = sans(a["type"])
         size = {"petit": "small (reaching the child's knee)", "moyen": "medium-sized (reaching the child's hip)",
                 "grand": "large (its back reaches the child's waist)"}.get(a["taille"], h("taille")["en"]) if est_chien(a["type"]) or a["type"] == "chat" else h("taille")["en"]
-        couleur = "" if "couleur" in hors else h("couleur")["en"] + " "
-        txt = f"{a['nom'] or 'the pet'}, {av['prenom']}'s {size} {couleur}{h('type')['en']} (a living animal)"
+        tpl = type_animal(a["type"]).get("tpl")
+        couleur = "" if "couleur" in hors or tpl else h("couleur")["en"] + " "
+        txt = f"{a['nom'] or 'the pet'}, {av['prenom']}'s {size} {couleur}{h('type')['en']}"
+        if tpl and "couleur" not in hors:
+            txt += " " + tpl.format(c=h("couleur")["en"])
+        txt += " (a living animal)"
         if a["type"] in ("chien", "lapin"):
             txt += f" with {h('oreilles')['en']}"
         if a["motif"] != "uni" and a["type"] != "oiseau" and "motif" not in hors:
@@ -968,6 +985,7 @@ def recolor_targets(kind, cfg):
         if cfg.get("accessoire") == "echarpe": t["A"] = col("doudou", "couleur_accessoire")
     else:
         hors = sans(cfg.get("type"))
+        cfg = dict(cfg, couleur=couleur_permise(cfg))
         main = col("animal", "couleur")
         if cfg.get("couleur") != base.get("couleur"): t["R"] = main; t["dye"] = True
         if cfg.get("motif") == "uni" and cfg.get("type") != "oiseau": t["G"] = _shade(main, .2)
@@ -979,6 +997,8 @@ def recolor_targets(kind, cfg):
         for k in hors:          # race de chien, tortue, poisson : ce que le modèle peint impose
             for z in {"couleur": ("R", "dye", "G", "motif", "M"), "motif": ("G", "motif", "M"), "collier": ("C",)}.get(k, ()):
                 t.pop(z, None)
+        if type_animal(cfg.get("type")).get("clair_suit") and "R" in t:      # labrador, bouledogue : poitrail assorti au pelage
+            t["G"] = _shade(main, .2)
     return {k: v for k, v in t.items() if v}
 
 

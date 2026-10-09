@@ -527,54 +527,84 @@
    {
     "id": "labrador",
     "fr": "Labrador",
-    "en": "young yellow Labrador retriever dog (golden-yellow coat, floppy ears, otter tail)",
+    "en": "young Labrador retriever dog (floppy ears, otter tail)",
     "img": "animal-chien-labrador",
     "race": "chien",
     "sans": [
-     "couleur",
      "motif",
      "couleur2",
      "oreilles"
-    ]
+    ],
+    "tpl": "with a {c} coat",
+    "couleurs": [
+     "creme",
+     "fauve",
+     "marron",
+     "noir"
+    ],
+    "clair_suit": true
    },
    {
     "id": "berger",
     "fr": "Berger australien",
-    "en": "young blue merle Australian Shepherd dog (grey-and-black marbled coat, white chest and white blaze, copper points on the face and legs, fluffy fur)",
+    "en": "young Australian Shepherd dog (blue merle grey-and-black marbled coat, white chest and white blaze, fluffy fur)",
     "img": "animal-chien-berger-australien",
     "race": "chien",
     "sans": [
-     "couleur",
      "motif",
      "couleur2",
      "oreilles"
-    ]
+    ],
+    "tpl": "with {c} points on the face and legs",
+    "couleurs": [
+     "roux",
+     "fauve",
+     "marron",
+     "noir"
+    ],
+    "couleur_fr": "Couleur des marques"
    },
    {
     "id": "bouledogue",
     "fr": "Bouledogue français",
-    "en": "young fawn French bulldog (big upright bat ears, short flat dark muzzle, compact body)",
+    "en": "young French bulldog (big upright bat ears, short flat dark muzzle, compact body)",
     "img": "animal-chien-bouledogue",
     "race": "chien",
     "sans": [
-     "couleur",
      "motif",
      "couleur2",
      "oreilles"
-    ]
+    ],
+    "tpl": "with a {c} coat",
+    "couleurs": [
+     "fauve",
+     "creme",
+     "blanc",
+     "marron",
+     "gris",
+     "noir"
+    ],
+    "clair_suit": true
    },
    {
     "id": "jackrussell",
     "fr": "Jack Russell",
-    "en": "young Jack Russell terrier dog (white coat with tan patches on the head and one on the back, folded ears)",
+    "en": "young Jack Russell terrier dog (white coat, folded ears)",
     "img": "animal-chien-jack-russell",
     "race": "chien",
     "sans": [
-     "couleur",
      "motif",
      "couleur2",
      "oreilles"
-    ]
+    ],
+    "tpl": "with {c} patches on the head and one on the back",
+    "couleurs": [
+     "roux",
+     "fauve",
+     "marron",
+     "noir"
+    ],
+    "couleur_fr": "Couleur des taches"
    },
    {
     "id": "lapin",
@@ -597,15 +627,25 @@
    {
     "id": "tortue",
     "fr": "Tortue",
-    "en": "little pet tortoise (land turtle) with a rounded green-brown shell with clear hexagonal plates",
+    "en": "little pet tortoise (land turtle) with clear hexagonal plates on its rounded shell",
     "img": "animal-tortue",
     "sans": [
-     "couleur",
      "motif",
      "couleur2",
      "oreilles",
      "collier"
-    ]
+    ],
+    "tpl": "whose shell is {c}",
+    "couleurs": [
+     "marron",
+     "olive",
+     "vert",
+     "fauve",
+     "jaune",
+     "gris",
+     "noir"
+    ],
+    "couleur_fr": "Couleur de la carapace"
    },
    {
     "id": "poisson",
@@ -719,6 +759,13 @@
     "c": "#F2D14C",
     "sh": "#D8B530",
     "en": "bright-yellow"
+   },
+   {
+    "id": "olive",
+    "fr": "Vert olive (tortue)",
+    "c": "#7A8A3E",
+    "sh": "#5F6E2C",
+    "en": "olive-green"
    }
   ],
   "motif": [
@@ -912,7 +959,7 @@
     "oreilles": "tombantes"
    },
    "berger": {
-    "couleur": "gris",
+    "couleur": "roux",
     "motif": "uni",
     "couleur2": "creme",
     "yeux": "sombres",
@@ -928,7 +975,7 @@
     "oreilles": "tombantes"
    },
    "jackrussell": {
-    "couleur": "blanc",
+    "couleur": "roux",
     "motif": "uni",
     "couleur2": "creme",
     "yeux": "sombres",

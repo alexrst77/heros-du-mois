@@ -575,6 +575,7 @@
       if (cfg.collier && cfg.collier !== 'aucun' && cfg.type !== 'oiseau') t.C = colorOf(OPT.animal.collier, cfg.collier);
       const Z = { couleur: ['R', 'dye', 'G', 'motif', 'M'], motif: ['G', 'motif', 'M'], collier: ['C'] };
       sansDe(cfg.type).forEach(k => (Z[k] || []).forEach(z => delete t[z]));      // race de chien, tortue, poisson : le modèle peint impose
+      if ((Avatar.pick(OPT.animal.type, cfg.type) || {}).clair_suit && t.R) t.G = Avatar.shade(main, .2);      // labrador, bouledogue : poitrail assorti
     }
     return t;
   }
@@ -594,15 +595,16 @@
     const k = keyOf(kind, cfg); let st = PAINT.get(k);
     if (!st) {
       const slot = kind + ':' + modelName(kind, cfg);
-      st = { url: SHOWN.get(slot) || modelUrl(kind, cfg) }; PAINT.set(k, st);   // on garde l'image affichée jusqu'au nouveau rendu (pas de clignotement)
+      st = { url: SHOWN.get(slot) || modelUrl(kind, cfg), k }; PAINT.set(k, st);   // on garde l'image affichée jusqu'au nouveau rendu (pas de clignotement)
       const t = targetsOf(kind, cfg);
       if (Object.keys(t).length)       // aperçu instantané : on recolore le modèle peint (aucun appel payant)
-        Avatar.recolor(modelName(kind, cfg), t).then(u => { st.url = u; st.recolore = true; SHOWN.set(slot, u); renderStage(); }).catch(() => {});
+        Avatar.recolor(modelName(kind, cfg), t).then(u => { st.url = u; st.recolore = true; SHOWN.set(slot, u); renderStage();
+          document.querySelectorAll('img[data-pk]').forEach(i => { if (i.dataset.pk === k) i.src = u; }); }).catch(() => {});   // vignettes de l'équipe aussi
       else { st.url = modelUrl(kind, cfg); SHOWN.set(slot, st.url); }
     }
     return st;
   }
-  const img = (st, alt) => `<img src="${st.url}" alt="${esc(alt || '')}">`;
+  const img = (st, alt) => `<img src="${st.url}" alt="${esc(alt || '')}" data-pk="${esc(st.k || '')}">`;
   function status(which) {
     const rest = bookOnly(kindOf(which), cfgOf(which));
     return rest.length ? `<div class="badge">✓ Aperçu en direct. ${rest.join(', ').replace(/^./, c => c.toUpperCase())} apparaîtr${rest.length > 1 ? 'ont' : 'a'} dans les illustrations du livre.</div>` : '';
@@ -733,13 +735,14 @@
   }
   function panelAnimaux() {
     const p = S.animaux[pet], O = OPT.animal, hors = sansDe(p.type), chien = estChien(p.type);
-    const colors = ['oiseau', 'poisson'].includes(p.type) ? O.couleur.map(c => Object.assign({}, c, { fr: c.fr.replace(' (oiseau)', '') })) : O.couleur.filter(c => !/oiseau/.test(c.fr));
+    const ty = Avatar.pick(O.type, p.type), sansOis = c => Object.assign({}, c, { fr: c.fr.replace(/ \(.*\)/, '') });
+    const colors = ty.couleurs ? ty.couleurs.map(id => sansOis(Avatar.pick(O.couleur, id))) : ['oiseau', 'poisson'].includes(p.type) ? O.couleur.map(sansOis) : O.couleur.filter(c => !/\(/.test(c.fr));
     const races = O.type.filter(t => t.id === 'chien' || t.race === 'chien').map(t => ({ id: t.id, fr: t.race_fr || t.fr }));
     const det = ['taille', !hors.includes('motif') && 'motif', 'yeux', !hors.includes('collier') && p.type !== 'oiseau' && 'collier'].filter(Boolean).join(', ');
     return G('Son nom', `<input type="text" data-in="nom" maxlength="20" placeholder="Pistache" value="${esc(p.nom)}">`) +
       G('Espèce', thumbs({ type: chien ? 'chien' : p.type }, 'type', O.type.filter(t => !t.race), id => `<img src="/static/avatars/${Avatar.pick(O.type, id).img}.webp" alt="" loading="lazy">`)) +
       (chien ? G('Race', chips(p, 'type', races)) : '') +
-      (!hors.includes('couleur') ? G('Couleur', swatches(p, 'couleur', colors), sel(colors, p.couleur)) : '') +
+      (!hors.includes('couleur') ? G(ty.couleur_fr || 'Couleur', swatches(p, 'couleur', colors), sel(colors, p.couleur)) : '') +
       `<details class="multi reg" data-ouv="affa" ${OUVERT.affa ? 'open' : ''}><summary>Plus de détails <small>${det}</small></summary><div class="reg-b">` +
       G('Taille', chips(p, 'taille', O.taille)) +
       (!hors.includes('motif') ? G(p.type === 'oiseau' ? 'Ventre' : 'Motif', chips(p, 'motif', p.type === 'oiseau' ? O.motif.filter(m => m.id === 'uni' || m.id === 'ventre') : O.motif)) : '') +
@@ -1083,6 +1086,7 @@
       if (tg === 'animaux' && b.dataset.k === 'type') {      // on ne remplace que les réglages que le parent n'a pas encore touchés
         const base = OPT.modeles.animal[o.type]; o._choisi = o._choisi || [];
         Object.keys(base).forEach(k => { if (!o._choisi.includes(k)) o[k] = base[k]; });
+        const pc = Avatar.pick(OPT.animal.type, o.type).couleurs; if (pc && !pc.includes(o.couleur)) o.couleur = base.couleur;   // couleur proposée pour cette race
       } else if (tg === 'animaux') { o._choisi = [...new Set([...(o._choisi || []), b.dataset.k])]; }
       return render();
     }
