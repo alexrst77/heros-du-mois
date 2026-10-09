@@ -517,17 +517,37 @@
   .fin h2 { text-shadow:0 2px 16px rgba(20,10,50,.5); } .fin p { color:#fff; font-weight:600; }
   .fin h2::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='10' viewBox='0 0 120 10'%3E%3Cpath d='M3 6 Q 20 1 40 5 T 80 5 T 117 4' stroke='%23FFC23D' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); }
   .contact { border:2.5px solid var(--encre) !important; box-shadow:7px 7px 0 var(--luciole) !important; }
+
+  /* menu du téléphone (en haut à gauche) : les mêmes liens que le bandeau de l'ordinateur */
+  .burger { display:none; flex:none; width:40px; height:40px; border:2px solid var(--encre); border-radius:12px; background:#fff; cursor:pointer;
+            flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0; }
+  .burger span { display:block; width:18px; height:2.5px; border-radius:2px; background:var(--encre); transition:transform .2s, opacity .2s; }
+  .burger[aria-expanded="true"] span:nth-child(1) { transform:translateY(6.5px) rotate(45deg); }
+  .burger[aria-expanded="true"] span:nth-child(2) { opacity:0; }
+  .burger[aria-expanded="true"] span:nth-child(3) { transform:translateY(-6.5px) rotate(-45deg); }
+  .menu-m { display:grid; gap:2px; padding:8px 16px 14px; background:#fff; border-top:1px solid var(--trait); }
+  .menu-m[hidden] { display:none; }
+  .menu-m a { padding:12px 6px; font-weight:800; font-size:17px; color:var(--encre); text-decoration:none; border-bottom:1px solid var(--trait); }
+  .menu-m a:last-child { border-bottom:0; }
+  @media (max-width:820px) { .burger { display:inline-flex; } }
+  @media (max-width:440px) { .top .btn .long { display:none; } }
+  @media (min-width:821px) { .menu-m { display:none !important; } }
 </style>
 </head>
 <body>
 <div class="noel" id="noel" hidden>🎄 Pour Noël, commandez avant le <b>1er décembre</b> : création, relecture, impression et livraison comprises.</div>
 <header class="top">
   <div class="in wrap">
+    <button type="button" class="burger" id="burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="menuMobile"><span></span><span></span><span></span></button>
     <a href="/" class="logo" aria-label="Mon Héros du Mois, accueil"><span class="logo-mark" aria-hidden="true"></span>Mon Héros du Mois</a>
     <nav aria-label="Navigation principale">
       <a href="#livres">Livres</a><a href="#calendrier">Calendrier</a><a href="#coloriage">Coloriage</a><a href="#objets">Objets</a><a href="#comment">Comment ça marche</a><a href="#questions">Questions</a><a href="/compte">Mon compte</a>
     </nav>
-    <a class="btn petit" href="/creer">Créer son univers</a>
+    <a class="btn petit" href="/creer">Créer<span class="long"> son univers</span></a>
+  </div>
+  <div class="menu-m" id="menuMobile" role="navigation" aria-label="Menu" hidden>
+    <a href="#livres">📚 Livres</a><a href="#calendrier">📅 Calendrier</a><a href="#coloriage">🖍️ Coloriage</a><a href="#objets">🎒 Objets</a>
+    <a href="#comment">✨ Comment ça marche</a><a href="#questions">❓ Questions</a><a href="/compte">👤 Mon compte</a>
   </div>
 </header>
 
@@ -1104,6 +1124,15 @@
     $('avis').innerHTML = list.map(a => `<figure><div class="etoiles" aria-label="${a.note || 5} étoiles sur 5">${'★'.repeat(a.note || 5)}</div><blockquote>${esc(a.texte)}</blockquote><figcaption>${esc(a.nom)}${a.ville ? ', ' + esc(a.ville) : ''}</figcaption></figure>`).join('');
     $('avisBloc').hidden = false;
   }).catch(() => {});
+})();
+</script>
+<script>
+(function () {
+  const b = document.getElementById('burger'), m = document.getElementById('menuMobile');
+  const ouvrir = o => { b.setAttribute('aria-expanded', o); b.setAttribute('aria-label', o ? 'Fermer le menu' : 'Ouvrir le menu'); m.hidden = !o; };
+  b.addEventListener('click', () => ouvrir(m.hidden));
+  m.addEventListener('click', e => { if (e.target.closest('a')) ouvrir(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') ouvrir(false); });
 })();
 </script>
 </body>
