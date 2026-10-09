@@ -276,14 +276,14 @@ function vueTableau() {
 
 /* ================================================================ commandes */
 const FILTRES = { actifs: '📚 En cours', relire: '👀 À relire', fabrication: '🎨 Fabrication', pret: '✅ Prêts', imprimeur: "🖨️ Chez l'imprimeur", bloque: '⚠️ Bloqués', expedie: '📦 Expédiés', essai: '🧪 Essais', archive: '🗂️ Archivés', tout: 'Tout' };
-const filtreOk = (k, f) => f === 'tout' || (f === 'actifs' ? !['archive', 'expedie', 'essai'].includes(k) : k === f);
+const filtreOk = (k, f, o) => f === 'tout' || (f === 'actifs' ? !['archive', 'expedie', 'essai', 'imprimeur'].includes(k) || (k === 'imprimeur' && o && o.printful_statut === 'draft') : k === f);   // chez l'imprimeur : rien à faire, sauf brouillon Printful à confirmer
 let CHERCHE = '';
 function vueCommandes() {
   const ks = D.commandes.map(o => [o, etat(o).k]);
   const q = CHERCHE.trim().toLowerCase();
-  const rows = ks.filter(([o, k]) => filtreOk(k, FILTRE) && (!q || [o.id, o.email, o.titre, (o.adresse || {}).nom, o.prenom].join(' ').toLowerCase().includes(q))).map(([o]) => o);
+  const rows = ks.filter(([o, k]) => filtreOk(k, FILTRE, o) && (!q || [o.id, o.email, o.titre, (o.adresse || {}).nom, o.prenom].join(' ').toLowerCase().includes(q))).map(([o]) => o);
   return `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><input id="cherche" value="${esc(CHERCHE)}" placeholder="🔎 Chercher : nom, e-mail, référence…" style="flex:1;min-width:220px;font:600 14px var(--texte);padding:10px 12px;border:1.5px solid var(--line);border-radius:12px" oninput="CHERCHE=this.value;clearTimeout(window._ch);window._ch=setTimeout(()=>{render();const i=document.getElementById('cherche');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>
-    <div class="chips">${Object.entries(FILTRES).map(([k, t]) => { const c = ks.filter(([, x]) => filtreOk(x, k)).length; return `<button class="${k === FILTRE ? 'on' : ''}" onclick="FILTRE='${k}';render()">${t}<em>${c}</em></button>`; }).join('')}</div>
+    <div class="chips">${Object.entries(FILTRES).map(([k, t]) => { const c = ks.filter(([o, x]) => filtreOk(x, k, o)).length; return `<button class="${k === FILTRE ? 'on' : ''}" onclick="FILTRE='${k}';render()">${t}<em>${c}</em></button>`; }).join('')}</div>
     ${rows.length ? liste(rows) : '<div class="empty"><div class="big">🌙</div>Aucune commande ici.</div>'}
     ${D.abonnements.length ? '<h2>Abonnements (ancienne formule)</h2>' + vueAbos() : ''}`;
 }
