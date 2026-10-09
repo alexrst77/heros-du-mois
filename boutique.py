@@ -971,6 +971,43 @@ def admin_vignettes():
     return jsonify(lancees=todo)
 
 
+@bp.get("/admin/api/atelier-avatars")
+def admin_atelier_etat():
+    if not admin_ok():
+        abort(403)
+    import atelier_avatars as AT
+    return jsonify(AT.etat())
+
+
+@bp.post("/admin/api/atelier-avatars")
+def admin_atelier_peindre():
+    """Peint en arrière-plan les nouveaux modèles d'avatar (races de chiens, tortue, poisson, cheveux longs garçon)."""
+    if not admin_ok():
+        abort(403)
+    import atelier_avatars as AT
+    d = request.get_json(force=True, silent=True) or {}
+    AT.lancer(log, [x for x in d.get("refaire") or [] if x in AT.NOUVEAUX])
+    return jsonify(ok=True)
+
+
+@bp.get("/admin/atelier-avatars/<nom>.png")
+def admin_atelier_image(nom):
+    if not admin_ok():
+        abort(403)
+    import atelier_avatars as AT
+    if nom not in AT.NOUVEAUX or not AT.fichier(nom).exists():
+        abort(404)
+    return send_file(AT.fichier(nom), mimetype="image/png", max_age=0)
+
+
+@bp.get("/admin/atelier-avatars.zip")
+def admin_atelier_zip():
+    if not admin_ok():
+        abort(403)
+    import atelier_avatars as AT
+    return send_file(AT.zip_bytes(), mimetype="application/zip", as_attachment=True, download_name="nouveaux_avatars.zip")
+
+
 @bp.get("/admin/api/tarifs")
 def admin_tarifs():
     if not admin_ok():
