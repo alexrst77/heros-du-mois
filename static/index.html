@@ -550,6 +550,8 @@
   const modelName = (kind, cfg) => kind === 'enfant' ? Avatar.pick(OPT.enfant.coiffure, cfg.coiffure).img + (cfg.taches === 'oui' ? '' : '-lisse')   // modèles peints avec taches de rousseur
     : Avatar.pick(OPT[kind].type, cfg.type).img + (kind === 'doudou' && cfg.accessoire !== 'noeud' ? '-nu' : '');   // sans nœud : aucun accessoire ou écharpe
   const colorOf = (list, id) => Avatar.pick(list, id).c;
+  const sansDe = type => (Avatar.pick(OPT.animal.type, type) || {}).sans || [];
+  const estChien = type => type === 'chien' || (Avatar.pick(OPT.animal.type, type) || {}).race === 'chien';
   function targetsOf(kind, cfg) {
     const b = modelBase(kind, cfg), t = {};
     if (kind === 'enfant') {
@@ -571,13 +573,15 @@
       if (['taches', 'raye', 'masque'].includes(cfg.motif) && cfg.type !== 'oiseau') { t.motif = cfg.motif; t.M = colorOf(OPT.animal.couleur2, cfg.couleur2); }
       if (cfg.yeux !== b.yeux) t.E = colorOf(OPT.animal.yeux, cfg.yeux);
       if (cfg.collier && cfg.collier !== 'aucun' && cfg.type !== 'oiseau') t.C = colorOf(OPT.animal.collier, cfg.collier);
+      const Z = { couleur: ['R', 'dye', 'G', 'motif', 'M'], motif: ['G', 'motif', 'M'], collier: ['C'] };
+      sansDe(cfg.type).forEach(k => (Z[k] || []).forEach(z => delete t[z]));      // race de chien, tortue, poisson : le modèle peint impose
     }
     return t;
   }
   function bookOnly(kind, cfg) { return []; }      // tout ce qui se choisit se voit en direct dans l'aperçu
   const SHOWN = new Map(), OUVERT = {};
   const RETIREES = ['sweat', 'robe'];      // tenues retirées : rendu pas assez propre en portrait
-  const COIF = { garcon: ['court', 'bataille', 'boucle', 'afro', 'rase'],
+  const COIF = { garcon: ['court', 'bataille', 'boucle', 'milong', 'longgarcon', 'afro', 'rase'],
                  fille: ['long', 'longboucle', 'carre', 'couettes', 'queue', 'tresses', 'chignon', 'afro', 'boucle'] };
   function herosChoix() {          // qui est le héros du livre : l'enfant, son doudou ou un de ses animaux
     const l = [['enfant', (S.enfant.prenom || 'Mon enfant').trim() + ' (l\'enfant)']];
@@ -728,17 +732,20 @@
       `<button type="button" class="btn danger" data-eqdel="doudou">Pas de doudou</button>`;
   }
   function panelAnimaux() {
-    const p = S.animaux[pet], O = OPT.animal;
-    const colors = p.type === 'oiseau' ? O.couleur : O.couleur.filter(c => !/oiseau/.test(c.fr));
+    const p = S.animaux[pet], O = OPT.animal, hors = sansDe(p.type), chien = estChien(p.type);
+    const colors = ['oiseau', 'poisson'].includes(p.type) ? O.couleur.map(c => Object.assign({}, c, { fr: c.fr.replace(' (oiseau)', '') })) : O.couleur.filter(c => !/oiseau/.test(c.fr));
+    const races = O.type.filter(t => t.id === 'chien' || t.race === 'chien').map(t => ({ id: t.id, fr: t.race_fr || t.fr }));
+    const det = ['taille', !hors.includes('motif') && 'motif', 'yeux', !hors.includes('collier') && p.type !== 'oiseau' && 'collier'].filter(Boolean).join(', ');
     return G('Son nom', `<input type="text" data-in="nom" maxlength="20" placeholder="Pistache" value="${esc(p.nom)}">`) +
-      G('Espèce', thumbs(p, 'type', O.type, id => `<img src="/static/avatars/animal-${id}.webp" alt="" loading="lazy">`)) +
-      G('Couleur', swatches(p, 'couleur', colors), sel(O.couleur, p.couleur)) +
-      `<details class="multi reg" data-ouv="affa" ${OUVERT.affa ? 'open' : ''}><summary>Plus de détails <small>taille, motif, yeux, collier</small></summary><div class="reg-b">` +
+      G('Espèce', thumbs({ type: chien ? 'chien' : p.type }, 'type', O.type.filter(t => !t.race), id => `<img src="/static/avatars/${Avatar.pick(O.type, id).img}.webp" alt="" loading="lazy">`)) +
+      (chien ? G('Race', chips(p, 'type', races)) : '') +
+      (!hors.includes('couleur') ? G('Couleur', swatches(p, 'couleur', colors), sel(colors, p.couleur)) : '') +
+      `<details class="multi reg" data-ouv="affa" ${OUVERT.affa ? 'open' : ''}><summary>Plus de détails <small>${det}</small></summary><div class="reg-b">` +
       G('Taille', chips(p, 'taille', O.taille)) +
-      G(p.type === 'oiseau' ? 'Ventre' : 'Motif', chips(p, 'motif', p.type === 'oiseau' ? O.motif.filter(m => m.id === 'uni' || m.id === 'ventre') : O.motif)) +
-      (p.motif !== 'uni' && p.type !== 'hamster' || (p.type === 'hamster' && p.motif !== 'uni') ? G('Deuxième couleur', swatches(p, 'couleur2', O.couleur2), sel(O.couleur2, p.couleur2)) : '') +
+      (!hors.includes('motif') ? G(p.type === 'oiseau' ? 'Ventre' : 'Motif', chips(p, 'motif', p.type === 'oiseau' ? O.motif.filter(m => m.id === 'uni' || m.id === 'ventre') : O.motif)) : '') +
+      (!hors.includes('motif') && p.motif !== 'uni' ? G('Deuxième couleur', swatches(p, 'couleur2', O.couleur2), sel(O.couleur2, p.couleur2)) : '') +
       G('Yeux', swatches(p, 'yeux', O.yeux)) +
-      (p.type !== 'oiseau' ? G('Collier', swatches(p, 'collier', O.collier), sel(O.collier, p.collier)) : '') + `</div></details>` +
+      (p.type !== 'oiseau' && !hors.includes('collier') ? G('Collier', swatches(p, 'collier', O.collier), sel(O.collier, p.collier)) : '') + `</div></details>` +
       `<button type="button" class="btn danger" data-delpet="1">Retirer ${esc(petName(p, pet))}</button>`;
   }
   function panelFratrie() {
@@ -1072,6 +1079,7 @@
         if (AJ[b.dataset.v]) o[AJ[b.dataset.v]] = false;
       }
       if ((tab === 'enfant' || tg === 'fratrie') && b.dataset.k === 'genre' && !COIF[o.genre].includes(o.coiffure)) o.coiffure = COIF[o.genre][0];
+      if (tg === 'animaux' && b.dataset.k === 'type' && b.dataset.v === 'chien' && estChien(avant) && b.closest('.thumbs')) o.type = avant;   // « Chien » garde la race choisie
       if (tg === 'animaux' && b.dataset.k === 'type') {      // on ne remplace que les réglages que le parent n'a pas encore touchés
         const base = OPT.modeles.animal[o.type]; o._choisi = o._choisi || [];
         Object.keys(base).forEach(k => { if (!o._choisi.includes(k)) o[k] = base[k]; });

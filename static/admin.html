@@ -618,7 +618,7 @@ async function atelierCharger() { ATEL = await (await fetch('/admin/api/atelier-
 function atelierHtml() {
   if (!ATEL) return 'Chargement…';
   const n = ATEL.modeles.filter(m => m.pret).length;
-  return `<div class="ateliers">${ATEL.modeles.map(m => `<figure>${m.pret ? `<img src="/admin/atelier-avatars/${m.nom}.png${Q}&t=${Date.now()}" alt="">` : '<div class="vide">' + (ATEL.en_cours ? '⏳' : '—') + '</div>'}<figcaption>${esc(m.nom.replace(/^(enfant|animal)-/, ''))}${m.pret && !ATEL.en_cours ? ` <a href="#" onclick="atelierPeindre(this,['${m.nom}']);return false">refaire</a>` : ''}</figcaption>${ATEL.erreurs[m.nom] ? `<div class="ko-c" style="font-size:11px">${esc(ATEL.erreurs[m.nom])}</div>` : ''}</figure>`).join('')}</div>
+  return `<div class="ateliers">${ATEL.modeles.map(m => `<figure>${m.pret ? `<img src="/admin/atelier-avatars/${m.nom}.png${Q}&t=${Date.now()}" alt="">` : '<div class="vide">' + (ATEL.en_cours ? '⏳' : '—') + '</div>'}<figcaption>${esc(m.nom.replace(/^(enfant|animal)-/, '').replace(/^doudou-/, 'doudou '))}${m.pret && !ATEL.en_cours ? ` <a href="#" onclick="atelierPeindre(this,['${m.nom}']);return false">refaire</a>` : ''}</figcaption>${ATEL.erreurs[m.nom] ? `<div class="ko-c" style="font-size:11px">${esc(ATEL.erreurs[m.nom])}</div>` : ''}</figure>`).join('')}</div>
     <div class="acts">${ATEL.en_cours ? '<span class="meta">⏳ En cours de peinture (environ 1 min par image)…</span>' : `<button class="btn" onclick="atelierPeindre(this)">${n < ATEL.modeles.length ? `🎨 Peindre ${n ? 'les ' + (ATEL.modeles.length - n) + ' manquants' : 'les ' + ATEL.modeles.length + ' modèles'} (≈ 0,20 $ l'un)` : '✅ Tout est peint'}</button>`}
     ${n ? `<a class="btn" href="/admin/atelier-avatars.zip${Q}">⬇️ Télécharger le zip (à envoyer à Claude)</a>` : ''}</div>`;
 }
@@ -678,8 +678,8 @@ function vueReglages() {
     <div id="disque" class="meta">Chargement…</div>
     <div class="acts"><button class="btn" onclick="nettoyer(this)">🧹 Libérer de la place</button></div>
     <p class="meta" style="margin:0">Efface seulement les fichiers temporaires, les essais de plus de 3 jours et les créations jamais commandées. Rien de ce qui sert n'est touché.</p></div>
-  <div class="card" style="grid-column:1/-1"><h3>🎨 Nouveaux avatars (races de chiens, tortue, poisson, cheveux longs garçon)</h3>
-    <p class="meta" style="margin:0 0 8px">Peints par OpenAI dans le style du pack. Regarde-les, refais ceux qui ne plaisent pas, puis envoie le zip à Claude pour les brancher dans le configurateur.</p>
+  <div class="card" style="grid-column:1/-1"><h3>🎨 Repeindre le pack d'avatars dans le nouveau style</h3>
+    <p class="meta" style="margin:0 0 8px">Les 12 coiffures, 5 animaux et 5 doudous actuels, repeints par OpenAI dans le style des nouveaux chiens, de la tortue et du poisson (mêmes personnages, mêmes couleurs, cadrage identique). Rien ne change sur le site tant que Claude ne les a pas intégrés : regarde-les, refais ceux qui ne plaisent pas, puis envoie le zip à Claude. Coût estimé : 4 à 5 $ pour les 22.</p>
     <div id="atelier">${ATEL ? atelierHtml() : 'Chargement…'}</div></div>
   <div class="card"><h3>🖼️ Vignettes de l'accueil du site</h3>
     <p class="meta" style="margin:0">Illustrations des cartes univers et fêtes encore manquantes (une image par vignette).</p>

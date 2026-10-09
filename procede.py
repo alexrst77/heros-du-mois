@@ -130,6 +130,7 @@ def fiche(c):
         if k == "couleur_accessoire" and cfg.get("accessoire") == "aucun": continue
         if k == "couleur2" and cfg.get("motif") == "uni": continue
         if k == "oreilles" and cfg.get("type") not in ("chien", "lapin"): continue
+        if group == "animal" and k in G.sans(cfg.get("type")): continue      # race de chien, tortue : couleur du modèle
         n = "espece" if k == "type" else k             # « type » désigne déjà la sorte de personnage
         f[n] = G._opt(group, k, v).get("fr") or v
         f[n + "_id"] = v

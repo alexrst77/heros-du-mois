@@ -151,6 +151,16 @@ def _name(s):
     return "-".join(" ".join(w[:1].upper() + w[1:] for w in part.split(" ")) for part in s.split("-"))
 
 
+def sans(type_id):
+    """Réglages sans objet pour une espèce / une race (l'apparence est celle du modèle peint : race de chien, tortue…)."""
+    t = next((o for o in OPTIONS["animal"]["type"] if o["id"] == type_id), {})
+    return set(t.get("sans") or [])
+
+
+def est_chien(type_id):
+    return type_id == "chien" or any(o["id"] == type_id and o.get("race") == "chien" for o in OPTIONS["animal"]["type"])
+
+
 def _pick(group, src, where, problems):
     """Valeurs de l'éditeur -> identifiants connus. Une valeur absente ou inconnue est SIGNALÉE (jamais remplacée en silence)."""
     out = {}
@@ -239,15 +249,17 @@ def avatar_descriptions(av):
         res["doudou"] = txt
     for a in av.get("animaux", []):
         h = lambda k: _opt("animal", k, a[k])
+        hors = sans(a["type"])
         size = {"petit": "small (reaching the child's knee)", "moyen": "medium-sized (reaching the child's hip)",
-                "grand": "large (its back reaches the child's waist)"}.get(a["taille"], h("taille")["en"]) if a["type"] in ("chien", "chat") else h("taille")["en"]
-        txt = f"{a['nom'] or 'the pet'}, {av['prenom']}'s {size} {h('couleur')['en']} {h('type')['en']} (a living animal)"
+                "grand": "large (its back reaches the child's waist)"}.get(a["taille"], h("taille")["en"]) if est_chien(a["type"]) or a["type"] == "chat" else h("taille")["en"]
+        couleur = "" if "couleur" in hors else h("couleur")["en"] + " "
+        txt = f"{a['nom'] or 'the pet'}, {av['prenom']}'s {size} {couleur}{h('type')['en']} (a living animal)"
         if a["type"] in ("chien", "lapin"):
             txt += f" with {h('oreilles')['en']}"
-        if a["motif"] != "uni" and a["type"] != "oiseau":
+        if a["motif"] != "uni" and a["type"] != "oiseau" and "motif" not in hors:
             txt += f", {h('motif')['en'].replace('a second colour', h('couleur2')['en']).replace('white muzzle and white belly', h('couleur2')['en'] + ' muzzle and ' + h('couleur2')['en'] + ' belly')}"
         txt += f", {h('yeux')['en']}"
-        if a["collier"] != "aucun" and a["type"] != "oiseau":
+        if a["collier"] != "aucun" and a["type"] != "oiseau" and "collier" not in hors:
             txt += f", {h('collier')['en']}"
         res["animaux"].append(txt)
     return res
@@ -880,6 +892,7 @@ def normalize_cfg(kind, cfg, age=None):
         if out["type"] not in ("chien", "lapin"): out.pop("oreilles")
         if out["motif"] == "uni" or out["type"] == "oiseau" and out["motif"] != "ventre": out.pop("couleur2", None)
         if out["type"] == "oiseau": out.pop("collier")
+        for k in sans(out["type"]): out.pop(k, None)
     return out
 
 
@@ -954,6 +967,7 @@ def recolor_targets(kind, cfg):
             t["B"] = col("doudou", "couleur_accessoire")
         if cfg.get("accessoire") == "echarpe": t["A"] = col("doudou", "couleur_accessoire")
     else:
+        hors = sans(cfg.get("type"))
         main = col("animal", "couleur")
         if cfg.get("couleur") != base.get("couleur"): t["R"] = main; t["dye"] = True
         if cfg.get("motif") == "uni" and cfg.get("type") != "oiseau": t["G"] = _shade(main, .2)
@@ -962,6 +976,9 @@ def recolor_targets(kind, cfg):
             t["motif"] = cfg["motif"]; t["M"] = col("animal", "couleur2")
         if cfg.get("yeux") and cfg.get("yeux") != base.get("yeux"): t["E"] = col("animal", "yeux")
         if cfg.get("collier") not in (None, "aucun") and cfg.get("type") != "oiseau": t["C"] = col("animal", "collier")
+        for k in hors:          # race de chien, tortue, poisson : ce que le modèle peint impose
+            for z in {"couleur": ("R", "dye", "G", "motif", "M"), "motif": ("G", "motif", "M"), "collier": ("C",)}.get(k, ()):
+                t.pop(z, None)
     return {k: v for k, v in t.items() if v}
 
 

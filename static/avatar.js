@@ -128,7 +128,7 @@
     const C2 = plush ? '#FFF6EA' : pick(O.couleur2, a.couleur2).c;
     const light = plush ? shade(C, .45) : (a.motif === 'ventre' || a.motif === 'uni' ? (a.motif === 'ventre' ? C2 : shade(C, .25)) : shade(C, .25));
     const eyeC = plush ? '#2A1C16' : pick(O.yeux, a.yeux).c;
-    const t = a.type, droop = a.oreilles === 'tombantes';
+    const t = ['labrador', 'berger', 'bouledogue', 'jackrussell'].includes(a.type) ? 'chien' : a.type, droop = a.oreilles === 'tombantes';
     let behind = '', ears = '', extra = '', face = '', tail = '';
     let head = `<circle cx="150" cy="128" r="64" fill="${C}"/>`;
     let bodyShape = `<ellipse cx="150" cy="222" rx="68" ry="60" fill="${C}"/>`;

@@ -14,12 +14,19 @@ import cv2
 AV = "static/avatars/"
 DOUDOUS = ["doudou-lapin", "doudou-ours", "doudou-chat", "doudou-chien", "doudou-elephant"]
 EYES = {"animal-chat": [(204, 132), (255, 114)], "animal-chien": [(232, 119), (283, 94)], "animal-hamster": [(226, 142), (297, 120)],
-        "animal-lapin": [(250, 178), (320, 160)], "animal-oiseau": [(264, 113), (327, 135)]}
+        "animal-lapin": [(250, 178), (320, 160)], "animal-oiseau": [(264, 113), (327, 135)],
+        "animal-chien-labrador": [(238, 90), (289, 70)], "animal-chien-berger-australien": [(243, 110), (294, 88)],
+        "animal-chien-bouledogue": [(239, 137), (315, 125)], "animal-chien-jack-russell": [(245, 108), (301, 89)],
+        "animal-poisson": [(321, 180), (397, 154)], "animal-tortue": [(295, 152), (372, 128)]}
 # collier : courbe (début, contrôle, fin) dans l'espace 480 px, demi-épaisseur ; relevé sur chaque modèle peint
 COLLIERS = {"animal-chat": {"p0": [150, 214], "c": [222, 238], "p1": [292, 196], "hw": 6.5},
             "animal-chien": {"p0": [204, 214], "c": [262, 236], "p1": [322, 204], "hw": 6.5},
             "animal-hamster": {"p0": [176, 214], "c": [252, 236], "p1": [326, 206], "hw": 6},
-            "animal-lapin": {"p0": [268, 240], "c": [312, 258], "p1": [366, 234], "hw": 5.5}}
+            "animal-lapin": {"p0": [268, 240], "c": [312, 258], "p1": [366, 234], "hw": 5.5},
+            "animal-chien-labrador": {"p0": [212, 182], "c": [262, 206], "p1": [320, 172], "hw": 6.5},
+            "animal-chien-berger-australien": {"p0": [214, 182], "c": [266, 206], "p1": [324, 172], "hw": 6.5},
+            "animal-chien-bouledogue": {"p0": [206, 218], "c": [264, 244], "p1": [328, 212], "hw": 6.5},
+            "animal-chien-jack-russell": {"p0": [222, 186], "c": [272, 210], "p1": [328, 178], "hw": 6.5}}
 
 
 def nobow(n):
@@ -51,11 +58,12 @@ def eye_mask(n):
     H, W = l.shape; yy, xx = np.mgrid[0:H, 0:W]
     out = np.zeros((H, W))
     lmax = 0.72 if n == "animal-chat" else 0.58          # iris vert clair du chat
+    r = 24 if n in ("animal-chat", "animal-chien", "animal-hamster", "animal-lapin", "animal-oiseau") else 13   # nouveaux modèles : yeux plus petits
     for (cx, cy) in EYES[n]:
         d2 = (xx - cx) ** 2 + (yy - cy) ** 2
-        ring = (d2 > 24 ** 2) & (d2 < 32 ** 2) & (im[..., 3] > .9)
+        ring = (d2 > r ** 2) & (d2 < (r + 8) ** 2) & (im[..., 3] > .9)
         fur = np.median(rgb[ring], axis=0)
-        cand = (np.sqrt(((rgb - fur) ** 2).sum(-1)) > .22) & (d2 < 24 ** 2)
+        cand = (np.sqrt(((rgb - fur) ** 2).sum(-1)) > .22) & (d2 < r ** 2)
         lab, _ = nd.label(cand)
         ys, xs = np.where((l < .2) & (d2 < 8 ** 2))
         eye = nd.binary_fill_holes(nd.binary_closing(np.isin(lab, list(set(lab[ys, xs]) - {0})), iterations=2))

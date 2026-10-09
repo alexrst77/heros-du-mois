@@ -984,7 +984,7 @@ def admin_atelier_etat():
 
 @bp.post("/admin/api/atelier-avatars")
 def admin_atelier_peindre():
-    """Peint en arrière-plan les nouveaux modèles d'avatar (races de chiens, tortue, poisson, cheveux longs garçon)."""
+    """Repeint en arrière-plan le pack d'avatars dans le nouveau style (voir atelier_avatars.py)."""
     if not admin_ok():
         abort(403)
     import atelier_avatars as AT
@@ -1008,7 +1008,7 @@ def admin_atelier_zip():
     if not admin_ok():
         abort(403)
     import atelier_avatars as AT
-    return send_file(AT.zip_bytes(), mimetype="application/zip", as_attachment=True, download_name="nouveaux_avatars.zip")
+    return send_file(AT.zip_bytes(), mimetype="application/zip", as_attachment=True, download_name="pack_repeint.zip")
 
 
 @bp.get("/admin/api/tarifs")
