@@ -80,6 +80,11 @@ def calcul(lignes, vendeur):
     return {"lignes": out, "tva": tva, "total_ttc": total_ttc, "total_ht": sum(x["total_ht"] for x in out), "reel": reel}
 
 
+def paiement_reel(o):
+    """Vrai paiement Stripe (mode live). Les paiements de test (carte 4242) et simulés ne donnent jamais de facture."""
+    return (o.get("stripe_session") or "").startswith("cs_live_")
+
+
 def emettre(oid, livre_json):
     """Crée (une fois) la facture d'une commande payée. Renvoie la facture existante si elle est déjà émise."""
     o = db.get(oid)
@@ -89,6 +94,8 @@ def emettre(oid, livre_json):
         raise FactureError("la facture se fait sur la commande d'origine (celle qui porte le paiement)")
     if o["statut"] == "attente_paiement" or not o["montant"] or (o["formule"] or "").startswith("essai"):
         raise FactureError("seulement pour une commande payée (pas un essai, pas un test)")
+    if not paiement_reel(o):
+        raise FactureError("paiement de test (Stripe en mode test ou simulé) : pas de facture, pour garder une numérotation sans trou")
     deja = de_commande(oid)
     if deja:
         return deja

@@ -222,7 +222,7 @@ function carte(o) {
   const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${Q}">${esc(f)}</a>`).join('')
     + (o.job_id && o.statut !== 'attente_paiement' ? `<a href="/admin/archive/${o.id}${Q}">📦 dossier complet (zip, pour Claude)</a>` : '');
   const fac = o.facture ? `<a class="btn" target="_blank" href="/admin/facture/${o.facture}.pdf${Q}">🧾 Facture ${esc(o.facture)}</a>`
-    : (o.montant && (o.origine || o.id) === o.id && o.statut !== 'attente_paiement' && !(o.formule || '').startsWith('essai')) ? `<button class="btn" onclick="act('${o.id}','facture',this)">🧾 Émettre la facture</button>` : '';
+    : (o.montant && !o.paiement_test && (o.origine || o.id) === o.id && o.statut !== 'attente_paiement' && !(o.formule || '').startsWith('essai')) ? `<button class="btn" onclick="act('${o.id}','facture',this)">🧾 Émettre la facture</button>` : '';
   const sousTitre = [((o.formule || '').startsWith('essai') ? '🧪 ' : '') + esc(FORMULE[o.formule] || o.formule),
     o.extra ? (o.pack_total ? `avec ${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}${o.objet ? ', colis Printful à part' : ', même colis'}` : '') : o.pack_total > 1 ? `livre ${o.numero}/${o.pack_total}` : '',
     !o.extra && o.pack_cal ? '+ ' + (o.pack_extras || []).map(x => (NOMX[x] || x).replace(/^(le|la) /, '')).join(' + ') : '',
@@ -230,7 +230,7 @@ function carte(o) {
   return `<div class="book">${cov}<div>
     <div class="ligne1"><div class="title">${esc(titre)}</div>${o.montant ? `<div class="prix">${eur(o.montant)}</div>` : ''}</div>
     <div class="meta">${sousTitre}</div>
-    <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>${o.facture ? '<span class="pill p-grey">🧾 facturée</span>' : ''}
+    <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>${o.facture ? '<span class="pill p-grey">🧾 facturée</span>' : ''}${o.paiement_test && (o.origine || o.id) === o.id ? '<span class="pill p-grey" title="Payée en mode test Stripe : ni facture, ni chiffre d\'affaires">🧪 paiement test</span>' : ''}
     <div class="say">${e.say}</div>
     ${e.k === 'fabrication' ? `<div class="prog"><div class="bar big"><i style="width:${o.progression || 1}%"></i></div><b>${o.progression || 0} %</b></div>${o.etape ? `<div class="meta">${esc(o.etape)}</div>` : ''}` : ''}
     ${bud ? `<div class="money">IA : <b>${usd(bud)}</b> / ${PL} $ <span class="bar"><i class="${pct > 80 ? 'warn' : ''}" style="width:${pct}%"></i></span></div>` : ''}
@@ -252,7 +252,7 @@ function liste(rows) { return rows.length ? rows.map(carte).join('') : ''; }
 /* ================================================================ tableau de bord */
 const debutMois = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime() / 1000; };
 function ventes(depuis) {        // commandes payées (celles qui portent le montant)
-  return D.commandes.filter(o => o.montant && (o.origine || o.id) === o.id && o.statut !== 'attente_paiement' && !(o.formule || '').startsWith('essai') && o.cree >= depuis);
+  return D.commandes.filter(o => o.montant && !o.paiement_test && (o.origine || o.id) === o.id && o.statut !== 'attente_paiement' && !(o.formule || '').startsWith('essai') && o.cree >= depuis);
 }
 function vueTableau() {
   const C = D.commandes.map(o => [o, etat(o).k]);

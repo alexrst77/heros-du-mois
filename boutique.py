@@ -829,7 +829,9 @@ def admin_list():
         r["pack_cal_prets"] = sum(1 for x in g if x["formule"] in NON_LIVRES and x.get("finalise"))
         r["pack_extras"] = [x["formule"] for x in g if x["formule"] in NON_LIVRES]
         r["pack_mail"] = tete.get("mail_pret")
-    a_facturer = sum(1 for r in rows if r.get("montant") and (r["origine"] or r["id"]) == r["id"] and not r.get("facture")
+    for r in rows:
+        r["paiement_test"] = bool(r.get("montant")) and not factures.paiement_reel(r)
+    a_facturer = sum(1 for r in rows if r.get("montant") and (r["origine"] or r["id"]) == r["id"] and not r.get("facture") and not r["paiement_test"]
                      and r["statut"] != "attente_paiement" and not (r["formule"] or "").startswith("essai"))
     return jsonify(plafond=budget.PLAFOND, commandes=rows, abonnements=db.subs(),
                    vendeur_manquants=legal.manquants(), a_facturer=a_facturer,
@@ -1287,7 +1289,8 @@ def _livre_json(oid):
 def facturables():
     """Commandes d'origine payées (pas d'essai, pas de test à 0 €), de la plus ancienne à la plus récente."""
     return sorted([o for o in db.lister(100000) if (o["origine"] or o["id"]) == o["id"] and o["montant"]
-                   and o["statut"] not in ("attente_paiement",) and not (o["formule"] or "").startswith("essai")], key=lambda o: o["cree"])
+                   and o["statut"] not in ("attente_paiement",) and not (o["formule"] or "").startswith("essai")
+                   and factures.paiement_reel(o)], key=lambda o: o["cree"])
 
 
 @bp.get("/admin/api/factures")
