@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify, send_file, abort, redirect, Respo
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
 import calendrier, coloriage
-import printful, objets
+import printful, objets, legal, factures
 EXTRAS = {"calendrier": calendrier, "coloriage": coloriage}      # produits Lulu qui ne sont pas des livres (même colis que les livres)
 OBJETS = {k: objets for k in objets.KINDS}                         # objets Printful (gourde, tasse, sac) : leur propre colis
 NON_LIVRES = {**EXTRAS, **OBJETS}
@@ -151,8 +151,9 @@ def order_create():
     folder = STORE / oid; folder.mkdir(parents=True)
     guides = A.save_avatar_pngs(data.get("avatar_png") or {}, folder)
     previews = A.save_previews(data.get("apercus") or {}, folder)
+    lignes = paiement.lignes(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs)   # pour la facture
     (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {k: p.name for k, p in guides.items()},
-                                                   "apercus": {k: p.name for k, p in previews.items()}}, ensure_ascii=False), encoding="utf-8")
+                                                   "apercus": {k: p.name for k, p in previews.items()}, "lignes": lignes}, ensure_ascii=False), encoding="utf-8")
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
               montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs), origine=oid,
               numero=0 if formule in EXTRAS else 1)
@@ -385,6 +386,7 @@ def order_status(oid):
     except Exception:
         avec_cal = avec_colo = False; objs = []
     return jsonify(id=oid, statut=o["statut"], formule=o["formule"], job=o["job_id"], titre=o["titre"], calendrier=avec_cal, coloriage=avec_colo, objets=objs,
+                   montant=o["montant"],
                    test=not paiement.configured())
 
 
@@ -807,6 +809,8 @@ def admin_list():
         r["coloriage"] = r["formule"] == "coloriage"
         r["extra"] = r["formule"] in NON_LIVRES
         r["objet"] = r["formule"] if r["formule"] in OBJETS else None
+        fa = factures.de_commande(r["id"]) if (r["origine"] or r["id"]) == r["id"] and r["montant"] else None
+        r["facture"] = fa["numero"] if fa else None
         r["plafond"] = NON_LIVRES[r["formule"]].PLAFOND if r["formule"] in NON_LIVRES else budget.PLAFOND
         try:
             r["prenom"] = json.loads((STORE / r["origine"] / "livre.json").read_text(encoding="utf-8"))["form"].get("prenom")
@@ -825,7 +829,10 @@ def admin_list():
         r["pack_cal_prets"] = sum(1 for x in g if x["formule"] in NON_LIVRES and x.get("finalise"))
         r["pack_extras"] = [x["formule"] for x in g if x["formule"] in NON_LIVRES]
         r["pack_mail"] = tete.get("mail_pret")
+    a_facturer = sum(1 for r in rows if r.get("montant") and (r["origine"] or r["id"]) == r["id"] and not r.get("facture")
+                     and r["statut"] != "attente_paiement" and not (r["formule"] or "").startswith("essai"))
     return jsonify(plafond=budget.PLAFOND, commandes=rows, abonnements=db.subs(),
+                   vendeur_manquants=legal.manquants(), a_facturer=a_facturer,
                    config={"stripe": "live" if paiement.live() else "test" if paiement.configured() else "simulé",
                            "lulu": lulu.env() if lulu.configured() else "non configuré", "pod": lulu.POD_PACKAGE,
                            "pod_calendrier": calendrier.POD, "calendrier_valide": calendrier.fichiers_valides(),
@@ -1067,6 +1074,10 @@ def admin_action(oid, action):
             job = send_to_print(oid)
             return jsonify(ok=True, info={"lulu": None if job.get("printful") else job.get("id"), "env": lulu.env(),
                                           "printful": job.get("printful_id"), "printful_statut": job.get("printful_statut")})
+        if action == "facture":                    # facture de la commande (une seule, numérotée à la suite)
+            ori = o["origine"] or oid
+            f = factures.emettre(ori, _livre_json(ori))
+            return jsonify(ok=True, info={"numero": f["numero"], "total": f["total"]})
         if action == "maquette-printful":          # photos du produit fini par l'outil de maquette Printful (aucune commande)
             folder = A.OUT / (o["job_id"] or "_")
             if o["formule"] not in OBJETS or not (folder / "objet.json").exists():
@@ -1209,13 +1220,178 @@ def admin_action(oid, action):
                     shutil.rmtree(STORE / ori, ignore_errors=True)
             return jsonify(ok=True)
         abort(404)
-    except (RuntimeError, lulu.LuluError, paiement.StripeError, budget.BudgetLivreError, printful.PrintfulError, procede.ProcedeError) as e:
+    except (RuntimeError, lulu.LuluError, paiement.StripeError, budget.BudgetLivreError, printful.PrintfulError, procede.ProcedeError, factures.FactureError) as e:
         return jsonify(erreur=str(e)), 400
+
+
+# ------------------------------------------------------------------ pages légales, référencement
+def _page_legale(nom):
+    return Response(legal.page(nom), mimetype="text/html")
 
 
 @bp.get("/cgv")
 def cgv():
-    return send_file(A.ROOT / "static" / "cgv.html")
+    return _page_legale("cgv")
+
+
+@bp.get("/mentions-legales")
+def mentions_legales():
+    return _page_legale("mentions")
+
+
+@bp.get("/confidentialite")
+def confidentialite():
+    return _page_legale("confidentialite")
+
+
+@bp.get("/api/mesure")
+def api_mesure():
+    """Outils de mesure activés (identifiants publics réglés dans Railway). Vide = aucun outil, aucun bandeau."""
+    return jsonify({k: os.getenv(v, "").strip() for k, v in (("ga4", "GA4_ID"), ("meta", "META_PIXEL_ID"), ("gads", "GOOGLE_ADS_ID"),
+                                                            ("gads_achat", "GOOGLE_ADS_ACHAT"))})
+
+
+@bp.get("/robots.txt")
+def robots():
+    return Response(f"User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /impression/\nDisallow: /objet/\n"
+                    f"Sitemap: {base_url()}/sitemap.xml\n", mimetype="text/plain")
+
+
+@bp.get("/sitemap.xml")
+def sitemap():
+    b = base_url()
+    pages = [("/", "1.0"), ("/creer", "0.8"), ("/cgv", "0.2"), ("/mentions-legales", "0.1"), ("/confidentialite", "0.2")]
+    x = "".join(f"<url><loc>{b}{u}</loc><priority>{p}</priority></url>" for u, p in pages)
+    return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{x}</urlset>',
+                    mimetype="application/xml")
+
+
+# ------------------------------------------------------------------ mon entreprise, factures, rentabilité (admin)
+@bp.route("/admin/api/vendeur", methods=["GET", "POST"])
+def admin_vendeur():
+    if not admin_ok():
+        abort(403)
+    if request.method == "POST":
+        legal.enregistrer(request.get_json(force=True, silent=True) or {})
+    d = legal.lire()
+    return jsonify(vendeur=d, champs={k: {"libelle": v[0], "obligatoire": v[1]} for k, v in legal.CHAMPS.items()}, manquants=legal.manquants(d))
+
+
+def _livre_json(oid):
+    try:
+        return json.loads((STORE / oid / "livre.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def facturables():
+    """Commandes d'origine payées (pas d'essai, pas de test à 0 €), de la plus ancienne à la plus récente."""
+    return sorted([o for o in db.lister(100000) if (o["origine"] or o["id"]) == o["id"] and o["montant"]
+                   and o["statut"] not in ("attente_paiement",) and not (o["formule"] or "").startswith("essai")], key=lambda o: o["cree"])
+
+
+@bp.get("/admin/api/factures")
+def admin_factures():
+    if not admin_ok():
+        abort(403)
+    fs = factures.lister()
+    faites = {f["commande"] for f in fs}
+    return jsonify(factures=[{k: f[k] for k in ("numero", "commande", "cree", "date_vente", "total", "regime", "client")} for f in fs][::-1],
+                   a_faire=[{"id": o["id"], "cree": o["cree"], "montant": o["montant"], "email": o["email"], "nom": (o["adresse"] or {}).get("nom")}
+                            for o in facturables() if o["id"] not in faites],
+                   manquants=legal.manquants())
+
+
+@bp.post("/admin/api/factures/manquantes")
+def admin_factures_manquantes():
+    if not admin_ok():
+        abort(403)
+    faites = {f["commande"] for f in factures.lister()}
+    nouvelles = []
+    try:
+        for o in facturables():                     # dans l'ordre des ventes : la numérotation reste chronologique
+            if o["id"] not in faites:
+                nouvelles.append(factures.emettre(o["id"], _livre_json(o["id"]))["numero"])
+    except factures.FactureError as e:
+        return jsonify(erreur=str(e), emises=nouvelles), 400
+    return jsonify(ok=True, emises=nouvelles)
+
+
+@bp.get("/admin/facture/<numero>.pdf")
+def admin_facture_pdf(numero):
+    if not admin_ok():
+        abort(403)
+    f = factures.par_numero(numero) or abort(404)
+    p = factures.chemin(numero)
+    if not p.exists():
+        factures.pdf(f)
+    return send_file(p, mimetype="application/pdf", download_name=f"Facture-{numero}.pdf")
+
+
+@bp.get("/admin/factures/recettes.csv")
+def admin_recettes():
+    if not admin_ok():
+        abort(403)
+    an = request.args.get("annee") or None
+    return Response(factures.livre_recettes_csv(an), mimetype="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename=livre-des-recettes{'-' + an if an else ''}.csv"})
+
+
+def _montant_txt(t):
+    """« 61.20 EUR (colis : …) » -> 61.2 ; None si absent."""
+    m = re.match(r"\s*([0-9]+(?:[.,][0-9]+)?)", t or "")
+    return float(m.group(1).replace(",", ".")) if m else None
+
+
+@bp.get("/admin/api/rentabilite")
+def admin_rentabilite():
+    """Rentabilité RÉELLE par commande payée : encaissé, IA réellement dépensée, devis Lulu et Printful enregistrés à l'envoi."""
+    if not admin_ok():
+        abort(403)
+    tous = db.lister(100000)
+    par_origine = {}
+    for x in tous:
+        par_origine.setdefault(x["origine"] or x["id"], []).append(x)
+    out = []
+    for o in facturables():
+        g = par_origine.get(o["id"], [o])
+        ia_usd = 0.0
+        for x in g:
+            try:
+                folder = A.OUT / (x["job_id"] or "_")
+                ia_usd += budget.depense(procede.livre_id(folder) if folder.exists() else x["id"])["regle"]
+            except Exception:
+                ia_usd += float(x.get("cout") or 0)
+        lulu_c = [_montant_txt(x["lulu_cout"]) for x in g if x.get("lulu_cout") and "Printful" not in (x["lulu_cout"] or "")]
+        pf_c = [_montant_txt(x["lulu_cout"]) for x in g if x.get("lulu_cout") and "Printful" in (x["lulu_cout"] or "")]
+        out.append({"id": o["id"], "cree": o["cree"], "formule": o["formule"], "montant": o["montant"], "statut": o["statut"],
+                    "ia_usd": round(ia_usd, 3), "lulu_eur": round(sum(c for c in lulu_c if c), 2) if lulu_c else None,
+                    "printful_eur": round(sum(c for c in pf_c if c), 2) if pf_c else None,
+                    "objets": sorted({x["formule"] for x in g if x["formule"] in OBJETS}), "envoye": any(x["statut"] in ("envoyee_impression", "expediee") for x in g)})
+    return jsonify(commandes=out[::-1], tarifs=paiement.grille(), regime=legal.lire()["regime_tva"], taux_tva=legal.lire()["taux_tva"])
+
+
+@bp.post("/admin/api/rgpd/purge")
+def admin_rgpd_purge():
+    """Efface les données des enfants et les fichiers des commandes expédiées depuis plus de N jours (30 par défaut).
+    Les factures (nom, adresse, montants) restent : obligation légale de 10 ans."""
+    if not admin_ok():
+        abort(403)
+    jours = max(7, int((request.get_json(force=True, silent=True) or {}).get("jours", 30)))
+    limite = time.time() - jours * 86400
+    faites = []
+    for o in db.lister(100000):
+        if o["statut"] == "expediee" and (o.get("maj") or 0) < limite and o["erreur"] != "données effacées":
+            shutil.rmtree(A.OUT / (o["job_id"] or "_"), ignore_errors=True)
+            db.update(o["id"], pdf=None, erreur="données effacées")
+            faites.append(o["id"])
+    for ori in {(db.get(i) or {}).get("origine") for i in faites}:
+        if ori and all(x["erreur"] == "données effacées" or x["statut"] in ("expediee", "annulee") for x in db.lister(100000) if x["origine"] == ori):
+            s = db.sub_get((db.get(ori) or {}).get("abonnement_id") or "")
+            if not s or s["statut"] != "actif":
+                shutil.rmtree(STORE / ori, ignore_errors=True)
+    log(f"RGPD : données effacées pour {len(faites)} commande(s) expédiée(s) depuis plus de {jours} jours")
+    return jsonify(ok=True, effacees=len(faites), jours=jours)
 
 
 # ---------------------------------------------------------------- formulaire de contact du site

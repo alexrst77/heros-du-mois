@@ -2,87 +2,142 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
 <link rel="apple-touch-icon" href="/static/marque/apple-touch-icon.png">
 <title>Atelier – Mon Héros du Mois</title>
 <style>
+  @font-face { font-family:"Young Serif"; src:url("/static/fonts/YoungSerif-Regular.woff") format("woff"); font-display:swap; }
+  @font-face { font-family:"Nunito"; src:url("/static/fonts/Nunito.woff") format("woff"); font-weight:200 1000; font-display:swap; }
   :root {
-    --bg:#FBF5EA; --card:#FFFFFF; --ink:#1F2557; --soft:#6B6F8E; --line:#EADFCB; --gold:#E8B54A; --gold-soft:#FCEFD2;
-    --blue:#3D6BD8; --blue-soft:#E3EBFC; --green:#2E9E68; --green-soft:#DDF3E7; --red:#D9534F; --red-soft:#FBE3E1;
-    --grey-soft:#EFEBE3; --violet:#7A5AD8; --violet-soft:#ECE6FB; --shadow:0 2px 10px rgba(31,37,87,.07);
+    --bg:#F6F1E7; --card:#FFFFFF; --ink:#1F2557; --soft:#6B6F8E; --line:#ECE3D2; --nuit:#1A1F4A; --gold:#FFC94A; --gold-soft:#FFF3D1;
+    --blue:#3D6BD8; --blue-soft:#E6EDFC; --green:#2E8A5E; --green-soft:#DFF2E7; --red:#C9443F; --red-soft:#FBE4E2;
+    --grey-soft:#F1ECE2; --violet:#7A5AD8; --violet-soft:#EEE8FC; --shadow:0 1px 2px rgba(31,37,87,.06), 0 8px 24px -12px rgba(31,37,87,.18);
+    --titre:"Young Serif", Georgia, serif; --texte:"Nunito", system-ui, -apple-system, sans-serif;
   }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui, -apple-system, sans-serif; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:500 15px/1.5 var(--texte); -webkit-font-smoothing:antialiased; }
   a { color:var(--blue); }
-  .wrap { max-width:1100px; margin:0 auto; padding:18px 16px 80px; }
-  header { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
-  header img { width:44px; height:44px; }
-  header h1 { font:700 24px Georgia, serif; margin:0; }
-  header .hi { color:var(--soft); font-size:14px; }
-  nav { display:flex; gap:6px; overflow-x:auto; padding:4px 0 10px; margin-bottom:8px; position:sticky; top:0; background:var(--bg); z-index:5; }
-  nav button { flex:none; border:0; background:transparent; color:var(--soft); font:600 15px system-ui; padding:9px 14px; border-radius:999px; cursor:pointer; }
-  nav button.on { background:var(--ink); color:#fff; }
-  nav .badge { display:inline-block; min-width:20px; padding:0 6px; margin-left:4px; border-radius:999px; background:var(--gold); color:var(--ink); font-size:12px; }
-  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:18px; }
-  .tile { background:var(--card); border-radius:16px; padding:14px; box-shadow:var(--shadow); cursor:pointer; border:2px solid transparent; }
-  .tile:hover { border-color:var(--line); }
-  .tile .n { font:700 30px Georgia, serif; } .tile .l { color:var(--soft); font-size:13px; } .tile .e { font-size:22px; float:right; }
-  h2 { font:700 19px Georgia, serif; margin:22px 0 10px; }
-  .empty { text-align:center; padding:40px 10px; color:var(--soft); background:var(--card); border-radius:16px; box-shadow:var(--shadow); }
-  .empty .big { font-size:44px; }
-  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
-  .chips button { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:6px 12px; font:600 13px system-ui; cursor:pointer; }
-  .chips button.on { background:var(--gold-soft); border-color:var(--gold); }
-  .book { display:grid; grid-template-columns:96px 1fr; gap:14px; background:var(--card); border-radius:18px; padding:14px; margin-bottom:12px; box-shadow:var(--shadow); }
-  .cover { width:96px; height:96px; border-radius:10px; object-fit:cover; background:linear-gradient(135deg, #F7D99A, #9DB7F0); display:flex; align-items:center; justify-content:center; font-size:38px; overflow:hidden; box-shadow:2px 3px 0 rgba(31,37,87,.15); }
+  :focus-visible { outline:3px solid var(--gold); outline-offset:2px; border-radius:6px; }
+  /* ---- structure : barre latérale (ordinateur), barre du haut (téléphone) */
+  .app { display:grid; grid-template-columns:232px 1fr; min-height:100vh; }
+  aside { background:var(--nuit); color:#E3E6FA; padding:20px 14px; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:4px; }
+  .brand { display:flex; align-items:center; gap:10px; padding:4px 8px 18px; color:#fff; text-decoration:none; }
+  .brand img { width:38px; height:38px; } .brand b { font:400 19px/1.1 var(--titre); } .brand small { display:block; font:600 12px var(--texte); color:#AEB4E0; }
+  aside nav { display:flex; flex-direction:column; gap:2px; }
+  aside nav button { display:flex; align-items:center; gap:10px; width:100%; border:0; background:transparent; color:#C9CDF0; font:700 15px var(--texte); padding:10px 12px; border-radius:12px; cursor:pointer; text-align:left; }
+  aside nav button:hover { background:rgba(255,255,255,.06); color:#fff; }
+  aside nav button.on { background:rgba(255,201,74,.16); color:#fff; box-shadow:inset 3px 0 0 var(--gold); }
+  aside nav .ic { width:22px; text-align:center; } aside nav .badge { margin-left:auto; min-width:22px; padding:1px 7px; border-radius:999px; background:var(--gold); color:var(--ink); font:800 12px var(--texte); text-align:center; }
+  aside .bas { margin-top:auto; font-size:12px; color:#8F95C7; padding:8px; line-height:1.6; } aside .bas a { color:#C9CDF0; }
+  .env { display:inline-block; padding:1px 8px; border-radius:999px; font-weight:800; font-size:11px; }
+  .env.test { background:#FFF3D1; color:#8A5A00; } .env.live { background:#DFF2E7; color:#1E6B47; }
+  main { padding:26px 30px 90px; max-width:1180px; width:100%; }
+  .tete { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+  .tete h1 { font:400 30px/1.1 var(--titre); margin:0; } .tete .hi { color:var(--soft); margin-top:4px; }
+  @media (max-width:900px) {
+    .app { grid-template-columns:1fr; }
+    aside { position:sticky; top:0; z-index:10; height:auto; flex-direction:row; align-items:center; padding:8px 10px; overflow-x:auto; gap:6px; }
+    .brand { padding:0 6px 0 0; } .brand b, .brand small, aside .bas { display:none; }
+    aside nav { flex-direction:row; } aside nav button { padding:8px 10px; white-space:nowrap; font-size:14px; } aside nav button span.t { display:none; } aside nav button.on span.t { display:inline; }
+    main { padding:18px 14px 80px; }
+  }
+  /* ---- éléments */
+  h2 { font:400 21px/1.2 var(--titre); margin:28px 0 12px; } h2:first-child { margin-top:0; }
+  h3 { font:800 16px var(--texte); margin:0 0 8px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:8px; }
+  .kpi { background:var(--card); border-radius:18px; padding:16px; box-shadow:var(--shadow); cursor:pointer; border:1px solid transparent; transition:border-color .15s; }
+  .kpi:hover { border-color:var(--line); }
+  .kpi .l { color:var(--soft); font-weight:700; font-size:13px; display:flex; justify-content:space-between; } .kpi .n { font:400 30px/1.1 var(--titre); margin-top:6px; } .kpi .s { color:var(--soft); font-size:13px; margin-top:2px; }
+  .kpi.alerte { background:var(--gold-soft); } .kpi.sombre { background:var(--nuit); color:#fff; } .kpi.sombre .l, .kpi.sombre .s { color:#AEB4E0; }
+  .empty { text-align:center; padding:36px 10px; color:var(--soft); background:var(--card); border-radius:18px; box-shadow:var(--shadow); }
+  .empty .big { font-size:40px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+  .chips button { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:999px; padding:7px 13px; font:700 13px var(--texte); cursor:pointer; }
+  .chips button.on { background:var(--ink); border-color:var(--ink); color:#fff; }
+  .chips button em { font-style:normal; opacity:.6; margin-left:4px; }
+  .book { display:grid; grid-template-columns:84px 1fr; gap:16px; background:var(--card); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:var(--shadow); }
+  .cover { width:84px; height:84px; border-radius:12px; object-fit:cover; background:linear-gradient(135deg, #F7D99A, #9DB7F0); display:flex; align-items:center; justify-content:center; font-size:34px; overflow:hidden; }
   .cover img { width:100%; height:100%; object-fit:cover; }
-  .title { font:700 17px Georgia, serif; margin:0 0 2px; }
-  .meta { color:var(--soft); font-size:13px; }
-  .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; font-weight:700; font-size:13px; margin:6px 6px 0 0; }
+  .ligne1 { display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .title { font:400 18px/1.25 var(--titre); margin:0; } .prix { font:800 16px var(--texte); white-space:nowrap; }
+  .meta, .muted { color:var(--soft); font-size:13px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-weight:800; font-size:12.5px; margin:8px 6px 0 0; }
   .p-gold { background:var(--gold-soft); color:#8A5A00; } .p-blue { background:var(--blue-soft); color:var(--blue); } .p-green { background:var(--green-soft); color:var(--green); }
   .p-red { background:var(--red-soft); color:var(--red); } .p-grey { background:var(--grey-soft); color:var(--soft); } .p-violet { background:var(--violet-soft); color:var(--violet); }
-  .say { margin:8px 0 0; }
+  .say { margin:6px 0 0; font-size:14px; }
   .bar { height:8px; background:var(--grey-soft); border-radius:99px; overflow:hidden; margin-top:8px; max-width:420px; }
   .bar i { display:block; height:100%; background:linear-gradient(90deg, var(--blue), var(--violet)); border-radius:99px; transition:width .6s; }
   .money { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--soft); margin-top:8px; }
   .prog { display:flex; align-items:center; gap:10px; max-width:460px; margin-top:8px; } .prog .bar { flex:1; margin:0; }
-  .bar.big { height:12px; } .prog b { font:800 15px system-ui; min-width:46px; text-align:right; }
-  .money .bar { width:120px; height:6px; margin:0; } .money .bar i { background:var(--green); }
-  .money .bar i.warn { background:var(--gold); }
+  .bar.big { height:12px; } .prog b { font:800 15px var(--texte); min-width:46px; text-align:right; }
+  .money .bar { width:120px; height:6px; margin:0; } .money .bar i { background:var(--green); } .money .bar i.warn { background:var(--gold); }
   .acts { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-  .btn { border:0; border-radius:12px; padding:10px 16px; font:700 14px system-ui; cursor:pointer; background:var(--grey-soft); color:var(--ink); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  .btn { border:0; border-radius:12px; padding:9px 15px; font:800 14px var(--texte); cursor:pointer; background:var(--grey-soft); color:var(--ink); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  .btn:hover { filter:brightness(.97); }
   .btn.main { background:var(--ink); color:#fff; } .btn.ok { background:var(--green); color:#fff; } .btn.gold { background:var(--gold); color:var(--ink); }
   .btn.danger { background:var(--red-soft); color:var(--red); } .btn:disabled { opacity:.5; cursor:wait; }
-  details { margin-top:10px; } summary { cursor:pointer; color:var(--soft); font-size:13px; font-weight:600; }
+  details.plus { margin-top:10px; } details.plus > summary { cursor:pointer; color:var(--soft); font-size:13px; font-weight:700; list-style:none; }
+  details.plus > summary::before { content:"▸ "; } details.plus[open] > summary::before { content:"▾ "; }
   .more { margin-top:8px; font-size:13px; color:var(--soft); } .more .acts { margin-top:8px; } .more .btn { padding:7px 12px; font-size:13px; }
   .files a { display:inline-block; margin:4px 10px 0 0; }
-  .issues { margin:8px 0 0; padding:10px 12px; background:var(--gold-soft); border-radius:12px; font-size:13px; }
-  .issues.red { background:var(--red-soft); }
+  .issues { margin:8px 0 0; padding:10px 12px; background:var(--gold-soft); border-radius:12px; font-size:13px; } .issues.red { background:var(--red-soft); }
+  .issues ul { margin:4px 0 0 18px; padding:0; }
   .result { position:relative; margin-top:10px; padding:12px 40px 12px 14px; border-radius:12px; background:var(--blue-soft); font-size:14px; }
   .result.ok { background:var(--green-soft); } .result.err { background:var(--red-soft); color:#8B2420; }
   .result .x { position:absolute; top:6px; right:8px; border:0; background:transparent; font-size:18px; cursor:pointer; color:var(--soft); }
-  .result table { margin-top:6px; } .result .big { font:700 20px Georgia, serif; }
-  .issues ul { margin:4px 0 0 18px; padding:0; }
-  .card { background:var(--card); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:var(--shadow); }
+  .result table { margin-top:6px; } .result .big { font:400 20px var(--titre); }
+  .card { background:var(--card); border-radius:18px; padding:18px; margin-bottom:14px; box-shadow:var(--shadow); }
+  .card > h3 { display:flex; align-items:center; gap:8px; }
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; } .grid2 .card { margin:0; }
   .kv { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:14px; } .kv span:nth-child(odd) { color:var(--soft); }
-  dialog { border:0; border-radius:18px; padding:0; max-width:640px; width:calc(100% - 32px); box-shadow:0 20px 60px rgba(0,0,0,.25); color:var(--ink); }
-  dialog .in { padding:18px; max-height:80vh; overflow:auto; }
-  dialog h3 { font:700 18px Georgia, serif; margin:0 0 10px; }
-  table { width:100%; border-collapse:collapse; font-size:13px; } td, th { padding:6px 4px; border-bottom:1px solid var(--line); text-align:left; } td.r, th.r { text-align:right; }
-  #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(120px); background:var(--ink); color:#fff; padding:12px 18px; border-radius:14px; font-weight:600; max-width:calc(100% - 32px); transition:transform .3s, opacity .3s; z-index:20; opacity:0; pointer-events:none; }
+  dialog { border:0; border-radius:20px; padding:0; max-width:680px; width:calc(100% - 32px); box-shadow:0 20px 60px rgba(0,0,0,.25); color:var(--ink); }
+  dialog .in { padding:20px; max-height:80vh; overflow:auto; } dialog h3 { font:400 19px var(--titre); margin:0 0 10px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; font-variant-numeric:tabular-nums; } td, th { padding:7px 6px; border-bottom:1px solid var(--line); text-align:left; }
+  th { color:var(--soft); font-weight:800; font-size:12px; } td.r, th.r { text-align:right; }
+  tr.tot td { font-weight:800; border-bottom:0; }
+  .champ { display:grid; gap:4px; font:700 13px var(--texte); color:var(--soft); } .champ input, .champ select { font:600 14px var(--texte); color:var(--ink); padding:9px 11px; border:1.5px solid var(--line); border-radius:10px; background:#fff; width:100%; }
+  .champ.req span::after { content:" *"; color:var(--red); } .form { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; }
+  .bandeau { display:flex; gap:12px; align-items:center; background:var(--gold-soft); border-radius:14px; padding:12px 14px; margin-bottom:14px; font-size:14px; }
+  .bandeau.rouge { background:var(--red-soft); } .bandeau .btn { margin-left:auto; }
+  #toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(120px); background:var(--ink); color:#fff; padding:12px 18px; border-radius:14px; font-weight:700; max-width:calc(100% - 32px); transition:transform .3s, opacity .3s; z-index:20; opacity:0; pointer-events:none; }
   #toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
-  @media (max-width:560px) { .book { grid-template-columns:64px 1fr; } .cover { width:64px; height:64px; font-size:28px; } .tile .n { font-size:24px; } }
+  /* ---- rentabilité */
+  .sim { display:grid; grid-template-columns:minmax(280px, 360px) 1fr; gap:16px; align-items:start; }
+  @media (max-width:1000px) { .sim { grid-template-columns:1fr; } }
+  .reg { display:grid; gap:12px; } .reg .r { display:grid; grid-template-columns:1fr 92px; gap:8px; align-items:center; font-size:13.5px; }
+  .reg input[type=range] { grid-column:1 / -1; width:100%; accent-color:var(--ink); margin:0; }
+  .reg input[type=number] { font:700 14px var(--texte); padding:6px 8px; border:1.5px solid var(--line); border-radius:9px; width:100%; text-align:right; }
+  .reg fieldset { border:1px solid var(--line); border-radius:14px; padding:10px 12px 12px; margin:0; display:grid; gap:10px; } .reg legend { font:800 13px var(--texte); padding:0 6px; }
+  .grand { font:400 44px/1 var(--titre); } .grand.pos { color:var(--green); } .grand.neg { color:var(--red); }
+  .barres { display:grid; gap:8px; margin-top:12px; } .barres .b { display:grid; grid-template-columns:150px 1fr 92px; gap:10px; align-items:center; font-size:13px; }
+  .barres .b i { display:block; height:14px; border-radius:6px; min-width:2px; } .barres .b span.v { text-align:right; font-weight:800; font-variant-numeric:tabular-nums; }
+  .ok-c { color:var(--green); font-weight:800; } .ko-c { color:var(--red); font-weight:800; } .mid-c { color:#8A5A00; font-weight:800; }
+  @media (max-width:560px) { .book { grid-template-columns:56px 1fr; } .cover { width:56px; height:56px; font-size:26px; } .barres .b { grid-template-columns:100px 1fr 80px; } }
+  td.r, th.r { white-space:nowrap; }
+  #simRes { position:sticky; top:16px; align-self:start; }
+  .reg-d { border:1px solid var(--line); border-radius:14px; padding:10px 12px; } .reg-d summary { font:800 13px var(--texte); cursor:pointer; } .reg-d fieldset { border:0; padding:10px 0 0; margin:0; display:grid; gap:10px; }
+  @media (max-width:900px) { #simRes { position:static; } }
+  .kv span { overflow-wrap:anywhere; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header><img src="/static/marque/etoile-128.png" alt=""><div><h1>L'atelier</h1><div class="hi" id="hi">Chargement…</div></div></header>
-  <nav id="nav"></nav>
-  <main id="view"></main>
+<div class="app">
+  <aside>
+    <a class="brand" href="/" target="_blank"><img src="/static/marque/etoile-128.png" alt=""><span><b>L'atelier</b><small>Mon Héros du Mois</small></span></a>
+    <nav id="nav"></nav>
+    <div class="bas" id="bas"></div>
+  </aside>
+  <main>
+    <div class="tete"><div><h1 id="titre">Tableau de bord</h1><div class="hi" id="hi">Chargement…</div></div><div id="teteActs"></div></div>
+    <div id="view"></div>
+  </main>
 </div>
 <dialog id="dlg"><div class="in" id="dlgIn"></div></dialog>
 <div id="toast"></div>
+
 <script>
+
 const code = new URLSearchParams(location.search).get('code') || '';
 const H = { 'X-Admin': code }, Q = '?code=' + encodeURIComponent(code);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -94,7 +149,7 @@ const NOMX = { calendrier: 'le calendrier', coloriage: 'le cahier', gourde: 'la 
 // colis = livres + calendrier de la même commande
 const NB = o => (o.pack_total || 0) + (o.pack_cal || 0), PRETS = o => (o.pack_prets || 0) + (o.pack_cal_prets || 0);
 const colis = o => [(o.pack_total ? `${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}` : '')].concat((o.pack_extras || []).map(x => NOMX[x] || x)).filter(Boolean).join(' + ');
-let D = null, TAB = 'accueil', FILTRE = 'actifs';
+let D = null, TAB = 'tableau', FILTRE = 'actifs';
 const RES = {}, OPEN = new Set();   // résultats affichés sous un livre (restent jusqu'à ce que tu les fermes) ; menus ouverts
 
 function toast(t) { const e = document.getElementById('toast'); e.textContent = t; e.classList.add('show'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('show'), 4200); }
@@ -154,29 +209,37 @@ function boutons(o, e) {
   return { main, sec: sec.join('') };
 }
 
+
+/* ================================================================ cartes de commande */
 function carte(o) {
   const e = etat(o), bt = boutons(o, e), a = o.adresse || {};
   const titre = o.titre || (o.prenom ? `${o.calendrier ? 'Le calendrier' : o.coloriage ? 'Le cahier de coloriage' : o.objet ? NOMX[o.objet].replace(/^./, c => c.toUpperCase()) : 'Le livre'} de ${esc(o.prenom)}` : 'En préparation');
-  const cov = o.vignette ? `<div class="cover"><img loading="lazy" src="/admin/vignette/${o.id}${Q}&v=${o.finalise ? 1 : 0}" alt=""></div>` : `<div class="cover">${e.k === 'fabrication' ? '🎨' : '📖'}</div>`;
+  const cov = o.vignette ? `<div class="cover"><img loading="lazy" src="/admin/vignette/${o.id}${Q}&v=${o.finalise ? 1 : 0}" alt=""></div>` : `<div class="cover">${e.k === 'fabrication' ? '🎨' : o.objet ? (FORMULE[o.formule] || '').split(' ')[0] : '📖'}</div>`;
   const PL = o.plafond || D.plafond, bud = o.budget ? o.budget.total : null, pct = bud != null ? Math.min(100, bud / PL * 100) : 0;
   const issues = (o.controle || []).length && e.k !== 'pret'
     ? `<div class="issues"><b>Le contrôle a remarqué :</b><ul>${o.controle.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
   const err = o.erreur && o.erreur !== 'données effacées' && e.k !== 'pret' ? `<div class="issues red">${esc(o.erreur.replace(/^Fabrication : /, ''))}</div>` : '';
   const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${Q}">${esc(f)}</a>`).join('')
     + (o.job_id && o.statut !== 'attente_paiement' ? `<a href="/admin/archive/${o.id}${Q}">📦 dossier complet (zip, pour Claude)</a>` : '');
+  const fac = o.facture ? `<a class="btn" target="_blank" href="/admin/facture/${o.facture}.pdf${Q}">🧾 Facture ${esc(o.facture)}</a>`
+    : (o.montant && (o.origine || o.id) === o.id && o.statut !== 'attente_paiement' && !(o.formule || '').startsWith('essai')) ? `<button class="btn" onclick="act('${o.id}','facture',this)">🧾 Émettre la facture</button>` : '';
+  const sousTitre = [((o.formule || '').startsWith('essai') ? '🧪 ' : '') + esc(FORMULE[o.formule] || o.formule),
+    o.extra ? (o.pack_total ? `avec ${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}${o.objet ? ', colis Printful à part' : ', même colis'}` : '') : o.pack_total > 1 ? `livre ${o.numero}/${o.pack_total}` : '',
+    !o.extra && o.pack_cal ? '+ ' + (o.pack_extras || []).map(x => (NOMX[x] || x).replace(/^(le|la) /, '')).join(' + ') : '',
+    o.volume_number ? 'tome ' + o.volume_number : '', day(o.cree), esc(a.nom || o.email || '')].filter(Boolean).join(' · ');
   return `<div class="book">${cov}<div>
-    <div class="title">${esc(titre)}</div>
-    <div class="meta">${(o.formule || '').startsWith('essai') ? '🧪 ' : ''}${esc(FORMULE[o.formule] || o.formule)}${o.extra ? (o.pack_total ? ` · avec ${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}${o.objet ? ', colis Printful à part' : ', même colis'}` : '') : o.pack_total > 1 ? ` · livre ${o.numero}/${o.pack_total}` : ''}${!o.extra && o.pack_cal ? ' · + ' + (o.pack_extras || []).map(x => (NOMX[x] || x).replace(/^(le|la) /, '')).join(' + ') : ''}${o.volume_number ? ' · tome ' + o.volume_number : ''}${o.montant ? ' · ' + eur(o.montant) : ''} · ${day(o.cree)}</div>
-    <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>
+    <div class="ligne1"><div class="title">${esc(titre)}</div>${o.montant ? `<div class="prix">${eur(o.montant)}</div>` : ''}</div>
+    <div class="meta">${sousTitre}</div>
+    <span class="pill ${e.pill[0]}">${e.pill[1]} ${e.pill[2]}</span>${o.facture ? '<span class="pill p-grey">🧾 facturée</span>' : ''}
     <div class="say">${e.say}</div>
     ${e.k === 'fabrication' ? `<div class="prog"><div class="bar big"><i style="width:${o.progression || 1}%"></i></div><b>${o.progression || 0} %</b></div>${o.etape ? `<div class="meta">${esc(o.etape)}</div>` : ''}` : ''}
     ${bud ? `<div class="money">IA : <b>${usd(bud)}</b> / ${PL} $ <span class="bar"><i class="${pct > 80 ? 'warn' : ''}" style="width:${pct}%"></i></span></div>` : ''}
     ${err}${issues}
-    <div class="acts">${bt.main}</div>
+    <div class="acts">${bt.main}${fac}</div>
     ${RES[o.id] ? `<div class="result ${RES[o.id].cls || ''}"><button class="x" title="Fermer" onclick="delete RES['${o.id}'];render()">×</button>${RES[o.id].html}</div>` : ''}
-    <details ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">
+    <details class="plus" ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">
       <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
-      ${o.pack_mail ? `<div>📧 Mail « livre prêt » envoyé au client le ${new Date(o.pack_mail * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
+      ${o.pack_mail ? `<div>📧 Mail « prêt » envoyé le ${new Date(o.pack_mail * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
       ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
       ${o.printful_id ? `<div>🎒 Printful : commande ${esc(o.printful_id)} · ${esc(o.printful_statut || '')}${o.lulu_cout ? ' · ' + esc(o.lulu_cout) : ''}</div>` : ''}
       <div class="files">${files}</div>
@@ -184,100 +247,206 @@ function carte(o) {
     </div></details>
   </div></div>`;
 }
-
 function liste(rows) { return rows.length ? rows.map(carte).join('') : ''; }
 
-function vueAccueil() {
+/* ================================================================ tableau de bord */
+const debutMois = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime() / 1000; };
+function ventes(depuis) {        // commandes payées (celles qui portent le montant)
+  return D.commandes.filter(o => o.montant && (o.origine || o.id) === o.id && o.statut !== 'attente_paiement' && !(o.formule || '').startsWith('essai') && o.cree >= depuis);
+}
+function vueTableau() {
   const C = D.commandes.map(o => [o, etat(o).k]);
   const n = k => C.filter(([, x]) => x === k).length;
   const af = C.filter(([, k]) => AFAIRE.includes(k)).map(([o]) => o), fab = C.filter(([, k]) => k === 'fabrication').map(([o]) => o);
-  const c = D.config;
-  return `<div class="tiles">
-      <div class="tile" onclick="go('livres','relire')"><span class="e">👀</span><div class="n">${n('relire')}</div><div class="l">à relire</div></div>
-      <div class="tile" onclick="go('livres','fabrication')"><span class="e">🎨</span><div class="n">${n('fabrication')}</div><div class="l">en fabrication</div></div>
-      <div class="tile" onclick="go('livres','pret')"><span class="e">✅</span><div class="n">${n('pret')}</div><div class="l">prêts à imprimer</div></div>
-      <div class="tile" onclick="go('livres','bloque')"><span class="e">⚠️</span><div class="n">${n('bloque')}</div><div class="l">bloqués</div></div>
-      <div class="tile" onclick="go('reglages')"><span class="e">💰</span><div class="n" style="font-size:22px">${usd(c.depense_jour)}</div><div class="l">IA aujourd'hui (max ${c.budget_jour} $)</div></div>
+  const c = D.config, mois = ventes(debutMois()), ca = mois.reduce((t, o) => t + o.montant, 0);
+  const alertes = [];
+  if (D.vendeur_manquants && D.vendeur_manquants.length) alertes.push(`<div class="bandeau">🏢 <span>Infos de l'entreprise à compléter pour les factures et les pages légales : ${esc(D.vendeur_manquants.slice(0, 4).join(', '))}${D.vendeur_manquants.length > 4 ? '…' : ''}</span><button class="btn gold" onclick="go('reglages')">Compléter</button></div>`);
+  if (c.budget_jour <= 15) alertes.push(`<div class="bandeau">🤖 <span>Plafond IA : ${c.budget_jour} $ par jour, soit environ ${Math.floor(c.budget_jour / 2)} livres. À relever dans Railway (BUDGET_OPENAI_JOUR) avant la publicité.</span></div>`);
+  if (c.lulu !== 'production') alertes.push(`<div class="bandeau">🖨️ <span>${c.lulu === 'non configuré' ? 'Lulu n\'est pas branché' : 'Lulu est en bac à sable'} : aucune vraie impression.</span></div>`);
+  return alertes.join('') + `<div class="kpis">
+      <div class="kpi sombre" onclick="go('rentabilite')"><div class="l">Ventes du mois <span>💶</span></div><div class="n">${eur(ca)}</div><div class="s">${mois.length} commande${mois.length > 1 ? 's' : ''}${mois.length ? ' · panier ' + eur(Math.round(ca / mois.length)) : ''}</div></div>
+      <div class="kpi ${n('relire') ? 'alerte' : ''}" onclick="go('commandes','relire')"><div class="l">À relire <span>👀</span></div><div class="n">${n('relire')}</div><div class="s">à valider avant impression</div></div>
+      <div class="kpi ${n('pret') ? 'alerte' : ''}" onclick="go('commandes','pret')"><div class="l">Prêts à imprimer <span>✅</span></div><div class="n">${n('pret')}</div><div class="s">colis à envoyer</div></div>
+      <div class="kpi" onclick="go('commandes','fabrication')"><div class="l">En fabrication <span>🎨</span></div><div class="n">${n('fabrication')}</div><div class="s">${n('bloque') ? `<span class="ko-c">${n('bloque')} bloquée(s)</span>` : 'aucune bloquée'}</div></div>
+      <div class="kpi" onclick="go('reglages')"><div class="l">IA aujourd'hui <span>🤖</span></div><div class="n">${usd(c.depense_jour)}</div><div class="s">sur ${c.budget_jour} $ autorisés</div></div>
     </div>
-    <h2>À faire</h2>${af.length ? liste(af) : `<div class="empty"><div class="big">🎉</div>Rien à faire pour l'instant. Les livres se fabriquent tout seuls.</div>`}
+    <h2>À faire</h2>${af.length ? liste(af) : `<div class="empty"><div class="big">🎉</div>Rien à faire pour l'instant. Les créations se fabriquent toutes seules.</div>`}
     ${fab.length ? `<h2>En train de se fabriquer</h2>${liste(fab)}` : ''}`;
 }
 
-const FILTRES = { actifs: '📚 En cours', relire: '👀 À relire', fabrication: '🎨 Fabrication', pret: '✅ Prêts', bloque: '⚠️ Bloqués', expedie: '📦 Expédiés', essai: '🧪 Essais', archive: '🗂️ Archivés', tout: 'Tout' };
-function vueLivres() {
-  const rows = D.commandes.filter(o => {
-    const k = etat(o).k;
-    if (FILTRE === 'tout') return true;
-    if (FILTRE === 'actifs') return !['archive', 'expedie', 'essai'].includes(k);
-    return k === FILTRE;
-  });
-  return `<div class="chips">${Object.entries(FILTRES).map(([k, t]) => `<button class="${k === FILTRE ? 'on' : ''}" onclick="FILTRE='${k}';render()">${t}</button>`).join('')}</div>
-    ${rows.length ? liste(rows) : '<div class="empty"><div class="big">🌙</div>Aucun livre ici.</div>'}`;
+/* ================================================================ commandes */
+const FILTRES = { actifs: '📚 En cours', relire: '👀 À relire', fabrication: '🎨 Fabrication', pret: '✅ Prêts', imprimeur: "🖨️ Chez l'imprimeur", bloque: '⚠️ Bloqués', expedie: '📦 Expédiés', essai: '🧪 Essais', archive: '🗂️ Archivés', tout: 'Tout' };
+const filtreOk = (k, f) => f === 'tout' || (f === 'actifs' ? !['archive', 'expedie', 'essai'].includes(k) : k === f);
+let CHERCHE = '';
+function vueCommandes() {
+  const ks = D.commandes.map(o => [o, etat(o).k]);
+  const q = CHERCHE.trim().toLowerCase();
+  const rows = ks.filter(([o, k]) => filtreOk(k, FILTRE) && (!q || [o.id, o.email, o.titre, (o.adresse || {}).nom, o.prenom].join(' ').toLowerCase().includes(q))).map(([o]) => o);
+  return `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><input id="cherche" value="${esc(CHERCHE)}" placeholder="🔎 Chercher : nom, e-mail, référence…" style="flex:1;min-width:220px;font:600 14px var(--texte);padding:10px 12px;border:1.5px solid var(--line);border-radius:12px" oninput="CHERCHE=this.value;clearTimeout(window._ch);window._ch=setTimeout(()=>{render();const i=document.getElementById('cherche');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>
+    <div class="chips">${Object.entries(FILTRES).map(([k, t]) => { const c = ks.filter(([, x]) => filtreOk(x, k)).length; return `<button class="${k === FILTRE ? 'on' : ''}" onclick="FILTRE='${k}';render()">${t}<em>${c}</em></button>`; }).join('')}</div>
+    ${rows.length ? liste(rows) : '<div class="empty"><div class="big">🌙</div>Aucune commande ici.</div>'}
+    ${D.abonnements.length ? '<h2>Abonnements (ancienne formule)</h2>' + vueAbos() : ''}`;
 }
-
 function vueAbos() {
   const S = D.abonnements;
-  if (!S.length) return '<div class="empty"><div class="big">🔁</div>Aucun abonnement pour l\'instant.</div>';
   return S.map(s => `<div class="card"><b>${s.statut === 'actif' ? '🟢' : '⚪️'} ${esc(FORMULE[s.formule] || s.formule)}</b> · ${esc(s.email)}
-    <div class="meta" style="margin-top:4px">Dernier livre : n°${s.numero}${s.livres_restants != null ? ` · encore ${s.livres_restants} livre(s)` : ''}${s.prochain ? ' · prochain le ' + new Date(s.prochain * 1000).toLocaleDateString('fr-FR') : s.statut === 'actif' ? ' · prochain à la prochaine facture' : ''}</div></div>`).join('');
+    <div class="meta" style="margin-top:4px">Dernier livre : n°${s.numero}${s.livres_restants != null ? ` · encore ${s.livres_restants} livre(s)` : ''}${s.prochain ? ' · prochain le ' + new Date(s.prochain * 1000).toLocaleDateString('fr-FR') : ''}</div></div>`).join('');
 }
 
+/* ================================================================ messages */
 let MSG = null;
 function vueMessages() {
   if (!MSG) { fetch('/admin/api/messages', { headers: H }).then(r => r.json()).then(m => { MSG = m; render(); }); return 'Chargement…'; }
-  return (MSG.envoi ? '' : '<p class="meta">Les messages arrivent ici (l\'envoi par e-mail n\'est pas configuré).</p>') +
-    (MSG.messages.length ? MSG.messages.map(x => `<div class="card"><b>✉️ ${esc(x.sujet)}</b><div class="meta">${esc(x.nom || '')} · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a> · ${day(x.cree)}</div><p style="white-space:pre-wrap;margin:8px 0 0">${esc(x.message)}</p></div>`).join('')
+  return (MSG.envoi ? '' : '<div class="bandeau">✉️ <span>L\'envoi par e-mail n\'est pas configuré : les messages arrivent seulement ici.</span></div>') +
+    (MSG.messages.length ? MSG.messages.map(x => `<div class="card"><h3>✉️ ${esc(x.sujet)}</h3><div class="meta">${esc(x.nom || '')} · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a> · ${day(x.cree)}</div><p style="white-space:pre-wrap;margin:8px 0 0">${esc(x.message)}</p><div class="acts"><a class="btn" href="mailto:${esc(x.email)}?subject=${encodeURIComponent('Re : ' + x.sujet)}">Répondre</a></div></div>`).join('')
       : '<div class="empty"><div class="big">📭</div>Aucun message.</div>');
 }
 
-let TARIFS = null;
-function vueReglages() {
-  const c = D.config;
-  if (!TARIFS) fetch('/admin/api/tarifs' + Q, { headers: H }).then(r => r.json()).then(t => { TARIFS = t; render(); });
-  const t = TARIFS, e = t && t.etat, m = t && t.tarifs.modeles;
-  return `${RES._reg ? `<div class="result ${RES._reg.cls || ''}" style="margin:0 0 12px"><button class="x" onclick="delete RES._reg;render()">×</button>${RES._reg.html}</div>` : ''}
-  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">💰 Plafond IA : ${D.plafond} $ par livre</h3>
-    ${!t ? 'Chargement…' : `<div>${e.ok ? '<span class="pill p-green">✅ Fabrication autorisée</span>' : '<span class="pill p-red">⛔ Fabrication bloquée</span> ' + e.manque.map(esc).join(' ; ')}</div>
-      <div class="meta" style="margin-top:8px">Prix confirmés le <b>${esc(e.confirme_le || '—')}</b> · image de référence : <b>${esc(e.jetons_image_entree_max || 'non calibrée')}</b> jetons</div>
-      <div class="meta">gpt-image-2 : texte ${m['gpt-image-2'].texte_entree} $/M · image entrée ${m['gpt-image-2'].image_entree} $/M · image sortie ${m['gpt-image-2'].sortie_image} $/M — gpt-4.1 : ${m['gpt-4.1'].texte_entree} / ${m['gpt-4.1'].sortie} $/M</div>
-      <div class="acts"><button class="btn" onclick="confirmer()">J'ai vérifié les prix OpenAI</button><button class="btn" onclick="calibrer(this)" ${e.confirme_le ? '' : 'disabled'}>Recalibrer (≈ 0,02 $)</button></div>`}
-  </div>
-  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">⚙️ Branchements</h3><div class="kv">
-    <span>Paiement</span><span>${c.stripe === 'live' ? '🟢 réel' : c.stripe === 'test' ? '🟡 test (carte 4242)' : '⚪️ simulé'}</span>
-    <span>Imprimeur</span><span>${c.lulu === 'non configuré' ? '⚪️ Lulu non branché' : c.lulu === 'production' ? '🟢 Lulu (réel)' : '🟡 Lulu bac à sable'}</span>
-    <span>Produit</span><span>${esc(c.pod)}</span>
-    <span>Adresse du site</span><span>${esc(c.public_url || '—')}</span>
-    <span>Impression auto</span><span>${c.auto_impression ? 'oui' : 'non (tu valides chaque livre)'}</span></div></div>
-  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🏷️ Comparer les prix d'impression</h3>
-    <p class="meta" style="margin:0">Devis Lulu pour plusieurs fabrications (rigide, souple, agrafé…) et deux livraisons. Aucune commande, rien n'est payé.</p>
-    <div class="acts"><button class="btn" onclick="comparer(this)">Comparer</button></div></div>
-  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">📅 Calendriers Lulu (test)</h3>
-    <p class="meta" style="margin:0">Code produit : <b>${esc(D.config.pod_calendrier || '')}</b> · fichiers ${D.config.calendrier_valide ? '<b style="color:var(--green)">validés par Lulu ✅</b>' : '<b style="color:var(--red)">pas encore validés</b> (bouton « 🔎 Vérifier les fichiers chez Lulu » sur un calendrier)'}.<br>Devis de test : aucune commande.</p>
-    <div class="acts"><button class="btn" onclick="calendrier(this)">Tester</button></div></div>
-  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🎒 Printful (gourdes, sacs à dos…)</h3>
-    <p class="meta" style="margin:0">Vérifie la connexion et cherche dans le catalogue (mots en anglais, séparés par des virgules). Lecture seule : aucune commande.</p>
-    <input id="pfq" placeholder="bottle, backpack, kid, mug, puzzle" style="width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid #ddd">
-    <div class="acts"><button class="btn" onclick="printfulCat(this)">Vérifier et chercher</button></div></div>
-  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">💾 Place sur le disque</h3>
-    <div id="disque" class="meta">Chargement…</div>
-    <div class="acts"><button class="btn" onclick="nettoyer(this)">🧹 Libérer de la place</button></div>
-    <p class="meta" style="margin:0">Efface seulement les fichiers temporaires (pages de rendu, copies de références, images refusées archivées), les essais de plus de 3 jours et les créations jamais commandées. Rien de ce qui sert n'est touché.</p></div>
-  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🖍️ Cahiers de coloriage Lulu (test)</h3>
-    <p class="meta" style="margin:0">Code produit : <b>${esc(D.config.pod_coloriage || '')}</b> · fichiers ${D.config.coloriage_valide ? '<b style="color:var(--green)">validés par Lulu ✅</b>' : '<b style="color:var(--red)">pas encore validés</b> (bouton « 🔎 Vérifier les fichiers chez Lulu » sur un cahier)'}.<br>Devis de test des codes possibles (Lettre US, spirale, noir et blanc) : aucune commande.</p>
-    <div class="acts"><button class="btn" onclick="calendrier(this, 'coloriage')">Tester</button></div></div>
-  <div class="card"><h3 style="font:700 17px Georgia,serif;margin:0 0 8px">🖼️ Vignettes de l'accueil du site</h3>
-    <p class="meta" style="margin:0">Illustrations des cartes univers et fêtes encore manquantes (une image par vignette).</p>
-    <div class="acts"><button class="btn" onclick="vignettes(this)">Générer les vignettes manquantes</button></div></div>`;
+/* ================================================================ factures */
+let FAC = null;
+function vueFactures() {
+  if (!FAC) { fetch('/admin/api/factures' + Q, { headers: H }).then(r => r.json()).then(f => { FAC = f; render(); }); return 'Chargement…'; }
+  const an = new Date().getFullYear(), tot = FAC.factures.filter(f => (f.numero || '').includes('-' + an + '-')).reduce((t, f) => t + f.total, 0);
+  return (FAC.manquants.length ? `<div class="bandeau rouge">🏢 <span>Pour émettre une facture valable, complète : ${esc(FAC.manquants.join(', '))}.</span><button class="btn gold" onclick="go('reglages')">Mon entreprise</button></div>` : '') +
+    `<div class="kpis"><div class="kpi sombre"><div class="l">Facturé en ${an} <span>🧾</span></div><div class="n">${eur(tot)}</div><div class="s">${FAC.factures.length} facture(s) au total</div></div>
+      <div class="kpi ${FAC.a_faire.length ? 'alerte' : ''}"><div class="l">À facturer <span>⏳</span></div><div class="n">${FAC.a_faire.length}</div><div class="s">commande(s) payée(s) sans facture</div></div></div>
+    <div class="acts" style="margin:4px 0 18px">${FAC.a_faire.length ? `<button class="btn main" onclick="emettreTout(this)">🧾 Émettre les ${FAC.a_faire.length} facture(s) manquante(s)</button>` : ''}
+      <a class="btn" href="/admin/factures/recettes.csv${Q}&annee=${an}">⬇️ Livre des recettes ${an} (CSV)</a><a class="btn" href="/admin/factures/recettes.csv${Q}">⬇️ Tout (CSV)</a></div>
+    <div class="card"><h3>Factures émises</h3>${FAC.factures.length ? `<table><tr><th>N°</th><th>Date</th><th>Client</th><th>Régime</th><th class="r">Montant</th><th></th></tr>
+      ${FAC.factures.map(f => `<tr><td><b>${esc(f.numero)}</b></td><td>${new Date(f.cree * 1000).toLocaleDateString('fr-FR')}</td><td>${esc((f.client || {}).nom || '')}<div class="meta">${esc((f.client || {}).email || '')}</div></td><td>${f.regime === 'reel' ? 'TVA' : 'Franchise'}</td><td class="r">${eur(f.total)}</td><td class="r"><a target="_blank" href="/admin/facture/${f.numero}.pdf${Q}">PDF</a></td></tr>`).join('')}</table>`
+      : '<p class="meta">Aucune facture pour l\'instant. Chaque commande payée peut recevoir sa facture (numérotée à la suite, jamais modifiée).</p>'}</div>
+    <p class="meta">Les numéros se suivent sans trou (MHM-année-0001…). Une facture émise n'est jamais modifiée : en cas d'erreur, on fait un avoir (à demander à ton comptable). Le livre des recettes est le registre chronologique exigé en micro-entreprise.</p>`;
+}
+async function emettreTout(b) {
+  if (!confirm('Émettre les factures manquantes, dans l\'ordre des ventes ? Les numéros sont définitifs.')) return;
+  b.disabled = true; const r = await (await fetch('/admin/api/factures/manquantes' + Q, { method: 'POST', headers: H })).json();
+  toast(r.erreur ? '⚠️ ' + r.erreur : `🧾 ${r.emises.length} facture(s) émise(s)`); FAC = null; load();
 }
 
-const TABS = [['accueil', '🏠 Accueil'], ['livres', '📚 Livres'], ['abos', '🔁 Abonnements'], ['messages', '💬 Messages'], ['reglages', '⚙️ Réglages']];
-function render() {
-  const nb = D.commandes.filter(o => AFAIRE.includes(etat(o).k)).length;
-  document.getElementById('nav').innerHTML = TABS.map(([k, t]) => `<button class="${k === TAB ? 'on' : ''}" onclick="go('${k}')">${t}${k === 'accueil' && nb ? `<span class="badge">${nb}</span>` : ''}</button>`).join('');
-  document.getElementById('view').innerHTML = { accueil: vueAccueil, livres: vueLivres, abos: vueAbos, messages: vueMessages, reglages: vueReglages }[TAB]();
-  if (TAB === 'reglages') chargerDisque();
+/* ================================================================ rentabilité : simulateur + réel */
+const HYP_DEF = { imp: 12, p1: 9, p3: 11.5, p6: 14.5, p12: 20, ia: 2, usd: .9, calFab: 16, calPortSeul: 7, calPortAjout: 2, coloFab: 10, coloPortSeul: 7, coloPortAjout: 2,
+  gourde: 43.5, tasse: 19, sac: 54.5, stripePct: 1.5, stripeFixe: .25, cotis: 12.3, cac: 25, n: 50, partPub: 70, fixes: 15,
+  mLivre: 30, mP3: 25, mP6: 30, mP12: 5, mCal: 5, mColo: 5, aCal: 15, aColo: 10, aTasse: 8, aGourde: 4, aSac: 3 };
+let HYP; try { HYP = Object.assign({}, HYP_DEF, JSON.parse(localStorage.getItem('mhm-hyp') || '{}')); } catch (_) { HYP = Object.assign({}, HYP_DEF); }
+let RENTA = null;
+function paniers() {
+  const T = RENTA.tarifs, F = T.formules, h = HYP, reel = RENTA.regime === 'reel', tx = RENTA.taux_tva;
+  const pf = { 1: h.p1, 3: h.p3, 6: h.p6, 12: h.p12 }, ia1 = h.ia * h.usd;
+  const L = (nom, ttc, fab, port, ia, cat, ajout, conf) => {
+    const t = reel ? (tx[cat] || 20) / 100 : 0;
+    const ht = ttc / (1 + t), fabN = fab / (1 + t), portN = port / (1 + t);
+    const st = ajout ? ttc * h.stripePct / 100 : ttc * h.stripePct / 100 + h.stripeFixe;
+    const marge = ht - fabN - portN - ia - st, cout = fabN + portN + ia + st;
+    return { nom, ttc, ht, cout, marge, txMarge: marge / cout, txMarque: marge / ht, cacMax: marge - ht * h.cotis / 100, conf };
+  };
+  const port = k => (T.port_fr[String(k)] ?? T.port_fr['3']) / 100;
+  return [
+    L('Livre seul', F.livre.prix / 100 + port(1), h.imp, pf[1], ia1, 'livre', false, 'estimé'),
+    L('Pack 3', F.pack3.prix / 100 + port(3), 3 * h.imp, pf[3], 3 * ia1, 'livre', false, 'port non mesuré'),
+    L('Pack 6', F.pack6.prix / 100, 6 * h.imp, pf[6], 6 * ia1, 'livre', false, 'estimé'),
+    L('Pack 12', F.pack12.prix / 100, 12 * h.imp, pf[12], 12 * ia1, 'livre', false, 'port non mesuré'),
+    L('Calendrier seul', T.calendrier.seul / 100 + T.calendrier.port / 100, h.calFab, h.calPortSeul, 1.73 * h.usd, 'calendrier', false, 'non mesuré'),
+    L('Coloriage seul', T.coloriage.seul / 100 + T.coloriage.port / 100, h.coloFab, h.coloPortSeul, 1.89 * h.usd, 'coloriage', false, 'non mesuré'),
+    L('Calendrier en ajout', T.calendrier.ajout / 100, h.calFab, h.calPortAjout, 1.73 * h.usd, 'calendrier', true, 'non mesuré'),
+    L('Coloriage en ajout', T.coloriage.ajout / 100, h.coloFab, h.coloPortAjout, 1.89 * h.usd, 'coloriage', true, 'non mesuré'),
+    L('Tasse (ajout)', T.objets.tasse.prix / 100, h.tasse, 0, .1 * h.usd, 'objet', true, 'devis Printful'),
+    L('Gourde (ajout)', T.objets.gourde.prix / 100, h.gourde, 0, .1 * h.usd, 'objet', true, 'devis Printful'),
+    L('Sac (ajout)', T.objets.sac.prix / 100, h.sac, 0, .25 * h.usd, 'objet', true, 'devis Printful')];
 }
-function go(t, f) { TAB = t; if (f) FILTRE = f; render(); scrollTo(0, 0); }
+function scenario() {
+  const P = Object.fromEntries(paniers().map(p => [p.nom, p])), h = HYP;
+  const mix = [['Livre seul', h.mLivre], ['Pack 3', h.mP3], ['Pack 6', h.mP6], ['Pack 12', h.mP12], ['Calendrier seul', h.mCal], ['Coloriage seul', h.mColo]];
+  const somme = mix.reduce((t, [, v]) => t + v, 0) || 1;
+  const livres = (h.mLivre + h.mP3 + h.mP6 + h.mP12) / somme;
+  const aj = [['Calendrier en ajout', h.aCal], ['Coloriage en ajout', h.aColo], ['Tasse (ajout)', h.aTasse], ['Gourde (ajout)', h.aGourde], ['Sac (ajout)', h.aSac]];
+  let ca = 0, ht = 0, cout = 0, marge = 0;
+  mix.forEach(([k, v]) => { const q = h.n * v / somme, p = P[k]; ca += p.ttc * q; ht += p.ht * q; cout += p.cout * q; marge += p.marge * q; });
+  aj.forEach(([k, v]) => { const q = h.n * livres * v / 100, p = P[k]; ca += p.ttc * q; ht += p.ht * q; cout += p.cout * q; marge += p.marge * q; });
+  const pub = h.n * h.partPub / 100 * h.cac, cotis = ht * h.cotis / 100;
+  return { ca, ht, cout, marge, pub, cotis, fixes: h.fixes, res: marge - pub - cotis - h.fixes, panier: ca / Math.max(h.n, 1), annuel: ca * 12 };
+}
+const e2 = v => (Math.round(v * 100) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const e0 = v => Math.round(v).toLocaleString('fr-FR') + ' €';
+function curseur(k, label, min, max, pas, suf) {
+  return `<div class="r"><label for="h_${k}">${label}</label><input type="number" id="h_${k}" value="${HYP[k]}" step="${pas}" min="${min}" max="${max}" oninput="majHyp('${k}',this.value,true)">
+    <input type="range" min="${min}" max="${max}" step="${pas}" value="${HYP[k]}" oninput="majHyp('${k}',this.value)" aria-label="${label}">${suf ? '' : ''}</div>`;
+}
+function majHyp(k, v, deNombre) {
+  HYP[k] = parseFloat(String(v).replace(',', '.')) || 0;
+  try { localStorage.setItem('mhm-hyp', JSON.stringify(HYP)); } catch (_) {}
+  const z = document.getElementById('simRes'); if (z) z.innerHTML = simResultats();
+  if (!deNombre) { const n = document.getElementById('h_' + k); if (n) n.value = HYP[k]; }
+  else { const r = document.querySelector(`#h_${k} + input[type=range]`); if (r) r.value = HYP[k]; }
+}
+function simResultats() {
+  const P = paniers(), s = scenario(), max = Math.max(s.ca, 1);
+  const cls = m => m >= 25 ? 'ok-c' : m >= 10 ? 'mid-c' : 'ko-c';
+  const barre = (lab, v, coul) => `<div class="b"><span>${lab}</span><i style="width:${Math.max(0, v / max * 100)}%;background:${coul}"></i><span class="v">${e0(v)}</span></div>`;
+  return `<div class="card"><h3>📅 Un mois à ${HYP.n} commandes</h3>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end"><div><div class="meta">Résultat estimé après pub, cotisations et frais fixes</div><div class="grand ${s.res >= 0 ? 'pos' : 'neg'}">${e0(s.res)}</div></div>
+        <div class="meta">Panier moyen <b>${e2(s.panier)}</b> · CA annuel <b>${e0(s.annuel)}</b>${RENTA.regime === 'franchise' && s.annuel > 85000 ? ' <span class="ko-c">· au-delà de 85 000 € : fin de la franchise de TVA</span>' : ''}</div></div>
+      <div class="barres">${barre('Chiffre d\'affaires', s.ca, '#1F2557')}${barre('Fabrication, port, IA, Stripe', s.cout, '#9DB7F0')}${barre('Publicité', s.pub, '#FFC94A')}${barre('Cotisations', s.cotis, '#F49A8A')}${barre('Frais fixes', s.fixes, '#C9CDF0')}${barre('Résultat', Math.max(0, s.res), '#2E8A5E')}</div></div>
+    <div class="card"><h3>🧺 Marge par panier ${RENTA.regime === 'reel' ? '(régime réel de TVA)' : '(franchise de TVA)'}</h3>
+      <table><tr><th>Panier</th><th class="r">Encaissé</th><th class="r">Coûts</th><th class="r">Marge</th><th class="r">Taux de marque</th><th class="r">CAC max</th><th>Coûts</th></tr>
+      ${P.map(p => `<tr><td>${p.nom}</td><td class="r">${e2(p.ttc)}</td><td class="r">${e2(p.cout)}</td><td class="r ${cls(p.marge)}">${e2(p.marge)}</td><td class="r">${Math.round(p.txMarque * 100)} %</td><td class="r">${/ajout/.test(p.nom) ? '—' : e2(Math.max(0, p.cacMax))}</td><td class="meta">${p.conf}</td></tr>`).join('')}</table>
+      <p class="meta">CAC max = coût d'acquisition qui ramène le résultat à zéro, après cotisations (${HYP.cotis} % du CA HT). Vert : plus de 25 € de marge ; orange : 10 à 25 € ; rouge : moins de 10 €.</p></div>`;
+}
+function vueRentabilite() {
+  if (!RENTA) { fetch('/admin/api/rentabilite' + Q, { headers: H }).then(r => r.json()).then(x => { RENTA = x; render(); }); return 'Chargement…'; }
+  const C = RENTA.commandes, reel = C.map(o => {
+    const enc = o.montant / 100, ia = o.ia_usd * HYP.usd, st = enc * HYP.stripePct / 100 + HYP.stripeFixe;
+    const connu = o.lulu_eur != null || (o.printful_eur != null && !o.envoye);
+    const fab = (o.lulu_eur || 0) + (o.printful_eur || 0);
+    return Object.assign({}, o, { enc, ia, st, fab, connu: o.lulu_eur != null || o.printful_eur != null, marge: enc - ia - st - fab });
+  });
+  const connus = reel.filter(o => o.connu), T = k => connus.reduce((t, o) => t + o[k], 0);
+  const sec = (t, ch, ferme) => ferme ? `<details class="reg-d"><summary>${t}</summary><fieldset>${ch}</fieldset></details>` : `<fieldset><legend>${t}</legend>${ch}</fieldset>`;
+  return `<div class="sim"><div class="card reg">
+      <h3>🎛️ Hypothèses</h3><p class="meta" style="margin:-4px 0 0">Bouge les curseurs : tout se recalcule. Remplace les estimations par les vrais devis dès que tu les as.</p>
+      ${sec('Ton mois', curseur('n', 'Commandes par mois', 5, 500, 5) + curseur('cac', 'CAC (€ par client acquis)', 0, 80, 1) + curseur('partPub', '% de commandes venues de la pub', 0, 100, 5) + curseur('cotis', 'Cotisations (% du CA HT)', 0, 30, .1) + curseur('fixes', 'Frais fixes (€ par mois)', 0, 500, 5))}
+      ${sec('Répartition des commandes (%)', curseur('mLivre', 'Livre seul', 0, 100, 1) + curseur('mP3', 'Pack 3', 0, 100, 1) + curseur('mP6', 'Pack 6', 0, 100, 1) + curseur('mP12', 'Pack 12', 0, 100, 1) + curseur('mCal', 'Calendrier seul', 0, 100, 1) + curseur('mColo', 'Coloriage seul', 0, 100, 1))}
+      ${sec('Ajouts sur les commandes de livres (%)', curseur('aCal', 'Calendrier', 0, 100, 1) + curseur('aColo', 'Coloriage', 0, 100, 1) + curseur('aTasse', 'Tasse', 0, 100, 1) + curseur('aGourde', 'Gourde', 0, 100, 1) + curseur('aSac', 'Sac', 0, 100, 1), 1)}
+      ${sec('Coûts Lulu (€ TTC, estimés)', curseur('imp', 'Impression d\'un livre', 5, 25, .1) + curseur('p1', 'Port 1 livre', 3, 20, .1) + curseur('p3', 'Port 3 livres', 3, 25, .1) + curseur('p6', 'Port 6 livres', 3, 30, .1) + curseur('p12', 'Port 12 livres', 3, 40, .1) + curseur('calFab', 'Impression calendrier', 5, 30, .1) + curseur('calPortSeul', 'Port calendrier seul', 0, 20, .1) + curseur('calPortAjout', 'Surcoût de port calendrier ajouté', 0, 10, .1) + curseur('coloFab', 'Impression coloriage', 3, 25, .1) + curseur('coloPortSeul', 'Port coloriage seul', 0, 20, .1) + curseur('coloPortAjout', 'Surcoût de port coloriage ajouté', 0, 10, .1), 1)}
+      ${sec('Printful et autres', curseur('tasse', 'Tasse (TTC port compris)', 5, 40, .1) + curseur('gourde', 'Gourde', 10, 70, .1) + curseur('sac', 'Sac', 10, 90, .1) + curseur('ia', 'IA par livre ($)', 0, 3, .05) + curseur('usd', '1 $ en €', .7, 1.1, .01) + curseur('stripePct', 'Stripe (%)', 0, 5, .1) + curseur('stripeFixe', 'Stripe (€ fixe)', 0, 1, .05), 1)}
+      <button class="btn" onclick="HYP=Object.assign({},HYP_DEF);try{localStorage.removeItem('mhm-hyp')}catch(_){};render()">Revenir aux hypothèses de l'audit</button>
+    </div><div id="simRes">${simResultats()}</div></div>
+    <h2>📒 Rentabilité réelle des commandes</h2>
+    <div class="card">${C.length ? `<table><tr><th>Date</th><th>Commande</th><th class="r">Encaissé</th><th class="r">IA</th><th class="r">Lulu + Printful</th><th class="r">Stripe (est.)</th><th class="r">Marge</th></tr>
+      ${reel.map(o => `<tr><td>${new Date(o.cree * 1000).toLocaleDateString('fr-FR')}</td><td>${esc(FORMULE[o.formule] || o.formule)}${o.objets.length ? ' + ' + o.objets.map(x => NOMX[x].replace(/^(le|la) /, '')).join(', ') : ''}<div class="meta">${o.id}</div></td><td class="r">${e2(o.enc)}</td><td class="r">${e2(o.ia)}</td><td class="r">${o.connu ? e2(o.fab) : '<span class="meta">à l\'envoi</span>'}</td><td class="r">${e2(o.st)}</td><td class="r ${o.connu ? (o.marge >= 0 ? 'ok-c' : 'ko-c') : ''}">${o.connu ? e2(o.marge) : '—'}</td></tr>`).join('')}
+      ${connus.length ? `<tr class="tot"><td colspan="2">Total des commandes envoyées (${connus.length})</td><td class="r">${e2(T('enc'))}</td><td class="r">${e2(T('ia'))}</td><td class="r">${e2(T('fab'))}</td><td class="r">${e2(T('st'))}</td><td class="r">${e2(T('marge'))}</td></tr>` : ''}</table>
+      <p class="meta">Les coûts Lulu et Printful sont ceux des devis enregistrés au moment de l'envoi chez l'imprimeur. Marge avant TVA, cotisations et publicité.</p>`
+      : '<p class="meta">Aucune vente pour l\'instant : les commandes payées apparaîtront ici avec leurs coûts réels.</p>'}</div>`;
+}
+
+/* ================================================================ réglages : mon entreprise, RGPD */
+let VEND = null;
+function carteEntreprise() {
+  if (!VEND) { fetch('/admin/api/vendeur' + Q, { headers: H }).then(r => r.json()).then(v => { VEND = v; render(); }); return '<div class="card">Chargement…</div>'; }
+  const v = VEND.vendeur, ch = VEND.champs;
+  const inp = k => k === 'regime_tva'
+    ? `<label class="champ req"><span>${esc(ch[k].libelle.replace(' (franchise ou reel)', ''))}</span><select id="v_${k}"><option value="franchise" ${v[k] === 'franchise' ? 'selected' : ''}>Franchise en base (pas de TVA)</option><option value="reel" ${v[k] === 'reel' ? 'selected' : ''}>Régime réel (TVA facturée)</option></select></label>`
+    : `<label class="champ ${ch[k].obligatoire ? 'req' : ''}"><span>${esc(ch[k].libelle)}</span><input id="v_${k}" value="${esc(v[k] || '')}"></label>`;
+  return `<div class="card"><h3>🏢 Mon entreprise</h3>
+    <p class="meta" style="margin:0 0 12px">Une seule fois : ces informations remplissent les CGV, les mentions légales, la politique de confidentialité et les factures. ${VEND.manquants.length ? `<span class="ko-c">Il manque ${VEND.manquants.length} information(s).</span>` : '<span class="ok-c">Tout est complet.</span>'}</p>
+    <div class="form">${['raison_sociale','forme','capital','adresse','siret','rcs','tva_intra','regime_tva','directeur_publication','email','telephone','mediateur_nom','mediateur_url','hebergeur','hebergeur_adresse','hebergeur_contact'].filter(k => ch[k]).concat(Object.keys(ch).filter(k => !['raison_sociale','forme','capital','adresse','siret','rcs','tva_intra','regime_tva','directeur_publication','email','telephone','mediateur_nom','mediateur_url','hebergeur','hebergeur_adresse','hebergeur_contact'].includes(k))).map(inp).join('')}</div>
+    <h3 style="margin-top:16px">Taux de TVA par produit (régime réel seulement)</h3>
+    <div class="form">${Object.entries(v.taux_tva).map(([k, t]) => `<label class="champ"><span>${{ livre: 'Livres', coloriage: 'Cahiers de coloriage', calendrier: 'Calendriers', objet: 'Objets' }[k] || k} (%)</span><input id="t_${k}" type="number" step="0.1" value="${t}"></label>`).join('')}</div>
+    <p class="meta">À faire confirmer par ton comptable (le taux des livres personnalisés notamment).</p>
+    <div class="acts"><button class="btn main" onclick="enregistrerVendeur(this)">Enregistrer</button><a class="btn" target="_blank" href="/mentions-legales">Voir les mentions légales</a><a class="btn" target="_blank" href="/cgv">Voir les CGV</a><a class="btn" target="_blank" href="/confidentialite">Voir la confidentialité</a></div></div>`;
+}
+async function enregistrerVendeur(b) {
+  const d = { taux_tva: {} };
+  Object.keys(VEND.champs).forEach(k => { const e = document.getElementById('v_' + k); if (e) d[k] = e.value; });
+  Object.keys(VEND.vendeur.taux_tva).forEach(k => { d.taux_tva[k] = document.getElementById('t_' + k).value; });
+  b.disabled = true;
+  VEND = await (await fetch('/admin/api/vendeur' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify(d) })).json();
+  toast('✅ Enregistré'); RENTA = null; FAC = null; load();
+}
+async function purgeRgpd(b) {
+  if (!confirm("Effacer les données des enfants et les fichiers de fabrication des commandes expédiées depuis plus de 30 jours ?\n\nLes factures restent (obligation légale). C'est définitif.")) return;
+  b.disabled = true; const r = await (await fetch('/admin/api/rgpd/purge' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: '{"jours":30}' })).json();
+  b.disabled = false; toast(r.erreur ? '⚠️ ' + r.erreur : `🧹 Données effacées pour ${r.effacees} commande(s)`); load();
+}
 
 const CONFIRM = {
   finaliser: "Tu as relu le livre et il te plaît ? Il sera figé et sauvegardé (plus aucun coût IA).",
@@ -429,17 +598,91 @@ async function vignettes(b) {
   RES._reg = r.lancees ? { cls: 'ok', html: r.lancees.length ? `🖼️ ${r.lancees.length} vignette(s) en cours (quelques minutes).` : '✅ Toutes les vignettes sont déjà faites.' } : { cls: 'err', html: '⚠️ ' + esc(r.erreur || 'erreur') }; render();
 }
 
+
+/* ================================================================ réglages */
+let TARIFS = null;
+function vueReglages() {
+  const c = D.config;
+  if (!TARIFS) fetch('/admin/api/tarifs' + Q, { headers: H }).then(r => r.json()).then(t => { TARIFS = t; render(); });
+  const t = TARIFS, e = t && t.etat, m = t && t.tarifs.modeles;
+  const res = RES._reg ? `<div class="result ${RES._reg.cls || ''}" style="margin:0 0 12px"><button class="x" onclick="delete RES._reg;render()">×</button>${RES._reg.html}</div>` : '';
+  return res + carteEntreprise() + `
+  <h2>Production</h2><div class="grid2">
+  <div class="card"><h3>💰 Plafond IA : ${D.plafond} $ par livre</h3>
+    ${!t ? 'Chargement…' : `<div>${e.ok ? '<span class="pill p-green">✅ Fabrication autorisée</span>' : '<span class="pill p-red">⛔ Fabrication bloquée</span> ' + e.manque.map(esc).join(' ; ')}</div>
+      <div class="meta" style="margin-top:8px">Dépense du jour : <b>${usd(c.depense_jour)}</b> sur ${c.budget_jour} $ (variable BUDGET_OPENAI_JOUR dans Railway)</div>
+      <div class="meta">Prix confirmés le <b>${esc(e.confirme_le || '—')}</b> · image de référence : <b>${esc(e.jetons_image_entree_max || 'non calibrée')}</b> jetons</div>
+      <div class="meta">gpt-image-2 : texte ${m['gpt-image-2'].texte_entree} $/M · image entrée ${m['gpt-image-2'].image_entree} $/M · image sortie ${m['gpt-image-2'].sortie_image} $/M — gpt-4.1 : ${m['gpt-4.1'].texte_entree} / ${m['gpt-4.1'].sortie} $/M</div>
+      <div class="acts"><button class="btn" onclick="confirmer()">J'ai vérifié les prix OpenAI</button><button class="btn" onclick="calibrer(this)" ${e.confirme_le ? '' : 'disabled'}>Recalibrer (≈ 0,02 $)</button></div>`}
+  </div>
+  <div class="card"><h3>🔌 Branchements</h3><div class="kv">
+    <span>Paiement</span><span>${c.stripe === 'live' ? '🟢 réel' : c.stripe === 'test' ? '🟡 test (carte 4242)' : '⚪️ simulé'}</span>
+    <span>Imprimeur livres</span><span>${c.lulu === 'non configuré' ? '⚪️ Lulu non branché' : c.lulu === 'production' ? '🟢 Lulu (réel)' : '🟡 Lulu bac à sable'}</span>
+    <span>Objets</span><span>${c.printful ? (c.printful_confirmer ? '🟢 Printful (envoi réel)' : '🟡 Printful (brouillons à confirmer)') : '⚪️ Printful non branché'}</span>
+    <span>Produit</span><span>${esc(c.pod)}</span>
+    <span>Adresse du site</span><span>${esc(c.public_url || '—')}</span>
+    <span>Impression auto</span><span>${c.auto_impression ? 'oui' : 'non (tu valides chaque livre)'}</span></div></div>
+  <div class="card"><h3>🏷️ Comparer les prix d'impression</h3>
+    <p class="meta" style="margin:0">Devis Lulu pour plusieurs fabrications (rigide, souple, agrafé…) et deux livraisons. Aucune commande, rien n'est payé.</p>
+    <div class="acts"><button class="btn" onclick="comparer(this)">Comparer</button></div></div>
+  <div class="card"><h3>🎒 Printful (gourdes, sacs, tasses)</h3>
+    <p class="meta" style="margin:0">Vérifie la connexion et cherche dans le catalogue (mots en anglais, séparés par des virgules). Lecture seule : aucune commande.</p>
+    <input id="pfq" placeholder="bottle, backpack, kid, mug, puzzle" style="width:100%;margin-top:8px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);font:600 14px var(--texte)">
+    <div class="acts"><button class="btn" onclick="printfulCat(this)">Vérifier et chercher</button></div></div>
+  <div class="card"><h3>📅 Calendriers Lulu (test)</h3>
+    <p class="meta" style="margin:0">Code produit : <b>${esc(c.pod_calendrier || '')}</b> · fichiers ${c.calendrier_valide ? '<b class="ok-c">validés par Lulu ✅</b>' : '<b class="ko-c">pas encore validés</b> (bouton « 🔎 Vérifier les fichiers chez Lulu » sur un calendrier)'}.<br>Devis de test : aucune commande.</p>
+    <div class="acts"><button class="btn" onclick="calendrier(this)">Tester</button></div></div>
+  <div class="card"><h3>🖍️ Cahiers de coloriage Lulu (test)</h3>
+    <p class="meta" style="margin:0">Code produit : <b>${esc(c.pod_coloriage || '')}</b> · fichiers ${c.coloriage_valide ? '<b class="ok-c">validés par Lulu ✅</b>' : '<b class="ko-c">pas encore validés</b> (bouton « 🔎 Vérifier les fichiers chez Lulu » sur un cahier)'}.<br>Devis de test (Lettre US, spirale, noir et blanc) : aucune commande.</p>
+    <div class="acts"><button class="btn" onclick="calendrier(this, 'coloriage')">Tester</button></div></div>
+  </div>
+  <h2>Entretien</h2><div class="grid2">
+  <div class="card"><h3>🔒 Données personnelles (RGPD)</h3>
+    <p class="meta" style="margin:0">La politique de confidentialité promet d'effacer prénoms, photos et fichiers au plus tard 3 mois après la livraison. Ce bouton efface ceux des commandes expédiées depuis plus de 30 jours. Les factures et le livre des recettes restent.</p>
+    <div class="acts"><button class="btn" onclick="purgeRgpd(this)">🧹 Effacer les anciennes données</button></div></div>
+  <div class="card"><h3>💾 Place sur le disque</h3>
+    <div id="disque" class="meta">Chargement…</div>
+    <div class="acts"><button class="btn" onclick="nettoyer(this)">🧹 Libérer de la place</button></div>
+    <p class="meta" style="margin:0">Efface seulement les fichiers temporaires, les essais de plus de 3 jours et les créations jamais commandées. Rien de ce qui sert n'est touché.</p></div>
+  <div class="card"><h3>🖼️ Vignettes de l'accueil du site</h3>
+    <p class="meta" style="margin:0">Illustrations des cartes univers et fêtes encore manquantes (une image par vignette).</p>
+    <div class="acts"><button class="btn" onclick="vignettes(this)">Générer les vignettes manquantes</button></div></div>
+  </div>`;
+}
+
+/* ================================================================ navigation */
+const TABS = [['tableau', '🏠', 'Tableau de bord'], ['commandes', '📚', 'Commandes'], ['rentabilite', '💶', 'Rentabilité'], ['factures', '🧾', 'Factures'], ['messages', '💬', 'Messages'], ['reglages', '⚙️', 'Réglages']];
+const VUES = { tableau: vueTableau, commandes: vueCommandes, rentabilite: vueRentabilite, factures: vueFactures, messages: vueMessages, reglages: vueReglages };
+function render() {
+  const nb = D.commandes.filter(o => AFAIRE.includes(etat(o).k)).length;
+  const badge = { tableau: nb, factures: D.a_facturer || 0, messages: D.messages_non_lus || 0 };
+  document.getElementById('nav').innerHTML = TABS.map(([k, ic, t]) => `<button class="${k === TAB ? 'on' : ''}" onclick="go('${k}')"><span class="ic">${ic}</span><span class="t">${t}</span>${badge[k] ? `<span class="badge">${badge[k]}</span>` : ''}</button>`).join('');
+  const c = D.config;
+  document.getElementById('bas').innerHTML = `${c.stripe === 'live' ? '🟢 Stripe réel' : c.stripe === 'test' ? '🟡 Stripe test' : '⚪️ Stripe simulé'}<br>${c.lulu === 'production' ? '🟢 Lulu réel' : c.lulu === 'non configuré' ? '⚪️ Lulu non branché' : '🟡 Lulu bac à sable'}<br><a href="/" target="_blank">Voir le site ↗</a>`;
+  document.getElementById('titre').textContent = (TABS.find(x => x[0] === TAB) || TABS[0])[2];
+  document.getElementById('teteActs').innerHTML = TAB === 'commandes' || TAB === 'tableau' ? `<button class="btn" onclick="load()">↻ Actualiser</button>` : TAB === 'rentabilite' ? `<button class="btn" onclick="RENTA=null;render()">↻ Recharger les ventes</button>` : '';
+  const y = scrollY, f = document.activeElement && document.activeElement.id;
+  if (TAB === 'rentabilite' && RENTA && document.getElementById('simRes') && f && f.startsWith('h_')) return;   // ne pas casser la saisie
+  document.getElementById('view').innerHTML = VUES[TAB]();
+  if (TAB === 'reglages') chargerDisque();
+  scrollTo(0, y);
+}
+function go(t, f) { TAB = VUES[t] ? t : 'tableau'; if (f) FILTRE = f; try { history.replaceState(null, '', location.pathname + Q + '#' + TAB); } catch (_) {} render(); scrollTo(0, 0); }
+
 async function load() {
   const r = await fetch('/admin/api/commandes' + Q, { headers: H });
   if (!r.ok) { document.getElementById('hi').textContent = 'Accès refusé : ajoute ?code=… à l\'adresse.'; return; }
   D = await r.json();
   const h = new Date().getHours();
   const nb = D.commandes.filter(o => AFAIRE.includes(etat(o).k)).length;
-  document.getElementById('hi').textContent = `${h < 18 ? 'Bonjour' : 'Bonsoir'} Alex · ${nb ? nb + ' chose(s) à faire' : 'tout roule'}`;
+  document.getElementById('hi').textContent = `${h < 5 || h >= 18 ? 'Bonsoir' : 'Bonjour'} Alex · ${nb ? nb + ' chose' + (nb > 1 ? 's' : '') + ' à faire' : 'tout roule'} · ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`;
   if (!document.getElementById('dlg').open) render();
 }
-load(); setInterval(() => { if (!document.hidden) load(); }, (D && D.commandes || []).some(o => o.en_cours) ? 4000 : 15000);
+TAB = VUES[location.hash.slice(1)] ? location.hash.slice(1) : 'tableau';
+load();
+setInterval(() => { if (!document.hidden && D && !['rentabilite', 'reglages'].includes(TAB)) load(); }, 15000);
 setInterval(() => { if (!document.hidden && D && (D.commandes || []).some(o => o.en_cours)) load(); }, 4000);
+
 </script>
 </body>
 </html>

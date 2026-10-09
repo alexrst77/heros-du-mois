@@ -4,7 +4,7 @@
 Lancement : python app.py   puis ouvrir http://localhost:8000"""
 import os, sys, json, uuid, threading, time, shutil, traceback, base64, io, re
 from pathlib import Path
-from flask import Flask, request, jsonify, send_file, send_from_directory, abort, redirect
+from flask import Flask, request, jsonify, send_file, send_from_directory, abort, redirect, Response
 from PIL import Image
 
 ROOT = Path(__file__).parent
@@ -254,7 +254,9 @@ def run(job_id, form, refs):
 def vitrine():
     if request.args.get("commande"):                 # anciens liens de retour de paiement
         return redirect("/creer?" + request.query_string.decode())
-    return send_from_directory(app.static_folder, "vitrine.html")
+    base = (os.getenv("PUBLIC_URL") or request.host_url).rstrip("/")      # adresses absolues (partage, référencement)
+    html = (ROOT / "static" / "vitrine.html").read_text(encoding="utf-8").replace("__BASE__", base)
+    return Response(html, mimetype="text/html")
 
 
 @app.get("/creer")

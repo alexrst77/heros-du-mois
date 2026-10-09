@@ -5,9 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
 <link rel="apple-touch-icon" href="/static/marque/apple-touch-icon.png">
-<title>Mon Héros du Mois – votre enfant en héros de ses livres, de son calendrier et de ses objets</title>
+<title>Livre personnalisé enfant, calendrier et cadeaux à son prénom – Mon Héros du Mois</title>
 <meta name="description" content="Créez son avatar une fois : votre enfant, son doudou et ses animaux deviennent les héros de ses livres illustrés, de son calendrier, de son cahier de coloriage, de sa gourde, de sa tasse et de son sac à dos.">
+<link rel="canonical" href="__BASE__/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mon Héros du Mois">
+<meta property="og:title" content="Votre enfant en héros de tout son univers">
+<meta property="og:description" content="Un avatar de votre enfant, avec son doudou et ses animaux, dans ses livres illustrés, son calendrier, son cahier de coloriage et ses objets à son prénom.">
+<meta property="og:image" content="__BASE__/static/vitrine/partage.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:locale" content="fr_FR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1A1F4A">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Mon Héros du Mois","url":"__BASE__/","logo":"__BASE__/static/marque/logo-480.webp","email":"monherosdumois@gmail.com","sameAs":["https://www.instagram.com/monherosdumois/"]}</script>
 <link rel="stylesheet" href="/static/theme.css">
+<script src="/static/mesure.js"></script>
 <style>
   /* ------------------------------------------------ en-tête */
   .top { position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--ciel) 88%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--trait); }
@@ -374,6 +386,8 @@
   footer .in { display:flex; flex-wrap:wrap; gap:14px 28px; align-items:center; }
   footer a { color:var(--encre-2); }
   @media (prefers-reduced-motion: reduce) { .luciole { animation:none; } .livre { transition:none; } }
+  .noel { background:var(--encre); color:#FFF7E8; text-align:center; font:600 14px/1.4 var(--texte); padding:9px 16px; }
+  .noel b { color:var(--luciole); }
   /* ------------------------------------------------ accueil boutique : titre + rayon des créations */
   .ouv { padding:38px 0 30px; }
   .ouv .in { display:grid; grid-template-columns:1fr minmax(320px, 430px); gap:20px 48px; align-items:end; }
@@ -443,10 +457,12 @@
   .obj .btn { align-self:flex-start; margin-top:14px; }
   .obj-plus { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; margin-top:30px; }
   .obj-plus img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:16px; display:block; }
+  .obj-plus.deux { grid-template-columns:repeat(2, minmax(0,1fr)); } .obj-plus.deux img { aspect-ratio:3/2; }
   @media (max-width:760px) { .obj-plus { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 </style>
 </head>
 <body>
+<div class="noel" id="noel" hidden>🎄 Pour Noël, commandez avant le <b>1er décembre</b> : création, relecture, impression et livraison comprises.</div>
 <header class="top">
   <div class="in wrap">
     <a href="/" class="logo" aria-label="Mon Héros du Mois, accueil"><span class="logo-mark" aria-hidden="true"></span>Mon Héros du Mois</a>
@@ -480,29 +496,30 @@
     <div class="fleches"><button type="button" id="rG" aria-label="Créations précédentes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" id="rD" aria-label="Créations suivantes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5l7 7-7 7"/></svg></button></div>
   </div>
   <ul class="etal-p" id="etalP">
-    <li class="prod"><a class="ph" href="/creer?formule=pack6" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/photo_04.webp" alt="Un livre Mon Héros du Mois tenu à deux mains" loading="lazy" style="object-position:50% 50%"><span class="prix"><small>dès</small> <span data-px="livre12">22,90 €</span></span></a>
+    <li class="prod"><a class="ph" href="/creer?formule=pack6" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/photo_04_r.webp" alt="Un livre Mon Héros du Mois tenu à deux mains" loading="lazy" style="object-position:50% 50%"><span class="prix"><small>dès</small> <span data-px="livre12">22,90 €</span></span></a>
       <h3>Ses livres d'aventures</h3><p>Une vraie histoire illustrée dont il est le héros, couverture rigide.</p>
       <div class="act"><a class="btn petit" href="/creer?formule=pack6">Créer</a><a class="voir" href="#livres">Voir</a></div></li>
-    <li class="prod"><a class="ph" href="/creer?produit=calendrier" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/cal_photo_1.webp" alt="Un petit garçon tient son calendrier, son prénom en lettres dorées" loading="lazy" style="object-position:50% 30%"><span class="prix"><span data-px="calendrier">34,90 €</span></span></a>
+    <li class="prod"><a class="ph" href="/creer?produit=calendrier" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/cal_photo_1_r.webp" alt="Un petit garçon tient son calendrier, son prénom en lettres dorées" loading="lazy" style="object-position:50% 30%"><span class="prix"><span data-px="calendrier">34,90 €</span></span></a>
       <h3>Son calendrier</h3><p>12 mois illustrés avec lui, son anniversaire déjà marqué.</p>
       <div class="act"><a class="btn petit" href="/creer?produit=calendrier">Créer</a><a class="voir" href="#calendrier">Voir</a></div></li>
-    <li class="prod"><a class="ph" href="/creer?produit=coloriage" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/colo_photo_2.webp" alt="Léo montre son cahier de coloriage" loading="lazy" style="object-position:50% 50%"><span class="prix"><span data-px="coloriage">24,90 €</span></span></a>
+    <li class="prod"><a class="ph" href="/creer?produit=coloriage" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/colo_photo_2_r.webp" alt="Léo montre son cahier de coloriage" loading="lazy" style="object-position:50% 50%"><span class="prix"><span data-px="coloriage">24,90 €</span></span></a>
       <h3>Son cahier de coloriage</h3><p>30 dessins à colorier où il est le héros, choisis par vous.</p>
       <div class="act"><a class="btn petit" href="/creer?produit=coloriage">Créer</a><a class="voir" href="#coloriage">Voir</a></div></li>
-    <li class="prod nouveau"><a class="ph" href="/creer?produit=gourde" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_gourde_gabin.webp" alt="Gabin tient sa gourde illustrée à son prénom" loading="lazy" style="object-position:50% 50%"><span class="prix"><span data-px="gourde">49,90 €</span></span></a>
+    <li class="prod nouveau"><a class="ph" href="/creer?produit=gourde" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_gourde_gabin_r.webp" alt="Gabin tient sa gourde illustrée à son prénom" loading="lazy" style="object-position:50% 50%"><span class="prix"><span data-px="gourde">49,90 €</span></span></a>
       <h3>Sa gourde à paille</h3><p>Son héros tout autour, son prénom dessus. Pour l'école et les balades.</p>
       <div class="act"><a class="btn petit" href="/creer?produit=gourde">Créer</a><a class="voir" href="#objets">Voir</a></div></li>
-    <li class="prod nouveau"><a class="ph" href="/creer?produit=tasse" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_tasse_lea.webp" alt="Léa boit dans sa tasse émaillée illustrée" loading="lazy" style="object-position:50% 70%"><span class="prix"><span data-px="tasse">24,90 €</span></span></a>
+    <li class="prod nouveau"><a class="ph" href="/creer?produit=tasse" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_tasse_lea_r.webp" alt="Léa boit dans sa tasse émaillée illustrée" loading="lazy" style="object-position:50% 70%"><span class="prix"><span data-px="tasse">24,90 €</span></span></a>
       <h3>Sa tasse émaillée</h3><p>Incassable, pour le chocolat chaud du soir.</p>
       <div class="act"><a class="btn petit" href="/creer?produit=tasse">Créer</a><a class="voir" href="#objets">Voir</a></div></li>
-    <li class="prod nouveau"><a class="ph" href="/creer?produit=sac" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_sac_mael.webp" alt="Le sac à dos illustré de Maël posé sur un bureau" loading="lazy" style="object-position:40% 50%"><span class="prix"><span data-px="sac">64,90 €</span></span></a>
+    <li class="prod nouveau"><a class="ph" href="/creer?produit=sac" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_sac_mael_r.webp" alt="Le sac à dos illustré de Maël posé sur un bureau" loading="lazy" style="object-position:40% 50%"><span class="prix"><span data-px="sac">64,90 €</span></span></a>
       <h3>Son sac à dos</h3><p>Illustré avec son héros et son prénom, pour l'école et les sorties.</p>
       <div class="act"><a class="btn petit" href="/creer?produit=sac">Créer</a><a class="voir" href="#objets">Voir</a></div></li>
   </ul>
   <div class="wrap">
     <ul class="rassure">
-      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Chaque création relue avant impression</li>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>Livrées ensemble, en 7 à 15 jours ouvrés</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Aucune photo de votre enfant : son avatar suffit</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Illustrations créées avec l'IA, relues une par une avant l'impression</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>Livré en 7 à 15 jours ouvrés, réimprimé sans frais en cas de défaut</li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Paiement sécurisé, en une seule fois</li>
     </ul>
   </div>
@@ -573,9 +590,9 @@
     <h2>Feuilletez nos livres</h2>
     <p class="sous">Cliquez sur un livre pour l'ouvrir. Dans le vôtre, votre enfant, son doudou et ses animaux deviennent les héros de l'aventure.</p>
     <div class="etal" id="etal">
-      <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp" alt=""></span><b>Noé</b><span>La poussière d'étoiles</span></button>
-      <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp?v=2" alt=""></span><b>Léo</b><span>La forêt enchantée</span></button>
-      <button type="button" data-l="mila"><span class="cv"><img src="/static/vitrine/mila_00.webp" alt=""></span><b>Mila</b><span>Le secret de l'océan</span></button>
+      <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp" alt="" loading="lazy"></span><b>Noé</b><span>La poussière d'étoiles</span></button>
+      <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp?v=2" alt="" loading="lazy"></span><b>Léo</b><span>La forêt enchantée</span></button>
+      <button type="button" data-l="mila"><span class="cv"><img src="/static/vitrine/mila_00.webp" alt="" loading="lazy"></span><b>Mila</b><span>Le secret de l'océan</span></button>
     </div>
     <div class="lecteur" id="lecteur" hidden>
     <p class="sous" id="sousLivre"></p>
@@ -720,20 +737,18 @@
     <h2>Ses objets de tous les jours</h2>
     <p class="sous">Le même héros, avec son prénom, sur ce qu'il emporte partout. Chaque objet est illustré pour lui, puis fabriqué par notre atelier partenaire. À ajouter à ses livres, à son calendrier ou à son cahier, livraison comprise.</p>
     <div class="obj-l">
-      <div class="obj"><img src="/static/vitrine/obj_gourde_emilie.webp" alt="Émilie montre sa gourde à paille illustrée à son prénom" loading="lazy">
+      <div class="obj"><img src="/static/vitrine/obj_gourde_gabin.webp" alt="Gabin montre sa gourde à paille illustrée à son prénom" loading="lazy">
         <h3>Sa gourde à paille</h3><p>Gourde CamelBak à paille, son héros tout autour et son prénom sur le devant. Pour la cantine, le sport et les balades.</p>
         <div class="px" data-px="gourde">49,90 €</div><a class="btn clair" href="/creer?produit=gourde">Créer sa gourde</a></div>
       <div class="obj"><img src="/static/vitrine/obj_tasse_noah2.webp" alt="La tasse émaillée de Noah, avec son doudou et son chien sous les étoiles" loading="lazy" style="object-position:38% 50%">
         <h3>Sa tasse émaillée</h3><p>Une tasse en métal émaillé, incassable et légère, illustrée d'une scène du soir. Pour le chocolat chaud avant l'histoire.</p>
         <div class="px" data-px="tasse">24,90 €</div><a class="btn clair" href="/creer?produit=tasse">Créer sa tasse</a></div>
-      <div class="obj"><img src="/static/vitrine/obj_sac_fille.webp" alt="Émilie porte son sac à dos illustré à son prénom" loading="lazy">
+      <div class="obj"><img src="/static/vitrine/obj_sac_mael.webp" alt="Le sac à dos illustré de Maël" loading="lazy" style="object-position:40% 50%">
         <h3>Son sac à dos</h3><p>Le devant entièrement illustré, avec son héros et son prénom. Pour l'école, le centre de loisirs et les week-ends.</p>
         <div class="px" data-px="sac">64,90 €</div><a class="btn clair" href="/creer?produit=sac">Créer son sac</a></div>
     </div>
-    <div class="obj-plus" aria-hidden="true">
-      <img src="/static/vitrine/obj_gourde_studio.webp" alt="" loading="lazy" style="object-position:50% 60%">
+    <div class="obj-plus deux" aria-hidden="true">
       <img src="/static/vitrine/obj_tasse_lea2.webp" alt="" loading="lazy" style="object-position:45% 50%">
-      <img src="/static/vitrine/obj_sac_mael.webp" alt="" loading="lazy">
       <img src="/static/vitrine/obj_tasse_noah.webp" alt="" loading="lazy" style="object-position:40% 50%">
     </div>
     <p class="sous petit-note">Livraison comprise dans le prix. Les objets sont fabriqués par un atelier partenaire et arrivent dans un colis à part, dans les mêmes délais que le reste de la commande.</p>
@@ -807,6 +822,9 @@
   <div class="in wrap">
     <a href="/" aria-label="Mon Héros du Mois, accueil"><img src="/static/marque/logo-480.webp" alt="Mon Héros du Mois" class="logo-full" width="140" height="139" style="width:140px;margin:0" loading="lazy"></a>
     <a href="/cgv">Conditions de vente</a>
+    <a href="/mentions-legales">Mentions légales</a>
+    <a href="/confidentialite">Confidentialité</a>
+    <a href="#" onclick="window.mesureChoix && mesureChoix();return false">Cookies</a>
     <a href="#contact">Nous contacter</a>
     <span>Paiement sécurisé par Stripe</span>
   </div>
@@ -821,6 +839,8 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const calme = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* bandeau de Noël : affiché d'octobre au 1er décembre (date limite de commande) */
+  { const d = new Date(), lim = new Date(d.getFullYear(), 11, 1); if (d.getMonth() >= 9 && d < lim) $('noel').hidden = false; }
   /* le livre 3D s'ouvre quand on arrive sur la section des livres (et pas pendant qu'on est en haut de la page) */
   { const sc = $('scene3d');
     if ('IntersectionObserver' in window) { const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { sc.classList.add('anim'); io.disconnect(); } }, { threshold: .45 }); io.observe(sc); }
@@ -832,6 +852,10 @@
     g.onclick = () => r.scrollBy({ left: -pas() * 2, behavior: calme ? 'auto' : 'smooth' });
     d.onclick = () => r.scrollBy({ left: pas() * 2, behavior: calme ? 'auto' : 'smooth' });
     r.addEventListener('scroll', maj, { passive: true }); addEventListener('resize', maj); maj(); }
+  /* mesure : quelle création intéresse (seulement avec consentement, voir mesure.js) */
+  document.querySelectorAll('a[href^="/creer"]').forEach(a => a.addEventListener('click', () => {
+    const u = new URL(a.href, location.href); window.mesure && mesure('voir_produit', { item_id: u.searchParams.get('produit') || u.searchParams.get('formule') || 'univers' });
+  }));
   /* prix : une seule source (le serveur), au cas où ils changent */
   fetch('/api/tarifs').then(r => r.json()).then(t => {
     const e = c => (c / 100).toFixed(2).replace('.', ',') + ' €';

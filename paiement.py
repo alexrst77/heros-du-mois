@@ -53,6 +53,29 @@ def total(formule, pays="FR", calendrier=False, coloriage=False, objets=()):
             + (PRIX_COLORIAGE_AJOUT if coloriage and formule != "coloriage" else 0) + frais_port(formule, pays))
 
 
+def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=()):
+    """Détail facturable d'une commande, tel qu'encaissé : [(libellé, quantité, prix unitaire TTC en centimes, catégorie)].
+    Catégorie = livre | calendrier | coloriage | objet | port (sert au taux de TVA)."""
+    f = FORMULES[formule]
+    out = []
+    if f["livres"]:
+        out.append((f"Livre illustré personnalisé ({f['nom']})", f["livres"], f["prix_livre"], "livre"))
+    if formule == "calendrier":
+        out.append(("Calendrier mural personnalisé (12 mois)", 1, PRIX_CALENDRIER, "calendrier"))
+    elif calendrier:
+        out.append(("Calendrier mural personnalisé (12 mois), en ajout", 1, PRIX_CALENDRIER_AJOUT, "calendrier"))
+    if formule == "coloriage":
+        out.append(("Cahier de coloriage personnalisé (30 dessins)", 1, PRIX_COLORIAGE, "coloriage"))
+    elif coloriage:
+        out.append(("Cahier de coloriage personnalisé (30 dessins), en ajout", 1, PRIX_COLORIAGE_AJOUT, "coloriage"))
+    for k in objets_valides(objets):
+        out.append((f"{OBJETS[k]['nom']}, livraison comprise", 1, OBJETS[k]["prix"], "objet"))
+    port = frais_port(formule, pays)
+    if port:
+        out.append(("Livraison", 1, port, "port"))
+    return out
+
+
 def grille():
     """Prix affichés par le site (en centimes) : une seule source pour la page d'accueil et la commande."""
     return {"formules": {k: {"nom": f["nom"], "livres": f["livres"], "prix_livre": f["prix_livre"], "prix": f["prix"]} for k, f in FORMULES.items()},

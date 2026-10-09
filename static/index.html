@@ -205,7 +205,12 @@
   .recap { background:#fff; border:1px solid var(--trait); border-radius:14px; padding:10px 16px; margin:8px 0 12px; font-variant-numeric:tabular-nums; }
   .recap > div { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid var(--trait); font-size:15px; }
   .recap > div.tot { border-bottom:0; font-weight:800; font-size:18px; }
-  .recap .offert { color:var(--mousse); } .recap .astuce { margin:6px 0 4px; font-size:13px; color:#8A5A00; font-weight:700; }
+  .recap .offert { color:var(--mousse); }
+  .vers6 { margin:8px 0 4px; } .vers6-t { font-size:13px; color:#8A5A00; } .vers6-t b { color:var(--encre); }
+  .vers6-b { height:6px; border-radius:99px; background:#F3E3B5; margin:6px 0; overflow:hidden; } .vers6-b i { display:block; height:100%; background:var(--luciole); border-radius:99px; }
+  .garanties { list-style:none; padding:0; margin:14px 0 4px; display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; font-size:13px; color:var(--encre-2); }
+  @media (max-width:520px) { .garanties { grid-template-columns:1fr; } }
+  .pied { text-align:center; font-size:13px; color:var(--encre-2); margin-top:28px; } .pied a { color:var(--encre-2); margin:0 6px; } .recap .astuce { margin:6px 0 4px; font-size:13px; color:#8A5A00; font-weight:700; }
   .occasion { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; background:#FFF3D1; border:1px solid #F2CF6E; border-radius:12px; padding:12px 14px; }
   .lien { background:none; border:0; padding:0; color:var(--encre); font:700 14px var(--texte); text-decoration:underline; cursor:pointer; }
   .delai { background:#EEF6F1; border:1px solid #CFE5D8; border-radius:14px; padding:12px 16px; margin:4px 0 18px; display:grid; gap:2px; }
@@ -257,6 +262,7 @@
     </section>
   </div>
 
+  <p class="pied"><a href="/cgv">Conditions de vente</a><a href="/mentions-legales">Mentions légales</a><a href="/confidentialite">Confidentialité</a><a href="#" onclick="window.mesureChoix && mesureChoix();return false">Cookies</a></p>
   <div id="suivi">
     <div class="kicker">Création en cours</div>
     <h2 id="titreSuivi" style="margin:10px 0 0">On écrit l'histoire de <span id="nom"></span>…</h2>
@@ -281,6 +287,7 @@
   </div>
 </div>
 
+<script src="/static/mesure.js"></script>
 <script src="/static/avatar.js"></script>
 <script>
 (async function () {
@@ -724,10 +731,11 @@
           objetsChoisis().map(k => `<div><span>${OBJ_INFO[k].court} <small>(livraison comprise)</small> <button type="button" class="lien petit" data-objet="${k}">retirer</button></span><span style="white-space:nowrap">${eur2(OBJ[k].prix)}</span></div>`).join('') +
           `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>` +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
-          (n && n < 6 ? `<p class="astuce">Livraison offerte et ${eur2(F.pack6.prix_livre)} le livre à partir de 6 livres.</p>` : '') + `</div>`; })() +
+          (n && n < 6 ? `<div class="vers6"><div class="vers6-t">Plus que <b>${6 - n} livre${6 - n > 1 ? 's' : ''}</b> pour la livraison offerte, et ${eur2(F.pack6.prix_livre)} le livre</div>` +
+            `<div class="vers6-b"><i style="width:${Math.round(n / 6 * 100)}%"></i></div><button type="button" class="lien petit" data-pack-go="pack6">Passer à 6 livres (${eur2(F.pack6.prix)})</button></div>` : '') + `</div>`; })() +
       (offres.length ? `<div class="offres"><div class="offres-h">✨ Pour compléter l'univers de ${pr} <span>créations : même colis, sans frais de port en plus · objets : livraison comprise</span></div>${offres.join('')}</div>` : '') +
       `<div class="delai"><b>Livraison estimée : ${delai()}</b>` +
-      `<span>${nbCrea() > 1 || F[c.formule].livres > 1 ? 'Création et relecture, impression, puis un seul colis' : 'Création et relecture, impression, puis expédition'} : 7 à 15 jours ouvrés.${objetsChoisis().length ? ' Les objets arrivent dans un colis à part, dans les mêmes délais.' : ''}</span></div>` +
+      `<span>${(() => { const d = new Date(); return d.getMonth() >= 9 && d < new Date(d.getFullYear(), 11, 1) ? '🎄 Commandée avant le 1er décembre, elle arrive pour Noël. ' : ''; })()}${nbCrea() > 1 || F[c.formule].livres > 1 ? 'Création et relecture, impression, puis un seul colis' : 'Création et relecture, impression, puis expédition'} : 7 à 15 jours ouvrés.${objetsChoisis().length ? ' Les objets arrivent dans un colis à part, dans les mêmes délais.' : ''}</span></div>` +
       `<label class="toggle" style="margin-bottom:12px"><input type="checkbox" data-chk="cadeau" ${c.cadeau ? 'checked' : ''}> C'est pour offrir</label>` +
       (c.cadeau ? `<div class="kdo">` +
         G('De la part de', inp('cadeau_de', 'Mamie Jo, Tonton Karim…', 'maxlength="40"')) +
@@ -738,7 +746,8 @@
       G('Adresse', inp('adresse1', 'numéro et rue', 'autocomplete="address-line1"') + '<div style="height:8px"></div>' + inp('adresse2', 'bâtiment, étage (facultatif)', 'autocomplete="address-line2"')) +
       `<div class="row2">${G('Code postal', inp('code_postal', '77000', 'autocomplete="postal-code"'))}${G('Ville', inp('ville', '', 'autocomplete="address-level2"'))}</div>` +
       `<div class="row2">${G('Pays', `<select data-in="pays">${[['FR', 'France'], ['BE', 'Belgique'], ['LU', 'Luxembourg'], ['CH', 'Suisse'], ['MC', 'Monaco']].map(([v, l]) => `<option value="${v}" ${c.pays === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}${G('Téléphone', inp('telephone', 'pour le transporteur', 'type="tel" autocomplete="tel"'))}</div>` +
-      `<label class="check"><input type="checkbox" data-chk="cgv" ${c.cgv ? 'checked' : ''}><span>J'accepte les <a href="/cgv" target="_blank">conditions de vente</a> et je reconnais qu'un produit personnalisé n'ouvre pas de droit de rétractation.</span></label>`;
+      `<label class="check"><input type="checkbox" data-chk="cgv" ${c.cgv ? 'checked' : ''}><span>J'accepte les <a href="/cgv" target="_blank">conditions de vente</a> et je reconnais qu'un produit personnalisé n'ouvre pas de droit de rétractation.</span></label>` +
+      `<ul class="garanties"><li>🔒 Paiement sécurisé par Stripe</li><li>👀 Chaque création relue avant l'impression</li><li>🛠️ Un défaut à la livraison ? Réimpression sans frais</li><li>🧸 Aucune photo de votre enfant, données effacées après livraison</li></ul>`;
   }
   const cible = el => { const t = el && el.closest && el.closest('[data-tgt]'); return t ? t.dataset.tgt : tab; };      // doudou / animaux sur la même étape
   const target = el => { const k = cible(el); return k === 'enfant' ? S.enfant : k === 'doudou' ? S.doudou : k === 'animaux' ? S.animaux[pet] : k === 'commande' ? S.commande : S.histoire; };
@@ -760,16 +769,17 @@
     const b = ev.target.closest('button'); if (!b) return;
     if (b.dataset.hasard) { hasard(); OUVERT.suite = true; return render(); }
     if (b.dataset.ajout) {               // proposition à l'étape commande : la création rejoint le colis
-      S.produits[b.dataset.ajout] = true; if (b.dataset.pack) S.commande.pack = b.dataset.pack;
+      S.produits[b.dataset.ajout] = true; if (b.dataset.pack) S.commande.pack = b.dataset.pack; window.mesure && mesure('ajout_produit', { item_id: b.dataset.ajout });
       const lib = { livres: 'Ses livres', calendrier: 'Le calendrier', coloriage: 'Le coloriage' }[b.dataset.ajout];
       render(); $('err').textContent = ''; const m = document.querySelector('.offres-ok') || document.createElement('p');
       m.className = 'offres-ok'; m.innerHTML = `✓ Ajouté ! Déjà réglé pour lui, modifiable dans « <button type="button" class="lien" data-t="creations">Ses créations</button> ».`;
       document.querySelector('.recap').after(m); return; }
     if (b.dataset.retirer) { S.produits[b.dataset.retirer] = false; return render(); }
-    if (b.dataset.objet) { const l = S.objets, i = l.indexOf(b.dataset.objet); if (i >= 0) l.splice(i, 1); else l.push(b.dataset.objet); $('err').textContent = ''; return render(); }
-    if (b.dataset.objetAjout) { if (!S.objets.includes(b.dataset.objetAjout)) S.objets.push(b.dataset.objetAjout); render();
+    if (b.dataset.objet) { const l = S.objets, i = l.indexOf(b.dataset.objet); if (i >= 0) l.splice(i, 1); else { l.push(b.dataset.objet); window.mesure && mesure('ajout_produit', { item_id: b.dataset.objet, value: (OBJ[b.dataset.objet] || {}).prix / 100 }); } $('err').textContent = ''; return render(); }
+    if (b.dataset.objetAjout) { if (!S.objets.includes(b.dataset.objetAjout)) S.objets.push(b.dataset.objetAjout); window.mesure && mesure('ajout_produit', { item_id: b.dataset.objetAjout }); render();
       const m = document.createElement('p'); m.className = 'offres-ok'; m.innerHTML = `✓ Ajouté !`; document.querySelector('.recap').after(m); return; }
     if (b.dataset.prod) { S.produits[b.dataset.prod] = !S.produits[b.dataset.prod]; $('err').textContent = ''; return render(); }
+    if (b.dataset.packGo) { S.commande.pack = b.dataset.packGo; S.produits.livres = true; window.mesure && mesure('ajout_produit', { item_id: 'pack6' }); return render(); }
     if (b.dataset.pack) { S.commande.pack = b.dataset.pack; return render(); }
     if (b.dataset.colo) { const l = S.coloriage.pages, i = l.indexOf(b.dataset.colo); OUVERT.colo = true;
       if (i >= 0) l.splice(i, 1); else if (l.length >= COLO.nombre) { $('err').textContent = `${COLO.nombre} pages au maximum : retirez-en une avant d'en ajouter une autre.`; return; } else l.push(b.dataset.colo);
@@ -838,6 +848,7 @@
     if (tab === 'compagnons') { const i = S.animaux.findIndex(a => !(a.nom || '').trim()); if (i >= 0) { pet = i; foc = 'animaux'; render(); $('err').textContent = "Indiquez le nom de chaque animal."; return; } }
     if (tab === 'creations' && S.histoire.demo) return submit();
     if (tab === 'creations' && aucune()) { $('err').textContent = 'Choisissez au moins une création.'; return; }
+    if (tab === 'enfant' && window.mesure) mesure('avatar_termine');
     if (tab !== 'commande') { const T = TABS(); tab = T[T.indexOf(tab) + 1]; render(); scrollTo({ top: 0, behavior: 'smooth' }); return; }
     submit();
   };
@@ -897,6 +908,7 @@
         adresse: { nom: c.nom, adresse1: c.adresse1, adresse2: c.adresse2, code_postal: c.code_postal, ville: c.ville, pays: c.pays, telephone: c.telephone } };
     }
     const go = $('next'), label = go.textContent; go.disabled = true; go.textContent = demo ? 'Envoi…' : 'Redirection vers le paiement…';
+    if (!demo && window.mesure) mesure('paiement_commence', { value: totalC() / 100 });
     try {
       const r = await fetch(demo ? '/api/livres' : '/api/commandes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const j = await r.json();
@@ -980,6 +992,8 @@
           return setTimeout(tick, 2500);
         }
         try { localStorage.removeItem('heros-avatar'); } catch (_) {}
+        try { if (!localStorage.getItem('mhm-achat-' + id)) { localStorage.setItem('mhm-achat-' + id, '1');      // une seule fois par commande
+          window.mesure && mesure('achat', { value: (o.montant || 0) / 100, transaction_id: id }); } } catch (_) {}
         $('titreSuivi').textContent = 'Merci, votre commande est confirmée !';
         $('pct').style.width = '100%';
         const pn = esc(e.prenom ? e.prenom.trim().replace(/^./, c => c.toUpperCase()) : 'votre enfant');
@@ -1014,7 +1028,7 @@
     const f = UNIV.find(x => x.fete && x.cle === q.get('fete'));                     // carte « occasion spéciale » de l'accueil
     if (f) { S.histoire.occasion = f.cle; if (!S.histoire.fetes.includes(f.cle)) S.histoire.fetes.push(f.cle); save(); } }
   const cmd = new URLSearchParams(location.search).get('commande');
-  if (cmd && /^[a-f0-9]{12}$/.test(cmd)) trackOrder(cmd); else render();
+  if (cmd && /^[a-f0-9]{12}$/.test(cmd)) trackOrder(cmd); else { render(); window.mesure && mesure('creation_commencee'); }
 })();
 </script>
 </body>

@@ -163,3 +163,16 @@ Un livre = 2 à 4 appels texte + 13 images (planche, couverture, 9 scènes, 2 d�
   son propre colis), fichiers téléchargés par Printful via `/objet/<id>/<jeton>/impression_*.png`. Suivi : « Actualiser le suivi ».
 - Tests depuis l'admin : « Gourde / Tasse / Sac de test » sur une commande existante (≈ 0,30 $ d'IA, aucune commande Printful
   tant que tu ne cliques pas « Envoyer »). Catalogue et prix : Réglages → carte Printful.
+
+## Admin (`static/admin.html`)
+Six onglets : Tableau de bord (alertes, ventes du mois, à faire), Commandes (recherche + filtres), Rentabilité (simulateur à curseurs + marge réelle de chaque vente), Factures, Messages, Réglages (Mon entreprise, production, RGPD, disque).
+Les hypothèses du simulateur restent dans le navigateur (localStorage `mhm-hyp`) ; le bouton « Revenir aux hypothèses de l'audit » les réinitialise.
+
+## Entreprise, pages légales et factures (`legal.py`, `factures.py`, `static/legal/`)
+- Les infos du vendeur se saisissent une fois dans Réglages → Mon entreprise (`DATA/vendeur.json`). Elles remplissent `/cgv`, `/mentions-legales`, `/confidentialite` et les factures. Un champ vide s'affiche « à compléter » en jaune : rien n'est inventé.
+- Factures : numéros continus `MHM-AAAA-NNNN`, jamais modifiées (une erreur = un avoir, à voir avec le comptable). Émission impossible tant que raison sociale, adresse et SIRET manquent. PDF : `/admin/facture/<numero>.pdf`. Livre des recettes : `/admin/factures/recettes.csv`.
+- Régime de TVA (franchise ou réel) et taux par produit : dans Mon entreprise. Taux par défaut à faire confirmer par un comptable.
+- RGPD : bouton « Effacer les anciennes données » (commandes expédiées depuis plus de 30 jours). Les factures restent.
+
+## Mesure d'audience (`static/mesure.js`)
+Rien n'est chargé sans variable Railway : `GA4_ID`, `META_PIXEL_ID`, `GOOGLE_ADS_ID` + `GOOGLE_ADS_ACHAT`. Dès qu'une est réglée, un bandeau de consentement apparaît ; rien n'est chargé sans « Accepter ». Événements : voir_produit, creation_commencee, avatar_termine, ajout_produit, paiement_commence, achat.
