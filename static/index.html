@@ -333,10 +333,10 @@
   const F = GR.formules;
   const PLANS = [
     { id: 'pack6', nom: '6 livres', txt: `${eur2(F.pack6.prix_livre)} le livre · livraison offerte`, tag: 'Notre conseil' },
-    { id: 'pack12', nom: '12 livres', txt: `Une aventure pour chaque mois · ${eur2(F.pack12.prix_livre)} le livre · livraison offerte`, tag: 'Le meilleur prix' },
+    { id: 'pack12', nom: '12 livres', txt: `${eur2(F.pack12.prix_livre)} le livre · livraison offerte`, tag: 'Le meilleur prix' },
     { id: 'pack3', nom: '3 livres', txt: `Trois aventures, un même héros · ${eur2(F.pack3.prix_livre)} le livre` },
     { id: 'livre', nom: '1 livre', txt: 'Pour découvrir ou offrir' },
-    { id: 'fetes', nom: 'Les 6 livres de fête', txt: `Son anniversaire et 5 fêtes de votre choix · ${eur2(F.fetes.prix_livre)} le livre · livraison offerte` }]
+    { id: 'fetes', nom: 'Les 6 livres de fête', txt: `Anniversaire + 5 fêtes · livraison offerte` }]
     .map(p => Object.assign(p, { px: eur2(F[p.id].prix), livres: F[p.id].livres }));
   const port = () => { const f = F[S.commande.formule] || F.pack6, n = f.livres;
     const base = S.commande.formule === 'calendrier' ? GR.calendrier.port : S.commande.formule === 'coloriage' ? GR.coloriage.port : n >= GR.port_offert_des ? 0 : (GR.port_fr[String(n)] ?? GR.port_fr['3']);
