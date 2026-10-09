@@ -322,7 +322,8 @@ function vueClients() {
   const pire = E.slice(1, -1).map((e, i) => [e, E[i].n ? (E[i].n - e.n) / E[i].n : 0, E[i]]).filter(x => x[2].n >= 3).sort((a, b) => b[1] - a[1])[0];
   return `<div class="chips">${[7, 30, 90].map(j => `<button class="${j === CLI_J ? 'on' : ''}" onclick="CLI_J=${j};CLI=null;render()">${j} jours</button>`).join('')}</div>
     <div class="kpis">
-      <div class="kpi sombre"><div class="l">Visiteurs <span>👀</span></div><div class="n">${C.visiteurs}</div><div class="s">${C.jours} derniers jours · ${C.visiteurs ? Math.round(100 * C.mobile / C.visiteurs) : 0} % sur mobile</div></div>
+      <div class="kpi sombre"><div class="l">Visiteurs <span>👀</span></div><div class="n">${C.visiteurs}</div><div class="s">${C.jours} derniers jours · ${C.visites} visites · ${C.visiteurs ? Math.round(100 * C.mobile / C.visiteurs) : 0} % sur mobile</div></div>
+      <div class="kpi"><div class="l">Aujourd'hui <span>📅</span></div><div class="n">${C.aujourdhui}</div><div class="s">visiteurs · ${C.pub_meta} venus de Facebook/Instagram (${C.jours} j)</div></div>
       <div class="kpi"><div class="l">Comptes clients <span>👤</span></div><div class="n">${C.clients.length}</div><div class="s">+${C.nouveaux_7j} cette semaine</div></div>
       <div class="kpi"><div class="l">Comptes qui ont commandé <span>🛒</span></div><div class="n">${C.clients_payants}</div><div class="s">sur ${C.clients.length} comptes</div></div>
       <div class="kpi ${C.attente.length ? 'alerte' : ''}"><div class="l">Paiements non finis <span>💳</span></div><div class="n">${C.attente.length}</div><div class="s">à relancer peut-être</div></div>

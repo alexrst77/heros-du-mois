@@ -151,7 +151,9 @@ def donnees(jours=30):
                         "stripe": bool(o["stripe_session"]), "relance": relances.get("cmd:" + o["id"])})
     return {"jours": jours, "entonnoir": [{"etape": e, "n": n} for e, n in zip(ETAPES, ent)] + [{"etape": "Payé", "n": payes}],
             "sources": sorted(sources.items(), key=lambda x: -x[1])[:8],
-            "visiteurs": len(P), "mobile": sum(1 for p in P if p["mobile"]),
+            "visiteurs": len(P), "mobile": sum(1 for p in P if p["mobile"]), "visites": sum(p["visites"] or 0 for p in P),
+            "aujourdhui": sum(1 for p in P if (p["derniere"] or 0) >= time.mktime(time.localtime()[:3] + (0, 0, 0, 0, 0, -1))),
+            "pub_meta": sum(1 for p in P if re.search(r"facebook|instagram|^fb$|^ig$|^meta", (p["source"] or "").lower())),
             "clients": liste, "nouveaux_7j": sum(1 for c in clients if (c["cree"] or 0) > now - 7 * 86400),
             "clients_payants": sum(1 for c in liste if c["commandes"]),
             "attente": attente, "mail": __import__("boutique").mail_configure()}
