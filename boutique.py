@@ -1603,7 +1603,7 @@ def mail_livre_pret(oid):
                        + (f'<p style="font:14px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 22px">Offert par {escape(cadeau_de)}</p>' if cadeau_de else ""))
         html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
 <div style="max-width:560px;margin:0 auto;padding:28px 18px">
- <p style="font:600 13px system-ui,sans-serif;letter-spacing:.12em;color:#B8892B;text-align:center;margin:0 0 6px">MON HÉROS DU MOIS</p>
+ <p style="text-align:center;margin:0 0 10px"><img src="{site}/static/marque/logo-mail.png" alt="Mon Héros du Mois" width="220" style="width:220px;max-width:70%;height:auto;border:0"></p>
  <h1 style="font-size:26px;text-align:center;margin:0 0 18px">{escape(titre_mail)}&nbsp;✨</h1>
  {visuels}
  <div style="background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.5 system-ui,sans-serif">
@@ -1691,7 +1691,7 @@ def mail_confirmation(oid):
                             f'<td style="padding:6px 0;text-align:right;white-space:nowrap">{eu(int(l[1]) * int(l[2]))}</td></tr>' for l in lignes)
         html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
 <div style="max-width:560px;margin:0 auto;padding:28px 18px">
- <p style="font:600 13px system-ui,sans-serif;letter-spacing:.12em;color:#B8892B;text-align:center;margin:0 0 6px">MON HÉROS DU MOIS</p>
+ <p style="text-align:center;margin:0 0 10px"><img src="{site}/static/marque/logo-mail.png" alt="Mon Héros du Mois" width="220" style="width:220px;max-width:70%;height:auto;border:0"></p>
  <h1 style="font-size:26px;text-align:center;margin:0 0 6px">Merci, c'est commandé&nbsp;✨</h1>
  <p style="font:15px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 20px">Commande n° {escape(ref)} · pour {escape(prenom)}</p>
  <div style="background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.4 system-ui,sans-serif;margin:0 0 14px">

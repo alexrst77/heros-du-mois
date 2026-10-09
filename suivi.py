@@ -162,7 +162,7 @@ def donnees(jours=30):
 def _mail_html(titre, intro, bouton, lien, site):
     return f"""<!doctype html><html><body style="margin:0;background:#F7F2FF;font-family:Georgia,serif;color:#24184D">
 <div style="max-width:560px;margin:0 auto;padding:28px 18px;text-align:center">
- <p style="font:700 13px system-ui,sans-serif;letter-spacing:.12em;color:#5A33C9;margin:0 0 8px">MON HÉROS DU MOIS</p>
+ <p style="text-align:center;margin:0 0 10px"><img src="{site}/static/marque/logo-mail.png" alt="Mon Héros du Mois" width="220" style="width:220px;max-width:70%;height:auto;border:0"></p>
  <h1 style="font-size:26px;margin:0 0 14px">{escape(titre)}</h1>
  <div style="background:#fff;border-radius:16px;padding:20px 18px;font:16px/1.5 system-ui,sans-serif;text-align:left">{intro}</div>
  <p style="margin:22px 0"><a href="{escape(lien)}" style="display:inline-block;background:#FFC23D;color:#24184D;font:800 17px system-ui,sans-serif;text-decoration:none;padding:14px 26px;border-radius:999px">{escape(bouton)}</a></p>

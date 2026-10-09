@@ -148,15 +148,14 @@ def pdf(f):
     c.setTitle(f"Facture {f['numero']}")
     encre, doux = (0.12, 0.15, 0.34), (0.42, 0.44, 0.56)
     e = lambda cents: f"{cents / 100:,.2f} €".replace(",", " ").replace(".", ",")
-    try:
-        c.drawImage(ImageReader(str(ROOT / "static" / "marque" / "etoile-128.png")), 40, H - 92, 46, 46, mask="auto")
+    try:                                                  # logo (ourson et nuage), 2,6 : 1
+        c.drawImage(ImageReader(str(ROOT / "static" / "marque" / "logo.png")), 36, H - 100, 150, 58, mask="auto")
     except Exception:
-        pass
-    c.setFillColorRGB(*encre); c.setFont("Titre", 20); c.drawString(94, H - 66, "Mon Héros du Mois")
+        c.setFillColorRGB(*encre); c.setFont("Titre", 20); c.drawString(40, H - 66, "Mon Héros du Mois")
     c.setFont("Texte", 9); c.setFillColorRGB(*doux)
-    y = H - 84
+    y = H - 114
     for t in (f"{v['raison_sociale']} · {v.get('forme') or ''}", v["adresse"], f"SIRET {v['siret']}" + (f" · TVA {v['tva_intra']}" if v.get("tva_intra") else ""), v.get("email") or ""):
-        c.drawString(94, y, t[:110]); y -= 12
+        c.drawString(40, y, t[:72]); y -= 12
     c.setFillColorRGB(*encre); c.setFont("Titre", 26); c.drawRightString(W - 40, H - 66, "Facture")
     c.setFont("Texte", 10)
     c.drawRightString(W - 40, H - 84, f"N° {f['numero']}")

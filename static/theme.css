@@ -44,6 +44,7 @@ h2 { font: 400 clamp(30px, 3.8vw, 44px)/1.1 var(--titre); margin: 0 0 12px; lett
 
 .logo { display: inline-flex; align-items: center; gap: 10px; font: 400 20px/1 var(--titre); color: var(--encre); text-decoration: none; white-space: nowrap; }
 .logo-mark { width: 40px; height: 40px; background: url("/static/marque/etoile-128.png") center/contain no-repeat; flex: none; }
+.logo-img { display: block; height: 58px; width: auto; }
 .logo-full { display: block; width: 180px; height: auto; margin: 0 auto 10px; }
 
 /* boutons « autocollants » : jaune lucioles, contour encre, ombre corail décalée */
@@ -60,4 +61,4 @@ h2 { font: 400 clamp(30px, 3.8vw, 44px)/1.1 var(--titre); margin: 0 0 12px; lett
 .btn.ghost:hover { box-shadow: 5px 5px 0 var(--luciole); }
 @media (prefers-reduced-motion: reduce) { .btn, .btn:hover, .btn:active { transition: none; transform: none; } }
 
-@media (max-width: 420px) { .logo { font-size: 17px; } .logo-mark { width: 34px; height: 34px; } .btn.petit { padding: 10px 14px; font-size: 14px; } }
+@media (max-width: 420px) { .logo-img { height: 42px; } .logo { font-size: 17px; } .logo-mark { width: 34px; height: 34px; } .btn.petit { padding: 10px 14px; font-size: 14px; } }

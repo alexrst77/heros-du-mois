@@ -99,7 +99,7 @@ def envoyer_lien():
              "Vous n'avez rien demandé ? Ignorez simplement ce message.\n\nL'équipe Mon Héros du Mois")
     html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
 <div style="max-width:520px;margin:0 auto;padding:28px 18px;text-align:center">
- <p style="font:600 13px system-ui,sans-serif;letter-spacing:.12em;color:#B8892B;margin:0 0 6px">MON HÉROS DU MOIS</p>
+ <p style="text-align:center;margin:0 0 10px"><img src="{site}/static/marque/logo-mail.png" alt="Mon Héros du Mois" width="220" style="width:220px;max-width:70%;height:auto;border:0"></p>
  <h1 style="font-size:24px;margin:0 0 16px">Votre lien de connexion</h1>
  <p style="font:15px/1.5 system-ui,sans-serif;margin:0 0 22px">Touchez le bouton pour retrouver vos héros et vos commandes.<br>Il est valable {LIEN_MIN} minutes.</p>
  <a href="{url}" style="display:inline-block;background:#FFC94A;color:#1F2557;font:800 16px system-ui,sans-serif;padding:14px 26px;border-radius:999px;text-decoration:none">Me connecter</a>
