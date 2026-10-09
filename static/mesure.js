@@ -49,6 +49,16 @@
   }
   window.mesureChoix = () => { if (cfg) bandeau(); else alert("Aucun outil de mesure n'est activé sur ce site."); };
 
+  /* parcours interne (statistiques du site, identifiant aléatoire sans donnée personnelle, voir /confidentialite) */
+  window.parcoursId = function () {
+    try { let v = localStorage.getItem('mhm-v'); if (!/^[a-f0-9]{24}$/.test(v || '')) { v = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); localStorage.setItem('mhm-v', v); } return v; } catch (_) { return ''; }
+  };
+  window.parcours = function (e) {
+    try { const v = parcoursId(); if (!v) return; const body = JSON.stringify({ v, e, r: document.referrer, u: location.search });
+      if (!(navigator.sendBeacon && navigator.sendBeacon('/api/p', new Blob([body], { type: 'application/json' })))) fetch('/api/p', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }); } catch (_) {}
+  };
+  if (!/^\/creer/.test(location.pathname)) parcours('visite');      // le configurateur envoie ses propres étapes
+
   fetch('/api/mesure').then(r => r.json()).then(c => {
     pret = true;
     if (!c || !(c.ga4 || c.meta || c.gads)) { cfg = null; file = []; return; }

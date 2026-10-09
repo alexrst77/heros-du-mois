@@ -431,6 +431,8 @@ boutique.setup(sys.modules[__name__])
 app.register_blueprint(boutique.bp)
 import comptes  # noqa: E402
 app.register_blueprint(comptes.bp)
+import suivi  # noqa: E402
+app.register_blueprint(suivi.bp)
 
 if __name__ == "__main__":
     print("Ouvre http://localhost:8000 dans ton navigateur" + ("" if os.getenv("OPENAI_API_KEY") else "  (pas de clé OpenAI : mode démo)"))

@@ -455,7 +455,7 @@
   let S;
   try { S = JSON.parse(localStorage.getItem('heros-avatar')) || null; } catch (_) { S = null; }
   S = S && S.enfant ? Object.assign(structuredClone(DEF), S) : structuredClone(DEF);
-  let tab = 'enfant', pet = 0, sib = 0;
+  let tab = 'enfant', pet = 0, sib = 0, DERN_ETAPE = '';
   if (ME.connecte) {                 // connecté : e-mail et dernière adresse pré-remplis (modifiables)
     if (!S.commande.email) S.commande.email = ME.email;
     const a = ME.adresse || {};
@@ -870,7 +870,7 @@
   }
   async function lancerApercu(b) {
     if (!(S.enfant.prenom || '').trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez d'abord le prénom."; return; }
-    b.disabled = true; b.textContent = 'Envoi…';
+    b.disabled = true; b.textContent = 'Envoi…'; window.parcours && parcours('apercu');
     try {
       const r = await fetch('/api/apercu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(await basePayload()) });
       const j = await r.json();
@@ -997,7 +997,7 @@
         G('De la part de', inp('cadeau_de', 'Mamie Jo, Tonton Karim…', 'maxlength="40"')) +
         G('Un petit mot', `<textarea data-in="cadeau_message" maxlength="160" placeholder="Pour ma petite étoile, plein d'aventures à lire ensemble !">${esc(c.cadeau_message)}</textarea>`, 'facultatif') +
         `<p class="hint">Le petit mot est imprimé au dos ${nbCrea() > 1 || F[c.formule].livres > 1 ? 'de chaque création' : isCal() ? 'du calendrier' : isColo() ? 'du cahier' : 'du livre'}.</p></div>` : '') +
-      G('E-mail', inp('email', c.cadeau ? 'pour suivre la commande (la vôtre)' : 'pour suivre la commande', 'type="email" autocomplete="email"')) +
+      G('E-mail', inp('email', c.cadeau ? 'pour suivre la commande (la vôtre)' : 'pour suivre la commande', 'type="email" autocomplete="email"') + `<p class="hint" style="margin:-4px 0 0">Si le paiement ne va pas au bout, nous pourrons vous envoyer un seul e-mail de rappel.</p>`) +
       G('Nom et prénom', inp('nom', c.cadeau ? 'destinataire du colis (l\'enfant ou ses parents)' : 'destinataire du colis', 'autocomplete="name"')) +
       G('Adresse', inp('adresse1', 'numéro et rue', 'autocomplete="address-line1"') + '<div style="height:8px"></div>' + inp('adresse2', 'bâtiment, étage (facultatif)', 'autocomplete="address-line2"')) +
       `<div class="row2">${G('Code postal', inp('code_postal', '77000', 'autocomplete="postal-code"'))}${G('Ville', inp('ville', '', 'autocomplete="address-level2"'))}</div>` +
@@ -1011,6 +1011,7 @@
   function render() {
     sync();
     if (!TABS().includes(tab)) tab = 'creations';
+    if (tab !== DERN_ETAPE && !new URLSearchParams(location.search).get('commande')) { DERN_ETAPE = tab; window.parcours && parcours(tab); }   // où les gens s'arrêtent
     $('tabs').innerHTML = TABS().map((t, i) => `<button data-t="${t}" class="${t === tab ? 'on' : ''}"><b>${i + 1}</b>${ETAPES[t]}</button>`).join('');
     { const on = $('tabs').querySelector('.on'); if (on) $('tabs').scrollLeft = on.offsetLeft - 40; }
     $('body').innerHTML = { enfant: panelEnfant, compagnons: panelCompagnons, creations: panelCreations, commande: panelCommande }[tab]();
@@ -1183,7 +1184,7 @@
       if (!c.cgv) { $('err').textContent = 'Cochez la case des conditions de vente.'; return; }
       if (c.cadeau && !c.cadeau_de.trim()) { $('err').textContent = 'Indiquez de la part de qui est le cadeau.'; return; }
       const dates = S.calendrier.dates.filter(x => x.j && x.m && (x.texte || '').trim()).map(x => ({ date: `${String(x.m).padStart(2, '0')}-${String(x.j).padStart(2, '0')}`, texte: x.texte.trim() }));
-      payload.commande = { formule: c.formule, email: c.email.trim(), cgv: true, code_promo: c.promo ? c.promo.code : '', apercu: S.apercu && S.apercu.statut === 'pret' ? S.apercu.id : '',
+      payload.commande = { v: window.parcoursId ? parcoursId() : '', formule: c.formule, email: c.email.trim(), cgv: true, code_promo: c.promo ? c.promo.code : '', apercu: S.apercu && S.apercu.statut === 'pret' ? S.apercu.id : '',
         calendrier: { actif: avecCal(), debut: S.calendrier.debut, dates },
         coloriage: { actif: avecColo(), pages: S.coloriage.pages },
         objets: objetsChoisis(),

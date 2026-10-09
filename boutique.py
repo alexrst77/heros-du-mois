@@ -203,6 +203,11 @@ def order_create():
               montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo), origine=oid,
               numero=0 if formule in NON_LIVRES else 1)
     try:
+        import suivi
+        suivi.noter_paiement(c.get("v"), oid)                   # parcours du visiteur : il est allé jusqu'au paiement
+    except Exception as e:
+        log(f"commande {oid} : parcours non noté : {e}")
+    try:
         comptes.noter_commande(oid, addr)                       # connecté : commande rattachée au compte, adresse gardée
     except Exception as e:
         log(f"commande {oid} : rattachement au compte impossible : {e}")

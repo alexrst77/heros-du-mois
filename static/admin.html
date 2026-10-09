@@ -295,6 +295,57 @@ function vueAbos() {
     <div class="meta" style="margin-top:4px">Dernier livre : n°${s.numero}${s.livres_restants != null ? ` · encore ${s.livres_restants} livre(s)` : ''}${s.prochain ? ' · prochain le ' + new Date(s.prochain * 1000).toLocaleDateString('fr-FR') : ''}</div></div>`).join('');
 }
 
+/* ================================================================ clients */
+let CLI = null, CLI_J = 30, CLI_Q = '';
+const ilya = t => { if (!t) return '—'; const s = Date.now() / 1000 - t; return s < 3600 ? 'il y a ' + Math.max(1, Math.round(s / 60)) + ' min' : s < 86400 ? 'il y a ' + Math.round(s / 3600) + ' h' : s < 86400 * 30 ? 'il y a ' + Math.round(s / 86400) + ' j' : new Date(t * 1000).toLocaleDateString('fr-FR'); };
+function cliCharger() { fetch('/admin/api/clients' + Q + (Q ? '&' : '?') + 'jours=' + CLI_J, { headers: H }).then(r => r.json()).then(c => { CLI = c; if (TAB === 'clients') render(); }); }
+async function relance(genre, id, b) {
+  if (!confirm('Envoyer UN e-mail de rappel « finis ton univers » ? (une seule relance possible)')) return;
+  b.disabled = true; b.textContent = 'Envoi…';
+  const r = await fetch('/admin/api/relance' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ genre, id }) });
+  const j = await r.json().catch(() => ({})); alert(j.message || (r.ok ? 'Envoyé' : 'Erreur')); cliCharger();
+}
+function vueClients() {
+  if (!CLI) { cliCharger(); return 'Chargement…'; }
+  const C = CLI, E = C.entonnoir, max = Math.max(1, E[0].n);
+  const btnRel = (genre, id, fait, ok = true) => fait ? `<span class="meta">✉️ relancé ${ilya(fait)}</span>` : !ok ? '' : C.mail ? `<button class="btn" onclick="relance('${genre}','${id}',this)">✉️ Relancer</button>` : '<span class="meta">envoi de mail non configuré</span>';
+  const q = CLI_Q.trim().toLowerCase();
+  const L = C.clients.filter(c => !q || [c.email, c.nom, c.heros.join(' ')].join(' ').toLowerCase().includes(q));
+  const ent = E.map((e, i) => { const prec = i ? E[i - 1].n : e.n, perte = i && prec ? Math.round(100 * (prec - e.n) / prec) : 0;
+    return `<div style="display:grid;grid-template-columns:minmax(120px,170px) 1fr 54px;gap:10px;align-items:center;margin:7px 0">
+      <span style="font-weight:700;font-size:13.5px">${esc(e.etape)}</span>
+      <div style="background:var(--line);border-radius:8px;height:22px;position:relative;overflow:hidden"><div style="width:${Math.max(2, 100 * e.n / max)}%;height:100%;background:${i === E.length - 1 ? 'var(--ok, #2E9D6A)' : 'var(--nuit)'};border-radius:8px"></div>
+      ${i && perte > 0 ? `<span style="position:absolute;right:8px;top:2px;font-size:12px;font-weight:800;color:${perte >= 50 ? '#C0392B' : 'var(--soft)'}">−${perte} %</span>` : ''}</div>
+      <b style="text-align:right">${e.n}</b></div>`; }).join('');
+  const pire = E.slice(1, -1).map((e, i) => [e, E[i].n ? (E[i].n - e.n) / E[i].n : 0, E[i]]).filter(x => x[2].n >= 3).sort((a, b) => b[1] - a[1])[0];
+  return `<div class="chips">${[7, 30, 90].map(j => `<button class="${j === CLI_J ? 'on' : ''}" onclick="CLI_J=${j};CLI=null;render()">${j} jours</button>`).join('')}</div>
+    <div class="kpis">
+      <div class="kpi sombre"><div class="l">Visiteurs <span>👀</span></div><div class="n">${C.visiteurs}</div><div class="s">${C.jours} derniers jours · ${C.visiteurs ? Math.round(100 * C.mobile / C.visiteurs) : 0} % sur mobile</div></div>
+      <div class="kpi"><div class="l">Comptes clients <span>👤</span></div><div class="n">${C.clients.length}</div><div class="s">+${C.nouveaux_7j} cette semaine</div></div>
+      <div class="kpi"><div class="l">Comptes qui ont commandé <span>🛒</span></div><div class="n">${C.clients_payants}</div><div class="s">sur ${C.clients.length} comptes</div></div>
+      <div class="kpi ${C.attente.length ? 'alerte' : ''}"><div class="l">Paiements non finis <span>💳</span></div><div class="n">${C.attente.length}</div><div class="s">à relancer peut-être</div></div>
+    </div>
+    <div class="card"><h3>🧭 Où les gens s'arrêtent (${C.jours} derniers jours)</h3>${ent}
+      <p class="meta" style="margin:10px 0 0">Chaque ligne : visiteurs (navigateurs différents) arrivés au moins jusqu'à cette étape. En rouge : plus de la moitié s'arrête là.${pire && pire[1] > 0 ? ` <b>Plus grosse perte : avant « ${esc(pire[0].etape)} » (−${Math.round(pire[1] * 100)} %).</b>` : ''} Comptage depuis la mise en place du suivi (9 octobre 2026).</p>
+      ${C.sources.length ? `<p class="meta" style="margin:8px 0 0">D'où ils viennent : ${C.sources.map(([s, n]) => `${esc(s)} <b>${n}</b>`).join(' · ')}</p>` : ''}</div>
+    <h2>💳 Paiements non finis</h2>
+    ${C.attente.length ? C.attente.map(o => `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div>
+        <b>${esc(o.prenom || 'Sans prénom')}</b> · ${esc(FORMULE[o.formule] || o.formule)} · <b>${eur(o.montant || 0)}</b>
+        <div class="meta">${esc(o.email || '')} · ${ilya(o.cree)}${o.visites ? ` · ${o.visites} visite${o.visites > 1 ? 's' : ''}` : ''}${o.apercu ? ' · a vu l\'aperçu de couverture' : ''}</div>
+        <div class="meta">Arrêt : ${o.stripe ? 'sur la page de paiement Stripe (tout était rempli)' : 'avant la page de paiement'}${o.a_paye_depuis ? ' · <b style="color:#2E9D6A">a commandé depuis avec ce mail</b>' : ''}</div></div>
+        <div class="acts" style="margin:0">${btnRel('cmd', o.id, o.relance, !o.a_paye_depuis)}</div></div></div>`).join('')
+      : '<div class="empty"><div class="big">🎉</div>Personne n\'a abandonné au paiement.</div>'}
+    <h2>👤 Comptes clients</h2>
+    <input value="${esc(CLI_Q)}" id="cliq" placeholder="🔎 Chercher : e-mail, nom, héros…" style="width:100%;font:600 14px var(--texte);padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:10px" oninput="CLI_Q=this.value;clearTimeout(window._cq);window._cq=setTimeout(()=>{render();const i=document.getElementById('cliq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
+    ${L.length ? `<div class="card" style="overflow-x:auto"><table><tr><th>Client</th><th>Inscrit</th><th>Dernière visite</th><th class="r">Visites</th><th>Héros</th><th>Plus loin atteint</th><th class="r">Commandes</th><th></th></tr>
+      ${L.map(c => `<tr><td><b>${esc(c.nom || c.email.split('@')[0])}</b><div class="meta">${esc(c.email)}</div></td><td>${new Date(c.cree * 1000).toLocaleDateString('fr-FR')}</td><td>${ilya(c.derniere)}</td>
+        <td class="r">${c.visites || '—'}</td><td>${c.heros.length ? esc(c.heros.slice(0, 3).join(', ')) : '—'}</td><td>${esc(c.etape)}${c.apercu ? ' · aperçu vu' : ''}</td>
+        <td class="r">${c.commandes ? `<b>${c.commandes}</b> · ${eur(c.total)}` : c.non_payees ? '<span class="meta">paiement non fini</span>' : '—'}</td>
+        <td class="r">${btnRel('cli', c.id, c.relance, c.relancable)}</td></tr>`).join('')}</table></div>`
+      : '<div class="empty"><div class="big">👤</div>Aucun compte client' + (q ? ' pour cette recherche' : ' pour l\'instant') + '.</div>'}
+    <p class="meta">Les visites des comptes sont comptées quand la personne est connectée. Relance : un seul e-mail par création ou par compte, envoyé seulement quand tu cliques. Les visiteurs sans compte ni commande restent anonymes.</p>`;
+}
+
 /* ================================================================ messages */
 let MSG = null;
 function vueMessages() {
@@ -688,8 +739,8 @@ function vueReglages() {
 }
 
 /* ================================================================ navigation */
-const TABS = [['tableau', '🏠', 'Tableau de bord'], ['commandes', '📚', 'Commandes'], ['rentabilite', '💶', 'Rentabilité'], ['factures', '🧾', 'Factures'], ['messages', '💬', 'Messages'], ['reglages', '⚙️', 'Réglages']];
-const VUES = { tableau: vueTableau, commandes: vueCommandes, rentabilite: vueRentabilite, factures: vueFactures, messages: vueMessages, reglages: vueReglages };
+const TABS = [['tableau', '🏠', 'Tableau de bord'], ['commandes', '📚', 'Commandes'], ['rentabilite', '💶', 'Rentabilité'], ['factures', '🧾', 'Factures'], ['clients', '👥', 'Clients'], ['messages', '💬', 'Messages'], ['reglages', '⚙️', 'Réglages']];
+const VUES = { tableau: vueTableau, commandes: vueCommandes, rentabilite: vueRentabilite, factures: vueFactures, clients: vueClients, messages: vueMessages, reglages: vueReglages };
 function render() {
   const nb = D.commandes.filter(o => AFAIRE.includes(etat(o).k)).length;
   const badge = { tableau: nb, factures: D.a_facturer || 0, messages: D.messages_non_lus || 0 };
@@ -697,10 +748,11 @@ function render() {
   const c = D.config;
   document.getElementById('bas').innerHTML = `${c.stripe === 'live' ? '🟢 Stripe réel' : c.stripe === 'test' ? '🟡 Stripe test' : '⚪️ Stripe simulé'}<br>${c.lulu === 'production' ? '🟢 Lulu réel' : c.lulu === 'non configuré' ? '⚪️ Lulu non branché' : '🟡 Lulu bac à sable'}<br><a href="/" target="_blank">Voir le site ↗</a>`;
   document.getElementById('titre').textContent = (TABS.find(x => x[0] === TAB) || TABS[0])[2];
-  document.getElementById('teteActs').innerHTML = TAB === 'commandes' || TAB === 'tableau' ? `<button class="btn" onclick="load()">↻ Actualiser</button>` : TAB === 'rentabilite' ? `<button class="btn" onclick="RENTA=null;render()">↻ Recharger les ventes</button>` : '';
+  document.getElementById('teteActs').innerHTML = TAB === 'clients' ? `<button class="btn" onclick="CLI=null;render()">↻ Actualiser</button>` : TAB === 'commandes' || TAB === 'tableau' ? `<button class="btn" onclick="load()">↻ Actualiser</button>` : TAB === 'rentabilite' ? `<button class="btn" onclick="RENTA=null;render()">↻ Recharger les ventes</button>` : '';
   const y = scrollY, f = document.activeElement && document.activeElement.id;
   if (TAB === 'reglages' && f && /^(v_|t_|pfq)/.test(f)) return;   // saisie en cours : on ne touche à rien
   if (TAB === 'rentabilite' && RENTA && document.getElementById('simRes') && f && f.startsWith('h_')) return;   // ne pas casser la saisie
+  if (TAB === 'clients' && f === 'cliq' && document.activeElement.value !== CLI_Q) return;
   document.getElementById('view').innerHTML = VUES[TAB]();
   if (TAB === 'reglages') { chargerDisque(); if (!ATEL) atelierCharger(); }
   scrollTo(0, y);
