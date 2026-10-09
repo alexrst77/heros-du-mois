@@ -27,6 +27,22 @@ JOBS = {}
 
 app = Flask(__name__, static_folder=str(ROOT / "static"))
 
+
+@app.before_request
+def _domaine_principal():
+    """Une seule adresse publique : www.domaine et l'ancienne adresse *.up.railway.app renvoient (301) vers PUBLIC_URL.
+    Seulement pour les pages lues (GET/HEAD) : les webhooks Stripe/Lulu (POST) et le contrôle de santé Railway ne sont pas touchés."""
+    from urllib.parse import urlsplit
+    pub = os.getenv("PUBLIC_URL", "").rstrip("/")
+    if not pub or request.method not in ("GET", "HEAD"):
+        return None
+    cible = urlsplit(pub).netloc.lower()
+    hote = request.host.split(":")[0].lower()
+    if cible and hote != cible and (hote.endswith(".up.railway.app") or hote == "www." + cible):
+        from flask import redirect
+        return redirect(pub + request.full_path.rstrip("?"), code=301)
+    return None
+
 REQUIRED = ["prenom", "age"]
 FIELDS = ["prenom", "age", "naissance", "genre", "cheveux", "yeux", "peau", "lunettes", "tenue", "doudou_nom", "doudou_type",
           "doudou_desc", "animal", "passions", "univers", "fetes", "anniversaire", "heros_livre", "theme", "precision", "numero", "demo", "code"]
