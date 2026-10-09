@@ -324,7 +324,7 @@ async function emettreTout(b) {
 }
 
 /* ================================================================ rentabilité : simulateur + réel */
-const HYP_DEF = { imp: 12, p1: 9, p3: 11.5, p6: 14.5, p12: 20, ia: 2, usd: .9, calFab: 16, calPortSeul: 7, calPortAjout: 2, coloFab: 10, coloPortSeul: 7, coloPortAjout: 2,
+const HYP_DEF = { imp: 11.55, p1: 9, p3: 11.5, p6: 14.5, p12: 20, ia: 1.3, usd: .9, calFab: 11.5, calPortSeul: 7, calPortAjout: 1.4, coloFab: 8.2, coloPortSeul: 7, coloPortAjout: 1.4,   // réel Lulu du 9/10 : livre 11,54 · calendrier 11,52 · cahier 8,19 · port des 3 en un colis 11,73 (TTC)
   gourde: 43.5, tasse: 19, sac: 54.5, stripePct: 1.5, stripeFixe: .25, cotis: 12.3, cac: 25, n: 50, partPub: 70, fixes: 15,
   mLivre: 30, mP3: 25, mP6: 30, mP12: 5, mCal: 5, mColo: 5, aCal: 15, aColo: 10, aTasse: 8, aGourde: 4, aSac: 3 };
 let HYP; try { HYP = Object.assign({}, HYP_DEF, JSON.parse(localStorage.getItem('mhm-hyp') || '{}')); } catch (_) { HYP = Object.assign({}, HYP_DEF); }
@@ -341,14 +341,14 @@ function paniers() {
   };
   const port = k => (T.port_fr[String(k)] ?? T.port_fr['3']) / 100;
   return [
-    L('Livre seul', F.livre.prix / 100 + port(1), h.imp, pf[1], ia1, 'livre', false, 'estimé'),
+    L('Livre seul', F.livre.prix / 100 + port(1), h.imp, pf[1], ia1, 'livre', false, 'impression réelle, port estimé'),
     L('Pack 3', F.pack3.prix / 100 + port(3), 3 * h.imp, pf[3], 3 * ia1, 'livre', false, 'port non mesuré'),
     L('Pack 6', F.pack6.prix / 100, 6 * h.imp, pf[6], 6 * ia1, 'livre', false, 'estimé'),
     L('Pack 12', F.pack12.prix / 100, 12 * h.imp, pf[12], 12 * ia1, 'livre', false, 'port non mesuré'),
     L('Calendrier seul', T.calendrier.seul / 100 + T.calendrier.port / 100, h.calFab, h.calPortSeul, 1.73 * h.usd, 'calendrier', false, 'non mesuré'),
     L('Coloriage seul', T.coloriage.seul / 100 + T.coloriage.port / 100, h.coloFab, h.coloPortSeul, 1.89 * h.usd, 'coloriage', false, 'non mesuré'),
-    L('Calendrier en ajout', T.calendrier.ajout / 100, h.calFab, h.calPortAjout, 1.73 * h.usd, 'calendrier', true, 'non mesuré'),
-    L('Coloriage en ajout', T.coloriage.ajout / 100, h.coloFab, h.coloPortAjout, 1.89 * h.usd, 'coloriage', true, 'non mesuré'),
+    L('Calendrier en ajout', T.calendrier.ajout / 100, h.calFab, h.calPortAjout, 1.6 * h.usd, 'calendrier', true, 'réel (1 commande)'),
+    L('Coloriage en ajout', T.coloriage.ajout / 100, h.coloFab, h.coloPortAjout, 1.9 * h.usd, 'coloriage', true, 'réel (1 commande)'),
     L('Tasse (ajout)', T.objets.tasse.prix / 100, h.tasse, 0, .1 * h.usd, 'objet', true, 'devis Printful'),
     L('Gourde (ajout)', T.objets.gourde.prix / 100, h.gourde, 0, .1 * h.usd, 'objet', true, 'devis Printful'),
     L('Sac (ajout)', T.objets.sac.prix / 100, h.sac, 0, .25 * h.usd, 'objet', true, 'devis Printful')];
@@ -408,7 +408,7 @@ function vueRentabilite() {
       ${sec('Ajouts sur les commandes de livres (%)', curseur('aCal', 'Calendrier', 0, 100, 1) + curseur('aColo', 'Coloriage', 0, 100, 1) + curseur('aTasse', 'Tasse', 0, 100, 1) + curseur('aGourde', 'Gourde', 0, 100, 1) + curseur('aSac', 'Sac', 0, 100, 1), 1)}
       ${sec('Coûts Lulu (€ TTC, estimés)', curseur('imp', 'Impression d\'un livre', 5, 25, .1) + curseur('p1', 'Port 1 livre', 3, 20, .1) + curseur('p3', 'Port 3 livres', 3, 25, .1) + curseur('p6', 'Port 6 livres', 3, 30, .1) + curseur('p12', 'Port 12 livres', 3, 40, .1) + curseur('calFab', 'Impression calendrier', 5, 30, .1) + curseur('calPortSeul', 'Port calendrier seul', 0, 20, .1) + curseur('calPortAjout', 'Surcoût de port calendrier ajouté', 0, 10, .1) + curseur('coloFab', 'Impression coloriage', 3, 25, .1) + curseur('coloPortSeul', 'Port coloriage seul', 0, 20, .1) + curseur('coloPortAjout', 'Surcoût de port coloriage ajouté', 0, 10, .1), 1)}
       ${sec('Printful et autres', curseur('tasse', 'Tasse (TTC port compris)', 5, 40, .1) + curseur('gourde', 'Gourde', 10, 70, .1) + curseur('sac', 'Sac', 10, 90, .1) + curseur('ia', 'IA par livre ($)', 0, 3, .05) + curseur('usd', '1 $ en €', .7, 1.1, .01) + curseur('stripePct', 'Stripe (%)', 0, 5, .1) + curseur('stripeFixe', 'Stripe (€ fixe)', 0, 1, .05), 1)}
-      <button class="btn" onclick="HYP=Object.assign({},HYP_DEF);try{localStorage.removeItem('mhm-hyp')}catch(_){};render()">Revenir aux hypothèses de l'audit</button>
+      <button class="btn" onclick="HYP=Object.assign({},HYP_DEF);try{localStorage.removeItem('mhm-hyp')}catch(_){};render()">Revenir aux valeurs par défaut (coûts Lulu réels du 9 octobre)</button>
     </div><div id="simRes">${simResultats()}</div></div>
     <h2>📒 Rentabilité réelle des commandes</h2>
     <div class="card">${C.length ? `<table><tr><th>Date</th><th>Commande</th><th class="r">Encaissé</th><th class="r">IA</th><th class="r">Lulu + Printful</th><th class="r">Stripe (est.)</th><th class="r">Marge</th></tr>
