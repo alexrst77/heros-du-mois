@@ -10,28 +10,28 @@
   @font-face { font-family:"Young Serif"; src:url("/static/fonts/YoungSerif-Regular.woff") format("woff"); font-display:swap; }
   @font-face { font-family:"Nunito"; src:url("/static/fonts/Nunito.woff") format("woff"); font-weight:200 1000; font-display:swap; }
   :root {
-    --bg:#F6F1E7; --card:#FFFFFF; --ink:#1F2557; --soft:#6B6F8E; --line:#ECE3D2; --nuit:#1A1F4A; --gold:#FFC94A; --gold-soft:#FFF3D1;
-    --blue:#3D6BD8; --blue-soft:#E6EDFC; --green:#2E8A5E; --green-soft:#DFF2E7; --red:#C9443F; --red-soft:#FBE4E2;
-    --grey-soft:#F1ECE2; --violet:#7A5AD8; --violet-soft:#EEE8FC; --shadow:0 1px 2px rgba(31,37,87,.06), 0 8px 24px -12px rgba(31,37,87,.18);
+    --bg:#F7F2FF; --card:#FFFFFF; --ink:#24184D; --soft:#6B6390; --line:#E6DAF7; --nuit:#2E1A6E; --gold:#FFC23D; --gold-soft:#FFF1CC;
+    --blue:#5A33C9; --blue-soft:#EEE8FC; --green:#138A6E; --green-soft:#DDF3EC; --red:#C4122F; --red-soft:#FDE4EA;
+    --grey-soft:#F1ECFA; --violet:#5A33C9; --violet-soft:#EEE8FC; --rose:#F2557A; --cyan:#1FB5A8; --shadow:0 1px 2px rgba(36,24,77,.06), 0 8px 24px -12px rgba(36,24,77,.2);
     --titre:"Young Serif", Georgia, serif; --texte:"Nunito", system-ui, -apple-system, sans-serif;
   }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:500 15px/1.5 var(--texte); -webkit-font-smoothing:antialiased; }
+  body { margin:0; background:var(--bg) url("/static/confettis.svg") 0 0 / 560px auto; color:var(--ink); font:500 15px/1.5 var(--texte); -webkit-font-smoothing:antialiased; }
   a { color:var(--blue); }
   :focus-visible { outline:3px solid var(--gold); outline-offset:2px; border-radius:6px; }
   /* ---- structure : barre latérale (ordinateur), barre du haut (téléphone) */
   .app { display:grid; grid-template-columns:232px 1fr; min-height:100vh; }
-  aside { background:var(--nuit); color:#E3E6FA; padding:20px 14px; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:4px; }
+  aside { background:var(--nuit); color:#EFE9FD; padding:20px 14px; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:4px; }
   .brand { display:flex; align-items:center; gap:10px; padding:4px 8px 18px; color:#fff; text-decoration:none; }
-  .brand img { width:38px; height:38px; } .brand b { font:400 19px/1.1 var(--titre); } .brand small { display:block; font:600 12px var(--texte); color:#AEB4E0; }
+  .brand img { width:38px; height:38px; } .brand b { font:400 19px/1.1 var(--titre); } .brand small { display:block; font:600 12px var(--texte); color:#C3B5EE; }
   aside nav { display:flex; flex-direction:column; gap:2px; }
-  aside nav button { display:flex; align-items:center; gap:10px; width:100%; border:0; background:transparent; color:#C9CDF0; font:700 15px var(--texte); padding:10px 12px; border-radius:12px; cursor:pointer; text-align:left; }
+  aside nav button { display:flex; align-items:center; gap:10px; width:100%; border:0; background:transparent; color:#D9CFF7; font:700 15px var(--texte); padding:10px 12px; border-radius:12px; cursor:pointer; text-align:left; }
   aside nav button:hover { background:rgba(255,255,255,.06); color:#fff; }
-  aside nav button.on { background:rgba(255,201,74,.16); color:#fff; box-shadow:inset 3px 0 0 var(--gold); }
+  aside nav button.on { background:rgba(255,194,61,.18); color:#fff; box-shadow:inset 3px 0 0 var(--gold); }
   aside nav .ic { width:22px; text-align:center; } aside nav .badge { margin-left:auto; min-width:22px; padding:1px 7px; border-radius:999px; background:var(--gold); color:var(--ink); font:800 12px var(--texte); text-align:center; }
-  aside .bas { margin-top:auto; font-size:12px; color:#8F95C7; padding:8px; line-height:1.6; } aside .bas a { color:#C9CDF0; }
+  aside .bas { margin-top:auto; font-size:12px; color:#A595DD; padding:8px; line-height:1.6; } aside .bas a { color:#D9CFF7; }
   .env { display:inline-block; padding:1px 8px; border-radius:999px; font-weight:800; font-size:11px; }
-  .env.test { background:#FFF3D1; color:#8A5A00; } .env.live { background:#DFF2E7; color:#1E6B47; }
+  .env.test { background:#FFF1CC; color:#8A5A00; } .env.live { background:#DDF3EC; color:#1E6B47; }
   main { padding:26px 30px 90px; max-width:1180px; width:100%; }
   .tete { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
   .tete h1 { font:400 30px/1.1 var(--titre); margin:0; } .tete .hi { color:var(--soft); margin-top:4px; }
@@ -49,7 +49,7 @@
   .kpi { background:var(--card); border-radius:18px; padding:16px; box-shadow:var(--shadow); cursor:pointer; border:1px solid transparent; transition:border-color .15s; }
   .kpi:hover { border-color:var(--line); }
   .kpi .l { color:var(--soft); font-weight:700; font-size:13px; display:flex; justify-content:space-between; } .kpi .n { font:400 30px/1.1 var(--titre); margin-top:6px; } .kpi .s { color:var(--soft); font-size:13px; margin-top:2px; }
-  .kpi.alerte { background:var(--gold-soft); } .kpi.sombre { background:var(--nuit); color:#fff; } .kpi.sombre .l, .kpi.sombre .s { color:#AEB4E0; }
+  .kpi.alerte { background:var(--gold-soft); } .kpi.sombre { background:var(--nuit); color:#fff; } .kpi.sombre .l, .kpi.sombre .s { color:#C3B5EE; }
   .empty { text-align:center; padding:36px 10px; color:var(--soft); background:var(--card); border-radius:18px; box-shadow:var(--shadow); }
   .empty .big { font-size:40px; }
   .chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
@@ -57,7 +57,7 @@
   .chips button.on { background:var(--ink); border-color:var(--ink); color:#fff; }
   .chips button em { font-style:normal; opacity:.6; margin-left:4px; }
   .book { display:grid; grid-template-columns:84px 1fr; gap:16px; background:var(--card); border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:var(--shadow); }
-  .cover { width:84px; height:84px; border-radius:12px; object-fit:cover; background:linear-gradient(135deg, #F7D99A, #9DB7F0); display:flex; align-items:center; justify-content:center; font-size:34px; overflow:hidden; }
+  .cover { width:84px; height:84px; border-radius:12px; object-fit:cover; background:linear-gradient(135deg, #F7D99A, #C3B5EE); display:flex; align-items:center; justify-content:center; font-size:34px; overflow:hidden; }
   .cover img { width:100%; height:100%; object-fit:cover; }
   .ligne1 { display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; }
   .title { font:400 18px/1.25 var(--titre); margin:0; } .prix { font:800 16px var(--texte); white-space:nowrap; }
@@ -73,9 +73,9 @@
   .bar.big { height:12px; } .prog b { font:800 15px var(--texte); min-width:46px; text-align:right; }
   .money .bar { width:120px; height:6px; margin:0; } .money .bar i { background:var(--green); } .money .bar i.warn { background:var(--gold); }
   .acts { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-  .btn { border:0; border-radius:12px; padding:9px 15px; font:800 14px var(--texte); cursor:pointer; background:var(--grey-soft); color:var(--ink); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  .btn { border:0; border-radius:999px; padding:9px 16px; font:800 14px var(--texte); cursor:pointer; background:var(--grey-soft); color:var(--ink); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
   .btn:hover { filter:brightness(.97); }
-  .btn.main { background:var(--ink); color:#fff; } .btn.ok { background:var(--green); color:#fff; } .btn.gold { background:var(--gold); color:var(--ink); }
+  .btn.main { background:var(--gold); color:var(--ink); border:2px solid var(--ink); box-shadow:3px 3px 0 var(--rose); padding:7px 15px; } .btn.ok { background:var(--green); color:#fff; } .btn.gold { background:var(--gold); color:var(--ink); border:2px solid var(--ink); box-shadow:3px 3px 0 var(--rose); padding:7px 15px; }
   .btn.danger { background:var(--red-soft); color:var(--red); } .btn:disabled { opacity:.5; cursor:wait; }
   details.plus { margin-top:10px; } details.plus > summary { cursor:pointer; color:var(--soft); font-size:13px; font-weight:700; list-style:none; }
   details.plus > summary::before { content:"▸ "; } details.plus[open] > summary::before { content:"▾ "; }
@@ -87,7 +87,7 @@
   .result.ok { background:var(--green-soft); } .result.err { background:var(--red-soft); color:#8B2420; }
   .result .x { position:absolute; top:6px; right:8px; border:0; background:transparent; font-size:18px; cursor:pointer; color:var(--soft); }
   .result table { margin-top:6px; } .result .big { font:400 20px var(--titre); }
-  .card { background:var(--card); border-radius:18px; padding:18px; margin-bottom:14px; box-shadow:var(--shadow); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:18px; margin-bottom:14px; box-shadow:var(--shadow); }
   .card > h3 { display:flex; align-items:center; gap:8px; }
   .grid2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; } .grid2 .card { margin:0; }
   .kv { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:14px; } .kv span:nth-child(odd) { color:var(--soft); }
@@ -316,7 +316,7 @@ function vueClients() {
   const ent = E.map((e, i) => { const prec = i ? E[i - 1].n : e.n, perte = i && prec ? Math.round(100 * (prec - e.n) / prec) : 0;
     return `<div style="display:grid;grid-template-columns:minmax(120px,170px) 1fr 54px;gap:10px;align-items:center;margin:7px 0">
       <span style="font-weight:700;font-size:13.5px">${esc(e.etape)}</span>
-      <div style="background:var(--line);border-radius:8px;height:22px;position:relative;overflow:hidden"><div style="width:${Math.max(2, 100 * e.n / max)}%;height:100%;background:${i === E.length - 1 ? 'var(--ok, #2E9D6A)' : 'var(--nuit)'};border-radius:8px"></div>
+      <div style="background:var(--line);border-radius:8px;height:22px;position:relative;overflow:hidden"><div style="width:${Math.max(2, 100 * e.n / max)}%;height:100%;background:${i === E.length - 1 ? 'var(--ok, #138A6E)' : 'var(--nuit)'};border-radius:8px"></div>
       ${i && perte > 0 ? `<span style="position:absolute;right:8px;top:2px;font-size:12px;font-weight:800;color:${perte >= 50 ? '#C0392B' : 'var(--soft)'}">−${perte} %</span>` : ''}</div>
       <b style="text-align:right">${e.n}</b></div>`; }).join('');
   const pire = E.slice(1, -1).map((e, i) => [e, E[i].n ? (E[i].n - e.n) / E[i].n : 0, E[i]]).filter(x => x[2].n >= 3).sort((a, b) => b[1] - a[1])[0];
@@ -335,7 +335,7 @@ function vueClients() {
     ${C.attente.length ? C.attente.map(o => `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div>
         <b>${esc(o.prenom || 'Sans prénom')}</b> · ${esc(FORMULE[o.formule] || o.formule)} · <b>${eur(o.montant || 0)}</b>
         <div class="meta">${esc(o.email || '')} · ${ilya(o.cree)}${o.visites ? ` · ${o.visites} visite${o.visites > 1 ? 's' : ''}` : ''}${o.apercu ? ' · a vu l\'aperçu de couverture' : ''}</div>
-        <div class="meta">Arrêt : ${o.stripe ? 'sur la page de paiement Stripe (tout était rempli)' : 'avant la page de paiement'}${o.a_paye_depuis ? ' · <b style="color:#2E9D6A">a commandé depuis avec ce mail</b>' : ''}</div></div>
+        <div class="meta">Arrêt : ${o.stripe ? 'sur la page de paiement Stripe (tout était rempli)' : 'avant la page de paiement'}${o.a_paye_depuis ? ' · <b style="color:#138A6E">a commandé depuis avec ce mail</b>' : ''}</div></div>
         <div class="acts" style="margin:0">${btnRel('cmd', o.id, o.relance, !o.a_paye_depuis)}</div></div></div>`).join('')
       : '<div class="empty"><div class="big">🎉</div>Personne n\'a abandonné au paiement.</div>'}
     <h2>👤 Comptes clients</h2>
@@ -441,7 +441,7 @@ function simResultats() {
   return `<div class="card"><h3>📅 Un mois à ${HYP.n} commandes</h3>
       <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end"><div><div class="meta">Résultat estimé après pub, cotisations et frais fixes</div><div class="grand ${s.res >= 0 ? 'pos' : 'neg'}">${e0(s.res)}</div></div>
         <div class="meta">Panier moyen <b>${e2(s.panier)}</b> · CA annuel <b>${e0(s.annuel)}</b>${RENTA.regime === 'franchise' && s.annuel > 85000 ? ' <span class="ko-c">· au-delà de 85 000 € : fin de la franchise de TVA</span>' : ''}</div></div>
-      <div class="barres">${barre('Chiffre d\'affaires', s.ca, '#1F2557')}${barre('Fabrication, port, IA, Stripe', s.cout, '#9DB7F0')}${barre('Publicité', s.pub, '#FFC94A')}${barre('Cotisations', s.cotis, '#F49A8A')}${barre('Frais fixes', s.fixes, '#C9CDF0')}${barre('Résultat', Math.max(0, s.res), '#2E8A5E')}</div></div>
+      <div class="barres">${barre('Chiffre d\'affaires', s.ca, '#24184D')}${barre('Fabrication, port, IA, Stripe', s.cout, '#C3B5EE')}${barre('Publicité', s.pub, '#FFC23D')}${barre('Cotisations', s.cotis, '#F49A8A')}${barre('Frais fixes', s.fixes, '#D9CFF7')}${barre('Résultat', Math.max(0, s.res), '#138A6E')}</div></div>
     <div class="card"><h3>🧺 Marge par panier ${RENTA.regime === 'reel' ? '(régime réel de TVA)' : '(franchise de TVA)'}</h3>
       <table><tr><th>Panier</th><th class="r">Encaissé</th><th class="r">Coûts</th><th class="r">Marge</th><th class="r">Taux de marque</th><th class="r">CAC max</th><th>Coûts</th></tr>
       ${P.map(p => `<tr><td>${p.nom}</td><td class="r">${e2(p.ttc)}</td><td class="r">${e2(p.cout)}</td><td class="r ${cls(p.marge)}">${e2(p.marge)}</td><td class="r">${Math.round(p.txMarque * 100)} %</td><td class="r">${/ajout/.test(p.nom) ? '—' : e2(Math.max(0, p.cacMax))}</td><td class="meta">${p.conf}</td></tr>`).join('')}</table>
