@@ -243,6 +243,7 @@ def confirm_paid(oid, stripe_sub=None):
     for b in creer_pack(oid):
         start_book(b, auto=True)
     threading.Thread(target=mail_confirmation, args=(oid,), daemon=True).start()
+    threading.Thread(target=mail_alerte_commande, args=(oid,), daemon=True).start()
     return True
 
 
@@ -1621,6 +1622,40 @@ def mail_livre_pret(oid):
         db.annuler_mail_pret(origine)                 # pas envoyé : il pourra repartir à la prochaine validation
         DERNIERE_ERREUR_MAIL[oid] = f"{type(e).__name__}: {e}"
         log(f"commande {origine} : mail « livre prêt » impossible : {type(e).__name__}: {e}")
+        return False
+
+
+def mail_alerte_commande(oid):
+    """Mail à Alex à chaque commande payée (ALERTE_EMAIL dans Railway, sinon l'adresse de contact). Jamais pour un essai."""
+    try:
+        o = db.get(oid)
+        if not o or (o["formule"] or "").startswith("essai") or not mail_configure():
+            return False
+        try:
+            brut = json.loads((STORE / oid / "livre.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            brut = {}
+        form = brut.get("form") or {}
+        eu = lambda c: f"{c / 100:.2f}".replace(".", ",") + " €"
+        lignes = [l for l in (brut.get("lignes") or []) if isinstance(l, (list, tuple)) and len(l) >= 3]
+        detail = "\n".join(f"– {l[0]}{' × ' + str(l[1]) if int(l[1]) > 1 else ''} : {eu(int(l[1]) * int(l[2]))}" for l in lignes) or \
+                 f"– {(paiement.FORMULES.get(o['formule']) or {}).get('nom') or o['formule']}"
+        a = o.get("adresse") or {}
+        reel = factures.paiement_reel(o)
+        site = (os.getenv("PUBLIC_URL") or "https://www.monherosdumois.fr").rstrip("/")
+        prenom = form.get("prenom") or "?"
+        texte = (f"Nouvelle commande payée{'' if reel else ' (PAIEMENT DE TEST)'} : {eu(o['montant'] or 0)}\n\n"
+                 f"Pour : {prenom} · univers : {form.get('univers') or '—'}\n{detail}\n"
+                 f"{'Code promo : ' + form['code_promo'] + chr(10) if form.get('code_promo') else ''}"
+                 f"{'Cadeau de : ' + form['cadeau_de'] + chr(10) if form.get('cadeau_de') else ''}\n"
+                 f"Client : {a.get('nom') or ''} · {o.get('email') or ''} · {a.get('ville') or ''} ({a.get('pays') or ''})\n"
+                 f"Référence : {oid.upper()}\n\nLa fabrication est lancée. Tu recevras le livre « à relire » dans l'admin :\n{site}/admin")
+        ok = send_mail(f"🎉 Nouvelle commande : {eu(o['montant'] or 0)} pour {prenom}{'' if reel else ' (test)'}", texte,
+                       reply_to=o.get("email") or None, to=os.getenv("ALERTE_EMAIL") or CONTACT)
+        log(f"commande {oid} : alerte « nouvelle commande » {'envoyée' if ok else 'non envoyée'}")
+        return ok
+    except Exception as e:
+        log(f"commande {oid} : alerte « nouvelle commande » impossible : {type(e).__name__}: {e}")
         return False
 
 
