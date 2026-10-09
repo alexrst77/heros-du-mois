@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
+<link rel="apple-touch-icon" href="/static/marque/apple-touch-icon.png">
+<title>Mon compte – Mon Héros du Mois</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/static/theme.css">
+<script src="/static/mesure.js"></script>
+<style>
+  body { background:var(--ciel); background-image:none; }
+  .top { border-bottom:1px solid var(--trait); } .top .in { display:flex; align-items:center; height:64px; gap:12px; }
+  .top .in a.retour { margin-left:auto; font-weight:700; font-size:15px; color:var(--encre-2); text-decoration:none; }
+  .page { max-width:880px; margin:0 auto; padding:36px 16px 80px; }
+  h1 { font:400 clamp(30px,4vw,42px)/1.1 var(--titre); margin:0 0 8px; }
+  h2 { font:400 24px/1.2 var(--titre); margin:34px 0 12px; }
+  .lead { color:var(--encre-2); margin:0 0 24px; font-size:17px; }
+  .carte { background:var(--papier); border:1px solid var(--trait); border-radius:22px; padding:22px; box-shadow:0 20px 40px -32px rgba(31,37,87,.45); }
+  .login { max-width:460px; margin:0 auto; text-align:center; }
+  .login .sep { display:flex; align-items:center; gap:12px; color:var(--encre-2); font-size:14px; margin:18px 0; }
+  .login .sep::before, .login .sep::after { content:""; flex:1; height:1px; background:var(--trait); }
+  .login input { width:100%; font:600 16px var(--texte); padding:14px 16px; border:2px solid var(--trait); border-radius:14px; background:#fff; color:var(--encre); margin-bottom:12px; }
+  .login .btn { width:100%; }
+  #gbtn { display:flex; justify-content:center; min-height:44px; }
+  .msg { margin:14px 0 0; font-weight:700; } .msg.ok { color:var(--mousse); } .msg.ko { color:var(--erreur); }
+  .invite { margin-top:18px; font-size:15px; color:var(--encre-2); } .invite a { color:var(--encre); font-weight:800; }
+  .tete { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .heros { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:14px; }
+  .h { background:var(--papier); border:1px solid var(--trait); border-radius:20px; padding:14px; text-align:center; }
+  .h .av { width:110px; height:110px; margin:0 auto 8px; border-radius:50%; background:#F3EADB; overflow:hidden; display:grid; place-items:center; font-size:46px; }
+  .h .av img { width:100%; height:100%; object-fit:cover; }
+  .h b { font:400 21px var(--titre); display:block; } .h small { color:var(--encre-2); display:block; margin:2px 0 10px; }
+  .h .btn { width:100%; padding:11px 14px; font-size:15px; }
+  .h button.lien { background:none; border:0; color:var(--encre-2); font:600 13px var(--texte); margin-top:8px; cursor:pointer; text-decoration:underline; }
+  .nouveau { display:grid; place-items:center; border:2px dashed var(--trait); border-radius:20px; min-height:200px; text-decoration:none; color:var(--encre); font-weight:800; }
+  .cmd { background:var(--papier); border:1px solid var(--trait); border-radius:18px; padding:16px 18px; margin-bottom:12px; display:grid; grid-template-columns:1fr auto; gap:4px 12px; }
+  .cmd .q { font-weight:800; } .cmd .d { color:var(--encre-2); font-size:14px; } .cmd .m { font-weight:800; text-align:right; }
+  .cmd .st { display:inline-block; background:#FFF3D1; border-radius:999px; padding:3px 10px; font-weight:800; font-size:13px; margin-top:6px; }
+  .cmd .st.ok { background:#E3F2EA; color:var(--mousse); }
+  .cmd .t { grid-column:1/-1; color:var(--encre-2); font-size:14px; } .cmd .t a { color:var(--encre); font-weight:700; }
+  .vide { color:var(--encre-2); background:var(--papier); border:1px dashed var(--trait); border-radius:18px; padding:20px; text-align:center; }
+  .bas { margin-top:40px; display:flex; gap:16px; flex-wrap:wrap; font-size:14px; }
+  .bas button { background:none; border:0; color:var(--encre-2); font:600 14px var(--texte); cursor:pointer; text-decoration:underline; padding:0; }
+</style>
+</head>
+<body>
+<header class="top"><div class="in wrap"><a href="/" class="logo"><span class="logo-mark" aria-hidden="true"></span>Mon Héros du Mois</a><a href="/creer" class="retour">Créer un univers</a></div></header>
+<main class="page" id="page"><p class="lead">Chargement…</p></main>
+<script>
+(async function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
+  const q = new URLSearchParams(location.search), suite = /^\/(creer|compte)/.test(q.get('suite') || '') ? q.get('suite') : '/compte';
+  let C = await (await fetch('/api/compte', { cache: 'no-store' })).json();
+
+  function vueConnexion() {
+    $('page').innerHTML = `<div class="login"><h1>Mon compte</h1>
+      <p class="lead">Retrouvez vos héros enregistrés et suivez vos commandes. Sans mot de passe.</p>
+      <div class="carte">
+        ${C.google ? `<div id="gbtn"></div><div class="sep">ou</div>` : ''}
+        <form id="f"><input id="em" type="email" autocomplete="email" placeholder="Votre adresse e-mail" required>
+        <button class="btn" type="submit">Recevoir mon lien de connexion</button></form>
+        <p class="msg" id="msg">${q.get('lien') === 'expire' ? '<span class="ko">Ce lien a expiré ou a déjà servi : demandez-en un nouveau.</span>' : ''}</p>
+      </div>
+      <p class="invite">Pas besoin de compte pour commander : <a href="/creer">continuer en invité</a>.</p></div>`;
+    $('f').onsubmit = async ev => {
+      ev.preventDefault(); const b = ev.target.querySelector('button'); b.disabled = true;
+      const r = await fetch('/api/compte/lien', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: $('em').value, suite }) });
+      const j = await r.json().catch(() => ({}));
+      $('msg').className = 'msg ' + (r.ok ? 'ok' : 'ko');
+      $('msg').textContent = r.ok ? `📬 C'est envoyé ! Ouvrez le lien reçu à ${$('em').value} (pensez aux indésirables).` : (j.erreur || 'Erreur, réessayez.');
+      b.disabled = false;
+    };
+    if (C.google) {
+      const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+      s.onload = () => {
+        google.accounts.id.initialize({ client_id: C.google, callback: async rep => {
+          const r = await fetch('/api/compte/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: rep.credential, suite }) });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok) location.href = j.suite || '/compte'; else { $('msg').className = 'msg ko'; $('msg').textContent = j.erreur || 'Connexion refusée.'; }
+        } });
+        google.accounts.id.renderButton($('gbtn'), { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', locale: 'fr', width: 300 });
+      };
+      document.head.appendChild(s);
+    }
+  }
+
+  function vueCompte() {
+    const H = C.heros || [], K = C.commandes || [];
+    $('page').innerHTML = `<div class="tete"><div><h1>Bonjour${C.nom ? ' ' + esc(C.nom.split(' ')[0]) : ''} ✨</h1><p class="lead">Connecté avec ${esc(C.email)}</p></div>
+        <a class="btn petit" href="/creer">Créer un nouvel univers</a></div>
+      <h2>Mes héros</h2>
+      <div class="heros">${H.map(h => `<div class="h"><div class="av">${h.apercu ? `<img src="${esc(h.apercu)}" alt="">` : '🧒'}</div><b>${esc(h.nom)}</b>
+          <small>modifié le ${new Date(h.maj * 1000).toLocaleDateString('fr-FR')}</small>
+          <button class="btn" data-ouvrir="${h.id}">Créer avec ${esc(h.nom)}</button><button class="lien" data-suppr="${h.id}" data-nom="${esc(h.nom)}">Supprimer</button></div>`).join('')}
+        <a class="nouveau" href="/creer">+ Nouveau héros</a></div>
+      <h2>Mes commandes</h2>
+      ${K.length ? K.map(c => `<div class="cmd"><div><div class="q">${esc(c.quoi)}</div><div class="d">Commande du ${new Date(c.cree * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} · n° ${esc(c.id.toUpperCase())}</div>
+          <span class="st ${c.statut === 'Expédié' ? 'ok' : ''}">${esc(c.statut)}</span></div><div class="m">${eur(c.montant)}</div>
+          ${c.titres.length || c.suivi.length ? `<div class="t">${c.titres.map(t => '« ' + esc(t) + ' »').join(' · ')}${c.suivi.length ? `${c.titres.length ? '<br>' : ''}📦 ${c.suivi.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">Suivre le colis${c.suivi.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' · ')}` : ''}</div>` : ''}</div>`).join('')
+        : `<div class="vide">Aucune commande pour l'instant avec ${esc(C.email)}.</div>`}
+      <div class="bas"><button id="out">Se déconnecter</button><button id="del">Supprimer mon compte</button><a href="/confidentialite">Données personnelles</a></div>`;
+    document.querySelectorAll('[data-ouvrir]').forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      const j = await (await fetch('/api/compte/heros/' + b.dataset.ouvrir)).json();
+      try { const cur = JSON.parse(localStorage.getItem('heros-avatar') || '{}'); localStorage.setItem('heros-avatar', JSON.stringify(Object.assign(cur, j.etat))); } catch (_) {}
+      location.href = '/creer';
+    });
+    document.querySelectorAll('[data-suppr]').forEach(b => b.onclick = async () => {
+      if (!confirm(`Supprimer ${b.dataset.nom} de vos héros enregistrés ?`)) return;
+      await fetch('/api/compte/heros/' + b.dataset.suppr, { method: 'DELETE' }); C = await (await fetch('/api/compte', { cache: 'no-store' })).json(); vueCompte();
+    });
+    $('out').onclick = async () => { await fetch('/api/compte/deconnexion', { method: 'POST' }); location.href = '/'; };
+    $('del').onclick = async () => {
+      if (!confirm("Supprimer votre compte et vos héros enregistrés ? Vos commandes et factures sont conservées (obligation légale). C'est définitif.")) return;
+      await fetch('/api/compte', { method: 'DELETE' }); location.href = '/';
+    };
+  }
+  C.connecte ? vueCompte() : vueConnexion();
+})();
+</script>
+</body>
+</html>

@@ -187,23 +187,49 @@ def sanitize_avatar(av, prenom, age, problems=None):
             if not x["nom"]:
                 problems.append(f"animal {i + 1} : nom non renseigné")
             out["animaux"].append(x)
+    out["fratrie"] = []
+    fr = [f for f in (av.get("fratrie") or []) if isinstance(f, dict)]
+    place = max(0, min(MAX_FRATRIE, MAX_COMPAGNONS - len(out["animaux"])))
+    if len(fr) > place:
+        problems.append(f"au plus {MAX_FRATRIE} frères et sœurs, et {MAX_COMPAGNONS} animaux + frères et sœurs en tout")
+    for i, f in enumerate(fr[:place]):        # frères et sœurs : même éditeur que l'enfant
+        if isinstance(f, dict):
+            x = _pick("enfant", f, f"frère ou sœur {i + 1}", problems)
+            x["nom"] = _name(f.get("prenom") or f.get("nom"))
+            x["age"] = str(f.get("age")) if str(f.get("age") or "").isdigit() and 0 < int(f["age"]) < 19 else "6"
+            if not x["nom"]:
+                problems.append(f"frère ou sœur {i + 1} : prénom non renseigné")
+            out["fratrie"].append(x)
     out["prenom"], out["age"] = prenom, age
     return out
 
 
+MAX_FRATRIE = 2
+MAX_COMPAGNONS = 4          # animaux + frères et sœurs : au-delà, les images se dégradent et le plafond IA est trop juste
+
+
+def _enfant_desc(nom, age, e):
+    """Description visuelle (anglais) d'un enfant configuré dans l'éditeur (le héros ou un frère / une sœur)."""
+    g = lambda k: _opt("enfant", k, e[k])
+    t = (f"{nom}, a {age}-year-old {g('genre')['en']} with {g('peau')['en']}, "
+         f"{g('couleur_cheveux')['en']} {g('coiffure')['en']}, {g('yeux')['en']}")
+    if e["lunettes"] != "aucune":
+        t += f", {g('lunettes')['en'].replace('glasses', g('couleur_lunettes')['en'] + ' glasses')}"
+    if e["taches"] == "oui":
+        t += f", {g('taches')['en']}"
+    t += f"; always wearing {g('couleur_tenue')['en']} {g('tenue')['en']}"
+    if e["tenue"] == "pyjama":
+        t += " and slippers"
+    return t
+
+
 def avatar_descriptions(av):
     """Descriptions visuelles (anglais) construites uniquement à partir des choix de l'éditeur."""
-    e = av["enfant"]; g = lambda k: _opt("enfant", k, e[k])
-    hero = (f"{av['prenom']}, a {av['age']}-year-old {g('genre')['en']} with {g('peau')['en']}, "
-            f"{g('couleur_cheveux')['en']} {g('coiffure')['en']}, {g('yeux')['en']}")
-    if e["lunettes"] != "aucune":
-        hero += f", {g('lunettes')['en'].replace('glasses', g('couleur_lunettes')['en'] + ' glasses')}"
-    if e["taches"] == "oui":
-        hero += f", {g('taches')['en']}"
-    hero += f"; always wearing {g('couleur_tenue')['en']} {g('tenue')['en']}"
-    if e["tenue"] == "pyjama":
-        hero += " and slippers"
-    res = {"hero": hero, "doudou": None, "animaux": []}
+    hero = _enfant_desc(av["prenom"], av["age"], av["enfant"])
+    res = {"hero": hero, "doudou": None, "animaux": [], "fratrie": []}
+    for f in av.get("fratrie") or []:
+        lien = "brother" if f["genre"] == "garcon" or f["genre"] == "garçon" else "sister"
+        res["fratrie"].append(_enfant_desc(f["nom"], f["age"], f).replace(f"{f['nom']}, a ", f"{f['nom']}, {av['prenom']}'s {lien} (a real child, part of the story), a ", 1))
     d = av.get("doudou")
     if d:
         h = lambda k: _opt("doudou", k, d[k])
@@ -238,6 +264,8 @@ def fixed_characters(f):
         parts.append(f"PLUSH TOY (held by the hero in most scenes): {d['doudou']}.")
     for t in d["animaux"]:
         parts.append(f"PET: {t}.")
+    for t in d.get("fratrie") or []:
+        parts.append(f"SIBLING: {t}.")
     return " ".join(parts)
 
 
@@ -289,6 +317,10 @@ def build_config(form):
             chars.append({"id": f"animal_{i + 1}", "type": "animal", "role": "animal de compagnie (vivant)",
                           "nom": a["nom"] or f"le {_opt('animal', 'type', a['type'])['fr'].lower()}",
                           "config": {k: v for k, v in a.items() if k != "nom"}, "desc": t})
+        for i, (f, t) in enumerate(zip(av.get("fratrie") or [], d.get("fratrie") or [])):
+            fille = f.get("genre") == "fille"
+            chars.append({"id": f"fratrie_{i + 1}", "type": "enfant", "role": ("sœur" if fille else "frère") + f" de {av['prenom']} (un vrai enfant de la famille)",
+                          "nom": f["nom"], "age": f["age"], "config": {k: v for k, v in f.items() if k not in ("nom", "age")}, "desc": t})
     else:
         probs.append("aucun avatar configuré : description textuelle minimale utilisée")
         chars.append({"id": "heros", "type": "enfant", "role": "héros", "nom": form["prenom"], "age": form["age"],
@@ -637,9 +669,12 @@ def refs_block(ids, story, first_index=1, style=True):
     by = _ids(story)
     lines = [f"Image {first_index + k}: {by[x]['nom'].upper()} ({by[x]['role']}) - {by[x]['desc']}." for k, x in enumerate(ids)]
     notes = []
-    h = by.get("heros")
-    if h and "heros" in ids and ((h.get("config") or {}).get("lunettes") not in (None, "aucune")) and len(ids) > 1:
-        notes.append(f"Only {h['nom'].upper()} wears glasses: the animals, the plush toy and every other character NEVER wear glasses.")
+    lun = [by[x]["nom"].upper() for x in ids if by[x]["type"] == "enfant" and (by[x].get("config") or {}).get("lunettes") not in (None, "aucune")]
+    if lun and len(ids) > 1:
+        notes.append(f"Only {' and '.join(lun)} wear{'s' if len(lun) == 1 else ''} glasses: the animals, the plush toy and every other character NEVER wear glasses.")
+    kids = [by[x]["nom"].upper() for x in ids if by[x]["type"] == "enfant"]
+    if len(kids) > 1:
+        notes.append(f"{', '.join(kids)} are different children (siblings): never merge or swap them; each keeps their own face, hair, skin tone and outfit.")
     if "doudou" in ids:
         d = by["doudou"]; hero = by.get("heros", {}).get("nom", "the hero").upper()
         notes.append(f"{d['nom'].upper()} is a STUFFED PLUSH TOY (fabric, seams, stitched eyes, stubby limbs), about the size of {hero}'s torso: "

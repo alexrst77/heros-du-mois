@@ -134,7 +134,7 @@ def composer(folder, snap, illu, spec):
 SYSTEM_OBJET = """Tu contrôles une illustration pour enfant imprimée sur un objet (gourde, tasse ou sac).
 Compare l'image à la fiche. BLOQUANTS (uniquement) :
 - un personnage attendu absent ou méconnaissable, ou un personnage récurrent en double ;
-- un humain en trop (aucun parent, frère, sœur, grand-parent) ; un chien, un chat ou un lapin domestique en trop ; deux animaux fusionnés ;
+- un humain en trop (aucun parent ni grand-parent ; aucun enfant absent des personnages attendus) ; un chien, un chat ou un lapin domestique en trop ; deux animaux fusionnés ;
 - espèce ou couleur principale fausse ; accessoire manquant ou présent alors que la fiche dit « aucun » ;
 - la peluche dessinée comme un animal vivant ; des lunettes sur un animal ou sur la peluche ;
 - un visage coupé par le bord de l'image ; du texte, des lettres, des chiffres, un cadre ou un filigrane ; une anatomie très fausse.
@@ -167,7 +167,7 @@ def image_prompt(snap, refs):
              style, "CHARACTER BIBLE", P._bible_lines(_ids(snap), snap, {}), P.refs_text(refs, snap),
              f"SCENE: {k['scene']}.",
              f"CHARACTERS: exactly these recurring characters ({noms}), each shown once, close together, big and clearly visible; "
-             f"{snap['personnages'][0]['nom'].upper()} is the focal point. No other human at all (no parent, sibling, grandparent).",
+             f"{snap['personnages'][0]['nom'].upper()} is the focal point. No other human at all (no parent, no grandparent, no child who is not listed).",
              "COMPOSITION: bold, simple and readable from a distance (it is printed on an object). Keep every character and face inside the "
              "central 60 % of the width. The characters are drawn a bit smaller and HIGHER in the picture: their feet and paws stay ABOVE the "
              f"bottom {'32' if k['tour'] else '22'} % of the height, which shows only grass or ground (a name ribbon is typeset there). "

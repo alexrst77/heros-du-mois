@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify, send_file, abort, redirect, Respo
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
 import calendrier, coloriage
-import printful, objets, legal, factures
+import printful, objets, legal, factures, comptes
 EXTRAS = {"calendrier": calendrier, "coloriage": coloriage}      # produits Lulu qui ne sont pas des livres (même colis que les livres)
 OBJETS = {k: objets for k in objets.KINDS}                         # objets Printful (gourde, tasse, sac) : leur propre colis
 NON_LIVRES = {**EXTRAS, **OBJETS}
@@ -157,6 +157,10 @@ def order_create():
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
               montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs), origine=oid,
               numero=0 if formule in EXTRAS else 1)
+    try:
+        comptes.noter_commande(oid, addr)                       # connecté : commande rattachée au compte, adresse gardée
+    except Exception as e:
+        log(f"commande {oid} : rattachement au compte impossible : {e}")
     if not paiement.configured():
         return jsonify(id=oid, url=f"/creer?commande={oid}&test=1")
     try:
@@ -1399,7 +1403,8 @@ def admin_rgpd_purge():
             if not s or s["statut"] != "actif":
                 shutil.rmtree(STORE / ori, ignore_errors=True)
     log(f"RGPD : données effacées pour {len(faites)} commande(s) expédiée(s) depuis plus de {jours} jours")
-    return jsonify(ok=True, effacees=len(faites), jours=jours)
+    comptes_effaces = comptes.purger_inactifs()                     # comptes sans connexion depuis 3 ans (politique de confidentialité)
+    return jsonify(ok=True, effacees=len(faites), jours=jours, comptes=comptes_effaces)
 
 
 # ---------------------------------------------------------------- formulaire de contact du site

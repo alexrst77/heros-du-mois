@@ -75,7 +75,8 @@ def save_avatar_pngs(data, folder):
     """Guides couleurs dessinés par le navigateur, par personnage."""
     out = {}
     items = [("enfant", data.get("enfant"))] + ([("doudou", data["doudou"])] if data.get("doudou") else []) + \
-            [(f"animal_{i}", a) for i, a in enumerate((data.get("animaux") or [])[:3])]
+            [(f"animal_{i}", a) for i, a in enumerate((data.get("animaux") or [])[:3])] + \
+            [(f"fratrie_{i}", a) for i, a in enumerate((data.get("fratrie") or [])[:2])]
     for name, url in items:
         p = save_png(url, folder / f"guide_{name}.png")
         if p:
@@ -87,7 +88,8 @@ def save_previews(data, folder):
     """Aperçus recolorés dans le navigateur (modèle peint + couleurs du parent)."""
     out = {}
     items = [("enfant", data.get("enfant")), ("doudou", data.get("doudou"))] + \
-            [(f"animal_{i}", a) for i, a in enumerate((data.get("animaux") or [])[:3])]
+            [(f"animal_{i}", a) for i, a in enumerate((data.get("animaux") or [])[:3])] + \
+            [(f"fratrie_{i}", a) for i, a in enumerate((data.get("fratrie") or [])[:2])]
     for name, url in items:
         p = save_png(url, folder / f"apercu_{name}.png") if url else None
         if p:
@@ -109,6 +111,7 @@ def char_id(name):
     """enfant -> heros ; doudou -> doudou ; animal_0 -> animal_1 (même ordre que dans l'éditeur)."""
     if name == "enfant": return "heros"
     if name.startswith("animal_"): return f"animal_{int(name.split('_')[1]) + 1}"
+    if name.startswith("fratrie_"): return f"fratrie_{int(name.split('_')[1]) + 1}"
     return name
 
 
@@ -426,6 +429,8 @@ def download(job_id):
 import boutique  # noqa: E402  commande, paiement, impression, abonnements, administration
 boutique.setup(sys.modules[__name__])
 app.register_blueprint(boutique.bp)
+import comptes  # noqa: E402
+app.register_blueprint(comptes.bp)
 
 if __name__ == "__main__":
     print("Ouvre http://localhost:8000 dans ton navigateur" + ("" if os.getenv("OPENAI_API_KEY") else "  (pas de clé OpenAI : mode démo)"))

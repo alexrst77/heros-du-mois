@@ -174,6 +174,13 @@ def check_snapshot(snap, form):
         for k in ("type", "taille", "couleur", "motif", "yeux", "collier"):
             n = "espece" if k == "type" else k
             if f.get(n + "_id") != a.get(k): probs.append(f"animal {i + 1} : {k} {f.get(n + '_id')} ≠ {a.get(k)}")
+    fr = av.get("fratrie") or []
+    if len([p for p in snap["personnages"] if str(p["id"]).startswith("fratrie_")]) != len(fr):
+        probs.append("nombre de frères et sœurs différent de la commande")
+    for i, f in enumerate(fr):
+        x = by.get(f"fratrie_{i + 1}") or {}
+        for k in ("genre", "peau", "coiffure", "couleur_cheveux", "tenue", "couleur_tenue"):
+            if x.get(k + "_id") != f.get(k): probs.append(f"frère/sœur {i + 1} : {k} {x.get(k + '_id')} ≠ {f.get(k)}")
     e = av.get("enfant") or {}
     h = by.get("heros") or {}
     for k in ("peau", "coiffure", "couleur_cheveux", "yeux", "lunettes", "tenue", "couleur_tenue"):
@@ -279,8 +286,10 @@ Format JSON exact :
 Identifiants : utilise EXACTEMENT ceux de la configuration (heros, doudou, animal_1…) ; un personnage inventé qui revient reçoit
 un identifiant invente_<nom> et une fiche dans characterBible (UN SEUL personnage inventé récurrent au plus). Tout personnage nommé dans le texte d'une double page figure dans
 presentCharacterIds de cette double page ; une absence volontaire d'un compagnon doit être justifiée par le texte.
-Aucun membre de la famille de l'enfant (maman, papa, frère, sœur, grands-parents, oncle, tante, cousins…) : ni dans le texte ni à
+Aucun membre de la famille de l'enfant (maman, papa, grands-parents, oncle, tante, cousins…, et aucun frère ou sœur NON configuré) : ni dans le texte ni à
 l'image. Les seuls personnages sont ceux de la configuration et, si besoin, UN personnage imaginaire (créature, animal magique, lutin…).
+Les frères et sœurs configurés (identifiants fratrie_…) sont de vrais enfants de la famille : ils vivent l'aventure avec le héros, avec une
+action utile, mais le héros reste au centre de l'histoire.
 leftComposition et rightComposition décrivent les deux moitiés d'UN SEUL INSTANT : chaque personnage est placé dans UNE seule
 des deux moitiés (jamais le même personnage à gauche ET à droite, sinon l'illustrateur le dessine deux fois).
 Thèmes de lecture : scène claire -> voile #F5F0DF, encre #163E49 ; scène sombre ou nocturne -> voile #171B3A (ou #092D43 sous l'eau), encre #FFF7E8.
@@ -303,11 +312,13 @@ def protagoniste(snap):
 FAMILLE = re.compile(r"\b(maman|papa|m[eè]re|p[eè]re|parents?|fr[eè]re|s(?:œ|oe)ur|mamie|mami|papi|papy|grand-(?:m[eè]re|p[eè]re)|grands-parents|"
                      r"tonton|tata|oncle|tante|cousine?|mom|mum|dad|mother|father|sister|brother|grandma|grandpa|grandmother|grandfather|aunt|uncle)\b"
                      r"(?!\s+(?:du|de la|des|de l'|de)\s)(?!\s+No[eë]l)(?!\s+Fouettard)", re.I)
+FRATRIE_MOT = re.compile(r"fr[eè]re|s(?:œ|oe)ur|sister|brother", re.I)
 
 
 def check_board(b, snap):
     probs = []
     ids = {p["id"] for p in snap["personnages"]}
+    fratrie = any(str(p["id"]).startswith("fratrie_") for p in snap["personnages"])
     inv = {x.get("id") for x in b.get("characterBible") or [] if str(x.get("id", "")).startswith("invente_")}
     lo, hi = word_range(snap["age"])
     sp = b.get("spreads") or []
@@ -335,8 +346,9 @@ def check_board(b, snap):
             if G._fold(nom) in txt and cid not in pres:
                 probs.append(f"Double page {i + 1} : le texte nomme {nom} ({cid}) mais il n'est pas dans presentCharacterIds.")
         if not s.get("requiredVisibleDetails"): probs.append(f"Double page {i + 1} : requiredVisibleDetails vide.")
-        fam = FAMILLE.search(str(s.get("leftText", "")) + " " + str(s.get("rightText", "")) + " " + str(s.get("scene", "")) + " "
-                             + str(s.get("leftComposition", "")) + " " + str(s.get("rightComposition", "")))
+        fam = next((m for m in FAMILLE.finditer(str(s.get("leftText", "")) + " " + str(s.get("rightText", "")) + " " + str(s.get("scene", "")) + " "
+                                                + str(s.get("leftComposition", "")) + " " + str(s.get("rightComposition", "")))
+                    if not (fratrie and FRATRIE_MOT.fullmatch(m.group(0)))), None)     # frère / sœur configurés : autorisés
         if fam:
             probs.append(f"Double page {s.get('id')} : membre de la famille (« {fam.group(0)} ») : interdit, remplace par les personnages configurés ou un personnage imaginaire.")
         for pid, nom in _noms(snap, b).items():
@@ -428,8 +440,13 @@ def _bible_lines(ids, snap, b):
         elif x in inv:
             lines.append(f"- {inv[x].get('name', x).upper()} [{x}] (invented story character, keep identical in every scene): {inv[x].get('visual_en', '')}.")
     hc = by["heros"]
-    if hc.get("lunettes_id") not in (None, "aucune") and len(ids) > 1:
-        lines.append(f"Only {hero} wears glasses; animals, the plush toy and everyone else never wear glasses.")
+    enfants = [by[x] for x in ids if x in by and by[x]["type"] == "enfant"]
+    lunettes = [e["nom"].upper() for e in enfants if e.get("lunettes_id") not in (None, "aucune")]
+    if lunettes and len(ids) > 1:
+        lines.append(f"Only {' and '.join(lunettes)} wear{'s' if len(lunettes) == 1 else ''} glasses; animals, the plush toy and everyone else never wear glasses.")
+    if len(enfants) > 1:
+        lines.append(f"{', '.join(e['nom'].upper() for e in enfants)} are {len(enfants)} different children: never merge or swap them, "
+                     "each keeps their own face, hair, skin tone, height for their age and outfit colours.")
     if "doudou" in ids:
         d = by["doudou"]
         if snap.get("protagoniste") == "doudou":
@@ -523,7 +540,7 @@ def pano_prompt(s, snap, b, refs, fix=None):
     extra = [refs_text(refs, snap, names),
              f"WORLD: {U.PAR_CLE[k]['image'] if k else G.art.DEFAULT_UNIVERS}.",
              f"CHARACTERS IN THIS SCENE: exactly {len(ids)} recurring characters ({', '.join(allnames.get(x, x) for x in ids)}), each shown once; "
-             "no other pet or plush; small background wildlife only if the scene asks for it. No other human at all: no parent, sibling, "
+             "no other pet or plush; small background wildlife only if the scene asks for it. No other human at all: no parent, no child who is not listed, no "
              "grandparent or other family member."]
     extra += une_seule_fois(s, snap, b)
     if fix: extra.append("CORRECTIONS REQUIRED (a previous attempt was rejected): " + "; ".join(fix))
@@ -540,7 +557,7 @@ def cover_prompt(b, snap, refs):
         refs_text(refs, snap, {x.get("id"): str(x.get("name", "")).upper() for x in b.get("characterBible") or []}),
         f"WORLD: {U.PAR_CLE[k]['image'] if k else G.art.DEFAULT_UNIVERS}.",
         f"COVER SCENE: {b['coverBrief']}",
-        f"Exactly these characters: {', '.join(ids)}; no other human, no family member. {protagoniste(snap)['nom'].upper()} is the focal point, in the lower two thirds.",
+        f"Exactly these characters: {', '.join(ids)}; no other human (no parent, no unlisted child). {protagoniste(snap)['nom'].upper()} is the focal point, in the lower two thirds.",
         "Keep the upper third calm (sky, foliage, soft light) for a title that will be typeset separately.",
         "No writing, letters, title, captions, watermark, typography or frame."])
 
@@ -593,7 +610,7 @@ def image(prompt, refs, path, size, quality, trace, etape=None):
 SYSTEM_PANO = """Tu contrôles une illustration panoramique (deux pages face à face, pliure au centre) d'un album jeunesse.
 Compare l'image à la fiche. BLOQUANTS (l'image est refaite) — uniquement :
 - un personnage attendu absent ou méconnaissable, ou un personnage récurrent en double ;
-- un humain ou un animal de compagnie en trop (aucun parent, frère, sœur ou grand-parent ne doit apparaître) ; deux animaux fusionnés ;
+- un humain ou un animal de compagnie en trop (aucun parent ni grand-parent ; aucun enfant absent de la fiche — un frère ou une sœur n'apparaît que s'il y est listé) ; deux animaux fusionnés ;
 - espèce ou couleur principale fausse ; accessoire manquant ou présent alors que la fiche dit « aucun » ;
 - la peluche dessinée comme un animal vivant ; des lunettes sur un animal ou la peluche ;
 - un visage, une tête d'animal ou l'action essentielle coupé par la pliure (bande de 44 à 56 % de la largeur) ;

@@ -419,7 +419,7 @@ def composer(folder, snap, cover, traits_src):
 SYSTEM_PAGE = """Tu contrôles une page de cahier de coloriage pour enfant (dessin au trait noir sur fond blanc).
 Compare l'image à la fiche. BLOQUANTS (uniquement) :
 - l'enfant attendu absent ou méconnaissable (coiffure, lunettes, vêtements très différents) ; un personnage récurrent en double ;
-- un humain en trop (aucun parent, frère, sœur) ; la peluche dessinée comme un animal vivant ;
+- un humain en trop (aucun parent ; aucun enfant absent des personnages attendus) ; la peluche dessinée comme un animal vivant ;
 - de la couleur, des aplats gris ou des ombrages (ce doit être un dessin au trait à colorier) ;
 - du texte, des lettres, des chiffres, un cadre, une signature ; une anatomie très fausse.
 MINEURS : détails trop petits, traits un peu fins, décor chargé.
@@ -460,7 +460,7 @@ def prompt_page(pg, snap, refs):
              "or the painting style.",
              f"SCENE: {pg['scene']}.",
              f"CHARACTERS: exactly these recurring characters ({noms}), each shown once; {snap['personnages'][0]['nom'].upper()} is the "
-             "main subject, large, near the centre. No other human (no parent, sibling, grandparent); small animals or objects of the "
+             "main subject, large, near the centre. No other human (no parent, no grandparent, no child who is not listed); small animals or objects of the "
              "scene are fine.",
              "COMPOSITION: portrait page, the drawing fills the page but keeps a clean white margin: no line touches the edges.",
              "No writing, letters, numbers, title, signature, frame or border."]

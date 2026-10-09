@@ -16,7 +16,7 @@
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta property="og:locale" content="fr_FR">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#1A1F4A">
+<meta name="theme-color" content="#3A12B8">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Mon Héros du Mois","url":"__BASE__/","logo":"__BASE__/static/marque/logo-480.webp","email":"monherosdumois@gmail.com","sameAs":["https://www.instagram.com/monherosdumois/"]}</script>
 <link rel="stylesheet" href="/static/theme.css">
 <script src="/static/mesure.js"></script>
@@ -333,7 +333,7 @@
   .formule .port.offert { background:#E3F2EA; color:var(--mousse); }
   .formule.phare .port.offert { background:var(--luciole); color:var(--encre); }
   /* calendrier de son année */
-  .calendrier { background:linear-gradient(180deg, var(--ciel), #F6ECDA 55%, var(--ciel)); }
+  .calendrier { background:linear-gradient(180deg, rgba(255,243,251,0), #EAFFD6 55%, rgba(255,243,251,0)); }
   .cal { display:grid; grid-template-columns:1.05fr 1fr; gap:56px; align-items:center; }
   .cal-photos { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
   .cal-photos img { width:100%; height:auto; display:block; border-radius:16px; box-shadow:0 24px 44px -26px rgba(31,37,87,.55); aspect-ratio:4/5; object-fit:cover; object-position:50% 20%; }
@@ -356,7 +356,7 @@
   .crea .etiq { align-self:flex-start; background:var(--luciole); color:var(--encre); font:800 12px var(--texte); border-radius:999px; padding:3px 10px; }
   .crea-bas { margin-top:18px; display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; justify-content:center; text-align:center; color:var(--encre-2); }
   @media (max-width:900px) { .crea { grid-template-columns:1fr; } .crea .c.phare img { max-height:none; aspect-ratio:4/3; } }
-  .coloriage { background:linear-gradient(180deg, var(--ciel), #EEF2FA 55%, var(--ciel)); }
+  .coloriage { background:linear-gradient(180deg, rgba(255,243,251,0), #E3F9FF 55%, rgba(255,243,251,0)); }
   .colo-photos { display:grid; grid-template-columns:1fr; gap:12px; }
   .colo-photos img { width:100%; height:auto; display:block; border-radius:18px; box-shadow:0 24px 44px -26px rgba(31,37,87,.55); }
   .colo-photos .quatre { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
@@ -459,6 +459,64 @@
   .obj-plus img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:16px; display:block; }
   .obj-plus.deux { grid-template-columns:repeat(2, minmax(0,1fr)); } .obj-plus.deux img { aspect-ratio:3/2; }
   @media (max-width:760px) { .obj-plus { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+
+  /* ================================================ « Fête foraine du soir » : décors des livres + fluo */
+  .noel { background:var(--rose); color:#fff; font-weight:800; } .noel b { color:var(--soleil); }
+  .top { background:color-mix(in srgb, #fff 82%, transparent); border-bottom:2.5px solid var(--encre); }
+  /* ouverture : le décor spatial d'un vrai livre, lavé de violet */
+  .ouv { position:relative; color:#fff; padding:64px 0 70px; background:
+      linear-gradient(100deg, rgba(30,18,64,.92) 0%, rgba(58,18,184,.72) 48%, rgba(255,46,151,.28) 100%),
+      url("/static/vitrine/fond_espace.webp") center 40% / cover; }
+  @media (max-width:700px) { .ouv { background-image:linear-gradient(180deg, rgba(30,18,64,.9), rgba(58,18,184,.78)), url("/static/vitrine/fond_espace_m.webp"); padding:34px 0 40px; } }
+  .ouv h1 { color:#fff; text-shadow:4px 4px 0 var(--rose); font-size:clamp(36px, 5.2vw, 66px); max-width:17ch; }
+  .ouv p.intro { color:#F1E9FF; font-weight:600; }
+  .ouv .essai { background:#fff; color:var(--encre); border:2.5px solid var(--encre); box-shadow:8px 8px 0 var(--luciole); border-radius:22px; transform:rotate(-1.2deg); }
+  .ouv .essai input { border:2.5px solid var(--encre); }
+  /* vague entre deux bandes */
+  .vague-h, .vague-b { position:relative; }
+  .vague-h::before, .vague-b::after { content:""; position:absolute; left:0; right:0; height:22px; pointer-events:none; z-index:2;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='22' viewBox='0 0 80 22'%3E%3Cpath d='M0 22 V11 Q20 0 40 11 T80 11 V22z' fill='%23FFF3FB'/%3E%3C/svg%3E") repeat-x 0 0 / 80px 22px; }
+  .vague-h::before { top:-1px; transform:scaleY(-1); } .vague-b::after { bottom:-1px; }
+  /* le rayon : violet électrique, étiquettes fluo */
+  .rayon { background:linear-gradient(160deg, #3A12B8, #6A2CFF 60%, #9B2BE0); }
+  .rayon::before { opacity:.9; }
+  .prod .ph { border:3px solid #fff; box-shadow:7px 7px 0 var(--rose); }
+  .prod:nth-child(3n+2) .ph { box-shadow:7px 7px 0 var(--luciole); } .prod:nth-child(3n) .ph { box-shadow:7px 7px 0 var(--cyan); }
+  .prod .prix { background:var(--soleil); border:2px solid var(--encre); box-shadow:none; }
+  .prod.nouveau .ph::after { background:var(--rose); color:#fff; border:2px solid #fff; }
+  .rayon-h p, .prod p, .rayon .rassure { color:#E7DCFF; }
+  .rayon .rassure svg { color:var(--luciole); }
+  /* titres : un trait de feutre rose dessous */
+  .bloc h2 { position:relative; padding-bottom:10px; }
+  .bloc h2::after { content:""; position:absolute; left:0; bottom:0; width:120px; height:10px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='10' viewBox='0 0 120 10'%3E%3Cpath d='M3 6 Q 20 1 40 5 T 80 5 T 117 4' stroke='%23FF2E97' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat; }
+  #questions h2::after, .fin h2::after { left:50%; margin-left:-60px; }
+  /* étapes et cartes : autocollants à contour encre */
+  .etape .vis { border:2.5px solid var(--encre); box-shadow:6px 6px 0 var(--rose); }
+  .etape:nth-child(2) .vis { box-shadow:6px 6px 0 var(--luciole); } .etape:nth-child(3) .vis { box-shadow:6px 6px 0 var(--cyan); }
+  .etape h3::before { background:var(--soleil) !important; border:2px solid var(--encre); color:var(--encre) !important; }
+  .obj img { border:2.5px solid var(--encre); box-shadow:7px 7px 0 var(--rose); }
+  .obj:nth-child(2) img { box-shadow:7px 7px 0 var(--luciole); } .obj:nth-child(3) img { box-shadow:7px 7px 0 var(--cyan); }
+  .objets { background:transparent; }
+  .formule { border:2.5px solid var(--encre); box-shadow:5px 5px 0 var(--trait); }
+  .formule.phare { background:var(--violet); border-color:var(--encre); box-shadow:8px 8px 0 var(--rose); }
+  .formule.phare .sous, .formule.phare li { color:#EFE6FF; }
+  .formule .etiq { background:var(--soleil); border:2px solid var(--encre); }
+  .formule .port { background:#FFE2F3; } .formule .port.offert { background:#DFFFC2; color:#1E5C00; }
+  .carte { border:2.5px solid var(--encre) !important; box-shadow:4px 4px 0 var(--rose); }
+  .carte:nth-child(3n+2) { box-shadow:4px 4px 0 var(--luciole); } .carte:nth-child(3n) { box-shadow:4px 4px 0 var(--cyan); }
+  /* feuilleter : sous l'océan d'un livre */
+  .nuit { background:linear-gradient(120deg, rgba(30,18,64,.86), rgba(106,44,255,.7) 55%, rgba(255,46,151,.55)), url("/static/vitrine/fond_ocean.webp") center / cover; }
+  @media (max-width:700px) { .nuit { background-image:linear-gradient(180deg, rgba(30,18,64,.88), rgba(106,44,255,.76)), url("/static/vitrine/fond_ocean_m.webp"); } }
+  .nuit .sous { color:#F1E9FF; }
+  /* univers : la forêt des lucioles */
+  .mondes { background:linear-gradient(180deg, rgba(255,243,251,.86), rgba(255,243,251,.94)), url("/static/vitrine/fond_foret.webp") center / cover; }
+  /* fin : les cristaux de l'espace, en grand */
+  .fin { background:linear-gradient(120deg, rgba(255,46,151,.86), rgba(106,44,255,.82)), url("/static/vitrine/fond_cristaux.webp") center / cover;
+         border:3px solid var(--encre); box-shadow:10px 10px 0 var(--luciole); }
+  .fin h2 { text-shadow:3px 3px 0 var(--encre); } .fin p { color:#fff; font-weight:600; }
+  .fin h2::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='10' viewBox='0 0 120 10'%3E%3Cpath d='M3 6 Q 20 1 40 5 T 80 5 T 117 4' stroke='%23B4FF1F' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); }
+  .contact { border:2.5px solid var(--encre) !important; box-shadow:7px 7px 0 var(--luciole) !important; }
 </style>
 </head>
 <body>
@@ -467,14 +525,14 @@
   <div class="in wrap">
     <a href="/" class="logo" aria-label="Mon Héros du Mois, accueil"><span class="logo-mark" aria-hidden="true"></span>Mon Héros du Mois</a>
     <nav aria-label="Navigation principale">
-      <a href="#livres">Livres</a><a href="#calendrier">Calendrier</a><a href="#coloriage">Coloriage</a><a href="#objets">Objets</a><a href="#comment">Comment ça marche</a><a href="#questions">Questions</a>
+      <a href="#livres">Livres</a><a href="#calendrier">Calendrier</a><a href="#coloriage">Coloriage</a><a href="#objets">Objets</a><a href="#comment">Comment ça marche</a><a href="#questions">Questions</a><a href="/compte">Mon compte</a>
     </nav>
     <a class="btn petit" href="/creer">Créer son univers</a>
   </div>
 </header>
 
 <main>
-<section class="ouv">
+<section class="ouv vague-b">
   <div class="in wrap">
     <h1>Votre enfant en héros, du livre du soir à la gourde de l'école</h1>
     <div>
@@ -490,7 +548,7 @@
   </div>
 </section>
 
-<section class="rayon" aria-labelledby="rayonT">
+<section class="rayon vague-b" aria-labelledby="rayonT">
   <div class="wrap rayon-h">
     <div><h2 id="rayonT">Tout son univers</h2><p>Choisissez une création ou plusieurs : vous ne composez son avatar qu'une fois.</p></div>
     <div class="fleches"><button type="button" id="rG" aria-label="Créations précédentes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" id="rD" aria-label="Créations suivantes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5l7 7-7 7"/></svg></button></div>
@@ -585,7 +643,7 @@
   </div>
 </section>
 
-<section class="nuit" id="feuilleter">
+<section class="nuit vague-h vague-b" id="feuilleter">
   <div class="wrap">
     <h2>Feuilletez nos livres</h2>
     <p class="sous">Cliquez sur un livre pour l'ouvrir. Dans le vôtre, votre enfant, son doudou et ses animaux deviennent les héros de l'aventure.</p>

@@ -176,3 +176,16 @@ Les hypothèses du simulateur restent dans le navigateur (localStorage `mhm-hyp`
 
 ## Mesure d'audience (`static/mesure.js`)
 Rien n'est chargé sans variable Railway : `GA4_ID`, `META_PIXEL_ID`, `GOOGLE_ADS_ID` + `GOOGLE_ADS_ACHAT`. Dès qu'une est réglée, un bandeau de consentement apparaît ; rien n'est chargé sans « Accepter ». Événements : voir_produit, creation_commencee, avatar_termine, ajout_produit, paiement_commence, achat.
+
+## Frères et sœurs (configurateur)
+Étape « Sa famille, ses animaux » : jusqu'à 2 frères et sœurs (même éditeur que l'enfant : prénom, année de naissance, apparence),
+et 4 compagnons au plus en tout (animaux + frères et sœurs), pour la qualité des images et le plafond IA.
+Ils deviennent les personnages `fratrie_1`, `fratrie_2` (type enfant) dans tous les produits ; le héros reste au centre.
+Aucun supplément de prix pour l'instant (décision d'Alex). Test : `tests/test_fratrie.py`.
+
+## Comptes clients (`comptes.py`, `static/compte.html`)
+Facultatifs : la commande en invité reste la voie par défaut. Connexion sans mot de passe par lien e-mail (Brevo, 30 min, usage unique)
+ou « Continuer avec Google » si `GOOGLE_CLIENT_ID` est réglé dans Railway. Mon compte : héros enregistrés (configuration de l'éditeur,
+sans photo), commandes (même e-mail ou passées connecté) avec statut et suivi, déconnexion, suppression du compte.
+Connecté, le configurateur pré-remplit e-mail et dernière adresse, et enregistre le héros à la commande. Les comptes inactifs depuis
+3 ans sont effacés par le bouton RGPD de l'admin. Test : `tests/test_comptes.py`.

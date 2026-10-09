@@ -665,7 +665,7 @@ def composer(folder, snap, cover, mois_imgs, couv_dims="auto"):
 SYSTEM_MOIS = """Tu contrôles une illustration de calendrier mural pour enfant (une page paysage, un mois).
 Compare l'image à la fiche. BLOQUANTS (uniquement) :
 - un personnage attendu absent ou méconnaissable, ou un personnage récurrent en double ;
-- un humain en trop (aucun parent, frère, sœur, grand-parent) ; un chien, un chat ou un lapin domestique en trop ; deux animaux fusionnés ;
+- un humain en trop (aucun parent ni grand-parent ; aucun enfant absent des personnages attendus) ; un chien, un chat ou un lapin domestique en trop ; deux animaux fusionnés ;
 - espèce ou couleur principale fausse ; accessoire manquant ou présent alors que la fiche dit « aucun » ;
 - la peluche dessinée comme un animal vivant ; des lunettes sur un animal ou sur la peluche ;
 - un visage dans les 8 % du haut ou les 10 % du bas de l'image (zone percée et reliée) ;
@@ -710,7 +710,7 @@ def image_prompt(scene, snap, refs, couverture=False):
     lines = [head, style, "CHARACTER BIBLE", P._bible_lines(ids, snap, {}), P.refs_text(refs, snap),
              f"SCENE: {COUVERTURE if couverture else scene['scene']}.",
              f"CHARACTERS: exactly these recurring characters ({noms}), each shown once, close together and clearly visible; "
-             f"{snap['personnages'][0]['nom'].upper()} is the focal point. No other human at all (no parent, sibling, grandparent); "
+             f"{snap['personnages'][0]['nom'].upper()} is the focal point. No other human at all (no parent, no grandparent, no child who is not listed); "
              "small background wildlife only if the scene asks for it.",
              "COMPOSITION: landscape, warm and joyful, readable from across a room. Keep every face and the main action inside the "
              "central 80 % of the picture: the top 8 % and the bottom 10 % are punched and bound (only sky, ground or foliage there).",

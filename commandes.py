@@ -34,7 +34,7 @@ with _db() as _c:
     for _t, _col in (("commandes", "cout real"), ("commandes", "tentatives integer default 0"), ("commandes", "univers text"),
                      ("abonnements", "faites text"), ("abonnements", "paiements integer default 1"),
                      ("commandes", "volume_number integer"), ("commandes", "mail_pret real"),
-                     ("commandes", "printful_id text"), ("commandes", "printful_statut text")):   # colonnes ajoutées après la mise en ligne
+                     ("commandes", "printful_id text"), ("commandes", "printful_statut text"), ("commandes", "client_id text")):   # colonnes ajoutées après la mise en ligne
         try:
             _c.execute(f"alter table {_t} add column {_col}")
         except sqlite3.OperationalError:
