@@ -119,8 +119,6 @@
   .reg-d { border:1px solid var(--line); border-radius:14px; padding:10px 12px; } .reg-d summary { font:800 13px var(--texte); cursor:pointer; } .reg-d fieldset { border:0; padding:10px 0 0; margin:0; display:grid; gap:10px; }
   @media (max-width:900px) { #simRes { position:static; } }
   .kv span { overflow-wrap:anywhere; }
-  .ateliers { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; } .ateliers figure { margin:0; text-align:center; font-size:12px; }
-  .ateliers img, .ateliers .vide { width:100%; aspect-ratio:1; object-fit:contain; background:#F4F1EC; border-radius:12px; display:grid; place-items:center; font-size:26px; }
 </style>
 </head>
 <body>
@@ -664,20 +662,6 @@ async function nettoyer(b) {
   const r = await (await fetch('/admin/api/disque/nettoyer' + Q, { method: 'POST', headers: H })).json(); b.disabled = false; b.textContent = '🧹 Libérer de la place';
   toast(r.ok ? `🧹 ${r.libere_mo} Mo libérés` : '⚠️ ' + (r.erreur || 'erreur')); document.getElementById('disque').innerHTML = disqueHtml(r.place || {});
 }
-let ATEL = null;
-async function atelierCharger() { ATEL = await (await fetch('/admin/api/atelier-avatars' + Q, { headers: H })).json(); const z = document.getElementById('atelier'); if (z) z.innerHTML = atelierHtml(); if (ATEL.en_cours) setTimeout(atelierCharger, 5000); }
-function atelierHtml() {
-  if (!ATEL) return 'Chargement…';
-  const n = ATEL.modeles.filter(m => m.pret).length;
-  return `<div class="ateliers">${ATEL.modeles.map(m => `<figure>${m.pret ? `<img src="/admin/atelier-avatars/${m.nom}.png${Q}&t=${Date.now()}" alt="">` : '<div class="vide">' + (ATEL.en_cours ? '⏳' : '—') + '</div>'}<figcaption>${esc(m.nom.replace(/^(enfant|animal)-/, '').replace(/^doudou-/, 'doudou '))}${m.pret && !ATEL.en_cours ? ` <a href="#" onclick="atelierPeindre(this,['${m.nom}']);return false">refaire</a>` : ''}</figcaption>${ATEL.erreurs[m.nom] ? `<div class="ko-c" style="font-size:11px">${esc(ATEL.erreurs[m.nom])}</div>` : ''}</figure>`).join('')}</div>
-    <div class="acts">${ATEL.en_cours ? '<span class="meta">⏳ En cours de peinture (environ 1 min par image)…</span>' : `<button class="btn" onclick="atelierPeindre(this)">${n < ATEL.modeles.length ? `🎨 Peindre ${n ? 'les ' + (ATEL.modeles.length - n) + ' manquants' : 'les ' + ATEL.modeles.length + ' modèles'} (≈ 0,20 $ l'un)` : '✅ Tout est peint'}</button>`}
-    ${n ? `<a class="btn" href="/admin/atelier-avatars.zip${Q}">⬇️ Télécharger le zip (à envoyer à Claude)</a>` : ''}</div>`;
-}
-async function atelierPeindre(b, refaire) {
-  if (b) b.disabled = true;
-  await fetch('/admin/api/atelier-avatars' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ refaire: refaire || [] }) });
-  ATEL = Object.assign(ATEL || {}, { en_cours: true }); setTimeout(atelierCharger, 1500); const z = document.getElementById('atelier'); if (z) z.innerHTML = atelierHtml();
-}
 async function vignettes(b) {
   b.disabled = true; const r = await (await fetch('/admin/api/vignettes' + Q, { method: 'POST', headers: H })).json();
   RES._reg = r.lancees ? { cls: 'ok', html: r.lancees.length ? `🖼️ ${r.lancees.length} vignette(s) en cours (quelques minutes).` : '✅ Toutes les vignettes sont déjà faites.' } : { cls: 'err', html: '⚠️ ' + esc(r.erreur || 'erreur') }; render();
@@ -729,9 +713,6 @@ function vueReglages() {
     <div id="disque" class="meta">Chargement…</div>
     <div class="acts"><button class="btn" onclick="nettoyer(this)">🧹 Libérer de la place</button></div>
     <p class="meta" style="margin:0">Efface seulement les fichiers temporaires, les essais de plus de 3 jours et les créations jamais commandées. Rien de ce qui sert n'est touché.</p></div>
-  <div class="card" style="grid-column:1/-1"><h3>🎨 Repeindre le pack d'avatars dans le nouveau style</h3>
-    <p class="meta" style="margin:0 0 8px">Les 12 coiffures, 5 animaux et 5 doudous actuels, repeints par OpenAI dans le style des nouveaux chiens, de la tortue et du poisson (mêmes personnages, mêmes couleurs, cadrage identique). Rien ne change sur le site tant que Claude ne les a pas intégrés : regarde-les, refais ceux qui ne plaisent pas, puis envoie le zip à Claude. Coût estimé : 4 à 5 $ pour les 22.</p>
-    <div id="atelier">${ATEL ? atelierHtml() : 'Chargement…'}</div></div>
   <div class="card"><h3>🖼️ Vignettes de l'accueil du site</h3>
     <p class="meta" style="margin:0">Illustrations des cartes univers et fêtes encore manquantes (une image par vignette).</p>
     <div class="acts"><button class="btn" onclick="vignettes(this)">Générer les vignettes manquantes</button></div></div>
@@ -754,7 +735,7 @@ function render() {
   if (TAB === 'rentabilite' && RENTA && document.getElementById('simRes') && f && f.startsWith('h_')) return;   // ne pas casser la saisie
   if (TAB === 'clients' && f === 'cliq' && document.activeElement.value !== CLI_Q) return;
   document.getElementById('view').innerHTML = VUES[TAB]();
-  if (TAB === 'reglages') { chargerDisque(); if (!ATEL) atelierCharger(); }
+  if (TAB === 'reglages') chargerDisque();
   scrollTo(0, y);
 }
 function go(t, f) { TAB = VUES[t] ? t : 'tableau'; if (f) FILTRE = f; try { history.replaceState(null, '', location.pathname + Q + '#' + TAB); } catch (_) {} render(); scrollTo(0, 0); }
