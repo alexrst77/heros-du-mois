@@ -174,7 +174,7 @@ def order_create():
         if formule == "coloriage" and len([x for x in dict.fromkeys(pages) if x in coloriage.PAR_CLE]) < coloriage.NB_PAGES:
             return jsonify(erreur=f"Choisissez les {coloriage.NB_PAGES} pages du cahier de coloriage (ou complétez au hasard)."), 400
         form["coloriage"] = {"pages": coloriage.choisir(pages)}
-    objs = paiement.objets_valides([x for x in (c.get("objets") or []) if isinstance(x, str)])   # gourde, tasse, sac (en ajout)
+    objs = paiement.objets_valides([x for x in (c.get("objets") or []) if isinstance(x, str)], formule)   # gourde, tasse, sac (en ajout)
     if objs:
         form["objets"] = objs
 
@@ -200,7 +200,7 @@ def order_create():
                                                    "apercus": {k: p.name for k, p in previews.items()}, "lignes": lignes}, ensure_ascii=False), encoding="utf-8")
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
               montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo), origine=oid,
-              numero=0 if formule in EXTRAS else 1)
+              numero=0 if formule in NON_LIVRES else 1)
     try:
         comptes.noter_commande(oid, addr)                       # connecté : commande rattachée au compte, adresse gardée
     except Exception as e:
@@ -261,7 +261,7 @@ def objets_du_pack(origine):
 
 def _creer_objets(oid, o, form, ids):
     for k in form.get("objets") or []:
-        if k in OBJETS:
+        if k in OBJETS and k != o["formule"]:                    # objet seul : la commande elle-même est cet objet
             cid = f"{oid}-{k[:3]}"
             if not db.get(cid):
                 db.create(id=cid, formule=k, email=o["email"], adresse=o["adresse"], statut="payee", montant=0, origine=oid, numero=0)
@@ -273,6 +273,8 @@ def creer_pack(oid):
     """Crée les livres 2..N du pack (une fois) et attribue leurs numéros de collection dans l'ordre. Renvoie les ids à fabriquer."""
     o = db.get(oid)
     form, _ = load_book(oid)
+    if o["formule"] in OBJETS:                                   # objet seul (gourde, tasse, sac) : la commande est l'objet
+        return _creer_objets(oid, o, form, [oid])
     if o["formule"] in EXTRAS:                                   # calendrier ou cahier seul : la commande est le produit
         ids = [oid]
         for k in EXTRAS:                                         # … et l'autre produit éventuellement ajouté

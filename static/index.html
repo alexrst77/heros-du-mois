@@ -304,6 +304,29 @@
   .team button.on { border-color:var(--rose); }
   .foot { background:#FBF8FF; }
   @media (max-width:600px) { .panel { box-shadow:5px 5px 0 var(--luciole); } .stage { box-shadow:5px 5px 0 var(--rose); } }
+
+  /* objets : la tasse, la gourde ou le sac, avec l'équipe imprimée dessus */
+  .scene.objet { overflow:visible; background:#2E1A6E; box-shadow:none; }
+  .scene.objet .decor { inset:0; filter:saturate(1.1) brightness(.9); transform:none; border-radius:inherit; }
+  .scene.objet::after { display:none; }
+  .scene.objet .dos { display:none; }
+  .scene.objet .ctitre { top:auto; bottom:5%; left:0; right:0; z-index:5; }
+  .scene.objet .ruban { display:inline-block; background:#FFF6E2; color:#2E1A6E; font:400 clamp(18px,3vw,26px)/1 var(--titre); padding:7px 18px 8px; border-radius:999px;
+                        box-shadow:0 4px 12px rgba(20,10,50,.35); text-shadow:none; }
+  .scene.objet .big, .scene.objet .group { height:70%; margin-bottom:12%; }
+  .scene.obj-tasse { aspect-ratio:1.3/1; width:80%; margin:18px 0 14px 4%; border-radius:12px 12px 26px 26px;
+                     box-shadow:inset 0 10px 0 #D9DDE3, inset 0 13px 0 #A9AFB8, inset -14px 0 22px rgba(0,0,0,.25), 0 22px 26px -18px rgba(20,10,50,.6); }
+  .scene.obj-tasse::before { content:""; position:absolute; right:-21%; top:20%; width:24%; height:50%; border:clamp(10px,2.4vw,16px) solid #E6E9EE; border-left:0;
+                             border-radius:0 60% 60% 0; box-shadow:4px 4px 10px rgba(20,10,50,.25); z-index:0; }
+  .scene.obj-gourde { aspect-ratio:.56/1; width:52%; margin:56px auto 10px; border-radius:46px 46px 32px 32px;
+                      box-shadow:inset -12px 0 20px rgba(0,0,0,.28), inset 10px 0 14px rgba(255,255,255,.18), 0 22px 26px -18px rgba(20,10,50,.6); }
+  .scene.obj-gourde::before { content:""; position:absolute; left:22%; right:22%; top:-15%; height:15%; background:linear-gradient(90deg,#2B2B33,#4A4A55 45%,#2B2B33);
+                              border-radius:16px 16px 4px 4px; }
+  .scene.obj-gourde .big, .scene.obj-gourde .group { height:52%; margin-bottom:28%; } .scene.obj-gourde .ruban { font-size:clamp(14px,2.4vw,20px); padding:6px 12px; }
+  .scene.obj-sac { aspect-ratio:.8/1; width:76%; margin:40px auto 10px; border-radius:42% 42% 18px 18px / 24% 24% 18px 18px;
+                   box-shadow:inset 0 0 0 7px #3E3550, inset -12px -6px 20px rgba(0,0,0,.25), 0 22px 26px -18px rgba(20,10,50,.6); }
+  .scene.obj-sac::before { content:""; position:absolute; left:38%; right:38%; top:-11%; height:13%; border:8px solid #3E3550; border-bottom:0; border-radius:22px 22px 0 0; }
+  @media (max-width:600px) { .scene.objet { max-width:none !important; } .scene.obj-tasse { width:66%; margin-left:10%; } .scene.obj-gourde { width:44%; } .scene.obj-sac { width:64%; } }
 </style>
 </head>
 <body>
@@ -321,7 +344,7 @@
     <aside class="stage">
       <div class="scene couv"><div class="decor" id="decor"></div><svg class="fl" id="fl" xmlns="http://www.w3.org/2000/svg"></svg>
         <div class="ctitre" id="ctitre"></div><div id="big" class="big"></div><div class="dos" aria-hidden="true"><i>★</i><b id="dosnum">1</b></div></div>
-      <p class="couvnote">* Aperçu pour présenter l'équipe : la vraie couverture est illustrée sur mesure avec votre héros.</p>
+      <p class="couvnote" id="couvnote">* Aperçu pour présenter l'équipe : la vraie couverture est illustrée sur mesure avec votre héros.</p>
       <div id="stat"></div>
       <div class="who" id="who"></div>
       <div class="team" id="team"></div>
@@ -385,7 +408,8 @@
     { id: 'livre', nom: '1 livre', txt: 'Pour découvrir ou offrir' },
     { id: 'fetes', nom: 'Les 6 livres de fête', txt: `Anniversaire + 5 fêtes · livraison offerte` }]
     .map(p => Object.assign(p, { px: eur2(F[p.id].prix), livres: F[p.id].livres }));
-  const port = () => { const f = F[S.commande.formule] || F.pack6, n = f.livres;
+  const port = () => { if (OBJ[S.commande.formule]) return 0;           // objet seul : livraison comprise
+    const f = F[S.commande.formule] || F.pack6, n = f.livres;
     const base = S.commande.formule === 'calendrier' ? GR.calendrier.port : S.commande.formule === 'coloriage' ? GR.coloriage.port : n >= GR.port_offert_des ? 0 : (GR.port_fr[String(n)] ?? GR.port_fr['3']);
     return base + (GR.supplement_pays[S.commande.pays] ?? GR.supplement_pays.BE); };
   const prixCalAjout = () => S.commande.formule !== 'calendrier' && S.commande.cal_ajout ? GR.calendrier.ajout : 0;
@@ -395,7 +419,7 @@
                      tasse: { emo: '☕', img: '/static/vitrine/obj_tasse_lea.webp', court: 'Tasse émaillée', txt: 'Tasse émaillée incassable pour le chocolat chaud, avec son prénom.' },
                      sac: { emo: '🎒', img: '/static/vitrine/obj_sac_mael.webp', court: 'Sac à dos', txt: 'Sac à dos illustré avec le héros et son prénom, pour l\'école ou les sorties.' } };
   const objetsChoisis = () => (S.objets || []).filter(k => OBJ[k]);
-  const prixObjets = () => objetsChoisis().reduce((t, k) => t + OBJ[k].prix, 0);
+  const prixObjets = () => objetsChoisis().filter(k => k !== S.commande.formule).reduce((t, k) => t + OBJ[k].prix, 0);   // l'objet « formule » est déjà dans F[formule].prix
   const brutC = () => (F[S.commande.formule] || F.pack6).prix + prixCalAjout() + prixColoAjout() + prixObjets();
   const remiseC = () => S.commande.promo && S.commande.promo.pourcent ? Math.round(brutC() * S.commande.promo.pourcent / 100) : 0;   // code promo : sur les créations, pas sur la livraison
   const totalC = () => brutC() - remiseC() + port();
@@ -478,8 +502,10 @@
     if (P.livres) { c.formule = c.pack; c.cal_ajout = !!P.calendrier; c.colo_ajout = !!P.coloriage; }
     else if (P.calendrier) { c.formule = 'calendrier'; c.cal_ajout = false; c.colo_ajout = !!P.coloriage; }
     else if (P.coloriage) { c.formule = 'coloriage'; c.cal_ajout = c.colo_ajout = false; }
+    else if (objetsChoisis().length) { c.formule = objetsChoisis()[0]; c.cal_ajout = c.colo_ajout = false; }   // objet(s) seul(s)
     else { c.formule = c.pack; c.cal_ajout = c.colo_ajout = false; }
   }
+  const rien = () => aucune() && !objetsChoisis().length;
   const aucune = () => !S.produits.livres && !S.produits.calendrier && !S.produits.coloriage;
   const nbCrea = () => ['livres', 'calendrier', 'coloriage'].filter(k => S.produits[k]).length;
   const avecColo = () => isColo() || !!S.commande.colo_ajout;
@@ -577,11 +603,23 @@
   function titreCouv() {             // même hiérarchie que la vraie couverture : « Mon Héros du Mois », prénom, titre
     const e = S.enfant, h = S.histoire;
     const P = S.produits;
-    const vue = tab === 'creations' && vueFoc === 'cal' && P.calendrier ? 'cal' : tab === 'creations' && vueFoc === 'colo' && P.coloriage ? 'colo'
-      : P.livres || aucune() ? 'livre' : P.calendrier ? 'cal' : 'colo';
-    document.querySelector('.scene').classList.toggle('cal', vue === 'cal');
-    document.querySelector('.scene').classList.toggle('colo', vue === 'colo');
+    const objFoc = vueFoc.startsWith('obj:') && objetsChoisis().includes(vueFoc.slice(4)) ? vueFoc.slice(4) : '';
+    const vue = (tab === 'creations' || tab === 'commande') && objFoc ? 'obj:' + objFoc
+      : tab === 'creations' && vueFoc === 'cal' && P.calendrier ? 'cal' : tab === 'creations' && vueFoc === 'colo' && P.coloriage ? 'colo'
+      : aucune() && objetsChoisis().length ? 'obj:' + objetsChoisis()[0] : P.livres || aucune() ? 'livre' : P.calendrier ? 'cal' : 'colo';
+    const sc = document.querySelector('.scene');
+    sc.classList.toggle('cal', vue === 'cal');
+    sc.classList.toggle('colo', vue === 'colo');
+    ['tasse', 'gourde', 'sac'].forEach(k => sc.classList.toggle('obj-' + k, vue === 'obj:' + k));
+    sc.classList.toggle('objet', vue.startsWith('obj:'));
+    $('couvnote').textContent = vue.startsWith('obj:') ? "* Aperçu pour présenter l'équipe : l'illustration de l'objet est peinte sur mesure avec votre héros." : "* Aperçu pour présenter l'équipe : la vraie couverture est illustrée sur mesure avec votre héros.";
     $('h1').textContent = (e.prenom || '').trim() ? `Créez l'univers de ${(e.prenom || '').trim().replace(/^./, c => c.toUpperCase())}` : 'Créez son univers';
+    if (vue.startsWith('obj:')) {                  // l'objet, avec l'équipe imprimée dessus et son prénom
+      const u0 = UNIV.find(x => !x.fete && x.nom === h.univers) || UNIV.find(x => !x.fete);
+      $('decor').style.backgroundImage = u0 ? `url("/vignette/${u0.cle}.webp")` : '';
+      $('ctitre').innerHTML = `<div class="ruban">${esc((e.prenom || '').trim().replace(/^./, c => c.toUpperCase()) || 'Votre héros')}</div>`;
+      return;
+    }
     if (vue === 'colo') {
       $('decor').style.backgroundImage = 'url("/static/vitrine/colo_fond.webp")';
       $('ctitre').innerHTML = `<div class="p">${esc((e.prenom || '').trim() || 'Votre héros')}</div><div class="t">Mon cahier de coloriage</div>`;
@@ -858,7 +896,7 @@
             autre('calendrier') ? `${eur2(GR.calendrier.ajout)} <s>${eur2(GR.calendrier.seul)}</s> avec une autre création` : `${eur2(GR.calendrier.seul)} · ${eur2(GR.calendrier.ajout)} avec une autre création`, regCal) +
       carte('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 dessins à colorier où il est le héros, choisis par vous.',
             autre('coloriage') ? `${eur2(GR.coloriage.ajout)} <s>${eur2(GR.coloriage.seul)}</s> avec une autre création` : `${eur2(GR.coloriage.seul)} · ${eur2(GR.coloriage.ajout)} avec une autre création`, regColo) +
-      `</div>` + (Object.keys(OBJ).length ? `<div class="objets-h">Ses objets, en plus <span>Avec une création ci-dessus · fabriqués par notre atelier objets, livrés à part, livraison comprise</span></div><div class="crea-l">` +
+      `</div>` + (Object.keys(OBJ).length ? `<div class="objets-h">Ses objets <span>Seuls ou avec une création · fabriqués par notre atelier objets, livrés à part, livraison comprise</span></div><div class="crea-l">` +
         Object.keys(OBJ).map(k => { const on = objetsChoisis().includes(k); return `<div class="crea-c ${on ? 'on' : ''}"><button type="button" class="crea-h" data-objet="${k}">
         <img src="${OBJ_INFO[k].img}" alt=""><span class="crea-t"><b>${OBJ_INFO[k].court}</b><span>${OBJ_INFO[k].txt}</span><span class="crea-px">${eur2(OBJ[k].prix)}, livraison comprise</span></span><i class="crea-ok">${on ? '✓' : '+'}</i></button></div>`; }).join('') + `</div>` : '');
   }
@@ -923,7 +961,7 @@
           (isColo() ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(f.prix)}</span></div>` : c.colo_ajout ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(GR.coloriage.ajout)}</span></div>` : '') +
           objetsChoisis().map(k => `<div><span>${OBJ_INFO[k].court} <small>(livraison comprise)</small> <button type="button" class="lien petit" data-objet="${k}">retirer</button></span><span style="white-space:nowrap">${eur2(OBJ[k].prix)}</span></div>`).join('') +
           (remiseC() ? `<div class="remise"><span>Code ${esc(c.promo.code)} (-${c.promo.pourcent} %) <button type="button" class="lien petit" data-promo-retirer="1">retirer</button></span><span>− ${eur2(remiseC())}</span></div>` : '') +
-          `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>` +
+          (OBJ[c.formule] ? `<div><span>Livraison</span><span><b class="offert">comprise</b></span></div>` : `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>`) +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
           (c.promo ? '' : `<details class="promo" ${OUVERT.promo ? 'open' : ''} data-ouv="promo"><summary>Vous avez un code promo ?</summary><div class="promo-l"><input type="text" id="promoIn" maxlength="30" placeholder="Votre code" autocapitalize="characters"><button type="button" class="btn petit" data-promo="1">Appliquer</button></div><p class="promo-err" id="promoErr"></p></details>`) +
           (n && n < 6 ? `<div class="vers6"><div class="vers6-t">Plus que <b>${6 - n} livre${6 - n > 1 ? 's' : ''}</b> pour la livraison offerte, et ${eur2(F.pack6.prix_livre)} le livre</div>` +
@@ -982,7 +1020,7 @@
       m.className = 'offres-ok'; m.innerHTML = `✓ Ajouté ! Déjà réglé pour lui, modifiable dans « <button type="button" class="lien" data-t="creations">Ses créations</button> ».`;
       document.querySelector('.recap').after(m); return; }
     if (b.dataset.retirer) { S.produits[b.dataset.retirer] = false; return render(); }
-    if (b.dataset.objet) { const l = S.objets, i = l.indexOf(b.dataset.objet); if (i >= 0) l.splice(i, 1); else { l.push(b.dataset.objet); window.mesure && mesure('ajout_produit', { item_id: b.dataset.objet, value: (OBJ[b.dataset.objet] || {}).prix / 100 }); } $('err').textContent = ''; return render(); }
+    if (b.dataset.objet) { const l = S.objets, i = l.indexOf(b.dataset.objet); if (i >= 0) { l.splice(i, 1); if (vueFoc === 'obj:' + b.dataset.objet) vueFoc = ''; } else { vueFoc = 'obj:' + b.dataset.objet; l.push(b.dataset.objet); window.mesure && mesure('ajout_produit', { item_id: b.dataset.objet, value: (OBJ[b.dataset.objet] || {}).prix / 100 }); } $('err').textContent = ''; return render(); }
     if (b.dataset.objetAjout) { if (!S.objets.includes(b.dataset.objetAjout)) S.objets.push(b.dataset.objetAjout); window.mesure && mesure('ajout_produit', { item_id: b.dataset.objetAjout }); render();
       const m = document.createElement('p'); m.className = 'offres-ok'; m.innerHTML = `✓ Ajouté !`; document.querySelector('.recap').after(m); return; }
     if (b.dataset.prod) { S.produits[b.dataset.prod] = !S.produits[b.dataset.prod]; $('err').textContent = ''; return render(); }
@@ -1061,7 +1099,7 @@
     if (tab === 'compagnons') { const i = S.animaux.findIndex(a => !(a.nom || '').trim()); if (i >= 0) { pet = i; foc = 'animaux'; render(); $('err').textContent = "Indiquez le nom de chaque animal."; return; } }
     if (tab === 'compagnons') { const i = S.fratrie.findIndex(f => !(f.prenom || '').trim()); if (i >= 0) { sib = i; foc = 'fratrie'; render(); $('err').textContent = "Indiquez le prénom de chaque frère et sœur."; return; } }
     if (tab === 'creations' && S.histoire.demo) return submit();
-    if (tab === 'creations' && aucune()) { $('err').textContent = 'Choisissez au moins une création.'; return; }
+    if (tab === 'creations' && (sync(), rien())) { $('err').textContent = 'Choisissez au moins une création ou un objet.'; return; }
     if (tab === 'enfant' && window.mesure) mesure('avatar_termine');
     if (tab !== 'commande') { const T = TABS(); tab = T[T.indexOf(tab) + 1]; render(); scrollTo({ top: 0, behavior: 'smooth' }); return; }
     submit();
@@ -1108,7 +1146,7 @@
       S.histoire.fetes = S.histoire.fetes.filter(f => f !== 'anniversaire');
     }
     sync();
-    if (aucune()) { tab = 'creations'; render(); $('err').textContent = 'Choisissez au moins une création.'; return; }
+    if (rien()) { tab = 'creations'; render(); $('err').textContent = 'Choisissez au moins une création ou un objet.'; return; }
     if (S.produits.coloriage && S.coloriage.pages.length < COLO.nombre) { tab = 'creations'; OUVERT.colo = true; vueFoc = 'colo'; render(); $('err').textContent = `Choisissez ${COLO.nombre} pages (${S.coloriage.pages.length} pour l'instant), ou cliquez sur « Compléter au hasard ».`; return; }
     const h = S.histoire, e = S.enfant;
     const payload = await basePayload();
@@ -1240,8 +1278,8 @@
     if (['calendrier', 'coloriage'].includes(q.get('produit'))) { S.produits = { livres: false, calendrier: q.get('produit') === 'calendrier', coloriage: q.get('produit') === 'coloriage' }; save(); }
     else if (q.get('formule') === 'mensuel') { S.commande.formule = 'pack6'; save(); }
     if (['gourde', 'tasse', 'sac'].includes(q.get('produit'))) {               // objet : ajouté à la création choisie (un livre par défaut)
-      if (!S.objets.includes(q.get('produit'))) S.objets.push(q.get('produit'));
-      if (aucune()) S.produits.livres = true;
+      S.produits = { livres: false, calendrier: false, coloriage: false };     // l'objet seul (le reste s'ajoute à l'étape 3)
+      S.objets = [q.get('produit')]; vueFoc = 'obj:' + q.get('produit');
       save(); }
     const u = UNIV.find(x => !x.fete && x.cle === q.get('univers'));                 // carte « univers » de l'accueil
     if (u) { S.histoire.univers = u.nom; S.histoire.occasion = ''; save(); }
