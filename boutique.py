@@ -604,6 +604,10 @@ def send_to_print(oid):
     origine = o["origine"] or oid
     livres, cals, objs = livres_du_pack(origine), extras_du_pack(origine), objets_du_pack(origine)
     tete = db.get(origine)
+    if (lulu.configured() and lulu.env() == "production" and not factures.paiement_reel(tete)
+            and os.getenv("IMPRESSION_SANS_PAIEMENT") != "1"):
+        raise RuntimeError("Commande payée en mode test (ou simulée) : pas d'impression réelle, elle te coûterait sans rien rapporter. "
+                           "Archive-la ou supprime-la. (Pour forcer un tirage d'essai : variable IMPRESSION_SANS_PAIEMENT=1.)")
     attendus = (paiement.FORMULES.get(tete["formule"]) or {"livres": len(livres)})["livres"]
     if len(livres) < attendus:
         raise RuntimeError(f"pack incomplet : {len(livres)}/{attendus} livres créés")
