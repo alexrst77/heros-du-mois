@@ -55,7 +55,7 @@ def lignes_commande(o, livre_json):
         f = (livre_json or {}).get("form") or {}
         try:
             L = paiement.lignes(o["formule"], (o["adresse"] or {}).get("pays"), calendrier=bool(f.get("calendrier")),
-                                coloriage=bool(f.get("coloriage")), objets=f.get("objets") or [])
+                                coloriage=bool(f.get("coloriage")), objets=f.get("objets") or [], promo=f.get("code_promo"))
         except KeyError:
             L = []
     if sum(q * u for _, q, u, _ in L) != (o["montant"] or 0):
@@ -67,11 +67,11 @@ def calcul(lignes, vendeur):
     """Montants par ligne et par taux. En franchise : tout est en « net », TVA 0."""
     reel = vendeur["regime_tva"] == "reel"
     taux = vendeur["taux_tva"]
-    cat_princ = next((c for _, _, _, c in lignes if c != "port"), "livre")
+    cat_princ = next((c for _, _, _, c in lignes if c not in ("port", "remise")), "livre")
     out, tva = [], {}
     for lib, q, pu, cat in lignes:
         ttc = q * pu
-        t = (taux.get(cat_princ if cat == "port" else cat, 20.0)) if reel else 0.0
+        t = (taux.get(cat_princ if cat in ("port", "remise") else cat, 20.0)) if reel else 0.0
         ht = round(ttc / (1 + t / 100)) if reel else ttc
         out.append({"libelle": lib, "quantite": q, "pu_ttc": pu, "total_ttc": ttc, "taux": t, "total_ht": ht})
         if reel:

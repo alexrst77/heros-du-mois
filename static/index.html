@@ -41,6 +41,27 @@
   .couv .dos { position:absolute; z-index:4; left:0; top:0; bottom:0; width:5.5%; background:linear-gradient(90deg, rgba(10,14,40,.75), rgba(10,14,40,.35));
                border-right:1px solid rgba(242,213,138,.45); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:10px 0 12px; }
   .multi.suite .liste { display:block; }
+  .promo { margin-top:10px; } .promo summary { cursor:pointer; font-weight:700; font-size:14px; color:var(--encre-2); text-decoration:underline; text-underline-offset:3px; list-style:none; }
+  .promo summary::-webkit-details-marker { display:none; }
+  .promo-l { display:flex; gap:8px; margin-top:8px; } .promo-l input { flex:1; min-width:0; text-transform:uppercase; }
+  .promo-err { color:var(--erreur); font-size:13px; font-weight:700; margin:6px 0 0; min-height:0; }
+  .recap .remise span:last-child { color:var(--mousse); font-weight:800; white-space:nowrap; } .recap > div > span:last-child { white-space:nowrap; }
+  .ap-c { display:flex; gap:14px; align-items:center; border:2.5px solid var(--encre); border-radius:20px; padding:12px; margin:0 0 16px; background:linear-gradient(110deg, #F1EBFC, #FFF6E2); box-shadow:4px 4px 0 var(--rose); }
+  .ap-c > div:last-child { min-width:0; } .ap-c b { display:block; font:400 19px/1.2 var(--titre); } .ap-c span { display:block; font-size:14px; color:var(--encre-2); margin-top:3px; }
+  .ap-ico { font-size:34px; flex:none; width:64px; height:64px; display:grid; place-items:center; background:#fff; border-radius:16px; border:2px solid var(--trait); }
+  .ap-c.ok img { width:150px; height:150px; border-radius:10px 16px 16px 10px; object-fit:cover; flex:none; box-shadow:0 10px 22px -10px rgba(36,24,77,.6); }
+  .ap-a { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; } .ap-n { font-size:13px !important; margin:0 !important; }
+  .ap-err { color:var(--erreur) !important; font-weight:700; }
+  .ap-wait { display:flex; gap:14px; align-items:center; } .ap-wait i { width:38px; height:38px; flex:none; border-radius:50%; border:4px solid var(--trait); border-top-color:var(--rose); animation:tourne 1s linear infinite; }
+  @keyframes tourne { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .ap-wait i { animation:none; } }
+  @media (max-width:520px) { .ap-c { flex-direction:column; text-align:center; } .ap-c.ok img { width:100%; height:auto; aspect-ratio:1; } .ap-a { justify-content:center; } }
+  .livres-l { display:grid; gap:6px; margin:0 0 14px; }
+  .livres-l .ln { display:grid; grid-template-columns:64px 1fr 1fr; gap:8px; align-items:center; }
+  .livres-l .ln b { font:800 14px var(--texte); } .livres-l .ln select { padding:9px 10px; font-size:14px; min-width:0; }
+  .livres-l .ln.tete span { font:800 12px var(--texte); color:var(--encre-2); }
+  .livres-l .occ-l { font-weight:700; font-size:14px; }
+  @media (max-width:520px) { .livres-l .ln:not(.tete) { background:#fff; border:1.5px solid var(--trait); border-radius:14px; padding:8px 10px; } .livres-l .ln { grid-template-columns:52px 1fr; } .livres-l .ln > select:last-child, .livres-l .ln > .occ-l { grid-column:2; } .livres-l .ln.tete { display:none; } }
   .suitebar { display:flex; gap:12px; align-items:center; margin-bottom:10px; }
   .suitebar .btn { flex:none; padding:10px 16px; font-size:14px; background:var(--luciole); color:var(--encre); box-shadow:none; }
   .suitebar .hint { margin:0; font-size:13px; }
@@ -375,7 +396,9 @@
                      sac: { emo: '🎒', img: '/static/vitrine/obj_sac_mael.webp', court: 'Sac à dos', txt: 'Sac à dos illustré avec le héros et son prénom, pour l\'école ou les sorties.' } };
   const objetsChoisis = () => (S.objets || []).filter(k => OBJ[k]);
   const prixObjets = () => objetsChoisis().reduce((t, k) => t + OBJ[k].prix, 0);
-  const totalC = () => (F[S.commande.formule] || F.pack6).prix + prixCalAjout() + prixColoAjout() + prixObjets() + port();
+  const brutC = () => (F[S.commande.formule] || F.pack6).prix + prixCalAjout() + prixColoAjout() + prixObjets();
+  const remiseC = () => S.commande.promo && S.commande.promo.pourcent ? Math.round(brutC() * S.commande.promo.pourcent / 100) : 0;   // code promo : sur les créations, pas sur la livraison
+  const totalC = () => brutC() - remiseC() + port();
   const THEMES = ["Accepter la différence", "Aller chez le dentiste", "Aller chez le médecin", "Apprendre à attendre", "Apprendre à partager", "Devenir propre", "Dire au revoir à la tétine", "Dire la vérité", "Dormir dans son grand lit", "Gérer la colère", "Goûter de nouveaux aliments", "La confiance en soi", "La peur du noir", "La politesse", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Le premier jour à la crèche", "Les cauchemars", "Les écrans : savoir s'arrêter", "Les émotions", "Oser se faire des amis", "Partir en vacances", "Prendre soin de la nature", "Quand papa et maman se séparent", "Ranger sa chambre", "Se brosser les dents", "S'habiller tout seul", "Un déménagement", "Une aventure pour rire"].sort((a, b) => a.localeCompare(b, 'fr'));
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   const AN = new Date().getFullYear(), ANNEES = Array.from({ length: 9 }, (_, i) => AN - 2 - i);      // de 2 à 10 ans
@@ -411,6 +434,9 @@
     document.getElementById('lienCompte').textContent = 'Mon compte ✓';
   }
   let SAUVE = '';
+  { const qp = new URLSearchParams(location.search).get('promo');      // lien de pub : /creer?promo=FAMILLE
+    if (qp) fetch('/api/promo?code=' + encodeURIComponent(qp)).then(r => r.ok ? r.json() : null).then(j => { if (j) { S.commande.promo = { code: j.code, pourcent: j.pourcent }; save(); render(); } }).catch(() => {}); }
+  document.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.id === 'promoIn') { ev.preventDefault(); const b = document.querySelector('[data-promo]'); if (b) b.click(); } });
   async function sauverHeros(auto) {
     if (!ME.connecte || !(S.enfant.prenom || '').trim()) return false;
     try {
@@ -777,6 +803,42 @@
     const pr = esc((S.enfant.prenom || 'votre enfant').trim());
     return `<div class="occasion" style="margin-bottom:16px;display:block">🖍️ <b>30 dessins à colorier avec ${pr}</b>${S.doudou.actif ? ', son doudou' : ''}${S.animaux.length ? ' et ses animaux' : ''}, en grand format 21,6 × 27,9 cm à spirale, imprimés au recto seulement : les feutres ne traversent pas. Nous avons préparé une sélection : changez ce que vous voulez.</div>` + pickerColoriage();
   }
+  let APR = { restants: null };
+  fetch('/api/apercu/restants').then(r => r.json()).then(j => { APR.restants = j.restants; APR.max = j.max; if (tab === 'creations') render(); }).catch(() => {});
+  function apercuHTML() {
+    const a = S.apercu, pr = esc((S.enfant.prenom || 'votre enfant').trim()), reste = APR.restants;
+    const bouton = (txt) => reste === 0 ? `<p class="hint" style="margin:8px 0 0">Vos ${APR.max || 2} aperçus du jour sont utilisés : la couverture finale sera créée à la commande.</p>`
+      : `<button type="button" class="btn petit" data-apercu="1">${txt}</button><span class="ap-n">${reste == null ? '' : reste + ' essai' + (reste > 1 ? 's' : '') + ' restant' + (reste > 1 ? 's' : '')}</span>`;
+    if (a && a.statut === 'en_cours') return `<div class="ap-c"><div class="ap-wait"><i></i><div><b>Nous peignons la couverture de ${pr}…</b><span>${esc(a.etape || 'Préparation')} · environ 1 à 2 minutes, vous pouvez continuer.</span></div></div></div>`;
+    if (a && a.statut === 'pret') return `<div class="ap-c ok"><img src="${a.image}" alt="Aperçu de la couverture de ${pr}"><div><b>La couverture de ${pr}</b><span>C'est cette illustration qui sera sur son livre 1, si vous gardez ces personnages et cet univers.</span><div class="ap-a">${bouton('🎨 Une autre version')}</div></div></div>`;
+    return `<div class="ap-c"><div class="ap-ico">✨</div><div><b>Voir sa vraie couverture avant de commander</b><span>Nous peignons ${pr} et ses compagnons dans l'univers du livre 1. C'est gratuit.</span>` +
+      (a && a.erreur ? `<span class="ap-err">${esc(a.erreur)}</span>` : '') + `<div class="ap-a">${bouton('Voir sa couverture')}</div></div></div>`;
+  }
+  async function lancerApercu(b) {
+    if (!(S.enfant.prenom || '').trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez d'abord le prénom."; return; }
+    b.disabled = true; b.textContent = 'Envoi…';
+    try {
+      const r = await fetch('/api/apercu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(await basePayload()) });
+      const j = await r.json();
+      if (!r.ok) { S.apercu = { statut: 'erreur', erreur: j.erreur }; if (r.status === 429) APR.restants = 0; render(); return; }
+      APR.restants = j.restants; S.apercu = { id: j.id, statut: 'en_cours', etape: 'Préparation' }; save(); render(); suivreApercu();
+    } catch (_) { S.apercu = { statut: 'erreur', erreur: 'Connexion perdue, réessayez.' }; render(); }
+  }
+  let APT = null;
+  function suivreApercu() {
+    clearTimeout(APT);
+    if (!S.apercu || S.apercu.statut !== 'en_cours') return;
+    APT = setTimeout(async () => {
+      try {
+        const j = await (await fetch('/api/apercu/' + S.apercu.id)).json();
+        S.apercu = Object.assign({}, S.apercu, j); save();
+        if (j.statut === 'refuse') fetch('/api/apercu/restants').then(r => r.json()).then(x => { APR.restants = x.restants; render(); });
+        if (tab === 'creations') render(); else renderStage();
+      } catch (_) {}
+      suivreApercu();
+    }, 3000);
+  }
+  if (S.apercu && S.apercu.statut === 'en_cours') suivreApercu();
   function panelCreations() {
     const P = S.produits, c = S.commande, pr = esc((S.enfant.prenom || 'votre enfant').trim()), autre = k => nbCrea() - (P[k] ? 1 : 0) > 0;
     const carte = (k, img, titre, txt, prix, corps) => `<div class="crea-c ${P[k] ? 'on' : ''}"><button type="button" class="crea-h" data-prod="${k}">
@@ -785,10 +847,11 @@
         <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>`;
     const n = (F[c.formule] || {}).livres || 1, un = S.histoire.occasion ? (FETES.find(u => u.cle === S.histoire.occasion) || {}).nom : S.histoire.univers;
     const reg = (cle, titre, resume, corps) => `<details class="multi reg" data-ouv="${cle}" ${OUVERT[cle] ? 'open' : ''}><summary>${titre} <small>${resume}</small></summary><div class="reg-b">${corps}</div></details>`;
-    const hist = reg('hist', n > 1 ? `✏️ Personnaliser ses ${n} aventures` : '✏️ Personnaliser son aventure', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : `${esc(S.histoire.theme)} · ${esc(un || '')}${n > 1 ? ' · les suivantes déjà choisies' : ''}, modifiable`, panelHistoire());
+    const hist = reg('hist', n > 1 ? `✏️ Personnaliser ses ${n} livres` : '✏️ Personnaliser son livre', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : n > 1 ? `livre 1 : ${esc(S.histoire.theme)} · ${esc(un || '')}… thème et univers de chaque livre` : `${esc(S.histoire.theme)} · ${esc(un || '')}`, panelHistoire());
     const regCal = reg('cal', '✏️ Personnaliser le calendrier', `commence en ${esc(moisLib(S.calendrier.debut).toLowerCase())}${S.calendrier.dates.filter(x => (x.texte || '').trim()).length ? ` · ${S.calendrier.dates.filter(x => (x.texte || '').trim()).length} date(s) de famille` : ''}, modifiable`, optionsCalendrier());
     const regColo = reg('colo', '✏️ Choisir les 30 pages du cahier', `${S.coloriage.pages.length}/${COLO.nombre} choisies, notre sélection, modifiable`, pickerColoriage());
     return `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr}. Tout est pré-réglé : touchez <b>« Personnaliser »</b> sous une création pour changer son thème, ses dates ou ses pages.</p>` +
+      apercuHTML() +
       `<div class="crea-l">` +
       carte('livres', '/static/vitrine/couv_jade.webp', 'Ses livres d\'aventures', 'Une vraie histoire illustrée dont il est le héros, couverture rigide.', `Dès ${eur2(F.pack12.prix_livre)} le livre`, plans + hist) +
       carte('calendrier', '/static/vitrine/cal_photo_2.webp', 'Son calendrier', '12 mois illustrés avec lui, son anniversaire et vos dates de famille.',
@@ -804,18 +867,25 @@
     return `<div class="occasion" style="margin-bottom:18px;display:block">📅 <b>12 illustrations de saison avec ${pr}</b>${S.doudou.actif ? ', son doudou' : ''}${S.animaux.length ? ' et ses animaux' : ''} : la neige en janvier, les flaques d'avril, la plage en juillet, les feuilles d'automne… Format paysage 28 × 22 cm, à spirale, à accrocher au mur.</div>` + optionsCalendrier();
   }
   function panelHistoire() {
-    const h = S.histoire, occ = h.occasion ? FETES.find(u => u.cle === h.occasion) : null;
-    return G('Thème', `<select data-in="theme">${THEMES.map(t => `<option ${h.theme === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`) +
-      (S.commande.formule === 'fetes' ? '' : occ ? G('Ce livre', `<div class="occasion"><b>Livre de fête : ${esc(occ.nom)}</b><button type="button" class="lien" data-occ="0">Choisir plutôt un univers</button></div>`) :
-        G('Univers', `<select data-in="univers">${UNIVERS.map(t => `<option ${h.univers === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`)) +
-      suiteHTML() +
-      G('Le héros du livre', `<select data-in="heros_livre">${herosChoix().map(([v, l]) => `<option value="${v}" ${h.heros_livre === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`,
-        'les autres l\'accompagnent') +
-      (S.commande.formule !== 'fetes' ? '' : G('Les 6 fêtes', `<details class="multi" ${OUVERT.fetes ? 'open' : ''}><summary>${h.fetes.length ? esc(FETES.filter(u => h.fetes.includes(u.cle)).map(u => u.puce).join(', ')) : '<span class="ph">Aucune fête choisie</span>'}</summary>` +
+    const h = S.histoire, occ = h.occasion ? FETES.find(u => u.cle === h.occasion) : null, n = (F[S.commande.formule] || {}).livres || 1;
+    const sel = (attrs, list, v) => `<select ${attrs}>${list.map(t => `<option ${v === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+    let livres = '';
+    if (S.commande.formule === 'fetes') {
+      livres = G('Les 6 fêtes', `<details class="multi" ${OUVERT.fetes ? 'open' : ''}><summary>${h.fetes.length ? esc(FETES.filter(u => h.fetes.includes(u.cle)).map(u => u.puce).join(', ')) : '<span class="ph">Aucune fête choisie</span>'}</summary>` +
         `<div class="liste">${FETES.map(u => `<label><input type="checkbox" data-fete="${u.cle}" ${h.fetes.includes(u.cle) ? 'checked' : ''}> ${esc(u.puce)}</label>`).join('')}</div></details>` +
-        `<p class="hint" style="margin:8px 0 0">Choisissez 6 fêtes (${h.fetes.length}/6) : un livre pour chacune, livrés ensemble dans un seul colis.</p>`, '6 à choisir')) +
+        `<p class="hint" style="margin:8px 0 0">Choisissez 6 fêtes (${h.fetes.length}/6) : un livre pour chacune, livrés ensemble dans un seul colis.</p>`, '6 à choisir');
+    } else {
+      const l1 = `<div class="ln"><b>Livre 1</b>${sel('data-in="theme" aria-label="Thème du livre 1"', THEMES, h.theme)}` +
+        (occ ? `<div class="occ-l">🎉 ${esc(occ.nom)} <button type="button" class="lien" data-occ="0">changer</button></div>` : sel('data-in="univers" aria-label="Univers du livre 1"', UNIVERS, h.univers)) + `</div>`;
+      const suite = n > 1 ? suiteDe().map((x, i) => `<div class="ln"><b>Livre ${i + 2}</b>${sel(`data-suite="${i}" data-sk="theme" aria-label="Thème du livre ${i + 2}"`, THEMES, x.theme)}${sel(`data-suite="${i}" data-sk="univers" aria-label="Univers du livre ${i + 2}"`, UNIVERS, x.univers)}</div>`).join('') : '';
+      livres = `<div class="livres-l"><div class="ln tete"><span></span><span>Thème</span><span>Univers</span></div>${l1}${suite}</div>` +
+        (n > 1 ? `<button type="button" class="btn ghost petit" data-hasard="1" style="margin:10px 0 4px">🎲 Tout tirer au hasard</button>` : '');
+    }
+    return livres +
+      G('Le héros des livres', `<select data-in="heros_livre">${herosChoix().map(([v, l]) => `<option value="${v}" ${h.heros_livre === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`, 'les autres l\'accompagnent') +
+      `<details class="multi" data-ouv="histplus" ${OUVERT.histplus ? 'open' : ''}><summary>Ses passions, un mot pour nous <small style="font-weight:500;color:var(--encre-2)">facultatif</small></summary><div class="reg-b">` +
       G('Ses passions', `<input type="text" data-in="passions" maxlength="120" placeholder="les camions, chanter, les dinosaures" value="${esc(h.passions)}">`) +
-      G('Un mot du parent', `<textarea data-in="precision" maxlength="280" placeholder="Il a peur des bruits de la nuit en ce moment, mais adore quand on chante ensemble.">${esc(h.precision)}</textarea>`, 'facultatif') +
+      G('Un mot du parent', `<textarea data-in="precision" maxlength="280" placeholder="Il a peur des bruits de la nuit en ce moment, mais adore quand on chante ensemble.">${esc(h.precision)}</textarea>`, 'pour le livre 1') + `</div></details>` +
       (TEST ? `<div class="row2">${G("N° d'aventure", `<input type="text" data-in="numero" maxlength="3" value="${esc(h.numero)}">`)}${G("Code d'accès", `<input type="text" data-in="code" placeholder="si demandé" value="${esc(h.code)}">`)}</div>` +
       `<label class="check"><input type="checkbox" data-chk="demo" ${h.demo ? 'checked' : ''}> Mode démo : tester sans appel API (livre d'exemple)</label>` : '');
   }
@@ -852,8 +922,10 @@
           (isCal() ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(f.prix)}</span></div>` : c.cal_ajout ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(GR.calendrier.ajout)}</span></div>` : '') +
           (isColo() ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(f.prix)}</span></div>` : c.colo_ajout ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(GR.coloriage.ajout)}</span></div>` : '') +
           objetsChoisis().map(k => `<div><span>${OBJ_INFO[k].court} <small>(livraison comprise)</small> <button type="button" class="lien petit" data-objet="${k}">retirer</button></span><span style="white-space:nowrap">${eur2(OBJ[k].prix)}</span></div>`).join('') +
+          (remiseC() ? `<div class="remise"><span>Code ${esc(c.promo.code)} (-${c.promo.pourcent} %) <button type="button" class="lien petit" data-promo-retirer="1">retirer</button></span><span>− ${eur2(remiseC())}</span></div>` : '') +
           `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>` +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
+          (c.promo ? '' : `<details class="promo" ${OUVERT.promo ? 'open' : ''} data-ouv="promo"><summary>Vous avez un code promo ?</summary><div class="promo-l"><input type="text" id="promoIn" maxlength="30" placeholder="Votre code" autocapitalize="characters"><button type="button" class="btn petit" data-promo="1">Appliquer</button></div><p class="promo-err" id="promoErr"></p></details>`) +
           (n && n < 6 ? `<div class="vers6"><div class="vers6-t">Plus que <b>${6 - n} livre${6 - n > 1 ? 's' : ''}</b> pour la livraison offerte, et ${eur2(F.pack6.prix_livre)} le livre</div>` +
             `<div class="vers6-b"><i style="width:${Math.round(n / 6 * 100)}%"></i></div><button type="button" class="lien petit" data-pack-go="pack6">Passer à 6 livres (${eur2(F.pack6.prix)})</button></div>` : '') + `</div>`; })() +
       (offres.length ? `<div class="offres"><div class="offres-h">✨ Pour compléter l'univers de ${pr} <span>créations : même colis, sans frais de port en plus · objets : livraison comprise</span></div>${offres.join('')}</div>` : '') +
@@ -891,6 +963,17 @@
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button'); if (!b) return;
     if (b.dataset.hasard) { hasard(); OUVERT.suite = true; return render(); }
+    if (b.dataset.promo) {
+      const v = ($('promoIn').value || '').trim(); if (!v) return;
+      b.disabled = true;
+      fetch('/api/promo?code=' + encodeURIComponent(v)).then(r => r.json().then(j => ({ ok: r.ok, j }))).then(({ ok, j }) => {
+        if (ok) { S.commande.promo = { code: j.code, pourcent: j.pourcent }; save(); render(); }
+        else { $('promoErr').textContent = j.erreur || 'Code invalide.'; b.disabled = false; }
+      }).catch(() => { $('promoErr').textContent = 'Vérification impossible, réessayez.'; b.disabled = false; });
+      return;
+    }
+    if (b.dataset.apercu) { lancerApercu(b); return; }
+    if (b.dataset.promoRetirer) { S.commande.promo = null; save(); return render(); }
     if (b.dataset.sauver) { b.disabled = true; b.textContent = 'Enregistrement…'; sauverHeros(); return; }
     if (b.dataset.ajout) {               // proposition à l'étape commande : la création rejoint le colis
       S.produits[b.dataset.ajout] = true; if (b.dataset.pack) S.commande.pack = b.dataset.pack; window.mesure && mesure('ajout_produit', { item_id: b.dataset.ajout });
@@ -1002,6 +1085,20 @@
     } catch (_) { return null; }
   }
 
+  async function basePayload() {      // configuration complète (avatars dessinés compris) : commande et aperçu de couverture
+    const h = S.histoire, e = S.enfant;
+    const payload = {
+      prenom: e.prenom.trim(), age: (majAge(), e.age), naissance: e.naissance, genre: e.genre, theme: h.theme, univers: (h.occasion && S.commande.formule !== 'fetes' && FETES.find(u => u.cle === h.occasion)) ? FETES.find(u => u.cle === h.occasion).nom : h.univers, fetes: h.fetes.join(','), anniversaire: anniv(), heros_livre: (herosChoix(), h.heros_livre), passions: h.passions,
+      suite: S.commande.formule === 'fetes' ? [] : suiteDe().map(x => ({ theme: x.theme, univers: x.univers })),
+      precision: h.precision, numero: h.numero, code: h.code, demo: h.demo ? '1' : '',
+      avatar: { enfant: e, doudou: S.doudou, animaux: S.animaux, fratrie: S.fratrie.map(f => Object.assign({}, f, { age: ageDe(f) })) }
+    };
+    payload.avatar_png = await avatarPngs();
+    const ap = async (kind, cfg) => { const st = paintState(kind, cfg); return (st.recolore && st.url.startsWith('data:')) ? st.url : null; };
+    payload.apercus = { enfant: await ap('enfant', e), doudou: S.doudou.actif ? await ap('doudou', S.doudou) : null,
+                        animaux: await Promise.all(S.animaux.map(p => ap('animal', p))), fratrie: await Promise.all(S.fratrie.map(f => ap('enfant', f))) };
+    return payload;
+  }
   /* ---------- envoi ---------- */
   async function submit() {
     if (!S.enfant.prenom.trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez le prénom de l'enfant."; return; }
@@ -1014,16 +1111,7 @@
     if (aucune()) { tab = 'creations'; render(); $('err').textContent = 'Choisissez au moins une création.'; return; }
     if (S.produits.coloriage && S.coloriage.pages.length < COLO.nombre) { tab = 'creations'; OUVERT.colo = true; vueFoc = 'colo'; render(); $('err').textContent = `Choisissez ${COLO.nombre} pages (${S.coloriage.pages.length} pour l'instant), ou cliquez sur « Compléter au hasard ».`; return; }
     const h = S.histoire, e = S.enfant;
-    const payload = {
-      prenom: e.prenom.trim(), age: (majAge(), e.age), naissance: e.naissance, genre: e.genre, theme: h.theme, univers: (h.occasion && S.commande.formule !== 'fetes' && FETES.find(u => u.cle === h.occasion)) ? FETES.find(u => u.cle === h.occasion).nom : h.univers, fetes: h.fetes.join(','), anniversaire: anniv(), heros_livre: (herosChoix(), h.heros_livre), passions: h.passions,
-      suite: S.commande.formule === 'fetes' ? [] : suiteDe().map(x => ({ theme: x.theme, univers: x.univers })),
-      precision: h.precision, numero: h.numero, code: h.code, demo: h.demo ? '1' : '',
-      avatar: { enfant: e, doudou: S.doudou, animaux: S.animaux, fratrie: S.fratrie.map(f => Object.assign({}, f, { age: ageDe(f) })) }
-    };
-    payload.avatar_png = await avatarPngs();
-    const ap = async (kind, cfg) => { const st = paintState(kind, cfg); return (st.recolore && st.url.startsWith('data:')) ? st.url : null; };
-    payload.apercus = { enfant: await ap('enfant', e), doudou: S.doudou.actif ? await ap('doudou', S.doudou) : null,
-                        animaux: await Promise.all(S.animaux.map(p => ap('animal', p))), fratrie: await Promise.all(S.fratrie.map(f => ap('enfant', f))) };
+    const payload = await basePayload();
     const demo = !!h.demo, c = S.commande;
     if (!demo) {
       if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(c.email.trim())) { $('err').textContent = 'Indiquez votre adresse e-mail.'; return; }
@@ -1032,7 +1120,7 @@
       if (!c.cgv) { $('err').textContent = 'Cochez la case des conditions de vente.'; return; }
       if (c.cadeau && !c.cadeau_de.trim()) { $('err').textContent = 'Indiquez de la part de qui est le cadeau.'; return; }
       const dates = S.calendrier.dates.filter(x => x.j && x.m && (x.texte || '').trim()).map(x => ({ date: `${String(x.m).padStart(2, '0')}-${String(x.j).padStart(2, '0')}`, texte: x.texte.trim() }));
-      payload.commande = { formule: c.formule, email: c.email.trim(), cgv: true,
+      payload.commande = { formule: c.formule, email: c.email.trim(), cgv: true, code_promo: c.promo ? c.promo.code : '', apercu: S.apercu && S.apercu.statut === 'pret' ? S.apercu.id : '',
         calendrier: { actif: avecCal(), debut: S.calendrier.debut, dates },
         coloriage: { actif: avecColo(), pages: S.coloriage.pages },
         objets: objetsChoisis(),

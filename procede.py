@@ -876,6 +876,12 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
     crefs = refs_for(b["coverCharacterIds"], portraits, None, folder, "couverture")
     ckey = cache_key(snap["empreinte"], b["coverBrief"], b["coverCharacterIds"], [fsha(f) for _, f in crefs], COVER_SIZE, quality_cover)
     cover = folder / f"couverture-{ckey}.png"
+    pre = Path(str(form.get("couverture_apercu") or ""))
+    apercus_dir = (Path(os.getenv("DATA_DIR", Path(__file__).parent / "data")) / "apercus").resolve()
+    if form.get("couverture_apercu") and pre.is_file() and apercus_dir in pre.resolve().parents:
+        cover = folder / f"couverture-apercu-{fsha(pre)[:12]}.png"       # la couverture vue avant le paiement : ce qu'on a vu, on le reçoit
+        if not cover.exists():
+            shutil.copy(pre, cover)
     if not cover.exists():
         prompt = cover_prompt(b, snap, crefs)
         (folder / "prompts").mkdir(exist_ok=True); (folder / "prompts" / f"{cover.stem}.txt").write_text(prompt, encoding="utf-8")

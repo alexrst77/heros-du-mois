@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify, send_file, abort, redirect, Respo
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
 import calendrier, coloriage
-import printful, objets, legal, factures, comptes
+import printful, objets, legal, factures, comptes, apercu
 EXTRAS = {"calendrier": calendrier, "coloriage": coloriage}      # produits Lulu qui ne sont pas des livres (même colis que les livres)
 OBJETS = {k: objets for k in objets.KINDS}                         # objets Printful (gourde, tasse, sac) : leur propre colis
 NON_LIVRES = {**EXTRAS, **OBJETS}
@@ -95,6 +95,37 @@ def parse_address(a):
     return a, None
 
 
+@bp.post("/api/apercu")
+def apercu_lancer():
+    rep, code = apercu.lancer(A, request.get_json(force=True, silent=True) or {}, apercu.visiteur(request))
+    return jsonify(rep), code
+
+
+@bp.get("/api/apercu/restants")
+def apercu_restants():
+    return jsonify(restants=apercu.restants(apercu.visiteur(request)), max=apercu.MAX_VISITEUR)
+
+
+@bp.get("/api/apercu/<pid>")
+def apercu_etat(pid):
+    e = apercu.etat(pid[:32])
+    return jsonify(e) if e else (jsonify(erreur="introuvable"), 404)
+
+
+@bp.get("/api/apercu/<pid>/image.jpg")
+def apercu_image(pid):
+    f = apercu.DOSSIER / re.sub(r"[^a-f0-9]", "", pid)[:32] / "apercu.jpg"
+    if not f.exists():
+        abort(404)
+    return send_file(f, mimetype="image/jpeg", max_age=86400)
+
+
+@bp.get("/api/promo")
+def promo_check():
+    p = paiement.promo_valide(request.args.get("code"))
+    return (jsonify(code=p[0], pourcent=p[1]) if p else (jsonify(erreur="Ce code promo n'existe pas."), 404))
+
+
 @bp.post("/api/commandes")
 def order_create():
     data = request.get_json(force=True, silent=True) or {}
@@ -151,11 +182,24 @@ def order_create():
     folder = STORE / oid; folder.mkdir(parents=True)
     guides = A.save_avatar_pngs(data.get("avatar_png") or {}, folder)
     previews = A.save_previews(data.get("apercus") or {}, folder)
-    lignes = paiement.lignes(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs)   # pour la facture
+    if c.get("apercu"):                      # aperçu de couverture vu avant le paiement : il devient la couverture du livre 1
+        try:
+            p = apercu.pour_commande(c.get("apercu"), A.generator.build_config(form), form.get("univers"))
+            if p:
+                form["couverture_apercu"] = p
+        except Exception as e:
+            log(f"aperçu {c.get('apercu')} non repris : {e}")
+    promo = paiement.promo_valide(c.get("code_promo"))
+    if c.get("code_promo") and not promo:
+        return jsonify(erreur="Ce code promo n'existe pas."), 400
+    promo = promo[0] if promo else None
+    if promo:
+        form["code_promo"] = promo
+    lignes = paiement.lignes(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo)   # pour la facture
     (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {k: p.name for k, p in guides.items()},
                                                    "apercus": {k: p.name for k, p in previews.items()}, "lignes": lignes}, ensure_ascii=False), encoding="utf-8")
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
-              montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs), origine=oid,
+              montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo), origine=oid,
               numero=0 if formule in EXTRAS else 1)
     try:
         comptes.noter_commande(oid, addr)                       # connecté : commande rattachée au compte, adresse gardée
@@ -165,7 +209,8 @@ def order_create():
         return jsonify(id=oid, url=f"/creer?commande={oid}&test=1")
     try:
         sid, url = paiement.checkout(oid, formule, email, base_url(), pays=addr.get("pays"), calendrier=paiement.avec_calendrier(formule, avec_cal),
-                                     coloriage=avec_colo and formule != "coloriage", objets=objs)
+                                     coloriage=avec_colo and formule != "coloriage", objets=objs, promo=promo,
+                                     remise_cents=paiement.remise(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo))
     except paiement.StripeError as e:
         db.update(oid, statut="erreur", erreur=str(e))
         return jsonify(erreur=str(e)), 502
@@ -322,6 +367,8 @@ def _start_book(oid, auto=False, reprise=False):
             form["univers"] = choix["univers"]
     else:
         form = dict(form, numero=f"{o['numero']:02d}")
+    if o["origine"] != oid or o["formule"] in NON_LIVRES or o.get("univers"):
+        form.pop("couverture_apercu", None)      # l'aperçu ne vaut que pour le livre 1, dans l'univers vu
     if o.get("univers") and o["formule"] not in NON_LIVRES:   # livre de fête : univers imposé
         form = dict(form, univers=o["univers"])
     if o["formule"] not in NON_LIVRES and U.cle_de(form.get("univers")) == "anniversaire":   # il a un an de plus le jour J

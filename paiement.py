@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Paiement Stripe Checkout (API REST, sans dépendance). Réglages .env : STRIPE_SECRET_KEY (sk_test_… pour les essais),
 STRIPE_WEBHOOK_SECRET (whsec_…). Sans clé : paiement simulé (mode test local)."""
-import os, json, hmac, hashlib, time, urllib.request, urllib.parse, urllib.error
+import os, re, json, hmac, hashlib, time, urllib.request, urllib.parse, urllib.error
 
 FORMULES = {      # tout se paie en une fois ; les livres d'une commande partent ensemble, dans un seul colis
     "livre":  {"nom": "1 livre personnalisé", "livres": 1, "prix_livre": int(os.getenv("PRIX_LIVRE_1", "2790")), "mode": "payment"},
@@ -48,12 +48,43 @@ def avec_calendrier(formule, calendrier):
     return bool(calendrier) and formule != "calendrier"
 
 
-def total(formule, pays="FR", calendrier=False, coloriage=False, objets=()):
+# Codes promo : PROMOS="FAMILLE:10,NOEL:15" dans Railway (pourcentage sur les créations, jamais sur la livraison)
+def promos():
+    out = {}
+    for x in os.getenv("PROMOS", "FAMILLE:10").split(","):
+        if ":" in x:
+            k, v = x.split(":", 1)
+            try:
+                pct = int(v.strip())
+            except ValueError:
+                continue
+            if k.strip() and 0 < pct <= 50:
+                out[k.strip().upper()] = pct
+    return out
+
+
+def promo_valide(code):
+    """(CODE, pourcentage) si le code existe, sinon None. Insensible à la casse et aux espaces."""
+    c = re.sub(r"\s+", "", str(code or "")).upper()[:30]
+    return (c, promos()[c]) if c in promos() else None
+
+
+def _brut(formule, pays, calendrier, coloriage, objets):
     return (FORMULES[formule]["prix"] + sum(OBJETS[k]["prix"] for k in objets_valides(objets)) + (PRIX_CALENDRIER_AJOUT if avec_calendrier(formule, calendrier) else 0)
-            + (PRIX_COLORIAGE_AJOUT if coloriage and formule != "coloriage" else 0) + frais_port(formule, pays))
+            + (PRIX_COLORIAGE_AJOUT if coloriage and formule != "coloriage" else 0))
 
 
-def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=()):
+def remise(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None):
+    p = promo_valide(promo)
+    return round(_brut(formule, pays, calendrier, coloriage, objets) * p[1] / 100) if p else 0
+
+
+def total(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None):
+    return (_brut(formule, pays, calendrier, coloriage, objets) + frais_port(formule, pays)
+            - remise(formule, pays, calendrier, coloriage, objets, promo))
+
+
+def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None):
     """Détail facturable d'une commande, tel qu'encaissé : [(libellé, quantité, prix unitaire TTC en centimes, catégorie)].
     Catégorie = livre | calendrier | coloriage | objet | port (sert au taux de TVA)."""
     f = FORMULES[formule]
@@ -70,6 +101,10 @@ def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=()):
         out.append(("Cahier de coloriage personnalisé (30 dessins), en ajout", 1, PRIX_COLORIAGE_AJOUT, "coloriage"))
     for k in objets_valides(objets):
         out.append((f"{OBJETS[k]['nom']}, livraison comprise", 1, OBJETS[k]["prix"], "objet"))
+    r = remise(formule, pays, calendrier, coloriage, objets, promo)
+    if r:
+        c, pct = promo_valide(promo)
+        out.append((f"Remise code {c} (-{pct} %)", 1, -r, "remise"))
     port = frais_port(formule, pays)
     if port:
         out.append(("Livraison", 1, port, "port"))
@@ -126,7 +161,7 @@ def _api(method, path, data=None):
         raise StripeError(f"Stripe : {msg}")
 
 
-def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, coloriage=False, objets=()):
+def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None, remise_cents=0):
     """Paiement unique : les livres (quantité × prix du livre), le calendrier s'il y en a un, puis la livraison sur une ligne
     à part (si elle n'est pas offerte)."""
     f = FORMULES[formule]
@@ -152,6 +187,12 @@ def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, co
             "metadata": {"commande": order_id, "formule": formule}, "payment_intent_data": {"metadata": {"commande": order_id}},
             "success_url": f"{base_url}/creer?commande={order_id}&session_id={{CHECKOUT_SESSION_ID}}",
             "cancel_url": f"{base_url}/creer?commande={order_id}&annule=1"}
+    if remise_cents > 0:              # code promo : coupon Stripe à usage unique, du montant exact de la remise
+        c, pct = promo_valide(promo)
+        cp = _api("POST", "/coupons", {"amount_off": int(remise_cents), "currency": "eur", "duration": "once", "max_redemptions": 1,
+                                       "name": f"Code {c} (-{pct} %)", "metadata": {"commande": order_id}})
+        data["discounts"] = [{"coupon": cp["id"]}]
+        data["metadata"]["code_promo"] = c
     s = _api("POST", "/checkout/sessions", data)
     return s["id"], s["url"]
 
