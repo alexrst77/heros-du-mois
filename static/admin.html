@@ -171,12 +171,16 @@ function etat(o) {
     return { k: 'relire', pill: ['p-gold', '👀', 'À relire'], say: 'Ouvre le livre, regarde les pages, puis valide-le.' };
   }
   if (o.statut === 'envoyee_impression' && o.printful_statut === 'draft') return { k: 'imprimeur', pill: ['p-gold', '📝', 'Brouillon Printful'], say: "Brouillon chez Printful : rien n'est fabriqué ni facturé tant que tu ne confirmes pas." };
-  if (o.statut === 'envoyee_impression') return { k: 'imprimeur', pill: ['p-blue', '🖨️', "Chez l'imprimeur"], say: o.printful_id ? 'Statut Printful : ' + esc(o.printful_statut || '') : o.lulu_statut ? 'Statut Lulu : ' + esc(o.lulu_statut) : '' };
+  if (o.statut === 'envoyee_impression') return { k: 'imprimeur', pill: ['p-blue', '🖨️', "Chez l'imprimeur"], say: o.printful_id ? 'Printful : ' + esc(PRINTFUL_FR[o.printful_statut] || o.printful_statut || '') : o.lulu_statut ? 'Lulu : ' + esc(LULU_FR[o.lulu_statut] || o.lulu_statut) : '' };
   if (o.statut === 'expediee') return { k: 'expedie', pill: ['p-green', '📦', 'Expédié'], say: (o.suivi || []).length ? 'Colis en route.' : '' };
   if (o.statut === 'annulee') return { k: 'archive', pill: ['p-grey', '🗂️', 'Archivé'], say: o.erreur === 'données effacées' ? 'Données effacées.' : '' };
   return { k: 'autre', pill: ['p-grey', '•', o.statut], say: '' };
 }
 const AFAIRE = ['relire', 'bloque', 'pret'];
+const LULU_FR = { CREATED: 'commande reçue', UNPAID: 'en attente de paiement chez Lulu', PAYMENT_IN_PROGRESS: 'paiement en cours chez Lulu', PRODUCTION_DELAYED: 'impression retardée (Lulu vérifie les fichiers)',
+  PRODUCTION_READY: "prêt pour l'impression", IN_PRODUCTION: "en cours d'impression", SHIPPED: 'expédié', REJECTED: 'refusé par Lulu (fichiers à revoir)', CANCELED: 'annulé', ERROR: 'erreur chez Lulu' };
+const PRINTFUL_FR = { draft: 'brouillon à confirmer', pending: 'en attente', inprocess: 'en fabrication', onhold: 'en pause (Printful a une question)', partial: 'expédié en partie',
+  fulfilled: 'expédié', failed: 'échec', canceled: 'annulé' };
 
 function boutons(o, e) {
   const pdf = (o.fichiers || []).find(f => f.endsWith('.pdf') && !f.startsWith('impression_'));
@@ -216,7 +220,7 @@ function carte(o) {
   const titre = o.titre || (o.prenom ? `${o.calendrier ? 'Le calendrier' : o.coloriage ? 'Le cahier de coloriage' : o.objet ? NOMX[o.objet].replace(/^./, c => c.toUpperCase()) : 'Le livre'} de ${esc(o.prenom)}` : 'En préparation');
   const cov = o.vignette ? `<div class="cover"><img loading="lazy" src="/admin/vignette/${o.id}${Q}&v=${o.finalise ? 1 : 0}" alt=""></div>` : `<div class="cover">${e.k === 'fabrication' ? '🎨' : o.objet ? (FORMULE[o.formule] || '').split(' ')[0] : '📖'}</div>`;
   const PL = o.plafond || D.plafond, bud = o.budget ? o.budget.total : null, pct = bud != null ? Math.min(100, bud / PL * 100) : 0;
-  const issues = (o.controle || []).length && e.k !== 'pret'
+  const issues = (o.controle || []).length && !['pret', 'imprimeur', 'expedie', 'archive', 'valide'].includes(e.k)   // déjà relu et validé : plus utile
     ? `<div class="issues"><b>Le contrôle a remarqué :</b><ul>${o.controle.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
   const err = o.erreur && o.erreur !== 'données effacées' && e.k !== 'pret' ? `<div class="issues red">${esc(o.erreur.replace(/^Fabrication : /, ''))}</div>` : '';
   const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${Q}">${esc(f)}</a>`).join('')
@@ -240,8 +244,8 @@ function carte(o) {
     <details class="plus" ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">
       <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
       ${o.pack_mail ? `<div>📧 Mail « prêt » envoyé le ${new Date(o.pack_mail * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
-      ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
-      ${o.printful_id ? `<div>🎒 Printful : commande ${esc(o.printful_id)} · ${esc(o.printful_statut || '')}${o.lulu_cout ? ' · ' + esc(o.lulu_cout) : ''}</div>` : ''}
+      ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(LULU_FR[o.lulu_statut] || o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
+      ${o.printful_id ? `<div>🎒 Printful : commande ${esc(o.printful_id)} · ${esc(PRINTFUL_FR[o.printful_statut] || o.printful_statut || '')}${o.lulu_cout ? ' · ' + esc(o.lulu_cout) : ''}</div>` : ''}
       <div class="files">${files}</div>
       <div class="acts">${bt.sec}</div><div class="muted" style="margin-top:6px">Réf. ${o.id}</div>
     </div></details>

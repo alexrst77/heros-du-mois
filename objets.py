@@ -225,7 +225,7 @@ def _dessiner(snap, refs, path, size, q, folder):
         (Path(folder) / "prompts" / f"{path.stem}.txt").write_text(prompt, encoding="utf-8")
         P.image(prompt, refs, path, size, q, f"prompts/{path.stem}.txt", etape="illustration")
     v = P._vision(SYSTEM_OBJET, {"objet": snap["kind"], "personnages_attendus": snap["personnages"], "scene": KINDS[snap["kind"]]["scene"]}, path)
-    r = {"retenu": path.name, "bloquants": v["bloquants"], "mineurs": v.get("mineurs", []), "controle_impossible": v.get("controle_impossible")}
+    r = {"retenu": path.name, "bloquants": v["bloquants"], "bloquants_fr": v.get("bloquants_fr", []), "mineurs": v.get("mineurs", []), "controle_impossible": v.get("controle_impossible")}
     rp.write_text(json.dumps(r, ensure_ascii=False, indent=1), encoding="utf-8")
     return r
 
@@ -292,8 +292,8 @@ def _run(form, cfg, refs, folder, job, progress, livre):
 def conclure(folder, snap, spec, fab, rapport, rapport_refs, livre, job):
     import fabrication as F  # noqa
     folder = Path(folder)
-    bloquants = [f"illustration : {x}" for x in rapport["bloquants"]]
-    bloquants += [f"référence {k} : {x}" for k, v in rapport_refs.items() for x in v.get("bloquants", [])]
+    bloquants = [f"illustration : {x}" for x in P.fr(rapport)]
+    bloquants += [f"référence {k} : {x}" for k, v in rapport_refs.items() for x in P.fr(v)]
     impossibles = [f"contrôle visuel impossible ({rapport['controle_impossible']})"] if rapport.get("controle_impossible") else []
     mineurs = [f"illustration : {x}" for x in rapport.get("mineurs", [])]
     phase = "needs_review" if (bloquants or impossibles) else "ready"

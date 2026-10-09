@@ -782,7 +782,7 @@ def _dessiner(etape, scene, refs, path, q, snap, folder):
         P.image(prompt, refs, path, IMG_SIZE, q, f"prompts/{path.stem}.txt", etape=etape)
     fiche = {"page": etape, "personnages_attendus": snap["personnages"], "scene": COUVERTURE if scene is None else scene["scene"]}
     v = P._vision(SYSTEM_MOIS, fiche, path)
-    r = {"retenu": path.name, "bloquants": v["bloquants"], "mineurs": v.get("mineurs", []), "controle_impossible": v.get("controle_impossible")}
+    r = {"retenu": path.name, "bloquants": v["bloquants"], "bloquants_fr": v.get("bloquants_fr", []), "mineurs": v.get("mineurs", []), "controle_impossible": v.get("controle_impossible")}
     rapport_p.write_text(json.dumps(r, ensure_ascii=False, indent=1), encoding="utf-8")
     return r
 
@@ -839,7 +839,7 @@ def _run(form, cfg, refs, folder, job, progress, livre):
     rapports["mois 1"] = _dessiner(*t[1][:4], t[1][4], snap, folder)
     if rapports["mois 1"]["bloquants"]:
         save("controle.json", {"etat": "needs_review", "pilote": rapports["mois 1"], "references": rapport_refs})
-        raise P.ProcedeError("Mois pilote non conforme : " + " ; ".join(rapports["mois 1"]["bloquants"]) +
+        raise P.ProcedeError("Mois pilote non conforme : " + " ; ".join(P.fr(rapports["mois 1"])) +
                              " (relecture humaine : aucune régénération automatique)")
     fait = [1]
     def un(c):
@@ -865,8 +865,8 @@ def _run(form, cfg, refs, folder, job, progress, livre):
 
 def conclure(folder, snap, fab, rapports, rapport_refs, livre, job):
     folder = Path(folder)
-    bloquants = [f"{k} : {x}" for k, r in rapports.items() for x in r["bloquants"]]
-    bloquants += [f"référence {k} : {x}" for k, v in rapport_refs.items() for x in v.get("bloquants", [])]
+    bloquants = [f"{k} : {x}" for k, r in rapports.items() for x in P.fr(r)]
+    bloquants += [f"référence {k} : {x}" for k, v in rapport_refs.items() for x in P.fr(v)]
     impossibles = [f"{k} : contrôle visuel impossible ({r['controle_impossible']})" for k, r in rapports.items() if r.get("controle_impossible")]
     mineurs = [f"{k} : {x}" for k, r in rapports.items() for x in r.get("mineurs", [])]
     phase = "needs_review" if (bloquants or impossibles) else "ready"

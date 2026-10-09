@@ -28,7 +28,7 @@ PANO_SIZE = os.getenv("OPENAI_PANO_SIZE", "2048x1024")
 COVER_SIZE = os.getenv("OPENAI_COVER_SIZE", "1024x1024")
 MAX_CORR = 0                                  # aucune régénération automatique (exigence : plafond 3 $, première sortie conforme)
 PROMPT_IMAGE_MAX = 6000                       # octets : au-delà, le prompt est refusé avant tout appel (borne de coût)
-REVIEW_MAX_TOKENS = 700
+REVIEW_MAX_TOKENS = 1000          # écarts en anglais (consignes) + leur traduction française (relecture)
 TEXTE_MAX = 16000                             # octets du brief de l'histoire (borne de coût)
 REVISION_MAX = 56000                          # octets de la demande de révision (brief + version précédente + problèmes)
 FICHE_MAX = 6000                              # octets de la fiche envoyée avec une image à contrôler
@@ -197,9 +197,20 @@ plusieurs personnages, texte écrit. MINEUR : nuance, détail de couture, pose.
 Réponds UNIQUEMENT en JSON : {"bloquants": ["consigne de correction en anglais"], "mineurs": ["en français"]}"""
 
 
+FR = ("\nAjoute aussi la clé \"bloquants_fr\" : chaque élément de « bloquants » traduit en français simple et court, "
+      "dans le même ordre (c'est ce que lit la personne qui relit le livre).")
+
+
+def fr(r):
+    """Écarts bloquants à afficher : en français si le contrôle les a traduits, sinon tels quels (anglais)."""
+    b, f = r.get("bloquants") or [], r.get("bloquants_fr") or []
+    return f if len(f) == len(b) and all(isinstance(x, str) and x.strip() for x in f) else b
+
+
 def _vision(system, fiche_json, path):
     """Contrôle visuel : UNE fois, budget réservé avant l'appel. Image envoyée en JPEG 1536 px max : coût en tuiles connu."""
     import io
+    system = system + FR
     im = Image.open(path).convert("RGB"); im.thumbnail((1536, 1536))
     buf = io.BytesIO(); im.save(buf, "JPEG", quality=88)
     b64 = base64.b64encode(buf.getvalue()).decode()
@@ -221,6 +232,7 @@ def _vision(system, fiche_json, path):
         v = json.loads(r.choices[0].message.content)
         v["bloquants"] = [x for x in v.get("bloquants") or [] if isinstance(x, str)][:6]
         v["mineurs"] = [x for x in v.get("mineurs") or [] if isinstance(x, str)][:6]
+        v["bloquants_fr"] = [x for x in v.get("bloquants_fr") or [] if isinstance(x, str)][:6]
         return v
     except (G.BudgetError, BU.BudgetLivreError, BU.AppelIncertain):
         raise
@@ -685,7 +697,7 @@ def draw_spread(s, snap, b, portraits, cover, folder, quality):
         (Path(folder) / "prompts" / f"{path.stem}.txt").write_text(prompt, encoding="utf-8")
         image(prompt, refs, path, PANO_SIZE, quality, f"prompts/{path.stem}.txt", etape=f"double page {s['id']}")
     v = review(path, s, snap, b)
-    rapport = {"retenu": path.name, "bloquants": v["bloquants"], "mineurs": v.get("mineurs", []), "essais": [{"fichier": path.name, **v}],
+    rapport = {"retenu": path.name, "bloquants": v["bloquants"], "bloquants_fr": v.get("bloquants_fr", []), "mineurs": v.get("mineurs", []), "essais": [{"fichier": path.name, **v}],
                "controle_impossible": v.get("controle_impossible")}
     rapport_p.write_text(json.dumps(rapport, ensure_ascii=False, indent=1))
     return path, rapport
@@ -850,7 +862,7 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
     etat("references", "Références des personnages", 6)
     portraits, rapport_refs = references(snap, cfg, refs, folder, lambda s: progress(s))
     save("references.json", rapport_refs)
-    bloq_refs = {k: v["bloquants"] for k, v in rapport_refs.items() if v["bloquants"]}
+    bloq_refs = {k: fr(v) for k, v in rapport_refs.items() if v["bloquants"]}
 
     etat("storyboard", "Histoire et storyboard (9 doubles pages)", 14)
     if not b:
@@ -893,7 +905,7 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
     results = {1: draw_spread(spreads[0], snap, b, portraits, cover, folder, quality)}
     if results[1][1]["bloquants"]:                    # le pilote ne passe pas : on n'engage pas les 8 autres
         save("controle.json", {"etat": "needs_review", "pilote": results[1][1], "references": rapport_refs})
-        raise ProcedeError("Panorama pilote non conforme : " + " ; ".join(results[1][1]["bloquants"]) +
+        raise ProcedeError("Panorama pilote non conforme : " + " ; ".join(fr(results[1][1])) +
                            " (relecture humaine : aucune régénération automatique)")
     todo = [s for s in spreads[1:]] if essai != "apercu" else []
     done = [1]
@@ -944,7 +956,7 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
         apercus_ = fab.pop("apercus")
     for i, sheet in enumerate(rep.get("planches", [])):          # planches contact visibles depuis l'admin
         shutil.copy(folder / "rendu" / sheet, folder / f"planche_contact_{i + 1}.jpg")
-    bloquants = [f"double page {k} : {x}" for k, (_, r) in sorted(results.items()) for x in r["bloquants"]]
+    bloquants = [f"double page {k} : {x}" for k, (_, r) in sorted(results.items()) for x in fr(r)]
     bloquants += [f"référence {k} : {x}" for k, v in bloq_refs.items() for x in v]
     bloquants += rep.get("problemes_rendu", [])
     mineurs = [f"double page {k} : {x}" for k, (_, r) in sorted(results.items()) for x in r.get("mineurs", [])]
