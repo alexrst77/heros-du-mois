@@ -505,7 +505,7 @@ def back_page(c, amb, story):
     t = fit_block(["\n".join(q4["accroche"][:2])], dict(font="Serif-Bold", size=27, min=21, max=28, leading=1.3), width, 110)
     p = fit_block(q4["paragraphes"], dict(font="Serif", size=16, min=13, max=17, leading=1.5), width, 150)
     qn = layout_block([q4.get("question", "").upper()], dict(font="Sans", size=9.5, leading=1.4), width)
-    meta = layout_block([f"À lire ensemble • {q4.get('age', '4–6 ans')}", f"Une histoire écrite pour {story.get('prenom', '')}"],
+    meta = layout_block(["À lire ensemble", f"Une histoire écrite pour {story.get('prenom', '')}"],
                         dict(font="Sans", size=9, leading=1.5), width)
     place_block(head, 46, art.SAFE + 4)
     top = 140

@@ -187,6 +187,7 @@ def confirm_paid(oid, stripe_sub=None):
     log(f"commande {oid} payée ({o['formule']})")
     for b in creer_pack(oid):
         start_book(b, auto=True)
+    threading.Thread(target=mail_confirmation, args=(oid,), daemon=True).start()
     return True
 
 
@@ -1560,6 +1561,63 @@ def mail_livre_pret(oid):
         db.annuler_mail_pret(origine)                 # pas envoyé : il pourra repartir à la prochaine validation
         DERNIERE_ERREUR_MAIL[oid] = f"{type(e).__name__}: {e}"
         log(f"commande {origine} : mail « livre prêt » impossible : {type(e).__name__}: {e}")
+        return False
+
+
+def mail_confirmation(oid):
+    """Mail au client juste après le paiement : récapitulatif (lignes payées), adresse, étapes et délai estimé. Une seule fois
+    (appelé par confirm_paid, qui ne passe qu'une fois). Jamais pour un essai. Ne bloque jamais la fabrication."""
+    try:
+        o = db.get(oid)
+        if not o or (o["formule"] or "").startswith("essai") or not o.get("email") or not mail_configure():
+            return False
+        try:
+            brut = json.loads((STORE / oid / "livre.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            brut = {}
+        form = brut.get("form") or {}
+        prenom = form.get("prenom") or "votre enfant"
+        site = (os.getenv("PUBLIC_URL") or "https://www.monherosdumois.fr").rstrip("/")
+        lignes = [l for l in (brut.get("lignes") or []) if isinstance(l, (list, tuple)) and len(l) >= 3]
+        if not lignes or sum(int(l[1]) * int(l[2]) for l in lignes) != (o["montant"] or 0):
+            lignes = [((paiement.FORMULES.get(o["formule"]) or {}).get("nom") or "Votre commande Mon Héros du Mois", 1, o["montant"] or 0, "")]
+        eu = lambda c: f"{c / 100:.2f}".replace(".", ",") + " €"
+        a = o.get("adresse") or {}
+        adr = ", ".join(x for x in (a.get("nom"), a.get("adresse1"), a.get("adresse2"), f"{a.get('code_postal') or ''} {a.get('ville') or ''}".strip()) if x)
+        d1, d2 = _jours_ouvres(time.time(), 7), _jours_ouvres(time.time(), 15)
+        ref = oid.upper()
+        rows_txt = "\n".join(f"– {l[0]}{' × ' + str(l[1]) if int(l[1]) > 1 else ''} : {eu(int(l[1]) * int(l[2]))}" for l in lignes)
+        texte = (f"Bonjour,\n\nMerci pour votre commande ! Le paiement est bien reçu.\n\nCommande n° {ref} pour {prenom} :\n{rows_txt}\n"
+                 f"Total payé : {eu(o['montant'] or 0)}\n\nLivraison : {adr}\n\nEt maintenant ?\n"
+                 f"1. Nous créons les illustrations de {prenom} (quelques minutes).\n2. Notre équipe relit chaque page avant l'impression.\n"
+                 f"3. Vous recevez un mail dès que tout part à l'impression.\n\nLivraison estimée entre le {_date_fr(d1)} et le {_date_fr(d2)}.\n\n"
+                 f"Une question ? Répondez simplement à ce mail.\n\nÀ très vite,\nL'équipe Mon Héros du Mois\n{site}")
+        rows_html = "".join(f'<tr><td style="padding:6px 0">{escape(str(l[0]))}{" × " + str(l[1]) if int(l[1]) > 1 else ""}</td>'
+                            f'<td style="padding:6px 0;text-align:right;white-space:nowrap">{eu(int(l[1]) * int(l[2]))}</td></tr>' for l in lignes)
+        html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
+<div style="max-width:560px;margin:0 auto;padding:28px 18px">
+ <p style="font:600 13px system-ui,sans-serif;letter-spacing:.12em;color:#B8892B;text-align:center;margin:0 0 6px">MON HÉROS DU MOIS</p>
+ <h1 style="font-size:26px;text-align:center;margin:0 0 6px">Merci, c'est commandé&nbsp;✨</h1>
+ <p style="font:15px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 20px">Commande n° {escape(ref)} · pour {escape(prenom)}</p>
+ <div style="background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.4 system-ui,sans-serif;margin:0 0 14px">
+  <table role="presentation" style="width:100%;border-collapse:collapse">{rows_html}
+   <tr><td style="padding:10px 0 0;border-top:1px solid #EFE6D2"><b>Total payé</b></td><td style="padding:10px 0 0;border-top:1px solid #EFE6D2;text-align:right"><b>{eu(o['montant'] or 0)}</b></td></tr></table>
+  <p style="margin:12px 0 0;color:#6B6F8E;font-size:14px">📦 Livraison : {escape(adr)}</p>
+ </div>
+ <div style="background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.5 system-ui,sans-serif">
+  <p style="margin:0 0 8px"><b>Et maintenant&nbsp;?</b></p>
+  <p style="margin:0 0 6px">🎨 Nous créons les illustrations de {escape(prenom)}.</p>
+  <p style="margin:0 0 6px">👀 Notre équipe relit chaque page avant l'impression.</p>
+  <p style="margin:0 0 6px">✉️ Vous recevez un mail dès que tout part à l'impression.</p>
+  <p style="margin:0">📬 Livraison estimée <b>entre le {_date_fr(d1)} et le {_date_fr(d2)}</b>.</p>
+ </div>
+ <p style="font:14px system-ui,sans-serif;color:#6B6F8E;text-align:center;margin:22px 0 0">Une question&nbsp;? Répondez simplement à ce mail.<br><a href="{site}" style="color:#3D6BD8">{site.replace('https://', '')}</a></p>
+</div></body></html>"""
+        ok = send_mail(f"✨ Commande confirmée : l'univers de {prenom} est en préparation", texte, reply_to=CONTACT, to=o["email"], html=html)
+        log(f"commande {oid} : mail de confirmation {'envoyé' if ok else 'non envoyé'} à {o['email']}")
+        return ok
+    except Exception as e:
+        log(f"commande {oid} : mail de confirmation impossible : {type(e).__name__}: {e}")
         return False
 
 

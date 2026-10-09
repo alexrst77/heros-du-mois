@@ -265,7 +265,7 @@ def group_sheet(ids, portraits, folder):
 # ====================================================================== 3. récit et storyboard
 def word_range(age):
     a = int(age or 5)
-    return (22, 36) if a <= 4 else (30, 45) if a <= 7 else (38, 55)
+    return (20, 32) if a <= 4 else (26, 40) if a <= 7 else (34, 50)
 
 
 STORY_RULES = """
@@ -284,6 +284,14 @@ l'image. Les seuls personnages sont ceux de la configuration et, si besoin, UN p
 leftComposition et rightComposition décrivent les deux moitiés d'UN SEUL INSTANT : chaque personnage est placé dans UNE seule
 des deux moitiés (jamais le même personnage à gauche ET à droite, sinon l'illustrateur le dessine deux fois).
 Thèmes de lecture : scène claire -> voile #F5F0DF, encre #163E49 ; scène sombre ou nocturne -> voile #171B3A (ou #092D43 sous l'eau), encre #FFF7E8.
+LANGUE TRÈS SIMPLE (priorité absolue : l'histoire est lue à voix haute à un jeune enfant, qui doit tout comprendre) :
+- phrases courtes : 6 à 12 mots en général, jamais plus de 15 ; une seule idée par phrase ;
+- mots de tous les jours qu'un enfant de maternelle connaît ; aucun mot rare, savant ou abstrait (pas de « mystérieux grimoire »,
+  « s'émerveiller », « scintillement », « périple »… : dire « vieux livre magique », « ouvrir grand les yeux », « briller », « voyage ») ;
+- temps du récit : le présent (pas de passé simple) ; dialogues courts et vivants (« Viens ! », « On essaie ? ») ;
+- une seule action importante par page, un seul problème dans l'histoire, des rebondissements faciles à suivre ;
+- répétitions et onomatopées bienvenues (Plouf ! Zou !), émotions nommées simplement (content, un peu peur, fier) ;
+- pas plus de 3 personnages qui parlent sur une même double page.
 Longueur : {mots} mots par page, jamais plus de 7 lignes. Typographie française (espaces avant ! ? : ;, guillemets « »).
 """
 
@@ -317,6 +325,8 @@ def check_board(b, snap):
             if not lo - 6 <= n <= hi + 6: probs.append(f"Double page {i + 1}, {side} : {n} mots (attendu {lo}–{hi}).")
             if M.text_height(t) > M.TEXT_MAX: probs.append(f"Double page {i + 1}, {side} : texte trop long pour la page (plus de 7 lignes), raccourcis-le.")
             if re.search(r"\[|\]|\{|\}|TODO|XXX|Prénom|placeholder", t): probs.append(f"Double page {i + 1}, {side} : texte provisoire.")
+            longues = [p for p in re.split(r"[.!?…]+", t) if len(p.split()) > 16]
+            if longues: probs.append(f"Double page {i + 1}, {side} : une phrase de {len(longues[0].split())} mots, difficile pour un jeune enfant : coupe-la en phrases de 6 à 12 mots.")   # non bloquant : révision demandée, sinon simple remarque
         pres = s.get("presentCharacterIds") or []
         unk = [x for x in pres if x not in ids | inv]
         if unk: probs.append(f"Double page {i + 1} : identifiants inconnus {unk}.")

@@ -169,7 +169,7 @@ def page_quatrieme(c, p, book):
         body = f"<font name='StoryBold'>Offert par {escape(k['de'])}</font>" + (f"<br/>« {escape(k['message'])} »" if k.get('message') else '')
         q = Paragraph(body, st); _, hk = q.wrap(S - 150, 90); q.drawOn(c, 75, 126)
     c.setStrokeColor(HexColor('#DCC38C')); c.setLineWidth(.7); c.line(245, 112, 350, 112)
-    c.setFont('Story', 11); c.drawCentredString(S / 2, 85, 'Une aventure à lire ensemble • ' + book['ageLabel'])
+    c.setFont('Story', 11); c.drawCentredString(S / 2, 85, 'Une aventure à lire ensemble')
     num = (book.get('coverTitle') or {}).get('numero')
     c.setFont('Story', 9); c.drawCentredString(S / 2, 62, book['title'] + (f"  •  livre n° {int(num)} de la collection" if num else ''))
 
@@ -209,7 +209,7 @@ def render(book, out, base=None, work=None, pages=None, check=True):
     cover = jpeg(asset(book['cover']), 'cover.jpg')
     out.parent.mkdir(parents=True, exist_ok=True)
     c = canvas.Canvas(str(out), pagesize=(S, S), pageCompression=1)
-    c.setTitle(book['title']); c.setAuthor(book['collection']); c.setSubject('Une aventure illustrée à lire ensemble • ' + book.get('ageLabel', '4–7 ans'))
+    c.setTitle(book['title']); c.setAuthor(book['collection']); c.setSubject('Une aventure illustrée à lire ensemble')
     # Cover and final back cover are included in the 20-page count.
     page_couverture(c, cover, book)
     c.showPage()

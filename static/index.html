@@ -94,6 +94,14 @@
   .crea-l { display:grid; gap:12px; }
   .reg { margin-top:12px; } .reg > summary { font-weight:800; font-size:15px; }
   .reg > summary small { display:block; font:500 13px/1.35 var(--texte); color:var(--encre-2); margin-top:2px; }
+  /* réglages des créations : bien visibles (bouton « Personnaliser ») */
+  .crea-b .reg { border:2px solid var(--luciole); background:color-mix(in srgb, var(--luciole) 14%, #fff); }
+  .crea-b .reg > summary { padding:13px 118px 13px 14px; }
+  .crea-b .reg > summary::after { content:"Personnaliser"; width:auto; height:auto; border:0; transform:translateY(-50%); right:12px; top:50%;
+    background:var(--encre); color:#fff; font:800 13px var(--texte); padding:8px 12px; border-radius:999px; }
+  .crea-b .reg[open] > summary::after { content:"Fermer"; transform:translateY(-50%); background:#fff; color:var(--encre); box-shadow:inset 0 0 0 2px var(--encre); }
+  @media (max-width:440px) { .crea-b .reg > summary { padding-right:14px; padding-bottom:52px; } .crea-b .reg > summary::after { top:auto; bottom:10px; transform:none; left:14px; right:auto; }
+    .crea-b .reg[open] > summary::after { transform:none; } }
   .reg-b { padding:16px 14px 2px; border-top:1px solid var(--trait); }
   .reg-b input[type=text], .reg-b input[type=email], .reg-b input[type=tel] { width:100%; height:auto; }
   .reg-b .liste input[type=checkbox] { width:19px; height:19px; }
@@ -664,10 +672,10 @@
         <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>`;
     const n = (F[c.formule] || {}).livres || 1, un = S.histoire.occasion ? (FETES.find(u => u.cle === S.histoire.occasion) || {}).nom : S.histoire.univers;
     const reg = (cle, titre, resume, corps) => `<details class="multi reg" data-ouv="${cle}" ${OUVERT[cle] ? 'open' : ''}><summary>${titre} <small>${resume}</small></summary><div class="reg-b">${corps}</div></details>`;
-    const hist = reg('hist', n > 1 ? `Ses ${n} aventures` : 'Son aventure', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : `${esc(S.histoire.theme)} · ${esc(un || '')}${n > 1 ? ' · les suivantes déjà choisies' : ''}, modifiable`, panelHistoire());
-    const regCal = reg('cal', 'Réglages du calendrier', `commence en ${esc(moisLib(S.calendrier.debut).toLowerCase())}${S.calendrier.dates.filter(x => (x.texte || '').trim()).length ? ` · ${S.calendrier.dates.filter(x => (x.texte || '').trim()).length} date(s) de famille` : ''}, modifiable`, optionsCalendrier());
-    const regColo = reg('colo', 'Les 30 pages', `${S.coloriage.pages.length}/${COLO.nombre} choisies, notre sélection, modifiable`, pickerColoriage());
-    return `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr}. Tout est déjà réglé pour lui : ouvrez les réglages seulement si vous voulez changer quelque chose.</p>` +
+    const hist = reg('hist', n > 1 ? `✏️ Personnaliser ses ${n} aventures` : '✏️ Personnaliser son aventure', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : `${esc(S.histoire.theme)} · ${esc(un || '')}${n > 1 ? ' · les suivantes déjà choisies' : ''}, modifiable`, panelHistoire());
+    const regCal = reg('cal', '✏️ Personnaliser le calendrier', `commence en ${esc(moisLib(S.calendrier.debut).toLowerCase())}${S.calendrier.dates.filter(x => (x.texte || '').trim()).length ? ` · ${S.calendrier.dates.filter(x => (x.texte || '').trim()).length} date(s) de famille` : ''}, modifiable`, optionsCalendrier());
+    const regColo = reg('colo', '✏️ Choisir les 30 pages du cahier', `${S.coloriage.pages.length}/${COLO.nombre} choisies, notre sélection, modifiable`, pickerColoriage());
+    return `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr}. Tout est déjà pré-réglé, mais <b>vous pouvez tout personnaliser</b> : thème et univers des histoires, mois de départ et dates du calendrier, pages du cahier… avec le bouton <b>« Personnaliser »</b> sous chaque création.</p>` +
       `<div class="crea-l">` +
       carte('livres', '/static/vitrine/couv_jade.webp', 'Ses livres d\'aventures', 'Une vraie histoire illustrée dont il est le héros, couverture rigide.', `Dès ${eur2(F.pack12.prix_livre)} le livre`, plans + hist) +
       carte('calendrier', '/static/vitrine/cal_photo_2.webp', 'Son calendrier', '12 mois illustrés avec lui, son anniversaire et vos dates de famille.',
