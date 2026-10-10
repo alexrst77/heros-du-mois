@@ -870,6 +870,11 @@ def admin_list():
             r["budget"] = None
         r["refusees"] = folder.exists() and any(json.loads(f.read_text(encoding="utf-8")).get("bloquants")
                                                 for f in list(folder.glob("spread-*.json")) + list(folder.glob("cal-*.json")) + list(folder.glob("colo-*.json")) + list(folder.glob("obj-*.json")))
+        try:
+            import suivi
+            r["pub"] = suivi.origine_commande(r["id"]) if (r["origine"] or r["id"]) == r["id"] else None
+        except Exception:
+            r["pub"] = None
         r["calendrier"] = r["formule"] == "calendrier"
         r["coloriage"] = r["formule"] == "coloriage"
         r["extra"] = r["formule"] in NON_LIVRES
@@ -1644,11 +1649,17 @@ def mail_alerte_commande(oid):
         reel = factures.paiement_reel(o)
         site = (os.getenv("PUBLIC_URL") or "https://www.monherosdumois.fr").rstrip("/")
         prenom = form.get("prenom") or "?"
+        try:
+            import suivi
+            pub = suivi.origine_commande(oid)
+        except Exception:
+            pub = None
         texte = (f"Nouvelle commande payée{'' if reel else ' (PAIEMENT DE TEST)'} : {eu(o['montant'] or 0)}\n\n"
                  f"Pour : {prenom} · univers : {form.get('univers') or '—'}\n{detail}\n"
                  f"{'Code promo : ' + form['code_promo'] + chr(10) if form.get('code_promo') else ''}"
                  f"{'Cadeau de : ' + form['cadeau_de'] + chr(10) if form.get('cadeau_de') else ''}\n"
                  f"Client : {a.get('nom') or ''} · {o.get('email') or ''} · {a.get('ville') or ''} ({a.get('pays') or ''})\n"
+                 f"{'Venue de : ' + pub + chr(10) if pub else ''}"
                  f"Référence : {oid.upper()}\n\nLa fabrication est lancée. Tu recevras le livre « à relire » dans l'admin :\n{site}/admin")
         ok = send_mail(f"🎉 Nouvelle commande : {eu(o['montant'] or 0)} pour {prenom}{'' if reel else ' (test)'}", texte,
                        reply_to=o.get("email") or None, to=os.getenv("ALERTE_EMAIL") or CONTACT)

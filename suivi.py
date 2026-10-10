@@ -25,6 +25,10 @@ create table if not exists parcours (vid text primary key, client_id text, premi
   pages integer default 0, etape integer default 0, apercu integer default 0, source text, mobile integer default 0, commande text);
 create table if not exists relances (cle text primary key, envoye real, email text, sujet text);
 """)
+    try:
+        _c.execute("alter table parcours add column campagne text")         # utm_campaign (ex. noel_oct26)
+    except Exception:
+        pass
 
 
 def _secret():
@@ -36,6 +40,11 @@ def _secret():
 
 def jeton(oid):
     return hmac.new(_secret(), f"reprendre:{oid}".encode(), hashlib.sha256).hexdigest()[:24]
+
+
+def _campagne(query):
+    q = parse_qs((query or "").lstrip("?"))
+    return (q.get("utm_campaign") or [""])[0][:60] or None
 
 
 def _source(ref, query):
@@ -65,15 +74,25 @@ def evenement():
     with db._lock, db._db() as c:
         r = c.execute("select * from parcours where vid=?", (v,)).fetchone()
         if not r:
-            c.execute("insert into parcours (vid, client_id, premiere, derniere, visites, pages, etape, apercu, source, mobile) values (?,?,?,?,?,?,?,?,?,?)",
-                      (v, cl["id"] if cl else None, now, now, 1, 1, RANG.get(e, 0), int(e == "apercu"), _source(d.get("r"), d.get("u")), mobile))
+            c.execute("insert into parcours (vid, client_id, premiere, derniere, visites, pages, etape, apercu, source, mobile, campagne) values (?,?,?,?,?,?,?,?,?,?,?)",
+                      (v, cl["id"] if cl else None, now, now, 1, 1, RANG.get(e, 0), int(e == "apercu"), _source(d.get("r"), d.get("u")), mobile, _campagne(d.get("u"))))
         else:
             c.execute("update parcours set derniere=?, visites=visites+?, pages=pages+1, etape=max(etape, ?), apercu=max(apercu, ?), "
                       "client_id=coalesce(?, client_id) where vid=?",
                       (now, 1 if now - (r["derniere"] or 0) > SESSION else 0, RANG.get(e, 0), int(e == "apercu"), cl["id"] if cl else None, v))
+            src = _source(d.get("r"), d.get("u"))
+            if src != "direct":                        # revenu par une pub ou un lien : c'est elle qu'on retient (dernier clic)
+                c.execute("update parcours set source=?, campagne=? where vid=?", (src, _campagne(d.get("u")), v))
         if secrets.randbelow(200) == 0:
             c.execute("delete from parcours where derniere < ?", (now - GARDE,))
     return ("", 204)
+
+
+def origine_commande(oid):
+    """« facebook (pub) · noel_oct26 » : d'où venait la personne qui a commandé (None si inconnu)."""
+    with db._db() as c:
+        r = c.execute("select source, campagne from parcours where commande=?", (oid,)).fetchone()
+    return ((r["source"] or "direct") + (" · " + r["campagne"] if r["campagne"] else "")) if r else None
 
 
 def noter_paiement(vid, oid):
@@ -118,6 +137,14 @@ def donnees(jours=30):
     sources = {}
     for p in P:
         sources[p["source"] or "direct"] = sources.get(p["source"] or "direct", 0) + 1
+    camp = {}                                          # ventes par source / campagne (utm)
+    montants = {o["id"]: (o["montant"] or 0) for o in cmds if payee(o)}
+    for p in P:
+        k = (p["source"] or "direct") + (" · " + p["campagne"] if p.get("campagne") else "")
+        x = camp.setdefault(k, {"campagne": k, "visiteurs": 0, "configurateur": 0, "paiement": 0, "payes": 0, "ca": 0})
+        x["visiteurs"] += 1; x["configurateur"] += p["etape"] >= 1; x["paiement"] += p["etape"] >= 5
+        if p["commande"] in montants:
+            x["payes"] += 1; x["ca"] += montants[p["commande"]]
     # clients (comptes)
     par_client = {}
     for p in tous_p:
@@ -151,6 +178,7 @@ def donnees(jours=30):
                         "stripe": bool(o["stripe_session"]), "relance": relances.get("cmd:" + o["id"])})
     return {"jours": jours, "entonnoir": [{"etape": e, "n": n} for e, n in zip(ETAPES, ent)] + [{"etape": "Payé", "n": payes}],
             "sources": sorted(sources.items(), key=lambda x: -x[1])[:8],
+            "campagnes": sorted(camp.values(), key=lambda x: (-x["ca"], -x["visiteurs"]))[:15],
             "visiteurs": len(P), "mobile": sum(1 for p in P if p["mobile"]), "visites": sum(p["visites"] or 0 for p in P),
             "aujourdhui": sum(1 for p in P if (p["derniere"] or 0) >= time.mktime(time.localtime()[:3] + (0, 0, 0, 0, 0, -1))),
             "pub_meta": sum(1 for p in P if re.search(r"facebook|instagram|^fb$|^ig$|^meta", (p["source"] or "").lower())),

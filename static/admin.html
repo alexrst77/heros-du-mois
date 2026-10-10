@@ -230,7 +230,7 @@ function carte(o) {
   const sousTitre = [((o.formule || '').startsWith('essai') ? '🧪 ' : '') + esc(FORMULE[o.formule] || o.formule),
     o.extra ? (o.pack_total ? `avec ${o.pack_total} livre${o.pack_total > 1 ? 's' : ''}${o.objet ? ', colis Printful à part' : ', même colis'}` : '') : o.pack_total > 1 ? `livre ${o.numero}/${o.pack_total}` : '',
     !o.extra && o.pack_cal ? '+ ' + (o.pack_extras || []).map(x => (NOMX[x] || x).replace(/^(le|la) /, '')).join(' + ') : '',
-    o.volume_number ? 'tome ' + o.volume_number : '', day(o.cree), esc(a.nom || o.email || '')].filter(Boolean).join(' · ');
+    o.volume_number ? 'tome ' + o.volume_number : '', day(o.cree), esc(a.nom || o.email || ''), o.pub && o.pub !== 'direct' ? '📣 ' + esc(o.pub) : ''].filter(Boolean).join(' · ');
   return `<div class="book">${cov}<div>
     <div class="ligne1"><div class="title">${esc(titre)}</div>${o.montant ? `<div class="prix">${eur(o.montant)}</div>` : ''}</div>
     <div class="meta">${sousTitre}</div>
@@ -331,6 +331,9 @@ function vueClients() {
     <div class="card"><h3>🧭 Où les gens s'arrêtent (${C.jours} derniers jours)</h3>${ent}
       <p class="meta" style="margin:10px 0 0">Chaque ligne : visiteurs (navigateurs différents) arrivés au moins jusqu'à cette étape. En rouge : plus de la moitié s'arrête là.${pire && pire[1] > 0 ? ` <b>Plus grosse perte : avant « ${esc(pire[0].etape)} » (−${Math.round(pire[1] * 100)} %).</b>` : ''} Comptage depuis la mise en place du suivi (9 octobre 2026).</p>
       ${C.sources.length ? `<p class="meta" style="margin:8px 0 0">D'où ils viennent : ${C.sources.map(([s, n]) => `${esc(s)} <b>${n}</b>`).join(' · ')}</p>` : ''}</div>
+    ${(C.campagnes || []).length ? `<div class="card" style="overflow-x:auto"><h3>📣 Pubs et campagnes (${C.jours} derniers jours)</h3><table><tr><th>Source · campagne (utm)</th><th class="r">Visiteurs</th><th class="r">Configurateur</th><th class="r">Paiement lancé</th><th class="r">Payé</th><th class="r">Ventes</th></tr>
+      ${C.campagnes.map(x => `<tr><td><b>${esc(x.campagne)}</b></td><td class="r">${x.visiteurs}</td><td class="r">${x.configurateur}</td><td class="r">${x.paiement}</td><td class="r">${x.payes ? '<b>' + x.payes + '</b>' : '0'}</td><td class="r">${x.ca ? eur(x.ca) : '—'}</td></tr>`).join('')}</table>
+      <p class="meta" style="margin:8px 0 0">Une personne est rangée dans la dernière pub sur laquelle elle a cliqué. « Payé » et « Ventes » : commandes payées par ces visiteurs.</p></div>` : ''}
     <h2>💳 Paiements non finis</h2>
     ${C.attente.length ? C.attente.map(o => `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div>
         <b>${esc(o.prenom || 'Sans prénom')}</b> · ${esc(FORMULE[o.formule] || o.formule)} · <b>${eur(o.montant || 0)}</b>
