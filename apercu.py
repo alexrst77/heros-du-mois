@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import commandes as db
 
 DOSSIER = db.DATA / "apercus"; DOSSIER.mkdir(parents=True, exist_ok=True)
-MAX_VISITEUR = int(os.getenv("APERCUS_PAR_VISITEUR", "2"))
+MAX_VISITEUR = int(os.getenv("APERCUS_PAR_PRODUIT", "1"))     # V2 : un seul aperçu par produit et par compte (livre aujourd'hui)
 MAX_JOUR = int(os.getenv("APERCUS_JOUR", "40"))
 PLAFOND = 1.3                                   # jusqu'à 6 portraits + la couverture
 FONTS = Path(__file__).parent / "fonts"
@@ -21,10 +21,11 @@ FONTS = Path(__file__).parent / "fonts"
 with db._db() as _c:
     _c.execute("create table if not exists apercus (id text primary key, visiteur text, cree real, statut text, etape text, erreur text, "
                "signature text, univers text, prenom text, cout real)")
-    try:
-        _c.execute("alter table apercus add column pct integer default 0")      # avancement affiché dans le rond
-    except Exception:
-        pass
+    for _col in ("pct integer default 0", "produit text default 'livre'"):     # avancement affiché dans le rond ; produit de l'aperçu
+        try:
+            _c.execute(f"alter table apercus add column {_col}")
+        except Exception:
+            pass
 
 
 def _ligne(pid):
@@ -43,9 +44,10 @@ def visiteur(req):
     return hashlib.sha256(("mhm-apercu:" + ip).encode()).hexdigest()[:24]
 
 
-def restants(vis):
+def restants(vis, produit="livre"):
+    """Aperçus encore possibles pour ce compte et ce produit (un essai qui a échoué ne compte pas)."""
     with db._db() as c:
-        n = c.execute("select count(*) from apercus where visiteur=? and cree>? and statut!='refuse'", (vis, time.time() - 86400)).fetchone()[0]
+        n = c.execute("select count(*) from apercus where visiteur=? and coalesce(produit,'livre')=? and statut!='refuse'", (vis, produit)).fetchone()[0]
     return max(0, MAX_VISITEUR - n)
 
 
@@ -67,7 +69,7 @@ def lancer(A, data, vis):
         return {"erreur": "Connectez-vous (gratuit, sans mot de passe) pour voir sa couverture.", "connexion": True}, 401
     vis = "c:" + cl["id"]
     if restants(vis) <= 0:
-        return {"erreur": f"Vous avez utilisé vos {MAX_VISITEUR} aperçus pour aujourd'hui : la couverture finale sera créée à la commande."}, 429
+        return {"erreur": "Vous avez déjà vu l'aperçu de sa couverture : la couverture finale sera créée à la commande, avec les mêmes personnages."}, 429
     with db._db() as c:
         if c.execute("select count(*) from apercus where cree>?", (time.time() - 86400,)).fetchone()[0] >= MAX_JOUR:
             return {"erreur": "Les aperçus sont très demandés aujourd'hui : réessayez demain, ou commandez directement."}, 429

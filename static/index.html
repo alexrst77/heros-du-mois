@@ -861,10 +861,10 @@
   function apercuHTML() {
     const a = S.apercu, pr = esc((S.enfant.prenom || 'votre enfant').trim()), reste = APR.restants;
     const bouton = (txt) => !ME.connecte ? `<a class="btn petit" href="/compte?suite=${encodeURIComponent('/creer?etape=creations')}">Se connecter pour voir sa couverture</a><span class="ap-n">gratuit, sans mot de passe</span>`
-      : reste === 0 ? `<p class="hint" style="margin:8px 0 0">Vos ${APR.max || 2} aperçus du jour sont utilisés : la couverture finale sera créée à la commande.</p>`
-      : `<button type="button" class="btn petit" data-apercu="1">${txt}</button><span class="ap-n">${reste == null ? '' : reste + ' essai' + (reste > 1 ? 's' : '') + ' restant' + (reste > 1 ? 's' : '')}</span>`;
+      : reste === 0 ? (a && a.statut === 'pret' ? '' : `<p class="hint" style="margin:8px 0 0">L'aperçu de sa couverture a déjà été fait : la couverture finale sera créée à la commande.</p>`)
+      : `<button type="button" class="btn petit" data-apercu="1">${txt}</button><span class="ap-n">${reste == null ? '' : reste > 1 ? reste + ' aperçus possibles' : 'un seul aperçu : vérifiez ses personnages avant'}</span>`;
     if (a && a.statut === 'en_cours') return `<div class="ap-c"><div class="ap-wait"><span class="ap-rond"><i></i><b id="apPct">${apPct()} %</b></span><div><b>Nous peignons la couverture de ${pr}…</b><span>${esc(a.etape || 'Préparation')} · environ 1 à 2 minutes, vous pouvez continuer.</span></div></div></div>`;
-    if (a && a.statut === 'pret') return `<div class="ap-c ok"><img src="${a.image}" alt="Aperçu de la couverture de ${pr}"><div><b>La couverture de ${pr}</b><span>C'est cette illustration qui sera sur son livre 1, si vous gardez ces personnages et cet univers.</span><div class="ap-a">${bouton('🎨 Une autre version')}</div></div></div>`;
+    if (a && a.statut === 'pret') return `<div class="ap-c ok"><img src="${a.image}" alt="Aperçu de la couverture de ${pr}"><div><b>La couverture de ${pr}</b><span>C'est cette illustration qui sera sur son livre 1, si vous gardez ces personnages et cet univers.</span>${APR.restants ? `<div class="ap-a">${bouton('🎨 Une autre version')}</div>` : ''}</div></div>`;
     return `<div class="ap-c"><div class="ap-ico">✨</div><div><b>Voir sa vraie couverture avant de commander</b><span>Nous peignons ${pr} et ses compagnons dans l'univers du livre 1. C'est gratuit.</span>` +
       (a && a.erreur ? `<span class="ap-err">${esc(a.erreur)}</span>` : '') + `<div class="ap-a">${bouton('Voir sa couverture')}</div></div></div>`;
   }

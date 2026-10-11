@@ -5,10 +5,10 @@ import os, re, json, hmac, hashlib, time, urllib.request, urllib.parse, urllib.e
 
 FORMULES = {      # tout se paie en une fois ; les livres d'une commande partent ensemble, dans un seul colis
     "livre":  {"nom": "1 livre personnalisé", "livres": 1, "prix_livre": int(os.getenv("PRIX_LIVRE_1", "2790")), "mode": "payment"},
-    "pack3":  {"nom": "3 livres personnalisés", "livres": 3, "prix_livre": int(os.getenv("PRIX_LIVRE_3", "2590")), "mode": "payment"},
-    "pack6":  {"nom": "6 livres personnalisés", "livres": 6, "prix_livre": int(os.getenv("PRIX_LIVRE_6", "2490")), "mode": "payment"},
+    "pack3":  {"nom": "3 livres personnalisés", "livres": 3, "prix_livre": int(os.getenv("PRIX_LIVRE_3", "2490")), "mode": "payment"},
+    "pack6":  {"nom": "6 livres personnalisés", "livres": 6, "prix_livre": int(os.getenv("PRIX_LIVRE_6", "2390")), "mode": "payment"},
     "pack12": {"nom": "12 livres personnalisés", "livres": 12, "prix_livre": int(os.getenv("PRIX_LIVRE_12", "2290")), "mode": "payment"},
-    "fetes":  {"nom": "Les 6 livres de fête", "livres": 6, "prix_livre": int(os.getenv("PRIX_LIVRE_6", "2490")), "mode": "payment"},
+    "fetes":  {"nom": "Les 6 livres de fête", "livres": 6, "prix_livre": int(os.getenv("PRIX_LIVRE_6", "2390")), "mode": "payment"},
 }
 for _f in FORMULES.values():
     _f["prix"] = _f["livres"] * _f["prix_livre"]          # prix des livres, hors livraison

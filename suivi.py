@@ -15,7 +15,7 @@ import commandes as db
 
 bp = Blueprint("suivi", __name__)
 RANG = {"visite": 0, "enfant": 1, "compagnons": 2, "creations": 3, "commande": 4, "paiement": 5}
-ETAPES = ["Site visité", "Configurateur ouvert", "Famille et animaux", "Créations choisies", "Page commande", "Paiement lancé"]
+ETAPES = ["Site visité", "Avatar commencé", "Avatar terminé", "Créations choisies", "Page commande", "Paiement lancé"]
 SESSION = 30 * 60
 GARDE = 400 * 86400
 
@@ -132,6 +132,10 @@ def donnees(jours=30):
     reel = lambda o: payee(o) and (factures.paiement_reel(o) if hasattr(factures, "paiement_reel") else True)
     # entonnoir : visiteurs uniques des N derniers jours, étape la plus loin atteinte
     ent = [sum(1 for p in P if p["etape"] >= i) for i in range(len(ETAPES))]
+    par_app = {}                                        # même entonnoir, téléphone / ordinateur
+    for nom, mob in (("mobile", 1), ("ordinateur", 0)):
+        Q = [p for p in P if (p["mobile"] or 0) == mob]
+        par_app[nom] = [sum(1 for p in Q if p["etape"] >= i) for i in range(len(ETAPES))] + [sum(1 for p in Q if p["commande"] in {o["id"] for o in cmds if payee(o)})]
     ok_ids = {o["id"] for o in cmds if payee(o)}
     payes = sum(1 for p in P if p["commande"] in ok_ids)          # visiteurs suivis qui ont payé (même base que l'entonnoir)
     sources = {}
@@ -176,7 +180,7 @@ def donnees(jours=30):
                         "prenom": _prenom(o["id"]), "visites": p.get("visites"), "apercu": bool(p.get("apercu")),
                         "a_paye_depuis": (o["email"] or "").lower() in payees_emails,
                         "stripe": bool(o["stripe_session"]), "relance": relances.get("cmd:" + o["id"])})
-    return {"jours": jours, "entonnoir": [{"etape": e, "n": n} for e, n in zip(ETAPES, ent)] + [{"etape": "Payé", "n": payes}],
+    return {"jours": jours, "par_appareil": par_app, "entonnoir": [{"etape": e, "n": n} for e, n in zip(ETAPES, ent)] + [{"etape": "Payé", "n": payes}],
             "sources": sorted(sources.items(), key=lambda x: -x[1])[:8],
             "campagnes": sorted(camp.values(), key=lambda x: (-x["ca"], -x["visiteurs"]))[:15],
             "visiteurs": len(P), "mobile": sum(1 for p in P if p["mobile"]), "visites": sum(p["visites"] or 0 for p in P),

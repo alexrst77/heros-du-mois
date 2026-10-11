@@ -329,6 +329,8 @@ function vueClients() {
       <div class="kpi ${C.attente.length ? 'alerte' : ''}"><div class="l">Paiements non finis <span>💳</span></div><div class="n">${C.attente.length}</div><div class="s">à relancer peut-être</div></div>
     </div>
     <div class="card"><h3>🧭 Où les gens s'arrêtent (${C.jours} derniers jours)</h3>${ent}
+      ${C.par_appareil ? `<div style="overflow-x:auto;margin-top:12px"><table><tr><th></th>${E.map(e => `<th class="r">${esc(e.etape)}</th>`).join('')}</tr>
+        ${Object.entries(C.par_appareil).map(([k, v]) => `<tr><td><b>${k === 'mobile' ? '📱 Téléphone' : '💻 Ordinateur'}</b></td>${v.map((n, i) => `<td class="r">${n}${i && v[0] ? `<div class="meta">${Math.round(100 * n / v[0])} %</div>` : ''}</td>`).join('')}</tr>`).join('')}</table></div>` : ''}
       <p class="meta" style="margin:10px 0 0">Chaque ligne : visiteurs (navigateurs différents) arrivés au moins jusqu'à cette étape. En rouge : plus de la moitié s'arrête là.${pire && pire[1] > 0 ? ` <b>Plus grosse perte : avant « ${esc(pire[0].etape)} » (−${Math.round(pire[1] * 100)} %).</b>` : ''} Comptage depuis la mise en place du suivi (9 octobre 2026).</p>
       ${C.sources.length ? `<p class="meta" style="margin:8px 0 0">D'où ils viennent : ${C.sources.map(([s, n]) => `${esc(s)} <b>${n}</b>`).join(' · ')}</p>` : ''}</div>
     ${(C.campagnes || []).length ? `<div class="card" style="overflow-x:auto"><h3>📣 Pubs et campagnes (${C.jours} derniers jours)</h3><table><tr><th>Source · campagne (utm)</th><th class="r">Visiteurs</th><th class="r">Configurateur</th><th class="r">Paiement lancé</th><th class="r">Payé</th><th class="r">Ventes</th></tr>
