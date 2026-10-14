@@ -92,8 +92,7 @@ def vendeur_public():
 # ------------------------------------------------------------------ routes
 @bp.get("/api/preuves")
 def api_liste():
-    return jsonify(preuves=[{k: x.get(k) for k in ("id", "type", "mime", "legende", "l", "h")} | {"url": f"/preuves/{x['fichier']}"} for x in liste()],
-                   vendeur=vendeur_public())
+    return jsonify(preuves=[{k: x.get(k) for k in ("id", "type", "mime", "legende", "l", "h")} | {"url": f"/preuves/{x['fichier']}"} for x in liste()])
 
 
 @bp.get("/preuves/<path:nom>")

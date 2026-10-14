@@ -684,7 +684,7 @@
     </div>
     <div class="ia-moi">
       <div class="rond" aria-hidden="true">A</div>
-      <p><b>Un doute avant de commander ? Écrivez-moi.</b> Je m'appelle Alexandre, j'ai créé Mon Héros du Mois et je réponds moi-même à chaque message : <a href="#contact">le formulaire</a>, <a href="mailto:monherosdumois@gmail.com">monherosdumois@gmail.com</a> ou <a href="https://www.instagram.com/monherosdumois/" rel="noopener" target="_blank">Instagram</a>.<span class="vend" id="vendeur"></span></p>
+      <p><b>Un doute avant de commander ? Écrivez-moi.</b> Je m'appelle Alexandre, j'ai créé Mon Héros du Mois et je réponds moi-même à chaque message : <a href="#contact">le formulaire</a>, <a href="mailto:monherosdumois@gmail.com">monherosdumois@gmail.com</a> ou <a href="https://www.instagram.com/monherosdumois/" rel="noopener" target="_blank">Instagram</a>.</p>
     </div>
   </div>
 </section>
@@ -1199,10 +1199,8 @@
     pli($('plusFetes'), $('cartesFetes'), NF, 'Voir toutes les occasions', 'Réduire la liste');
   }).catch(() => {});
 
-  /* vraies photos (admin) et identité du vendeur : rien n'est affiché tant que ce n'est pas réel */
+  /* vraies photos (admin) : rien n'est affiché tant qu'il n'y en a pas */
   fetch('/api/preuves').then(r => r.json()).then(j => {
-    const v = j.vendeur || {};
-    if (v.nom) $('vendeur').textContent = [v.nom, v.ville, v.siret ? 'SIRET ' + v.siret : ''].filter(Boolean).join(' · ');
     const l = j.preuves || []; if (!l.length) return;
     $('pvL').innerHTML = l.map(p => `<figure>${p.type === 'video' ? `<video src="${p.url}" controls playsinline preload="metadata"></video>` : `<img src="${p.url}" alt="${esc(p.legende || 'Photo d\'un livre reçu')}" loading="lazy">`}${p.legende ? `<figcaption>${esc(p.legende)}</figcaption>` : ''}</figure>`).join('');
     $('preuves').hidden = false;
