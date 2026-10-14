@@ -28,7 +28,7 @@ CHAMPS = {   # clé : (libellé, obligatoire, valeur par défaut)
     "hebergeur_adresse": ("Adresse de l'hébergeur", True, ""),
     "hebergeur_contact": ("Contact de l'hébergeur", True, "https://railway.com"),
 }
-TAUX_DEFAUT = {"livre": 5.5, "coloriage": 5.5, "calendrier": 20.0, "objet": 20.0}   # à faire confirmer par un comptable
+TAUX_DEFAUT = {"livre": 5.5, "ebook": 5.5, "coloriage": 5.5, "calendrier": 20.0, "objet": 20.0}   # à faire confirmer par un comptable
 
 
 def lire():

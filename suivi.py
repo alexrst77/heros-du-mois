@@ -287,12 +287,12 @@ def reprendre(oid):
         form = d["form"]; f = o["formule"]
         avec_cal = f == "calendrier" or bool(form.get("calendrier"))
         avec_colo = f == "coloriage" or bool(form.get("coloriage"))
-        objs, promo, pays = form.get("objets") or [], form.get("code_promo"), (o.get("adresse") or {}).get("pays")
-        if paiement.total(f, pays, calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo) != o["montant"]:
+        objs, promo, pays, eb = form.get("objets") or [], form.get("code_promo"), (o.get("adresse") or {}).get("pays"), bool(form.get("ebook"))
+        if paiement.total(f, pays, calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo, ebook=eb) != o["montant"]:
             B.log(f"reprise {oid} : montant changé depuis la commande, retour au configurateur"); return redirect("/creer")
         sid, url = paiement.checkout(oid, f, o["email"], B.base_url(), pays=pays, calendrier=paiement.avec_calendrier(f, avec_cal),
                                      coloriage=avec_colo and f != "coloriage", objets=objs, promo=promo,
-                                     remise_cents=paiement.remise(f, pays, calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo))
+                                     remise_cents=paiement.remise(f, pays, calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo, ebook=eb), ebook=eb)
         db.update(oid, stripe_session=sid)
         B.log(f"commande {oid} : paiement rouvert depuis la relance")
         return redirect(url)

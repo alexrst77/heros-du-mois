@@ -32,6 +32,24 @@ for _k, _o in OBJETS.items():        # un objet peut aussi se commander seul : i
     FORMULES[_k] = {"nom": _o["nom"], "livres": 0, "prix_livre": 0, "prix": _o["prix"], "mode": "payment"}
 
 
+# E-book (PDF à télécharger) : seul, ou ajouté à des livres imprimés (même histoire, aucune création en plus)
+PRIX_EBOOK = int(os.getenv("PRIX_EBOOK", "990"))
+PRIX_EBOOK_AJOUT = int(os.getenv("PRIX_EBOOK_AJOUT", "490"))          # par livre du pack
+FORMULES["ebook"] = {"nom": "E-book personnalisé (PDF)", "livres": 1, "prix_livre": PRIX_EBOOK, "prix": PRIX_EBOOK, "mode": "payment", "numerique": True}
+# Version imprimée d'un e-book déjà créé : même livre, aucune nouvelle création IA
+FORMULES["imprime"] = {"nom": "Version imprimée de son e-book", "livres": 1, "prix_livre": FORMULES["livre"]["prix_livre"],
+                       "prix": FORMULES["livre"]["prix_livre"], "mode": "payment", "reimpression": True}
+
+
+def numerique(formule):
+    return bool((FORMULES.get(formule) or {}).get("numerique"))
+
+
+def ebook_ajoute(formule, ebook):
+    """La version e-book est-elle AJOUTÉE à des livres imprimés ? (la formule « ebook » la compte déjà)"""
+    return bool(ebook) and not numerique(formule) and FORMULES.get(formule, {}).get("livres", 0) > 0
+
+
 def objets_valides(objets, formule=None):
     """Objets ajoutés (sans doublon), sans celui qui est déjà la formule (objet commandé seul)."""
     return [k for k in dict.fromkeys(objets or []) if k in OBJETS and k != formule]
@@ -42,9 +60,11 @@ SUPPLEMENT_PAYS = {"FR": 0, "BE": int(os.getenv("PORT_SUPPL_UE", "400")), "LU": 
                    "MC": int(os.getenv("PORT_SUPPL_UE", "400")), "CH": int(os.getenv("PORT_SUPPL_CH", "900"))}
 
 
-def frais_port(formule, pays="FR"):
+def frais_port(formule, pays="FR", physique=False):
     if formule in OBJETS:                       # objet seul : livraison comprise dans son prix (atelier Printful)
         return 0
+    if numerique(formule):                      # e-book : rien à livrer, sauf un calendrier ou un cahier ajouté
+        return PORT_FR[1] + SUPPLEMENT_PAYS.get((pays or "FR").upper(), SUPPLEMENT_PAYS["BE"]) if physique else 0
     n = FORMULES[formule]["livres"]
     base = PORT_FR[1] if formule in EXTRAS else 0 if n >= 6 else PORT_FR.get(n, PORT_FR[3])
     return base + SUPPLEMENT_PAYS.get((pays or "FR").upper(), SUPPLEMENT_PAYS["BE"])
@@ -76,28 +96,33 @@ def promo_valide(code):
     return (c, promos()[c]) if c in promos() else None
 
 
-def _brut(formule, pays, calendrier, coloriage, objets):
+def _brut(formule, pays, calendrier, coloriage, objets, ebook=False):
     return (FORMULES[formule]["prix"] + sum(OBJETS[k]["prix"] for k in objets_valides(objets, formule)) + (PRIX_CALENDRIER_AJOUT if avec_calendrier(formule, calendrier) else 0)
-            + (PRIX_COLORIAGE_AJOUT if coloriage and formule != "coloriage" else 0))
+            + (PRIX_COLORIAGE_AJOUT if coloriage and formule != "coloriage" else 0)
+            + (PRIX_EBOOK_AJOUT * FORMULES[formule]["livres"] if ebook_ajoute(formule, ebook) else 0))
 
 
-def remise(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None):
+def remise(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None, ebook=False):
     p = promo_valide(promo)
-    return round(_brut(formule, pays, calendrier, coloriage, objets) * p[1] / 100) if p else 0
+    return round(_brut(formule, pays, calendrier, coloriage, objets, ebook) * p[1] / 100) if p else 0
 
 
-def total(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None):
-    return (_brut(formule, pays, calendrier, coloriage, objets) + frais_port(formule, pays)
-            - remise(formule, pays, calendrier, coloriage, objets, promo))
+def total(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None, ebook=False):
+    return (_brut(formule, pays, calendrier, coloriage, objets, ebook) + frais_port(formule, pays, physique=bool(calendrier or coloriage))
+            - remise(formule, pays, calendrier, coloriage, objets, promo, ebook))
 
 
-def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None):
+def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None, ebook=False):
     """Détail facturable d'une commande, tel qu'encaissé : [(libellé, quantité, prix unitaire TTC en centimes, catégorie)].
     Catégorie = livre | calendrier | coloriage | objet | port (sert au taux de TVA)."""
     f = FORMULES[formule]
     out = []
-    if f["livres"]:
+    if numerique(formule):
+        out.append(("E-book illustré personnalisé (PDF à télécharger)", 1, f["prix_livre"], "ebook"))
+    elif f["livres"]:
         out.append((f"Livre illustré personnalisé ({f['nom']})", f["livres"], f["prix_livre"], "livre"))
+    if ebook_ajoute(formule, ebook):
+        out.append(("Version e-book (PDF) de chaque livre, en ajout", f["livres"], PRIX_EBOOK_AJOUT, "ebook"))
     if formule == "calendrier":
         out.append(("Calendrier mural personnalisé (12 mois)", 1, PRIX_CALENDRIER, "calendrier"))
     elif calendrier:
@@ -108,11 +133,11 @@ def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=(), pro
         out.append(("Cahier de coloriage personnalisé (30 dessins), en ajout", 1, PRIX_COLORIAGE_AJOUT, "coloriage"))
     for k in ([formule] if formule in OBJETS else []) + objets_valides(objets, formule):
         out.append((f"{OBJETS[k]['nom']}, livraison comprise", 1, OBJETS[k]["prix"], "objet"))
-    r = remise(formule, pays, calendrier, coloriage, objets, promo)
+    r = remise(formule, pays, calendrier, coloriage, objets, promo, ebook)
     if r:
         c, pct = promo_valide(promo)
         out.append((f"Remise code {c} (-{pct} %)", 1, -r, "remise"))
-    port = frais_port(formule, pays)
+    port = frais_port(formule, pays, physique=bool(calendrier or coloriage))
     if port:
         out.append(("Livraison", 1, port, "port"))
     return out
@@ -124,6 +149,7 @@ def grille():
             "port_fr": {str(k): v for k, v in PORT_FR.items()}, "port_offert_des": 6, "supplement_pays": SUPPLEMENT_PAYS,
             "calendrier": {"seul": PRIX_CALENDRIER, "ajout": PRIX_CALENDRIER_AJOUT, "port": PORT_FR[1]},
             "coloriage": {"seul": PRIX_COLORIAGE, "ajout": PRIX_COLORIAGE_AJOUT, "port": PORT_FR[1]},
+            "ebook": {"seul": PRIX_EBOOK, "ajout": PRIX_EBOOK_AJOUT},
             "objets": {k: {"nom": v["nom"], "prix": v["prix"]} for k, v in OBJETS.items()}}
 
 
@@ -168,14 +194,20 @@ def _api(method, path, data=None):
         raise StripeError(f"Stripe : {msg}")
 
 
-def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None, remise_cents=0):
+def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None, remise_cents=0, ebook=False):
     """Paiement unique : les livres (quantité × prix du livre), le calendrier s'il y en a un, puis la livraison sur une ligne
     à part (si elle n'est pas offerte)."""
     f = FORMULES[formule]
     items = []
-    if f["livres"]:
+    if numerique(formule):
+        items.append({"price_data": {"currency": "eur", "unit_amount": f["prix_livre"],
+                                     "product_data": {"name": "Mon Héros du Mois – e-book personnalisé (PDF à télécharger)"}}, "quantity": 1})
+    elif f["livres"]:
         items.append({"price_data": {"currency": "eur", "unit_amount": f["prix_livre"],
                                      "product_data": {"name": f"Mon Héros du Mois – livre personnalisé ({f['nom']})"}}, "quantity": f["livres"]})
+    if ebook_ajoute(formule, ebook):
+        items.append({"price_data": {"currency": "eur", "unit_amount": PRIX_EBOOK_AJOUT,
+                                     "product_data": {"name": "Mon Héros du Mois – version e-book (PDF) de chaque livre"}}, "quantity": f["livres"]})
     if formule == "calendrier" or calendrier:
         prix = PRIX_CALENDRIER if formule == "calendrier" else PRIX_CALENDRIER_AJOUT
         items.append({"price_data": {"currency": "eur", "unit_amount": prix,
@@ -187,7 +219,7 @@ def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, co
     for k in ([formule] if formule in OBJETS else []) + objets_valides(objets, formule):
         items.append({"price_data": {"currency": "eur", "unit_amount": OBJETS[k]["prix"],
                                      "product_data": {"name": f"Mon Héros du Mois – {OBJETS[k]['nom'].lower()} (livraison comprise)"}}, "quantity": 1})
-    port = frais_port(formule, pays)
+    port = frais_port(formule, pays, physique=bool(calendrier or coloriage) if numerique(formule) else False)
     if port:
         items.append({"price_data": {"currency": "eur", "unit_amount": port, "product_data": {"name": "Livraison (un seul colis)"}}, "quantity": 1})
     data = {"mode": "payment", "customer_email": email, "client_reference_id": order_id, "locale": "fr", "line_items": items,

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
+<title>Version imprimée – Mon Héros du Mois</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/static/theme.css">
+<style>
+  body { background:var(--ciel); }
+  .top { border-bottom:1px solid var(--trait); } .top .in { display:flex; align-items:center; height:72px; }
+  .page { max-width:560px; margin:0 auto; padding:32px 16px 80px; }
+  h1 { font:400 clamp(28px,4vw,38px)/1.15 var(--titre); margin:0 0 8px; }
+  .lead { color:var(--encre-2); margin:0 0 22px; }
+  .carte { background:var(--papier); border:1px solid var(--trait); border-radius:22px; padding:22px; }
+  label { display:block; font-weight:800; font-size:14px; margin:12px 0 5px; }
+  input, select { width:100%; font:600 16px var(--texte); padding:12px 14px; border:2px solid var(--trait); border-radius:14px; background:#fff; color:var(--encre); }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
+  .total { display:flex; justify-content:space-between; font-weight:800; font-size:18px; margin:18px 0 12px; padding-top:14px; border-top:1px solid var(--trait); }
+  .chk { display:flex; gap:10px; align-items:flex-start; font-size:14px; margin:8px 0 16px; } .chk input { width:auto; margin-top:3px; }
+  .btn { width:100%; } .err { color:var(--erreur); font-weight:700; margin-top:12px; }
+</style>
+</head>
+<body>
+<header class="top"><div class="in wrap"><a href="/" class="logo"><img class="logo-img" src="/static/marque/logo-h.webp" alt="Mon Héros du Mois" width="640" height="247"></a></div></header>
+<main class="page">
+  <h1>La version imprimée</h1>
+  <p class="lead" id="lead">Le même livre, imprimé et relié (couverture rigide), livré chez vous. Rien n'est recréé : c'est exactement son e-book.</p>
+  <form class="carte" id="f">
+    <label for="nom">Nom et prénom (destinataire)</label><input id="nom" autocomplete="name" required>
+    <label for="adresse1">Adresse</label><input id="adresse1" autocomplete="address-line1" required>
+    <input id="adresse2" autocomplete="address-line2" placeholder="Bâtiment, étage (facultatif)" style="margin-top:8px">
+    <div class="row2"><div><label for="code_postal">Code postal</label><input id="code_postal" autocomplete="postal-code" required></div>
+      <div><label for="ville">Ville</label><input id="ville" autocomplete="address-level2" required></div></div>
+    <div class="row2"><div><label for="pays">Pays</label><select id="pays"><option value="FR">France</option><option value="BE">Belgique</option><option value="LU">Luxembourg</option><option value="MC">Monaco</option><option value="CH">Suisse</option></select></div>
+      <div><label for="telephone">Téléphone (livreur)</label><input id="telephone" autocomplete="tel" required></div></div>
+    <div class="total"><span>Total, livraison comprise</span><span id="total">…</span></div>
+    <label class="chk"><input type="checkbox" id="cgv" required> <span>J'accepte les <a href="/cgv" target="_blank">conditions générales de vente</a>.</span></label>
+    <button class="btn" type="submit" id="go">Payer et lancer l'impression</button>
+    <p class="err" id="err"></p>
+  </form>
+</main>
+<script>
+(async function () {
+  const $ = id => document.getElementById(id);
+  const oid = location.pathname.split('/').pop(), j = new URLSearchParams(location.search).get('j') || '';
+  const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
+  let I = null;
+  try { I = await (await fetch(`/api/imprimer/${oid}?j=${encodeURIComponent(j)}`)).json(); } catch (_) {}
+  if (!I || !I.prix) { $('f').innerHTML = '<p>Ce lien n\'est plus valable. Retrouvez vos livres dans <a href="/compte">Mon compte</a>.</p>'; return; }
+  if (I.titre) $('lead').textContent = `« ${I.titre} », imprimé et relié (couverture rigide), livré chez vous. Rien n'est recréé : c'est exactement son e-book.`;
+  const maj = () => { const s = (I.supplement_pays || {})[$('pays').value] || 0; $('total').textContent = eur(I.prix + I.port + s); };
+  $('pays').onchange = maj; maj();
+  $('f').onsubmit = async ev => {
+    ev.preventDefault(); $('err').textContent = ''; $('go').disabled = true; $('go').textContent = 'Redirection vers le paiement…';
+    const adresse = {}; ['nom', 'adresse1', 'adresse2', 'code_postal', 'ville', 'pays', 'telephone'].forEach(k => adresse[k] = $(k).value);
+    const r = await fetch(`/api/imprimer/${oid}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ j, adresse, cgv: $('cgv').checked }) });
+    const x = await r.json().catch(() => ({}));
+    if (r.ok && x.url) { location.href = x.url; return; }
+    $('err').textContent = x.erreur || 'Erreur, réessayez.'; $('go').disabled = false; $('go').textContent = "Payer et lancer l'impression";
+  };
+})();
+</script>
+</body>
+</html>

@@ -42,6 +42,15 @@
   .essai input { flex:1; min-width:0; font:600 18px var(--texte); padding:13px 14px; border-radius:12px; border:2px solid var(--trait); background:#fff; color:var(--encre); }
   .essai input:focus { outline:none; border-color:var(--encre); }
   @media (max-width:480px) { .essai .row { flex-direction:column; } }
+  .essai > input { width:100%; }
+  .essai label small { font-weight:600; color:var(--encre-2); }
+  .genre-l { font-weight:800; font-size:15px; margin:14px 0 8px; color:var(--encre); }
+  .genres { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .genre { display:flex; flex-direction:column; align-items:center; gap:4px; border:2.5px solid var(--encre); border-radius:20px; background:var(--luciole);
+    box-shadow:4px 4px 0 var(--rose); padding:10px 8px 12px; font:800 17px var(--texte); color:var(--encre); cursor:pointer; transition:transform .12s; }
+  .genre:hover { transform:translate(-2px,-2px); } .genre:active { transform:translate(2px,2px); box-shadow:1px 1px 0 var(--rose); }
+  .genre img { width:84px; height:84px; border-radius:50%; background:#fff; object-fit:cover; }
+  .essai-n { margin:12px 0 0; font-size:14px; color:var(--encre-2); text-align:center; }
   .prix-appel { margin:-8px 0 22px; font-size:17px; color:var(--encre-2); }
   .prix-appel b { font:800 24px var(--texte); color:var(--encre); letter-spacing:-.3px; background:linear-gradient(transparent 62%, rgba(255,201,74,.55) 62%); padding:0 2px; }
   .rassure { display:flex; flex-wrap:wrap; gap:8px 22px; margin:22px 0 0; padding:0; list-style:none; font-size:15px; color:var(--encre-2); }
@@ -559,11 +568,14 @@
       <p class="intro">Avec son doudou et ses animaux, en 3 minutes, sans inscription. Il devient le héros de ses livres, de son calendrier, de son cahier de coloriage et de ses objets de tous les jours.</p>
     </div>
     <form class="essai" action="/creer" method="get">
-      <label for="prenom">Son prénom</label>
-      <div class="row">
-        <input id="prenom" name="prenom" maxlength="20" placeholder="Léo" autocomplete="off">
-        <button class="btn" type="submit" id="go">Créer son avatar gratuitement</button>
+      <label for="prenom">Son prénom <small>(facultatif)</small></label>
+      <input id="prenom" name="prenom" maxlength="20" placeholder="Léo" autocomplete="off">
+      <div class="genre-l">C'est…</div>
+      <div class="genres">
+        <button class="genre" type="submit" name="genre" value="fille"><img src="/static/avatars/enfant-long-lisse.webp" alt="" width="96" height="96"><span>Une fille</span></button>
+        <button class="genre" type="submit" name="genre" value="garcon"><img src="/static/avatars/enfant-court-lisse.webp" alt="" width="96" height="96"><span>Un garçon</span></button>
       </div>
+      <p class="essai-n">Gratuit, sans inscription · 3 minutes</p>
     </form>
   </div>
 </section>
@@ -937,7 +949,7 @@
   /* le prénom tapé apparaît sur le bouton */
   const input = $('prenom'), go = $('go');
   const nom = v => v.trim().replace(/^./, c => c.toUpperCase());
-  input.addEventListener('input', () => { go.textContent = input.value.trim() ? "Créer l'avatar de " + nom(input.value) : 'Créer son avatar gratuitement'; });
+  input && go && input.addEventListener('input', () => { go.textContent = input.value.trim() ? "Créer l'avatar de " + nom(input.value) : 'Créer son avatar gratuitement'; });
 
   /* feuilleter : deux livres (Léo, Mila). Chaque livre = suite de faces : couverture, puis gauche/droite de chaque double page, puis 4e de couverture.
      Sur grand écran : livre 3D (feuille j = faces 2j et 2j+1). Sur téléphone : une double page à la fois. */

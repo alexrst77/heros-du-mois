@@ -141,11 +141,23 @@ def order_create():
     email = str(c.get("email", "")).strip()[:190]
     if not EMAIL.match(email):
         return jsonify(erreur="Adresse e-mail invalide."), 400
-    addr, err = parse_address(c.get("adresse"))
-    if err:
-        return jsonify(erreur=err), 400
+    num = paiement.numerique(formule)
+    physique = not num or bool((c.get("calendrier") or {}).get("actif") if isinstance(c.get("calendrier"), dict) else False) \
+        or bool((c.get("coloriage") or {}).get("actif") if isinstance(c.get("coloriage"), dict) else False) or bool(c.get("objets"))
+    if physique:
+        addr, err = parse_address(c.get("adresse"))
+        if err:
+            return jsonify(erreur=err), 400
+    else:                                         # e-book seul : rien à livrer, pas d'adresse demandée
+        a0 = c.get("adresse") if isinstance(c.get("adresse"), dict) else {}
+        addr = {"nom": re.sub(r"\s+", " ", str(a0.get("nom") or "")).strip()[:80], "pays": "FR"}
     if c.get("cgv") is not True:
         return jsonify(erreur="Merci d'accepter les conditions générales de vente."), 400
+    ebook = num or paiement.ebook_ajoute(formule, c.get("ebook"))
+    if ebook and c.get("renonce_retractation") is not True:      # contenu numérique : demande expresse + renonciation (art. L221-28 13°)
+        return jsonify(erreur="Pour l'e-book, cochez la case : vous demandez sa création immédiate et renoncez au droit de rétractation."), 400
+    if ebook:
+        form["ebook"] = True
     fetes = [x for x in (form.get("fetes") or "").split(",") if x in U.PAR_CLE and U.PAR_CLE[x].get("fete")]
     form["fetes"] = ",".join(fetes)
     if formule == "fetes" and len(fetes) != 6:
@@ -196,11 +208,11 @@ def order_create():
     promo = promo[0] if promo else None
     if promo:
         form["code_promo"] = promo
-    lignes = paiement.lignes(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo)   # pour la facture
+    lignes = paiement.lignes(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo, ebook=ebook)   # pour la facture
     (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {k: p.name for k, p in guides.items()},
                                                    "apercus": {k: p.name for k, p in previews.items()}, "lignes": lignes}, ensure_ascii=False), encoding="utf-8")
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
-              montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo), origine=oid,
+              montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo, ebook=ebook), origine=oid,
               numero=0 if formule in NON_LIVRES else 1)
     try:
         import suivi
@@ -216,7 +228,8 @@ def order_create():
     try:
         sid, url = paiement.checkout(oid, formule, email, base_url(), pays=addr.get("pays"), calendrier=paiement.avec_calendrier(formule, avec_cal),
                                      coloriage=avec_colo and formule != "coloriage", objets=objs, promo=promo,
-                                     remise_cents=paiement.remise(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo))
+                                     remise_cents=paiement.remise(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo, ebook=ebook),
+                                     ebook=ebook)
     except paiement.StripeError as e:
         db.update(oid, statut="erreur", erreur=str(e))
         return jsonify(erreur=str(e)), 502
@@ -240,11 +253,119 @@ def confirm_paid(oid, stripe_sub=None):
         return False
     o = db.get(oid)
     log(f"commande {oid} payée ({o['formule']})")
-    for b in creer_pack(oid):
-        start_book(b, auto=True)
+    if o["formule"] == "imprime":                 # version imprimée d'un e-book : le livre existe déjà, validé, rien n'est recréé
+        try:
+            src = db.get(load_book(oid)[0].get("source_ebook") or "")
+            db.update(oid, job_id=src["job_id"], pdf=src["pdf"], titre=src["titre"], volume_number=src.get("volume_number"), statut="a_verifier")
+            log(f"commande {oid} : version imprimée du livre {src['id']}, prête à imprimer (aucune création)")
+        except Exception as e:
+            db.update(oid, statut="erreur", erreur=f"Version imprimée : livre d'origine introuvable ({e})")
+    else:
+        for b in creer_pack(oid):
+            start_book(b, auto=True)
     threading.Thread(target=mail_confirmation, args=(oid,), daemon=True).start()
     threading.Thread(target=mail_alerte_commande, args=(oid,), daemon=True).start()
     return True
+
+
+# ------------------------------------------------------------------ e-book
+def jeton_ebook(oid):
+    import hmac, hashlib, suivi
+    return hmac.new(suivi._secret(), f"ebook:{oid}".encode(), hashlib.sha256).hexdigest()[:24]
+
+
+def ebook_de(origine):
+    """La commande comprend-elle l'e-book (seul ou en ajout) ?"""
+    try:
+        return bool(load_book(origine)[0].get("ebook"))
+    except Exception:
+        return False
+
+
+def liens_ebook(origine, site=None):
+    """[{titre, url}] des e-books prêts (livres validés) de la commande."""
+    site = (site or os.getenv("PUBLIC_URL") or "").rstrip("/")
+    if not ebook_de(origine):
+        return []
+    out = []
+    for b in livres_du_pack(origine):
+        if b.get("job_id") and b.get("pdf") and fabrication.est_finalise(A.OUT / b["job_id"]) and (A.OUT / b["job_id"] / b["pdf"]).exists():
+            out.append({"id": b["id"], "titre": b.get("titre") or "son livre", "url": f"{site}/telecharger/{b['id']}.pdf?j={jeton_ebook(b['id'])}",
+                        "imprimer": f"{site}/imprimer/{b['id']}?j={jeton_ebook(b['id'])}" if paiement.numerique((db.get(origine) or {}).get("formule")) else None})
+    return out
+
+
+@bp.get("/imprimer/<oid>")
+def page_imprimer(oid):
+    """Commander la version imprimée d'un e-book (lien depuis Mon compte et le mail)."""
+    import hmac
+    if not re.fullmatch(r"[a-f0-9]{12}(-\d{2})?", oid) or not hmac.compare_digest(request.args.get("j", ""), jeton_ebook(oid)):
+        abort(404)
+    return send_file(Path(__file__).parent / "static" / "imprimer.html", max_age=0)
+
+
+@bp.get("/api/imprimer/<oid>")
+def info_imprimer(oid):
+    import hmac
+    if not hmac.compare_digest(request.args.get("j", ""), jeton_ebook(oid)):
+        abort(404)
+    b = db.get(oid) or abort(404)
+    f = paiement.FORMULES["imprime"]
+    return jsonify(titre=b.get("titre"), prix=f["prix"], port=paiement.frais_port("livre", "FR"), supplement_pays=paiement.SUPPLEMENT_PAYS)
+
+
+@bp.post("/api/imprimer/<oid>")
+def commander_imprime(oid):
+    """Crée la commande « version imprimée » (prix d'un livre + livraison) et ouvre le paiement."""
+    import hmac
+    d = request.get_json(force=True, silent=True) or {}
+    if not hmac.compare_digest(str(d.get("j") or ""), jeton_ebook(oid)):
+        abort(404)
+    b = db.get(oid) or abort(404)
+    if not b.get("job_id") or not fabrication.est_finalise(A.OUT / b["job_id"]):
+        return jsonify(erreur="Ce livre n'est pas encore prêt."), 400
+    addr, err = parse_address(d.get("adresse"))
+    if err:
+        return jsonify(erreur=err), 400
+    if d.get("cgv") is not True:
+        return jsonify(erreur="Merci d'accepter les conditions générales de vente."), 400
+    form = dict(load_book(b["origine"] or oid)[0]); form.update(formule="imprime", source_ebook=oid)
+    for k in ("ebook", "calendrier", "coloriage", "objets", "code_promo", "couverture_apercu"):
+        form.pop(k, None)
+    nid = uuid.uuid4().hex[:12]
+    folder = STORE / nid; folder.mkdir(parents=True)
+    lignes = [("Livre imprimé : version papier de son e-book « " + (b.get("titre") or "son livre") + " »", 1, paiement.FORMULES["imprime"]["prix_livre"], "livre")]
+    port = paiement.frais_port("livre", addr["pays"])
+    lignes.append(("Livraison", 1, port, "port"))
+    (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {}, "apercus": {}, "lignes": lignes}, ensure_ascii=False), encoding="utf-8")
+    montant = sum(q * u for _, q, u, _ in lignes)
+    db.create(id=nid, formule="imprime", email=b["email"], adresse=addr, statut="attente_paiement", montant=montant, origine=nid, numero=1)
+    if not paiement.configured():
+        return jsonify(id=nid, url=f"/creer?commande={nid}&test=1")
+    try:
+        sid, url = paiement.checkout(nid, "livre", b["email"], base_url(), pays=addr["pays"])
+        sid_ok = sid
+    except paiement.StripeError as e:
+        db.update(nid, statut="erreur", erreur=str(e))
+        return jsonify(erreur=str(e)), 502
+    db.update(nid, stripe_session=sid_ok)
+    return jsonify(id=nid, url=url)
+
+
+@bp.get("/telecharger/<oid>.pdf")
+def telecharger_ebook(oid):
+    """Lien sécurisé de l'e-book (envoyé par mail et visible dans Mon compte)."""
+    import hmac
+    if not re.fullmatch(r"[a-f0-9]{12}(-\d{2})?", oid) or not hmac.compare_digest(request.args.get("j", ""), jeton_ebook(oid)):
+        abort(404)
+    b = db.get(oid) or abort(404)
+    if not ebook_de(b["origine"] or oid) or not b.get("job_id") or not b.get("pdf") or not fabrication.est_finalise(A.OUT / b["job_id"]):
+        abort(404)
+    f = A.OUT / b["job_id"] / b["pdf"]
+    if not f.exists():
+        abort(410)
+    nom = re.sub(r"[^\w\- ]+", "", (b.get("titre") or "Mon Héros du Mois"), flags=re.U).strip()[:80] or "livre"
+    return send_file(f, mimetype="application/pdf", as_attachment=True, download_name=f"{nom}.pdf")
 
 
 def livres_du_pack(origine):
@@ -665,11 +786,15 @@ def send_to_print(oid):
     origine = o["origine"] or oid
     livres, cals, objs = livres_du_pack(origine), extras_du_pack(origine), objets_du_pack(origine)
     tete = db.get(origine)
+    if paiement.numerique(tete["formule"]):                 # e-book : livré par lien, seul un calendrier ou un cahier ajouté part chez Lulu
+        livres = []
+        if not cals and not objs:
+            raise RuntimeError("e-book : rien à imprimer, il est livré par lien de téléchargement (mail et Mon compte)")
     if (lulu.configured() and lulu.env() == "production" and not factures.paiement_reel(tete)
             and os.getenv("IMPRESSION_SANS_PAIEMENT") != "1"):
         raise RuntimeError("Commande payée en mode test (ou simulée) : pas d'impression réelle, elle te coûterait sans rien rapporter. "
                            "Archive-la ou supprime-la. (Pour forcer un tirage d'essai : variable IMPRESSION_SANS_PAIEMENT=1.)")
-    attendus = (paiement.FORMULES.get(tete["formule"]) or {"livres": len(livres)})["livres"]
+    attendus = 0 if paiement.numerique(tete["formule"]) else (paiement.FORMULES.get(tete["formule"]) or {"livres": len(livres)})["livres"]
     if len(livres) < attendus:
         raise RuntimeError(f"pack incomplet : {len(livres)}/{attendus} livres créés")
     parti = lambda b: b["statut"] in ("envoyee_impression", "expediee")
@@ -1187,6 +1312,9 @@ def admin_action(oid, action):
             folder = A.OUT / (o["job_id"] or "_")
             mod = produit_de(folder)
             man = (mod.finaliser_apres_relecture(folder) if mod else procede.finaliser_apres_relecture(folder))
+            tete = db.get(o["origine"] or oid) or o
+            if paiement.numerique(tete["formule"]) and o["formule"] not in NON_LIVRES:
+                db.update(oid, statut="expediee")         # e-book : livré par lien dès la validation (mail + Mon compte)
             _mail_pret_async(oid)
             return jsonify(ok=True, info={"finalise_le": man["finalise_le"], "fichiers": len(man["fichiers"])})
         if action == "refaire-refusees":         # décision humaine : refaire les illustrations refusées, dans les 3 $ du livre
@@ -1586,10 +1714,22 @@ def mail_livre_pret(oid):
         nl = len(livres)
         noms = ([("le livre" if nl == 1 else f"les {nl} livres")] if nl else []) + [NOMS_EXTRAS[b["formule"]] for b in cals]
         quoi = noms[0] if len(noms) == 1 else ", ".join(noms[:-1]) + " et " + noms[-1]
+        liens = liens_ebook(origine, site)
+        tout_num = paiement.numerique(tete["formule"]) and not cals            # e-book seul : rien à imprimer
+        if tout_num:
+            quoi = "l'e-book"
         titre_mail = (quoi[0].upper() + quoi[1:] + f" de {prenom} " + ("est prêt" if un else "sont prêts"))
-        texte = (f"Bonjour,\n\n{titre_mail} :\n" + "\n".join(f"– « {f['titre']} »" + ("" if f["cal"] else f" (livre n° {f['n']})") for f in fiches) +
-                 f"\n\n{'Il a été relu et part' if un else 'Ils ont été relus et partent'} maintenant à l'impression, {colis}. "
-                 f"Livraison estimée entre le {_date_fr(d1)} et le {_date_fr(d2)}.\n\nUne question ? Répondez simplement à ce mail.\n\n"
+        dl_txt = ("\n\nTéléchargez " + ("l'e-book" if len(liens) == 1 else "les e-books") + " (liens personnels, aussi dans « Mon compte ») :\n"
+                  + "\n".join(f"– « {l['titre']} » : {l['url']}" for l in liens)) if liens else ""
+        dl_html = ("<div style=\"background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.5 system-ui,sans-serif;margin:0 0 14px;text-align:center\">"
+                   "<p style=\"margin:0 0 10px\"><b>📥 " + ("Son e-book" if len(liens) == 1 else "Ses e-books") + " à télécharger</b></p>"
+                   + "".join(f'<p style="margin:0 0 8px"><a href="{escape(l["url"])}" style="display:inline-block;background:#FFC23D;color:#24184D;font:800 15px system-ui,sans-serif;text-decoration:none;padding:11px 20px;border-radius:999px">« {escape(l["titre"])} » (PDF)</a></p>' for l in liens)
+                   + "<p style=\"margin:6px 0 0;color:#6B6F8E;font-size:13px\">Liens personnels, à garder pour vous. Ils sont aussi dans « Mon compte ».</p>"
+                   + (f'<p style="margin:10px 0 0;font-size:14px">Envie de le tenir entre vos mains ? <a href="{escape(liens[0]["imprimer"])}" style="color:#5A33C9;font-weight:700">Commander la version imprimée</a></p>' if liens[0].get("imprimer") else "")
+                   + "</div>") if liens else ""
+        texte = (f"Bonjour,\n\n{titre_mail} :\n" + "\n".join(f"– « {f['titre']} »" + ("" if f["cal"] else f" (livre n° {f['n']})") for f in fiches) + dl_txt +
+                 ("" if tout_num else f"\n\n{'Il a été relu et part' if un else 'Ils ont été relus et partent'} maintenant à l'impression, {colis}. "
+                  f"Livraison estimée entre le {_date_fr(d1)} et le {_date_fr(d2)}.") + "\n\nUne question ? Répondez simplement à ce mail.\n\n"
                  f"À très vite,\nL'équipe Mon Héros du Mois\n{site}")
         if un:
             f = fiches[0]
@@ -1606,15 +1746,17 @@ def mail_livre_pret(oid):
                             + ("</tr><tr>" if i % 2 == 1 else "") for i, f in enumerate(fiches))
             visuels = (f'<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 18px"><tr>{cases}</tr></table>'
                        + (f'<p style="font:14px system-ui,sans-serif;text-align:center;color:#6B6F8E;margin:0 0 22px">Offert par {escape(cadeau_de)}</p>' if cadeau_de else ""))
+        impr_html = "" if tout_num else (f'<p style="margin:0 0 8px">🖨️ {"Il part" if un else "Ils partent"} maintenant à l\'impression, {colis}.</p>'
+                                         f'<p style="margin:0">📦 Livraison estimée <b>entre le {_date_fr(d1)} et le {_date_fr(d2)}</b>.</p>')
         html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
 <div style="max-width:560px;margin:0 auto;padding:28px 18px">
  <p style="text-align:center;margin:0 0 10px"><img src="{site}/static/marque/logo-mail.png" alt="Mon Héros du Mois" width="220" style="width:220px;max-width:70%;height:auto;border:0"></p>
  <h1 style="font-size:26px;text-align:center;margin:0 0 18px">{escape(titre_mail)}&nbsp;✨</h1>
  {visuels}
+ {dl_html}
  <div style="background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.5 system-ui,sans-serif">
-  <p style="margin:0 0 8px">✅ {escape(quoi[0].upper() + quoi[1:])} {'a été créé et relu' if un else 'ont été créés et relus'} avec soin.</p>
-  <p style="margin:0 0 8px">🖨️ {'Il part' if un else 'Ils partent'} maintenant à l'impression, {colis}.</p>
-  <p style="margin:0">📦 Livraison estimée <b>entre le {_date_fr(d1)} et le {_date_fr(d2)}</b>.</p>
+  <p style="margin:0{' 0 8px' if not tout_num else ''}">✅ {escape(quoi[0].upper() + quoi[1:])} {'a été créé et relu' if un else 'ont été créés et relus'} avec soin.</p>
+  {impr_html}
  </div>
  <p style="font:14px system-ui,sans-serif;color:#6B6F8E;text-align:center;margin:22px 0 0">Une question&nbsp;? Répondez simplement à ce mail.<br><a href="{site}" style="color:#3D6BD8">{site.replace('https://', '')}</a></p>
 </div></body></html>"""
@@ -1670,6 +1812,10 @@ def mail_alerte_commande(oid):
         return False
 
 
+EBOOK_ACCORD = ("Contenu numérique (e-book) : vous avez demandé sa création dès le paiement et renoncé à votre droit de rétractation "
+                "(article L221-28, 13° du Code de la consommation). Ce message en est la confirmation.")
+
+
 def mail_confirmation(oid):
     """Mail au client juste après le paiement : récapitulatif (lignes payées), adresse, étapes et délai estimé. Une seule fois
     (appelé par confirm_paid, qui ne passe qu'une fois). Jamais pour un essai. Ne bloque jamais la fabrication."""
@@ -1697,7 +1843,12 @@ def mail_confirmation(oid):
                  f"Total payé : {eu(o['montant'] or 0)}\n\nLivraison : {adr}\n\nEt maintenant ?\n"
                  f"1. Nous créons les illustrations de {prenom} (quelques minutes).\n2. Notre équipe relit chaque page avant l'impression.\n"
                  f"3. Vous recevez un mail dès que tout part à l'impression.\n\nLivraison estimée entre le {_date_fr(d1)} et le {_date_fr(d2)}.\n\n"
+                 + (EBOOK_ACCORD + "\n\n" if form.get("ebook") else "") +
                  f"Une question ? Répondez simplement à ce mail.\n\nÀ très vite,\nL'équipe Mon Héros du Mois\n{site}")
+        if paiement.numerique(o["formule"]) and not (form.get("calendrier") or form.get("coloriage") or form.get("objets")):
+            texte = texte.replace(f"Livraison : {adr}\n\n", "").replace("2. Notre équipe relit chaque page avant l'impression.\n3. Vous recevez un mail dès que tout part à l'impression.",
+                                  "2. Notre équipe relit chaque page.\n3. Vous recevez l'e-book par mail, sous 48 h, avec son lien de téléchargement.").replace(
+                                  f"Livraison estimée entre le {_date_fr(d1)} et le {_date_fr(d2)}.\n\n", "")
         rows_html = "".join(f'<tr><td style="padding:6px 0">{escape(str(l[0]))}{" × " + str(l[1]) if int(l[1]) > 1 else ""}</td>'
                             f'<td style="padding:6px 0;text-align:right;white-space:nowrap">{eu(int(l[1]) * int(l[2]))}</td></tr>' for l in lignes)
         html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
@@ -1710,6 +1861,7 @@ def mail_confirmation(oid):
    <tr><td style="padding:10px 0 0;border-top:1px solid #EFE6D2"><b>Total payé</b></td><td style="padding:10px 0 0;border-top:1px solid #EFE6D2;text-align:right"><b>{eu(o['montant'] or 0)}</b></td></tr></table>
   <p style="margin:12px 0 0;color:#6B6F8E;font-size:14px">📦 Livraison : {escape(adr)}</p>
  </div>
+ {('<p style="font:13px/1.5 system-ui,sans-serif;color:#6B6F8E;margin:0 0 14px">' + escape(EBOOK_ACCORD) + '</p>') if form.get("ebook") else ''}
  <div style="background:#fff;border-radius:14px;padding:16px 18px;font:15px/1.5 system-ui,sans-serif">
   <p style="margin:0 0 8px"><b>Et maintenant&nbsp;?</b></p>
   <p style="margin:0 0 6px">🎨 Nous créons les illustrations de {escape(prenom)}.</p>

@@ -172,6 +172,14 @@ STATUTS = {"payee": "En création", "generation": "En création", "a_verifier": 
            "attente_fete": "Programmé pour sa fête", "envoyee_impression": "En impression", "expediee": "Expédié", "annulee": "Annulée"}
 
 
+def _ebooks(origine):
+    try:
+        import boutique
+        return boutique.liens_ebook(origine)
+    except Exception:
+        return []
+
+
 def commandes_de(cl):
     import paiement
     out, tous = [], db.lister(100000)
@@ -190,7 +198,8 @@ def commandes_de(cl):
         out.append({"id": o["id"], "cree": o["cree"], "montant": o["montant"],
                     "quoi": (paiement.FORMULES.get(o["formule"]) or {}).get("nom") or o["formule"],
                     "titres": [x["titre"] for x in g if x.get("titre")][:12], "statut": statut,
-                    "suivi": sorted({u for x in g for u in (x.get("suivi") or []) if isinstance(u, str) and u.startswith("http")})})
+                    "suivi": sorted({u for x in g for u in (x.get("suivi") or []) if isinstance(u, str) and u.startswith("http")}),
+                    "ebooks": _ebooks(o["id"])})
     return sorted(out, key=lambda x: -x["cree"])
 
 

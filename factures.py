@@ -55,7 +55,7 @@ def lignes_commande(o, livre_json):
         f = (livre_json or {}).get("form") or {}
         try:
             L = paiement.lignes(o["formule"], (o["adresse"] or {}).get("pays"), calendrier=bool(f.get("calendrier")),
-                                coloriage=bool(f.get("coloriage")), objets=f.get("objets") or [], promo=f.get("code_promo"))
+                                coloriage=bool(f.get("coloriage")), objets=f.get("objets") or [], promo=f.get("code_promo"), ebook=bool(f.get("ebook")))
         except KeyError:
             L = []
     if sum(q * u for _, q, u, _ in L) != (o["montant"] or 0):
