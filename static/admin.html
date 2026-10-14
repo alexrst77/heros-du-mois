@@ -302,6 +302,12 @@ function vueAbos() {
 let CLI = null, CLI_J = 30, CLI_Q = '';
 const ilya = t => { if (!t) return '—'; const s = Date.now() / 1000 - t; return s < 3600 ? 'il y a ' + Math.max(1, Math.round(s / 60)) + ' min' : s < 86400 ? 'il y a ' + Math.round(s / 3600) + ' h' : s < 86400 * 30 ? 'il y a ' + Math.round(s / 86400) + ' j' : new Date(t * 1000).toLocaleDateString('fr-FR'); };
 function cliCharger() { fetch('/admin/api/clients' + Q + (Q ? '&' : '?') + 'jours=' + CLI_J, { headers: H }).then(r => r.json()).then(c => { CLI = c; if (TAB === 'clients') render(); }); }
+async function relanceGroupe(genre, n, b) {
+  if (!confirm(`Envoyer ${n} e-mail${n > 1 ? 's' : ''} de rappel ? (un seul par personne)`)) return;
+  b.disabled = true; b.textContent = 'Envoi…';
+  const r = await fetch('/admin/api/relance-groupe' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ genre }) });
+  const j = await r.json().catch(() => ({})); alert(r.ok ? `${j.envoyees} e-mail(s) envoyé(s)` : 'Erreur'); cliCharger();
+}
 async function relance(genre, id, b) {
   if (!confirm('Envoyer UN e-mail de rappel « finis ton univers » ? (une seule relance possible)')) return;
   b.disabled = true; b.textContent = 'Envoi…';
@@ -337,6 +343,10 @@ function vueClients() {
     ${(C.campagnes || []).length ? `<div class="card" style="overflow-x:auto"><h3>📣 Pubs et campagnes (${C.jours} derniers jours)</h3><table><tr><th>Source · campagne (utm)</th><th class="r">Visiteurs</th><th class="r">Configurateur</th><th class="r">Paiement lancé</th><th class="r">Payé</th><th class="r">Ventes</th></tr>
       ${C.campagnes.map(x => `<tr><td><b>${esc(x.campagne)}</b></td><td class="r">${x.visiteurs}</td><td class="r">${x.configurateur}</td><td class="r">${x.paiement}</td><td class="r">${x.payes ? '<b>' + x.payes + '</b>' : '0'}</td><td class="r">${x.ca ? eur(x.ca) : '—'}</td></tr>`).join('')}</table>
       <p class="meta" style="margin:8px 0 0">Une personne est rangée dans la dernière pub sur laquelle elle a cliqué. « Payé » et « Ventes » : commandes payées par ces visiteurs.</p></div>` : ''}
+    ${C.relances ? `<div class="card" style="overflow-x:auto"><h3>✉️ Relances « finis ton univers »</h3><table><tr><th>Situation</th><th class="r">À relancer</th><th class="r">Envoyées</th><th class="r">Ont cliqué</th><th class="r">Ont acheté</th><th></th></tr>
+      ${Object.entries(C.relances).map(([k, x]) => `<tr><td><b>${esc(x.nom)}</b></td><td class="r">${x.a_relancer}</td><td class="r">${x.stats.envoyees}</td><td class="r">${x.stats.clics}${x.stats.envoyees ? `<div class="meta">${Math.round(100 * x.stats.clics / x.stats.envoyees)} %</div>` : ''}</td><td class="r">${x.stats.achats}</td>
+        <td class="r">${x.a_relancer && C.mail ? `<button class="btn" onclick="relanceGroupe('${k}', ${x.a_relancer}, this)">✉️ Relancer les ${x.a_relancer}</button>` : ''}</td></tr>`).join('')}</table>
+      <p class="meta" style="margin:8px 0 0">Un seul e-mail par personne et par situation, envoyé quand tu cliques, à ceux inactifs depuis plus de 24 h (et moins de 14 jours). Chaque e-mail a un lien « ne plus recevoir de rappel ».</p></div>` : ''}
     <h2>💳 Paiements non finis</h2>
     ${C.attente.length ? C.attente.map(o => `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div>
         <b>${esc(o.prenom || 'Sans prénom')}</b> · ${esc(FORMULE[o.formule] || o.formule)} · <b>${eur(o.montant || 0)}</b>

@@ -9,7 +9,7 @@
   commande non payée (lien qui rouvre directement le paiement), ou compte avec un héros enregistré mais sans commande."""
 import os, re, json, time, hmac, hashlib, secrets
 from html import escape
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote_plus
 from flask import Blueprint, request, jsonify, redirect, abort
 import commandes as db
 
@@ -25,10 +25,13 @@ create table if not exists parcours (vid text primary key, client_id text, premi
   pages integer default 0, etape integer default 0, apercu integer default 0, source text, mobile integer default 0, commande text);
 create table if not exists relances (cle text primary key, envoye real, email text, sujet text);
 """)
-    try:
-        _c.execute("alter table parcours add column campagne text")         # utm_campaign (ex. noel_oct26)
-    except Exception:
-        pass
+    for _sql in ("alter table parcours add column campagne text",          # utm_campaign (ex. noel_oct26)
+                 "alter table relances add column clic real",              # la personne a cliqué le lien du mail
+                 "create table if not exists desinscrits (email text primary key, le real)"):
+        try:
+            _c.execute(_sql)
+        except Exception:
+            pass
 
 
 def _secret():
@@ -188,10 +191,27 @@ def donnees(jours=30):
             "pub_meta": sum(1 for p in P if re.search(r"facebook|instagram|^fb$|^ig$|^meta", (p["source"] or "").lower())),
             "clients": liste, "nouveaux_7j": sum(1 for c in clients if (c["cree"] or 0) > now - 7 * 86400),
             "clients_payants": sum(1 for c in liste if c["commandes"]),
-            "attente": attente, "mail": __import__("boutique").mail_configure()}
+            "attente": attente, "mail": __import__("boutique").mail_configure(),
+            "relances": {k: {"nom": SEGMENTS[k], "a_relancer": len(v), "stats": stats_relances()[k]} for k, v in eligibles().items()}}
 
 
-def _mail_html(titre, intro, bouton, lien, site):
+def _jeton_mail(email):
+    return hmac.new(_secret(), f"stop:{email.lower()}".encode(), hashlib.sha256).hexdigest()[:20]
+
+
+def desinscrit(email):
+    with db._db() as c:
+        return bool(c.execute("select 1 from desinscrits where email=?", ((email or "").lower(),)).fetchone())
+
+
+def _suivi_lien(cle, chemin, site):
+    """Lien du mail passant par /rl : on sait qui a cliqué (taux de reprise), puis redirection vers la bonne page."""
+    from urllib.parse import quote
+    t = hmac.new(_secret(), f"rl:{cle}".encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{site}/rl?c={quote(cle)}&t={t}&u={quote(chemin)}"
+
+
+def _mail_html(titre, intro, bouton, lien, site, stop=""):
     return f"""<!doctype html><html><body style="margin:0;background:#F7F2FF;font-family:Georgia,serif;color:#24184D">
 <div style="max-width:560px;margin:0 auto;padding:28px 18px;text-align:center">
  <p style="text-align:center;margin:0 0 10px"><img src="{site}/static/marque/logo-mail.png" alt="Mon Héros du Mois" width="220" style="width:220px;max-width:70%;height:auto;border:0"></p>
@@ -199,7 +219,7 @@ def _mail_html(titre, intro, bouton, lien, site):
  <div style="background:#fff;border-radius:16px;padding:20px 18px;font:16px/1.5 system-ui,sans-serif;text-align:left">{intro}</div>
  <p style="margin:22px 0"><a href="{escape(lien)}" style="display:inline-block;background:#FFC23D;color:#24184D;font:800 17px system-ui,sans-serif;text-decoration:none;padding:14px 26px;border-radius:999px">{escape(bouton)}</a></p>
  <p style="font:13px system-ui,sans-serif;color:#6B6F8E;margin:0">Une question ? Répondez simplement à ce mail.<br>Vous ne recevrez pas d'autre rappel pour cette création.<br>
- <a href="{site}" style="color:#5A33C9">{site.replace('https://', '')}</a></p>
+ {f'<a href="{escape(stop)}" style="color:#6B6F8E">Ne plus recevoir de rappel</a> · ' if stop else ''}<a href="{site}" style="color:#5A33C9">{site.replace('https://', '')}</a></p>
 </div></body></html>"""
 
 
@@ -240,17 +260,118 @@ def relancer(genre, ident):
                  f"Retrouvez-le pour finir son univers : {lien}\n\nUne question ? Répondez simplement à ce mail. "
                  f"Vous ne recevrez pas d'autre rappel.\n\nL'équipe Mon Héros du Mois")
         bouton = f"Retrouver {prenom}"
+    elif genre == "ins":                                 # inscrit, mais aucun héros enregistré ni commande
+        with db._db() as c:
+            cl = c.execute("select * from clients where id=?", (ident,)).fetchone()
+            h = c.execute("select 1 from heros where client_id=?", (ident,)).fetchone()
+        if not cl or h:
+            return False, "Compte introuvable, ou il a déjà un héros enregistré."
+        email, lien = cl["email"], f"{site}/creer"
+        sujet = "✨ Son avatar vous attend (gratuit, 3 minutes)"
+        intro = ("<p style='margin:0 0 10px'>Bonjour,</p><p style='margin:0 0 10px'>Votre compte Mon Héros du Mois est prêt, mais l'avatar de votre "
+                 "enfant n'est pas encore créé.</p><p style='margin:0'>En 3 minutes, gratuitement : son visage, sa coiffure, son doudou et ses animaux. "
+                 "Puis il devient le héros de ses livres.</p>")
+        texte = (f"Bonjour,\n\nVotre compte Mon Héros du Mois est prêt, mais l'avatar de votre enfant n'est pas encore créé.\n"
+                 f"En 3 minutes, gratuitement : {lien}\n\nUne question ? Répondez simplement à ce mail. Vous ne recevrez pas d'autre rappel.\n\nL'équipe Mon Héros du Mois")
+        bouton = "Créer son avatar"
     else:
         return False, "Relance inconnue."
+    if desinscrit(email):
+        return False, "Cette personne a demandé à ne plus recevoir de rappel."
+    cle = f"{genre}:{ident}"
+    chemin = lien.replace(site, "") or "/"
+    lien_suivi = _suivi_lien(cle, chemin, site)
+    texte = texte.replace(lien, lien_suivi)
+    stop = f"{site}/stop-rappels?e={quote_plus(email)}&t={_jeton_mail(email)}"
+    texte += f"\n\nNe plus recevoir de rappel : {stop}"
     try:
-        ok = B.send_mail(sujet, texte, reply_to=B.CONTACT, to=email, html=_mail_html(sujet.lstrip("✨ "), intro, bouton, lien, site))
+        ok = B.send_mail(sujet, texte, reply_to=B.CONTACT, to=email, html=_mail_html(sujet.lstrip("✨ "), intro, bouton, lien_suivi, site, stop))
     except Exception as e:
         return False, f"Envoi impossible : {e}"
     if ok:
         with db._lock, db._db() as c:
-            c.execute("insert or replace into relances values (?,?,?,?)", (f"{genre}:{ident}", time.time(), email, sujet))
+            c.execute("insert or replace into relances (cle, envoye, email, sujet) values (?,?,?,?)", (cle, time.time(), email, sujet))
         B.log(f"relance « {sujet} » envoyée à {email}")
     return bool(ok), "Relance envoyée ✉️" if ok else "Le mail n'est pas parti."
+
+
+@bp.get("/rl")
+def lien_relance():
+    cle, t, u = request.args.get("c", ""), request.args.get("t", ""), request.args.get("u", "/")
+    ok = hmac.compare_digest(t, hmac.new(_secret(), f"rl:{cle}".encode(), hashlib.sha256).hexdigest()[:16])
+    if ok:
+        with db._lock, db._db() as c:
+            c.execute("update relances set clic=coalesce(clic, ?) where cle=?", (time.time(), cle))
+    if not u.startswith("/") or u.startswith("//"):
+        u = "/"
+    return redirect(u)
+
+
+@bp.get("/stop-rappels")
+def stop_rappels():
+    e, t = (request.args.get("e") or "").strip().lower(), request.args.get("t", "")
+    if e and hmac.compare_digest(t, _jeton_mail(e)):
+        with db._lock, db._db() as c:
+            c.execute("insert or replace into desinscrits values (?,?)", (e, time.time()))
+        msg = "C'est noté : vous ne recevrez plus de rappel de notre part. Les e-mails liés à vos commandes (confirmation, livraison) restent envoyés."
+    else:
+        msg = "Ce lien n'est pas valable."
+    return (f"<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><link rel=stylesheet href=/static/theme.css>"
+            f"<div style='max-width:520px;margin:60px auto;padding:24px;font:17px/1.6 Nunito,system-ui'><h1 style='font-family:var(--titre)'>Rappels</h1><p>{escape(msg)}</p>"
+            f"<p><a href='/'>Retour au site</a></p></div>")
+
+
+SEGMENTS = {"cmd": "Paiement non fini", "cli": "Héros enregistré, sans achat", "ins": "Inscrit, sans héros"}
+
+
+def eligibles():
+    """Personnes à relancer par segment : jamais relancées, pas désinscrites, inactives depuis 24 h, depuis moins de 14 jours."""
+    now = time.time(); mini, maxi = now - 14 * 86400, now - 86400
+    with db._db() as c:
+        deja = {r[0] for r in c.execute("select cle from relances")}
+        stop = {r[0] for r in c.execute("select email from desinscrits")}
+        payes = {(r[0] or "").lower() for r in c.execute("select email from commandes where statut not in ('attente_paiement','erreur','annulee') and montant>0")}
+        cmds = [dict(r) for r in c.execute("select id, email, cree from commandes where statut='attente_paiement' and (origine is null or origine=id) and formule not like 'essai%'")]
+        cls = [dict(r) for r in c.execute("select id, email, cree, vu from clients")]
+        heros = {r[0]: r[1] for r in c.execute("select client_id, max(maj) from heros group by client_id")}
+    out = {k: [] for k in SEGMENTS}
+    for o in cmds:
+        if f"cmd:{o['id']}" not in deja and mini < o["cree"] < maxi and (o["email"] or "").lower() not in stop | payes:
+            out["cmd"].append({"id": o["id"], "email": o["email"]})
+    for cl in cls:
+        e = (cl["email"] or "").lower()
+        if e in stop or e in payes:
+            continue
+        if cl["id"] in heros:
+            if f"cli:{cl['id']}" not in deja and mini < heros[cl["id"]] < maxi:
+                out["cli"].append({"id": cl["id"], "email": e})
+        elif f"ins:{cl['id']}" not in deja and mini < (cl["cree"] or 0) < maxi:
+            out["ins"].append({"id": cl["id"], "email": e})
+    return out
+
+
+def stats_relances():
+    with db._db() as c:
+        R = [dict(r) for r in c.execute("select * from relances")]
+        payes = [dict(r) for r in c.execute("select email, cree, montant from commandes where statut not in ('attente_paiement','erreur','annulee') and montant>0")]
+    out = {}
+    for k in SEGMENTS:
+        L = [x for x in R if x["cle"].startswith(k + ":")]
+        achats = [x for x in L if any((p["email"] or "").lower() == (x["email"] or "").lower() and p["cree"] > x["envoye"] for p in payes)]
+        out[k] = {"envoyees": len(L), "clics": sum(1 for x in L if x.get("clic")), "achats": len(achats)}
+    return out
+
+
+@bp.post("/admin/api/relance-groupe")
+def admin_relance_groupe():
+    import boutique as B
+    if not B.admin_ok():
+        abort(403)
+    g = (request.get_json(force=True, silent=True) or {}).get("genre")
+    if g not in SEGMENTS:
+        abort(400)
+    n = sum(1 for x in eligibles()[g] if relancer(g, x["id"])[0])
+    return jsonify(ok=True, envoyees=n)
 
 
 @bp.get("/admin/api/clients")
