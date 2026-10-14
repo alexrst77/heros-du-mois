@@ -118,6 +118,17 @@ VARIANTES = [   # (code POD, description en clair) : même format carré 21,6 cm
 ]
 
 
+GRANDS = [   # (code POD, description, pages) : formats plus grands et livres plus épais, rigide couleur standard papier épais brillant
+    ("0850X0850FCSTDCW080CW444GXX", "Carré 21,6 cm (actuel) · 32 pages", 32),
+    ("0850X0850FCSTDCW080CW444GXX", "Carré 21,6 cm (actuel) · 40 pages", 40),
+    ("1100X0850FCSTDCW080CW444GXX", "Grand à l'italienne 28 × 21,6 cm · 24 pages", 24),
+    ("1100X0850FCSTDCW080CW444GXX", "Grand à l'italienne 28 × 21,6 cm · 32 pages", 32),
+    ("1100X0850FCSTDCW080CW444GXX", "Grand à l'italienne 28 × 21,6 cm · 40 pages", 40),
+    ("1169X0827FCSTDCW080CW444GXX", "A4 à l'italienne 29,7 × 21 cm · 32 pages", 32),
+    ("0850X1100FCSTDCW080CW444GXX", "Grand portrait 21,6 × 28 cm · 32 pages", 32),
+]
+
+
 def comparer(pages, addr, email):
     """Devis Lulu (aucune commande) pour plusieurs fabrications et deux modes de livraison : impression et port séparés."""
     out = []
@@ -135,6 +146,17 @@ def comparer(pages, addr, email):
                             "frais_ttc": fc.get("total_cost_incl_tax"), "total_ttc": r.get("total_cost_incl_tax")})
             except Exception as e:
                 out.append({"pod": pod, "fabrication": label, "livraison": ship, "erreur": str(e)[:160]})
+    for pod, label, n in GRANDS:                   # plus grand, plus de pages : devis seulement
+        try:
+            r = api("POST", "/print-job-cost-calculations/", {
+                "line_items": [{"page_count": n, "pod_package_id": pod, "quantity": 1}],
+                "shipping_address": address(addr, email), "shipping_option": "MAIL"})
+            li = (r.get("line_item_costs") or [{}])[0]; sc = r.get("shipping_cost") or {}; fc = r.get("fulfillment_cost") or {}
+            out.append({"pod": pod, "fabrication": label, "livraison": "MAIL", "devise": r.get("currency"), "grand": True,
+                        "impression_ttc": li.get("total_cost_incl_tax"), "port_ttc": sc.get("total_cost_incl_tax"),
+                        "frais_ttc": fc.get("total_cost_incl_tax"), "total_ttc": r.get("total_cost_incl_tax")})
+        except Exception as e:
+            out.append({"pod": pod, "fabrication": label, "livraison": "MAIL", "erreur": str(e)[:160]})
     for q in (3, 6, 12):                          # colis d'un pack : prix PAR livre, fabrication actuelle
         pod, label = VARIANTES[0]
         try:
