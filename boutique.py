@@ -185,7 +185,7 @@ def order_create():
     if avec_colo:
         pages = [x for x in (colo.get("pages") or []) if isinstance(x, str)]
         if formule == "coloriage" and len([x for x in dict.fromkeys(pages) if x in coloriage.PAR_CLE]) < coloriage.NB_PAGES:
-            return jsonify(erreur=f"Choisissez les {coloriage.NB_PAGES} pages du cahier de coloriage (ou complétez au hasard)."), 400
+            return jsonify(erreur=f"Choisissez les {coloriage.NB_PAGES} coloriages du cahier (ou complétez au hasard)."), 400
         form["coloriage"] = {"pages": coloriage.choisir(pages)}
     objs = paiement.objets_valides([x for x in (c.get("objets") or []) if isinstance(x, str)], formule)   # gourde, tasse, sac (en ajout)
     if objs:
@@ -1708,7 +1708,7 @@ def mail_livre_pret(oid):
         un = len(fiches) == 1
         deux_colis = any(b["formule"] in OBJETS for b in cals) and len(fiches) > sum(1 for b in cals if b["formule"] in OBJETS)
         colis = "en deux colis (les objets sont fabriqués par un autre atelier)" if deux_colis else "dans un seul colis"
-        SOUS = {"calendrier": "Calendrier mural · 12 mois illustrés", "coloriage": "Cahier de coloriage · 30 dessins à colorier",
+        SOUS = {"calendrier": "Calendrier mural · 12 mois illustrés", "coloriage": "Cahier de coloriage · 30 pages de coloriages et de jeux",
                 **{k: v["titre"] + " personnalisée" if k != "sac" else v["titre"] + " personnalisé" for k, v in objets.KINDS.items()}}
         EMO = {"calendrier": "📅", "coloriage": "🖍️", **{k: v["emoji"] for k, v in objets.KINDS.items()}}
         nl = len(livres)

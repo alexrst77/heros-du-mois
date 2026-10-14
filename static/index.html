@@ -849,7 +849,7 @@
         `<p class="hint">Anniversaires de la famille, rentrée, vacances, spectacle… Ils reviennent chaque année à la même date.</p>`, 'facultatif');
   }
   function titreColo(t) { return t.titre.replace('{p}', (S.enfant.prenom || '').trim().replace(/^./, c => c.toUpperCase()) || 'Votre enfant'); }
-  function pickerColoriage() {      // 30 pages à choisir dans le catalogue, sélection de l'équipe proposée d'office
+  function pickerColoriage() {      // COLO.nombre coloriages à choisir dans le catalogue, sélection de l'équipe proposée d'office
     const sel = S.coloriage.pages, n = sel.length, N = COLO.nombre;
     const liste = COLO.themes.filter(t => !CATF || t.cat === CATF);
     return `<div class="pickbar"><span class="compte ${n === N ? 'ok' : ''}">${n}/${N} pages choisies</span>` +
@@ -861,7 +861,7 @@
   }
   function panelColoriage() {
     const pr = esc((S.enfant.prenom || 'votre enfant').trim());
-    return `<div class="occasion" style="margin-bottom:16px;display:block">🖍️ <b>30 dessins à colorier avec ${pr}</b>${S.doudou.actif ? ', son doudou' : ''}${S.animaux.length ? ' et ses animaux' : ''}, en grand format 21,6 × 27,9 cm à spirale, imprimés au recto seulement : les feutres ne traversent pas. Nous avons préparé une sélection : changez ce que vous voulez.</div>` + pickerColoriage();
+    return `<div class="occasion" style="margin-bottom:16px;display:block">🖍️ <b>30 pages avec ${pr} : ${COLO.nombre} coloriages choisis par vous + 12 pages de jeux</b>${S.doudou.actif ? ', son doudou' : ''}${S.animaux.length ? ' et ses animaux' : ''}, en grand format 21,6 × 27,9 cm à spirale, imprimés au recto seulement : les feutres ne traversent pas. Nous avons préparé une sélection : changez ce que vous voulez.</div>` + pickerColoriage();
   }
   let APR = { restants: null };
   fetch('/api/apercu/restants').then(r => r.json()).then(j => { APR.restants = j.restants; APR.max = j.max; if (tab === 'creations') render(); }).catch(() => {});
@@ -917,14 +917,14 @@
     const reg = (cle, titre, resume, corps) => `<details class="multi reg" data-ouv="${cle}" ${OUVERT[cle] ? 'open' : ''}><summary>${titre} <small>${resume}</small></summary><div class="reg-b">${corps}</div></details>`;
     const hist = reg('hist', n > 1 ? `✏️ Personnaliser ses ${n} livres` : '✏️ Personnaliser son livre', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : n > 1 ? `livre 1 : ${esc(S.histoire.theme)} · ${esc(un || '')}… thème et univers de chaque livre` : `${esc(S.histoire.theme)} · ${esc(un || '')}`, panelHistoire());
     const regCal = reg('cal', '✏️ Personnaliser le calendrier', `commence en ${esc(moisLib(S.calendrier.debut).toLowerCase())}${S.calendrier.dates.filter(x => (x.texte || '').trim()).length ? ` · ${S.calendrier.dates.filter(x => (x.texte || '').trim()).length} date(s) de famille` : ''}, modifiable`, optionsCalendrier());
-    const regColo = reg('colo', '✏️ Choisir les 30 pages du cahier', `${S.coloriage.pages.length}/${COLO.nombre} choisies, notre sélection, modifiable`, pickerColoriage());
+    const regColo = reg('colo', `✏️ Choisir les ${COLO.nombre} coloriages du cahier`, `${S.coloriage.pages.length}/${COLO.nombre} choisies, notre sélection, modifiable`, pickerColoriage());
     return `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr}. Tout est pré-réglé : touchez <b>« Personnaliser »</b> sous une création pour changer son thème, ses dates ou ses pages.</p>` +
       apercuHTML() +
       `<div class="crea-l">` +
       carte('livres', '/static/vitrine/couv_jade.webp', 'Ses livres d\'aventures', 'Une vraie histoire illustrée dont il est le héros, couverture rigide.', `Dès ${eur2(F.pack12.prix_livre)} le livre`, plans + hist) +
       carte('calendrier', '/static/vitrine/cal_photo_2.webp', 'Son calendrier', '12 mois illustrés avec lui, son anniversaire et vos dates de famille.',
             autre('calendrier') ? `${eur2(GR.calendrier.ajout)} <s>${eur2(GR.calendrier.seul)}</s> avec une autre création` : `${eur2(GR.calendrier.seul)} · ${eur2(GR.calendrier.ajout)} avec une autre création`, regCal) +
-      carte('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 dessins à colorier où il est le héros, choisis par vous.',
+      carte('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 pages de coloriages et de jeux où il est le héros.',
             autre('coloriage') ? `${eur2(GR.coloriage.ajout)} <s>${eur2(GR.coloriage.seul)}</s> avec une autre création` : `${eur2(GR.coloriage.seul)} · ${eur2(GR.coloriage.ajout)} avec une autre création`, regColo) +
       `</div>` + (Object.keys(OBJ).length ? `<div class="objets-h">Ses objets <span>Seuls ou avec une création · fabriqués par notre atelier objets, livrés à part, livraison comprise</span></div><div class="crea-l">` +
         Object.keys(OBJ).map(k => { const on = objetsChoisis().includes(k); return `<div class="crea-c ${on ? 'on' : ''}"><button type="button" class="crea-h" data-objet="${k}">
@@ -977,7 +977,7 @@
       `<span class="mini">${PLANS.filter(p => p.id !== 'fetes').map(p => `<button type="button" data-ajout="livres" data-pack="${p.id}">${p.nom} · ${p.px}</button>`).join('')}</span>`, ''));
     if (!P.calendrier) offres.push(offre('calendrier', '/static/vitrine/cal_photo_2.webp', `Son calendrier ${esc(anneeCal())}`, '12 mois illustrés avec lui, ses fêtes et vos dates de famille.',
       `<b>+ ${eur2(GR.calendrier.ajout)}</b> <s>${eur2(GR.calendrier.seul)}</s>`, ajout('calendrier')));
-    if (!P.coloriage) offres.push(offre('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 dessins à colorier où il est le héros.',
+    if (!P.coloriage) offres.push(offre('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 pages de coloriages et de jeux où il est le héros.',
       `<b>+ ${eur2(GR.coloriage.ajout)}</b> <s>${eur2(GR.coloriage.seul)}</s>`, ajout('coloriage')));
     Object.keys(OBJ).filter(k => !objetsChoisis().includes(k)).forEach(k => offres.push(offre(k, OBJ_INFO[k].img, OBJ_INFO[k].court,
       OBJ_INFO[k].txt + ' Livré à part.', `<b>+ ${eur2(OBJ[k].prix)}</b> livraison comprise`, `<button type="button" class="btn" data-objet-ajout="${k}">Ajouter</button>`)));
@@ -1062,7 +1062,7 @@
     if (b.dataset.packGo) { S.commande.pack = b.dataset.packGo; S.produits.livres = true; window.mesure && mesure('ajout_produit', { item_id: 'pack6' }); return render(); }
     if (b.dataset.pack) { S.commande.pack = b.dataset.pack; return render(); }
     if (b.dataset.colo) { const l = S.coloriage.pages, i = l.indexOf(b.dataset.colo); OUVERT.colo = true;
-      if (i >= 0) l.splice(i, 1); else if (l.length >= COLO.nombre) { $('err').textContent = `${COLO.nombre} pages au maximum : retirez-en une avant d'en ajouter une autre.`; return; } else l.push(b.dataset.colo);
+      if (i >= 0) l.splice(i, 1); else if (l.length >= COLO.nombre) { $('err').textContent = `${COLO.nombre} coloriages au maximum : retirez-en un avant d'en ajouter une autre.`; return; } else l.push(b.dataset.colo);
       $('err').textContent = ''; return render(); }
     if (b.dataset.coloHasard) { const l = S.coloriage.pages; OUVERT.colo = true;
       const reste = melange(COLO.themes.map(t => t.cle).filter(c => !l.includes(c)));
@@ -1184,7 +1184,7 @@
     }
     sync();
     if (rien()) { tab = 'creations'; render(); $('err').textContent = 'Choisissez au moins une création ou un objet.'; return; }
-    if (S.produits.coloriage && S.coloriage.pages.length < COLO.nombre) { tab = 'creations'; OUVERT.colo = true; vueFoc = 'colo'; render(); $('err').textContent = `Choisissez ${COLO.nombre} pages (${S.coloriage.pages.length} pour l'instant), ou cliquez sur « Compléter au hasard ».`; return; }
+    if (S.produits.coloriage && S.coloriage.pages.length < COLO.nombre) { tab = 'creations'; OUVERT.colo = true; vueFoc = 'colo'; render(); $('err').textContent = `Choisissez ${COLO.nombre} coloriages (${S.coloriage.pages.length} pour l'instant), ou cliquez sur « Compléter au hasard ».`; return; }
     const h = S.histoire, e = S.enfant;
     const payload = await basePayload();
     const demo = !!h.demo, c = S.commande;

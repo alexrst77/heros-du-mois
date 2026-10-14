@@ -5,8 +5,9 @@ Même principe que les livres et le calendrier : mêmes avatars, mêmes portrait
 payés), instantané immuable de la commande, budget borné AVANT tout appel (plafond BUDGET_COLORIAGE_USD, 5 $ max), un appel
 par image, un contrôle visuel par image, aucune régénération automatique, « à relire » en cas d'écart.
 
-Contenu : 30 pages à colorier choisies par le parent dans le catalogue (THEMES) + 4 pages « Dessine… » + une page
-« Ce cahier appartient à » (prénom en lettres creuses, à colorier). Impression recto seul (le verso de chaque dessin reste
+Contenu (V2, 30 pages) : 18 coloriages choisis par le parent dans le catalogue (THEMES), 5 coloriages magiques numérotés,
+3 points à relier, 2 labyrinthes, 1 « Dessine… », 1 « Termine le dessin » (activités fabriquées et vérifiées par activites.py),
+une page « Ce cahier appartient à » (prénom en lettres creuses) et une page de solutions. Un PDF A4 à imprimer chez soi en plus. Impression recto seul (le verso de chaque dessin reste
 blanc : les feutres ne traversent pas sur le dessin suivant). Couverture en couleur, titre composé par code.
 Les traits générés sont binarisés (noir pur sur blanc) : aucun gris à l'impression."""
 import os, io, re, json, random, contextvars
@@ -20,9 +21,12 @@ import procede as P
 import calendrier as C
 
 ROOT = Path(__file__).parent
-VERSION = "coloriage-2026-10-08-v1"
+VERSION = "coloriage-2026-10-14-v2"
 POD = os.getenv("LULU_COLO_POD", "0850X1100BWSTDCO060UW444MXX")    # Lettre US, N&B standard, spirale, papier 60# non couché
-NB_PAGES = 30                                   # pages à colorier choisies par le parent
+NB_PAGES = 18                                   # V2 : coloriages classiques choisis par le parent (+ 12 activités = 30 pages)
+NB_MAGIQUES, NB_POINTS, NB_LABY = 5, 3, 2
+# ordre des 30 pages : c = coloriage classique, m = magique numéroté, p = points à relier, l = labyrinthe, d = dessine, t = termine le dessin
+ORDRE = "ccmcpcclccmcdcpccmctcclcpcmcmc"
 TRIM = (612.0, 792.0)                           # 8,5 x 11 po, portrait
 BLEED = 9.0
 PAGE = (TRIM[0] + 2 * BLEED, TRIM[1] + 2 * BLEED)            # 630 x 810 pt
@@ -32,7 +36,8 @@ RELIURE = 50.0                                  # pt : spirale sur le bord gauch
 IMG_SIZE = os.getenv("OPENAI_COLO_SIZE", "1024x1536")        # portrait 2:3 (taille standard du modèle)
 COVER_SIZE = os.getenv("OPENAI_COLO_COVER_SIZE", "1024x1536")
 PROMPT_MAX = 3600
-PLAFOND = min(5.0, float(os.getenv("BUDGET_COLORIAGE_USD", "5")))    # 31 images : plafond propre au cahier (5 $ max)
+PLAFOND = min(5.0, float(os.getenv("BUDGET_COLORIAGE_USD", "5")))    # 27 images (18 + 5 + 3 + couverture) : plafond propre au cahier (5 $ max)
+PTS_SIZE = "1024x1024"
 NAVY, GOLD, CREAM = C.NAVY, C.GOLD, C.CREAM
 STYLE_TRAIT = ROOT / "kit" / "style" / "coloriage-trait.jpg"      # rendu « page de coloriage » attendu (trait seul, aucun personnage à copier)
 NOIR = (0, 0, 0)
@@ -113,19 +118,19 @@ _T = [
 THEMES = [{"cle": k, "cat": c, "emoji": e, "titre": t, "scene": s} for k, c, e, t, s in _T]
 PAR_CLE = {t["cle"]: t for t in THEMES}
 # sélection proposée d'office (variée : un peu de chaque catégorie)
-PAR_DEFAUT = ["chateau_sable", "astronaute", "dinosaures", "pirates", "sous_marin", "fees", "superheros", "pole_nord", "safari", "montgolfiere",
-              "ferme", "cuisine", "jardin", "parc", "dodo", "cabane", "anniversaire", "noel", "bonhomme_neige", "automne", "pluie",
-              "pompier", "docteur", "pilote", "football", "velo", "piscine", "chiots", "foret", "papillons"]
+PAR_DEFAUT = ["chateau_sable", "astronaute", "dinosaures", "pirates", "sous_marin", "superheros", "ferme", "cuisine", "jardin", "dodo",
+              "anniversaire", "noel", "pluie", "pompier", "docteur", "football", "chiots", "foret",
+              "fees", "pole_nord", "safari", "montgolfiere", "parc", "cabane", "bonhomme_neige", "automne", "pilote", "velo", "piscine", "papillons"]
 
 
 def public():
     """Catalogue pour la page de création (titres avec « {p} » à remplacer par le prénom)."""
     return {"categories": [{"cle": k, "nom": n} for k, n in CATEGORIES], "themes": [{k: t[k] for k in ("cle", "cat", "emoji", "titre")} for t in THEMES],
-            "par_defaut": PAR_DEFAUT, "nombre": NB_PAGES}
+            "par_defaut": PAR_DEFAUT[:NB_PAGES], "nombre": NB_PAGES}
 
 
 def choisir(cles, fetes=None):
-    """30 pages : celles du parent (clés connues, sans doublon), complétées par la sélection par défaut."""
+    """NB_PAGES coloriages : ceux du parent (clés connues, sans doublon), complétées par la sélection par défaut."""
     out = [c for c in dict.fromkeys(cles or []) if c in PAR_CLE][:NB_PAGES]
     for c in PAR_DEFAUT + [t["cle"] for t in THEMES]:
         if len(out) >= NB_PAGES:
@@ -238,7 +243,7 @@ def page_couverture(cover, prenom):
         taille -= 2
     cx = (BLEED + RELIURE + PAGE[0] - BLEED) / 2
     L = [(BLEED + 52, nom, _ft("titre", taille), GOLD), (BLEED + 60 + taille * 1.1, "Mon cahier de coloriage", _ft("titre", 28), CREAM),
-         (BLEED + 100 + taille * 1.1, "30 dessins à colorier, rien qu'à toi", _ft("texte", 13, 700), CREAM)]
+         (BLEED + 100 + taille * 1.1, "30 pages de coloriages et de jeux, rien qu'à toi", _ft("texte", 13, 700), CREAM)]
     om = Image.new("RGBA", PX, (0, 0, 0, 0)); do = ImageDraw.Draw(om)
     for y, t, f, c in L:
         do.text((_p(cx), _p(y + 2)), t, font=f, fill=(0, 0, 0, 200), anchor="ma")
@@ -372,9 +377,139 @@ def maquette_ouverte(gauche, droite, dst):
     B.save(dst, quality=88); return Path(dst)
 
 
+# ====================================================================== pages d'activités (V2)
+BLOQUANT_ACT = ("sans solution", "aucune forme", "trop petite", "trop peu de zones", "aucune couleur", "image absente", "hors de la page")
+
+
+def _zone():
+    """Zone de dessin d'une page (en pt) : sous le titre, au-dessus du numéro, hors marge de reliure."""
+    return BLEED + RELIURE, BLEED + 80, PAGE[0] - BLEED - 30, PAGE[1] - BLEED - 52
+
+
+def _sur(page, calque):
+    """Pose un calque (blanc = transparent) sur la page."""
+    from PIL import ImageChops
+    w, h = min(page.width, calque.width), min(page.height, calque.height)
+    page.paste(ImageChops.darker(page.crop((0, 0, w, h)), calque.convert("L").crop((0, 0, w, h))), (0, 0))
+    return page
+
+
+def page_magique(src, num):
+    import activites as A
+    im, d, x0, x1 = _cadre_page("Coloriage magique", num)
+    _, top, _, bas = _zone()
+    leg_h = 70
+    try:
+        calque, r = A.coloriage_magique(src, (_p(x0), _p(top), _p(x1), _p(bas - leg_h - 8)))
+    except Exception as e:                          # image illisible : page laissée vide, bloquée pour relecture
+        return im, {"problemes": [f"image absente ou illisible ({e})"], "legende": []}
+    _sur(im, calque)
+    leg = r["legende"]
+    if leg:                                         # légende en toutes lettres (impression en noir) : 1 = rouge…
+        y = bas - leg_h + 6
+        _txt(d, ((x0 + x1) / 2, y), "Colorie chaque zone avec la couleur de son numéro :", _ft("texte", 10, 700), 0, "ma")
+        cw = (x1 - x0) / len(leg)
+        for k, (n, nom) in enumerate(leg):
+            cx = x0 + cw * (k + .5); cy = y + 40
+            d.ellipse((_p(cx - 34), _p(cy - 11), _p(cx - 12), _p(cy + 11)), outline=0, width=_p(1.4))
+            _txt(d, (cx - 23, cy - 7), str(n), _ft("texte", 11, 900), 0, "ma")
+            _txt(d, (cx - 6, cy - 7), nom, _ft("texte", 12, 800), 0, "la")
+    return im, r
+
+
+def page_points(src, num, age):
+    import activites as A
+    im, d, x0, x1 = _cadre_page("Relie les points !", num)
+    _, top, _, bas = _zone()
+    try:
+        calque, r = A.dessiner_points(src, (_p(x0), _p(top + 18), _p(x1), _p(bas)), age)
+    except Exception as e:
+        return im, {"problemes": [f"image absente ou illisible ({e})"]}
+    _sur(im, calque)
+    if r.get("n"):
+        _txt(d, ((x0 + x1) / 2, top - 6), f"Pars du point 1 entouré et relie-les jusqu'à {r['n']}, puis colorie !", _ft("texte", 10, 700), 0, "ma")
+    return im, r
+
+
+def page_labyrinthe(graine, num, age, prenom, cible, solution=False, box=None):
+    import activites as A
+    titre = f"Aide {prenom} à retrouver {cible} !"
+    if box is None:
+        im, d, x0, x1 = _cadre_page(titre, num)
+        _, top, _, bas = _zone()
+    else:
+        im, d = box["im"], box["d"]; x0, top, x1, bas = box["zone"]
+    calque, r = A.dessiner_labyrinthe((_p(x0), _p(top + 34), _p(x1), _p(bas - 34)), age, graine, avec_solution=solution)
+    _sur(im, calque)
+    ox, oy = r["origine"]; c = r["cellule_px"] / K
+    ox, oy = ox / K, oy / K
+    taille = 13 if box is None else 9
+    _txt(d, (ox + c / 2, oy - 26 * taille / 13), f"Départ : {prenom}", _ft("titre", taille), 0, "la")
+    fx, fy = ox + c * r["cols"], oy + c * r["rows"]
+    t = f"Arrivée : {cible}"
+    _txt(d, (fx - d.textlength(t, font=_ft("titre", taille)) / K, fy + 6), t, _ft("titre", taille), 0, "la")
+    return im, r
+
+
+def page_solutions(labys, num, age, prenom, cible):
+    """Dernière page : les solutions des labyrinthes (pour les parents)."""
+    im, d, x0, x1 = _cadre_page("Les solutions", num)
+    _, top, _, bas = _zone()
+    mi = (top + bas) / 2
+    rs = []
+    for k, g in enumerate(labys):
+        z = (x0 + 40, top + 10 if k == 0 else mi + 10, x1 - 40, mi - 10 if k == 0 else bas)
+        _, r = page_labyrinthe(g, None, age, prenom, cible, solution=True, box={"im": im, "d": d, "zone": z})
+        rs.append(r)
+    return im, rs
+
+
+def page_termine(trait, num):
+    """« Termine le dessin » : un coloriage du cahier dont la moitié droite est effacée (ligne pointillée au milieu du sujet)."""
+    im = page_coloriage(trait, "Termine le dessin !", num)
+    d = ImageDraw.Draw(im)
+    x0, top, x1, bas = _zone()
+    z = (_p(x0), _p(top), _p(x1), _p(bas))
+    box = ImageOps.invert(im.crop(z)).getbbox()
+    if box:
+        xm = z[0] + (box[0] + box[2]) // 2
+        d.rectangle((xm + 3, z[1], z[2], z[3]), fill=255)
+        for y in range(z[1] + box[1], z[1] + box[3], 54):
+            d.line((xm, y, xm, y + 27), fill=0, width=5)
+    _txt(d, ((x0 + x1) / 2, top - 6), "Dessine l'autre moitié, puis colorie tout !", _ft("texte", 10, 700), 0, "ma")
+    return im
+
+
+def pdf_a4(pages, out):
+    """Version à imprimer chez soi (A4) : chaque page réduite pour tenir dans la feuille, centrée."""
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.utils import ImageReader
+    from reportlab.lib.pagesizes import A4
+    c = canvas.Canvas(str(out), pagesize=A4, pageCompression=1)
+    c.setTitle("Cahier de coloriage – A4 à imprimer"); c.setAuthor("Mon Héros du Mois")
+    W, H = A4
+    k = min((W - 20) / TRIM[0], (H - 20) / TRIM[1])
+    for p in pages:
+        q = p.crop((_p(BLEED), _p(BLEED), _p(BLEED + TRIM[0]), _p(BLEED + TRIM[1])))      # sans fond perdu
+        if q.mode == "L":
+            b = io.BytesIO(); q.convert("1").save(b, "PNG"); b.seek(0)
+        else:
+            b = C._jpeg(q)
+        w, h = TRIM[0] * k, TRIM[1] * k
+        c.drawImage(ImageReader(b), (W - w) / 2, (H - h) / 2, w, h); c.showPage()
+    c.save()
+
+
+def _cible_laby(snap):
+    d = next((p for p in snap["personnages"] if p["type"] == "doudou"), None)
+    a = next((p for p in snap["personnages"] if p["type"] == "animal"), None)
+    return (d or a)["nom"] if (d or a) else "son trésor"
+
+
 # ====================================================================== assemblage
-def composer(folder, snap, cover, traits_src):
-    """Toutes les pages et tous les fichiers à partir des images enregistrées : rien n'est généré ici."""
+def composer(folder, snap, cover, traits_src, magiques_src=(), points_src=()):
+    """Toutes les pages et tous les fichiers à partir des images enregistrées : rien n'est généré ici (les activités sont
+    calculées par le programme et vérifiées)."""
     folder = Path(folder)
     prenom = snap["prenom"]
     traits, mesures = [], {}
@@ -383,19 +518,50 @@ def composer(folder, snap, cover, traits_src):
     couv = page_couverture(cover, prenom); dos = page_quatrieme(traits, prenom, snap.get("cadeau"))
     couv.save(folder / "page_couverture.jpg", quality=92); dos.save(folder / "page_quatrieme.jpg", quality=92)
     blanc = Image.new("L", PX, 255)
-    lecture, impression = [page_appartient(prenom)], [page_appartient(prenom), blanc]
-    dess = dessine_pages(snap); num = 0
-    pos_dessine = {7: 0, 15: 1, 23: 2, 30: 3}                  # une page « Dessine… » après les dessins 7, 15, 23 et 30
-    for k, (t, pg) in enumerate(zip(traits, snap["pages"]), start=1):
-        num += 1; p = page_coloriage(t, pg["titre"], num)
-        lecture.append(p); impression += [p, blanc]                # recto seul : le verso reste blanc
-        if k in pos_dessine:
-            num += 1; q = page_dessine(dess[pos_dessine[k]], num)
-            lecture.append(q); impression += [q, blanc]
+    lecture = [page_appartient(prenom)]
+    act_rapports = {}
+    if snap.get("activites"):                                   # V2 : 30 pages selon ORDRE
+        act = snap["activites"]; age = snap.get("age") or 5
+        rnd = random.Random(act["graine"])
+        labys = [rnd.randint(1, 10 ** 6) for _ in range(NB_LABY)]
+        cible = _cible_laby(snap)
+        ic = im_ = ip = il = 0
+        for num, ch in enumerate(ORDRE, start=1):
+            if ch == "c":
+                pg = snap["pages"][ic]; p = page_coloriage(traits[ic], pg["titre"], num); ic += 1
+            elif ch == "m":
+                src = magiques_src[im_] if im_ < len(magiques_src) else None; im_ += 1
+                p, r = page_magique(src, num) if src else (_cadre_page("Coloriage magique", num)[0], {"problemes": ["image absente"]})
+                act_rapports[f"coloriage magique {im_}"] = r
+            elif ch == "p":
+                src = points_src[ip] if ip < len(points_src) else None; ip += 1
+                p, r = page_points(src, num, age) if src else (_cadre_page("Relie les points !", num)[0], {"problemes": ["image absente"]})
+                act_rapports[f"points à relier {ip}"] = r
+            elif ch == "l":
+                p, r = page_labyrinthe(labys[il], num, age, prenom, cible); il += 1
+                act_rapports[f"labyrinthe {il}"] = r
+            elif ch == "d":
+                p = page_dessine(dessine_pages(snap)[0], num)
+            else:
+                p = page_termine(traits[min(2, len(traits) - 1)], num)
+            lecture.append(p)
+        sol, _ = page_solutions(labys, None, age, prenom, cible)
+        lecture.append(sol)
+    else:                                                       # V1 (cahiers déjà fabriqués) : 30 dessins + 4 « Dessine… »
+        dess = dessine_pages(snap); num = 0
+        pos_dessine = {7: 0, 15: 1, 23: 2, 30: 3}
+        for k, (t, pg) in enumerate(zip(traits, snap["pages"]), start=1):
+            num += 1; lecture.append(page_coloriage(t, pg["titre"], num))
+            if k in pos_dessine:
+                num += 1; lecture.append(page_dessine(dess[pos_dessine[k]], num))
+    impression = []
+    for p in lecture:                                           # recto seul : le verso reste blanc
+        impression += [p, blanc]
     titre = f"Le cahier de coloriage de {prenom}"
     nom = re.sub(r"[^\w\-]+", "-", titre, flags=re.U).strip("-")[:80]
     pdf([couv] + lecture + [dos], folder / f"{nom}.pdf", PAGE)
     pdf(impression, folder / "impression_interieur.pdf", PAGE)
+    pdf_a4(lecture, folder / "cahier_A4_a_imprimer.pdf")
     pages = len(impression)
     try:
         dims = dimensions_couverture(pages)
@@ -404,15 +570,23 @@ def composer(folder, snap, cover, traits_src):
     cv = couverture_impression(folder, dims)
     ap = folder / "apercus"; ap.mkdir(exist_ok=True)
     apercus = {"couverture": maquette_fermee(couv, ap / "couverture.jpg").name,
-               "ouvert": maquette_ouverte(lecture[1], lecture[8] if len(lecture) > 8 else lecture[2], ap / "ouvert.jpg").name}
+               "ouvert": maquette_ouverte(lecture[1], lecture[3] if len(lecture) > 3 else lecture[2], ap / "ouvert.jpg").name}
     c = C._rogne(couv); c.thumbnail((1100, 1100)); c.save(ap / "couverture.png"); apercus["couverture_png"] = "couverture.png"
+    vign = lecture[1:31]
     pl = Image.new("RGB", (6 * 300 + 70, 5 * 420 + 60), (251, 245, 234))
-    for k, t in enumerate(traits[:30]):
+    for k, t in enumerate(vign):
         v = t.convert("RGB").copy(); v.thumbnail((290, 410)); pl.paste(v, (35 + (k % 6) * 300, 30 + (k // 6) * 420))
     pl.save(ap / "planche.jpg", quality=84); apercus["planche"] = "planche.jpg"
     pl.save(folder / "planche_contact_1.jpg", quality=84)
-    return {"titre": titre, "pdf": f"{nom}.pdf", "interieur": {"pages": pages, "format_pt": list(PAGE)}, "couverture": cv,
-            "apercus": apercus, "mesures": mesures, "pages": pages}
+    bloq, mineurs = {}, {}
+    for k, r in act_rapports.items():
+        for x in r.get("problemes", []):
+            (bloq if any(b in x for b in BLOQUANT_ACT) else mineurs).setdefault(k, []).append(x)
+    return {"titre": titre, "pdf": f"{nom}.pdf", "a4": "cahier_A4_a_imprimer.pdf", "interieur": {"pages": pages, "format_pt": list(PAGE)},
+            "couverture": cv, "apercus": apercus, "mesures": mesures, "pages": pages,
+            "activites": {k: {kk: v for kk, v in r.items() if kk in ("zones", "legende", "n", "solution", "cols", "rows", "aire", "problemes")}
+                          for k, r in act_rapports.items()},
+            "activites_bloquants": bloq, "activites_mineurs": mineurs}
 
 
 # ====================================================================== fabrication (IA)
@@ -429,6 +603,22 @@ En cas de doute, ce n'est pas bloquant.
 Réponds UNIQUEMENT en JSON : {"bloquants": ["consigne en anglais"], "mineurs": ["en français"]}"""
 
 
+SUJETS_MAGIQUES = ["a big hot-air balloon above round hills and two clouds", "a smiling fish with big fins and three bubbles",
+                   "a butterfly on a big flower", "a rocket next to a planet with a ring and a star", "a little castle with two towers and a flag",
+                   "a friendly unicorn", "a sailing boat on waves with a sun", "a snail and a mushroom"]
+SUJETS_POINTS = ["a star", "a fish", "a cat sitting", "an elephant", "a rocket", "a dinosaur", "a house", "a heart-shaped balloon"]
+
+
+def activites(snap):
+    """Sujets des pages d'activités, choisis une fois pour toutes (dans l'instantané) : le doudou et les animaux d'abord."""
+    rnd = random.Random(snap["empreinte_images"])
+    comp = [p for p in snap["personnages"] if p["type"] in ("doudou", "animal")]
+    mag = [f"{p['nom'].upper()}, the {('plush toy ' if p['type'] == 'doudou' else '')}companion from the reference image" for p in comp[:2]]
+    mag += rnd.sample(SUJETS_MAGIQUES, len(SUJETS_MAGIQUES))
+    pts = [f"the outline of {p['nom'].upper()} from the reference image" for p in comp[:1]] + rnd.sample(SUJETS_POINTS, len(SUJETS_POINTS))
+    return {"magiques": mag[:NB_MAGIQUES], "points": pts[:NB_POINTS], "compagnons": [p["id"] for p in comp[:2]], "graine": rnd.randint(1, 10 ** 6)}
+
+
 def snapshot(form, cfg):
     if cfg.get("problemes"):
         raise P.ProcedeError("Configuration incomplète, rien n'est généré : " + " ; ".join(cfg["problemes"]))
@@ -441,6 +631,7 @@ def snapshot(form, cfg):
             "cadeau": {"de": form["cadeau_de"], "message": form.get("cadeau_message", "")} if form.get("cadeau_de") else None}
     data["empreinte"] = P.sha(data)
     data["empreinte_images"] = P.sha([VERSION, data["personnages"]])
+    data["activites"] = activites(data)
     return data
 
 
@@ -468,6 +659,20 @@ def prompt_page(pg, snap, refs):
     if len(p.encode()) > PROMPT_MAX:
         lines[3] = lines[3][:900]; p = "\n".join(lines)
     return p
+
+
+def prompt_activite(item, snap, refs):
+    if item["type"] == "magique":
+        return "\n".join([
+            "Use case: colour-by-number page for children. Create ONE simple portrait illustration in FLAT COLOURS with THICK BLACK OUTLINES.",
+            f"SUBJECT: {item['sujet']}, large, centred, filling most of the page. " + (P.refs_text(refs, snap) if item.get("ref_id") else ""),
+            "STYLE: a few big simple shapes (between 6 and 14 areas), every area closed by a thick black outline, each area ONE flat colour "
+            "chosen only among red, orange, yellow, green, blue, purple, pink and brown; white background; no gradient, no shading, no texture, "
+            "no tiny details, no text, no numbers, no frame."])
+    return "\n".join([
+        "Use case: dot-to-dot activity. Create ONE solid BLACK SILHOUETTE on a pure white background.",
+        f"SUBJECT: {item['sujet']}, one single shape, large and centred, instantly recognisable from its outline alone. " + (P.refs_text(refs, snap) if item.get("ref_id") else ""),
+        "STYLE: pure flat black filled shape, no inner lines, no other object, no shadow, no ground, no text, no frame."])
 
 
 def prompt_couverture(snap, refs):
@@ -503,6 +708,18 @@ def cibles(snap, portraits, folder):
         refs = [groupe, style]
         out.append((f"page {pg['rang']}", pg, refs, folder / f"colo-page-{pg['rang']:02d}-{_key(snap, [pg['cle'], pg['scene']], refs, IMG_SIZE, qm)}.png",
                     qm, IMG_SIZE))
+    act = snap.get("activites") or {}
+    comp = act.get("compagnons") or []
+    for k, sujet in enumerate(act.get("magiques") or []):
+        rid = comp[k] if k < len(comp) and comp[k] in portraits else None
+        refs = [(f"référence d'identité : {rid}", portraits[rid])] if rid else [("STYLE reference only for clean thick outlines", STYLE_TRAIT)]
+        item = {"type": "magique", "sujet": sujet, "rang": k + 1, "ref_id": rid}
+        out.append((f"coloriage magique {k + 1}", item, refs, folder / f"colo-magique-{k + 1}-{_key(snap, ['magique', sujet], refs, IMG_SIZE, qm)}.png", qm, IMG_SIZE))
+    for k, sujet in enumerate(act.get("points") or []):
+        rid = comp[0] if k == 0 and comp and comp[0] in portraits and "reference image" in sujet else None
+        refs = [(f"référence d'identité : {rid}", portraits[rid])] if rid else [("STYLE reference only", STYLE_TRAIT)]
+        item = {"type": "points", "sujet": sujet, "rang": k + 1, "ref_id": rid}
+        out.append((f"points à relier {k + 1}", item, refs, folder / f"colo-points-{k + 1}-{_key(snap, ['points', sujet], refs, PTS_SIZE, 'low')}.png", "low", PTS_SIZE))
     return out
 
 
@@ -523,11 +740,13 @@ def plan(cfg, folder, snap=None, portraits=None):
         out += [img("couverture", 2, qc, COVER_SIZE), ctl("contrôle couverture", COVER_SIZE)]
         for k in range(NB_PAGES):
             out += [img(f"page {k + 1}", 2, qm, IMG_SIZE), ctl(f"contrôle page {k + 1}", IMG_SIZE)]
+        out += [img(f"coloriage magique {k + 1}", 1, qm, IMG_SIZE) for k in range(NB_MAGIQUES)]
+        out += [img(f"points à relier {k + 1}", 1, "low", PTS_SIZE) for k in range(NB_POINTS)]
         return out
-    for etape, _, refs, path, q, size in cibles(snap, portraits, folder):
+    for etape, pg, refs, path, q, size in cibles(snap, portraits, folder):
         if not path.exists():
             out.append(img(etape, len(refs), q, size))
-        if not path.with_suffix(".json").exists():
+        if not path.with_suffix(".json").exists() and not (pg or {}).get("type"):
             out.append(ctl("contrôle " + etape, size))
     return out
 
@@ -537,6 +756,15 @@ def _dessiner(etape, pg, refs, path, q, size, snap, folder):
     rapport_p = path.with_suffix(".json")
     if path.exists() and rapport_p.exists():
         return json.loads(rapport_p.read_text(encoding="utf-8"))
+    if pg is not None and pg.get("type"):                      # activité : dessin de base, vérifiée par le programme à la mise en page
+        if not path.exists():
+            prompt = prompt_activite(pg, snap, refs)
+            (Path(folder) / "prompts").mkdir(exist_ok=True)
+            (Path(folder) / "prompts" / f"{path.stem}.txt").write_text(prompt, encoding="utf-8")
+            P.image(prompt, refs, path, size, q, f"prompts/{path.stem}.txt", etape=etape)
+        r = {"retenu": path.name, "bloquants": [], "mineurs": [], "controle": "programme"}
+        rapport_p.write_text(json.dumps(r, ensure_ascii=False, indent=1), encoding="utf-8")
+        return r
     if not path.exists():
         prompt = prompt_couverture(snap, refs) if pg is None else prompt_page(pg, snap, refs)
         (Path(folder) / "prompts").mkdir(exist_ok=True)
@@ -600,10 +828,10 @@ def _run(form, cfg, refs, folder, job, progress, livre):
         save("controle.json", {"etat": "needs_review", "pilote": rapports["page 1"], "references": rapport_refs})
         raise P.ProcedeError("Page pilote non conforme : " + " ; ".join(P.fr(rapports["page 1"])) +
                              " (relecture humaine : aucune régénération automatique)")
-    fait = [1]
+    fait, total = [1], len(t) - 1
     def un(c):
         r = _dessiner(*c, snap, folder)
-        fait[0] += 1; progress(f"Pages {fait[0]}/{NB_PAGES}", 14 + int(78 * fait[0] / NB_PAGES))
+        fait[0] += 1; progress(f"Pages {fait[0]}/{total}", 14 + int(78 * fait[0] / total))
         return c[0], r
     with ThreadPoolExecutor(max_workers=G.WORKERS) as ex:
         futs = [ex.submit(contextvars.copy_context().run, un, c) for c in t[2:]]
@@ -616,7 +844,8 @@ def _run(form, cfg, refs, folder, job, progress, livre):
         if errs:
             raise errs[0]
     etat("assembling", "Mise en page et PDF", 94)
-    fab = composer(folder, snap, t[0][3], [c[3] for c in t[1:]])
+    fab = composer(folder, snap, t[0][3], [c[3] for c in t[1:] if c[0].startswith("page ")],
+                   [c[3] for c in t if c[0].startswith("coloriage magique")], [c[3] for c in t if c[0].startswith("points à relier")])
     return conclure(folder, snap, fab, rapports, rapport_refs, livre, job)
 
 
@@ -626,14 +855,16 @@ def conclure(folder, snap, fab, rapports, rapport_refs, livre, job):
     bloquants += [f"référence {k} : {x}" for k, v in rapport_refs.items() for x in P.fr(v)]
     impossibles = [f"{k} : contrôle visuel impossible ({r['controle_impossible']})" for k, r in rapports.items() if r.get("controle_impossible")]
     mineurs = [f"{k} : {x}" for k, r in rapports.items() for x in r.get("mineurs", [])]
+    bloquants += [f"{k} : {x}" for k, v in fab.get("activites_bloquants", {}).items() for x in v]       # vérifiés par le programme
+    mineurs += [f"{k} : {x}" for k, v in fab.get("activites_mineurs", {}).items() for x in v]
     phase = "needs_review" if (bloquants or impossibles) else "ready"
     dep = BU.depense(livre) if livre else {"regle": 0}
     cout = round(dep["regle"], 4)
-    info = {"produit": "coloriage", "titre": fab["titre"], "prenom": snap["prenom"], "pdf_lecture": fab["pdf"], "pages_impression": fab["pages"],
+    info = {"produit": "coloriage", "titre": fab["titre"], "prenom": snap["prenom"], "pdf_lecture": fab["pdf"], "pdf_a4": fab.get("a4"), "pages_impression": fab["pages"],
             "images": sorted(p.name for p in folder.glob("colo-*.png")), "apercus": fab["apercus"]}
     (folder / "coloriage.json").write_text(json.dumps(info, ensure_ascii=False, indent=1), encoding="utf-8")
     controle = {"etat": phase, "produit": "coloriage", "instantane": snap["empreinte"], "modele_image": P.model(), "references": rapport_refs,
-                "images": rapports, "mesures": fab["mesures"], "bloquants": bloquants, "mineurs": mineurs, "controles_impossibles": impossibles,
+                "images": rapports, "mesures": fab["mesures"], "activites": fab.get("activites", {}), "bloquants": bloquants, "mineurs": mineurs, "controles_impossibles": impossibles,
                 "fabrication": {"interieur": fab["interieur"], "couverture": fab["couverture"]}, "impression_bloquee": fab["couverture"]["problemes"],
                 "cout_api_usd": cout, "budget": dep}
     (folder / "controle.json").write_text(json.dumps(controle, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -649,7 +880,7 @@ def pages_impression(folder):
     try:
         return int(json.loads((Path(folder) / "coloriage.json").read_text(encoding="utf-8"))["pages_impression"])
     except (OSError, ValueError, KeyError):
-        return 2 + 2 * (NB_PAGES + 4)
+        return 2 * (len(ORDRE) + 2)
 
 
 def finaliser(folder, res):
@@ -658,7 +889,7 @@ def finaliser(folder, res):
     info = json.loads((folder / "coloriage.json").read_text(encoding="utf-8"))
     fichiers = ([info["pdf_lecture"], "coloriage.json", "coloriage_instantane.json", "references.json", "controle.json", "budget.json",
                  "impression_interieur.pdf", "impression_couverture.pdf", "page_couverture.jpg", "page_quatrieme.jpg"]
-                + info["images"] + [p.name for p in folder.glob("portrait_*.png")] + [f"apercus/{v}" for v in info["apercus"].values()])
+                + ([info["pdf_a4"]] if info.get("pdf_a4") else []) + info["images"] + [p.name for p in folder.glob("portrait_*.png")] + [f"apercus/{v}" for v in info["apercus"].values()])
     man = F.finaliser(folder, fichiers, {"produit": "coloriage", "titre": res["titre"], "pdf_lecture": info["pdf_lecture"], "pages": res["pages"],
                                          "mineurs": res["mineurs"], "cout_api_usd": res["cout"], "appels_api": BU.appels(P.livre_id(folder)),
                                          "apercus": info["apercus"], "volumeNumber": None})
@@ -692,10 +923,13 @@ def recomposer(folder, form=None):
         raise P.ProcedeError("Cahier finalisé : ses fichiers sont figés")
     snap = json.loads((folder / "coloriage_instantane.json").read_text(encoding="utf-8"))
     cov = sorted(folder.glob("colo-couverture-*.png"))
-    pages = [sorted(folder.glob(f"colo-page-{k:02d}-*.png")) for k in range(1, NB_PAGES + 1)]
-    if not cov or not all(pages):
+    pages = [sorted(folder.glob(f"colo-page-{k:02d}-*.png")) for k in range(1, len(snap["pages"]) + 1)]
+    act = snap.get("activites") or {}
+    mag = [sorted(folder.glob(f"colo-magique-{k}-*.png")) for k in range(1, len(act.get("magiques") or []) + 1)]
+    pts = [sorted(folder.glob(f"colo-points-{k}-*.png")) for k in range(1, len(act.get("points") or []) + 1)]
+    if not cov or not all(pages) or not all(mag) or not all(pts):
         raise P.ProcedeError("Images du cahier incomplètes")
-    return composer(folder, snap, cov[-1], [p[-1] for p in pages])
+    return composer(folder, snap, cov[-1], [p[-1] for p in pages], [m[-1] for m in mag], [p[-1] for p in pts])
 
 
 DEMO_PAGE = ROOT / "kit" / "coloriage_demo"
@@ -714,5 +948,33 @@ def demo(form, cfg, folder, job, progress):
         Image.open(src[(pg["rang"] - 1) % len(src)]).save(dst); traits.append(dst)
     cov = folder / "colo-couverture-demo.png"
     Image.open(ROOT / "kit" / "calendrier_demo" / "mois-07.jpg").convert("RGB").save(cov)
-    fab = composer(folder, snap, cov, traits)
+    mag, pts = _demo_activites(folder)
+    fab = composer(folder, snap, cov, traits, mag, pts)
     return conclure(folder, snap, fab, {"couverture": {"bloquants": [], "mineurs": []}}, {}, None, job)
+
+
+def _demo_activites(folder):
+    """Démo : dessins de base des activités tracés par le programme (aucun appel)."""
+    import math
+    folder = Path(folder)
+    m = Image.new("RGB", (1024, 1536), "white"); d = ImageDraw.Draw(m)
+    d.rectangle((0, 1100, 1024, 1536), fill=(70, 170, 70), outline="black", width=10)            # colline
+    d.ellipse((262, 200, 762, 760), fill=(220, 50, 50), outline="black", width=12)              # montgolfière
+    d.polygon([(330, 650), (694, 650), (580, 860), (444, 860)], fill=(240, 140, 40), outline="black")
+    d.rectangle((440, 900, 584, 1020), fill=(140, 90, 50), outline="black", width=12)
+    d.line((450, 860, 460, 900), fill="black", width=8); d.line((574, 860, 564, 900), fill="black", width=8)
+    d.ellipse((60, 120, 300, 260), fill=(60, 120, 210), outline="black", width=10)               # nuages
+    d.ellipse((780, 300, 990, 420), fill=(60, 120, 210), outline="black", width=10)
+    d.ellipse((800, 1180, 960, 1340), fill=(245, 210, 50), outline="black", width=10)            # soleil couchant
+    mags = []
+    for k in range(NB_MAGIQUES):
+        p = folder / f"colo-magique-{k + 1}-demo.png"; m.save(p); mags.append(p)
+    pts = []
+    for k in range(NB_POINTS):
+        s = Image.new("L", (1024, 1024), 255); ds = ImageDraw.Draw(s)
+        br = 5 + k
+        poly = [(512 + (420 if i % 2 == 0 else 190) * math.cos(math.pi / 2 + i * math.pi / br),
+                 512 - (420 if i % 2 == 0 else 190) * math.sin(math.pi / 2 + i * math.pi / br)) for i in range(2 * br)]
+        ds.polygon(poly, fill=0)
+        p = folder / f"colo-points-{k + 1}-demo.png"; s.save(p); pts.append(p)
+    return mags, pts

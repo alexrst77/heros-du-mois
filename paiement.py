@@ -128,9 +128,9 @@ def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=(), pro
     elif calendrier:
         out.append(("Calendrier mural personnalisé (12 mois), en ajout", 1, PRIX_CALENDRIER_AJOUT, "calendrier"))
     if formule == "coloriage":
-        out.append(("Cahier de coloriage personnalisé (30 dessins)", 1, PRIX_COLORIAGE, "coloriage"))
+        out.append(("Cahier de coloriage personnalisé (30 pages : coloriages et jeux)", 1, PRIX_COLORIAGE, "coloriage"))
     elif coloriage:
-        out.append(("Cahier de coloriage personnalisé (30 dessins), en ajout", 1, PRIX_COLORIAGE_AJOUT, "coloriage"))
+        out.append(("Cahier de coloriage personnalisé (30 pages : coloriages et jeux), en ajout", 1, PRIX_COLORIAGE_AJOUT, "coloriage"))
     for k in ([formule] if formule in OBJETS else []) + objets_valides(objets, formule):
         out.append((f"{OBJETS[k]['nom']}, livraison comprise", 1, OBJETS[k]["prix"], "objet"))
     r = remise(formule, pays, calendrier, coloriage, objets, promo, ebook)
