@@ -126,6 +126,13 @@ GRANDS = [   # (code POD, description, pages) : formats plus grands et livres pl
     ("1100X0850FCSTDCW080CW444GXX", "Grand à l'italienne 28 × 21,6 cm · 40 pages", 40),
     ("1169X0827FCSTDCW080CW444GXX", "A4 à l'italienne 29,7 × 21 cm · 32 pages", 32),
     ("0850X1100FCSTDCW080CW444GXX", "Grand portrait 21,6 × 28 cm · 32 pages", 32),
+    ("0827X1169FCSTDCW080CW444GXX", "A4 portrait 21 × 29,7 cm · 48 pages (3 histoires)", 48),
+    ("0827X1169FCSTDCW080CW444GXX", "A4 portrait 21 × 29,7 cm · 64 pages (4 histoires)", 64),
+    ("0827X1169FCSTDCW080CW444GXX", "A4 portrait 21 × 29,7 cm · 80 pages (5 histoires)", 80),
+    ("1169X0827FCSTDCW080CW444GXX", "A4 à l'italienne 29,7 × 21 cm · 48 pages (3 histoires)", 48),
+    ("1169X0827FCSTDCW080CW444GXX", "A4 à l'italienne 29,7 × 21 cm · 64 pages (4 histoires)", 64),
+    ("1169X0827FCSTDCW080CW444GXX", "A4 à l'italienne 29,7 × 21 cm · 80 pages (5 histoires)", 80),
+    ("0827X1169FCSTDCW060UW444MXX", "A4 portrait · papier fin mat (moins cher) · 64 pages", 64),
 ]
 
 
