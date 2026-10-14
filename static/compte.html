@@ -70,7 +70,7 @@
       const r = await fetch('/api/compte/lien', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: $('em').value, suite }) });
       const j = await r.json().catch(() => ({}));
       $('msg').className = 'msg ' + (r.ok ? 'ok' : 'ko');
-      $('msg').textContent = r.ok ? `📬 C'est envoyé ! Ouvrez le lien reçu à ${$('em').value} (pensez aux indésirables).` : (j.erreur || 'Erreur, réessayez.');
+      $('msg').textContent = r.ok ? `C'est envoyé ! Ouvrez le lien reçu à ${$('em').value} (pensez aux indésirables).` : (j.erreur || 'Erreur, réessayez.');
       b.disabled = false;
     };
     if (C.google) {
@@ -89,18 +89,18 @@
 
   function vueCompte() {
     const H = C.heros || [], K = C.commandes || [];
-    $('page').innerHTML = `<div class="tete"><div><h1>Bonjour${C.nom ? ' ' + esc(C.nom.split(' ')[0]) : ''} ✨</h1><p class="lead">Connecté avec ${esc(C.email)}</p></div>
+    $('page').innerHTML = `<div class="tete"><div><h1>Bonjour${C.nom ? ' ' + esc(C.nom.split(' ')[0]) : ''}</h1><p class="lead">Connecté avec ${esc(C.email)}</p></div>
         <a class="btn petit" href="/creer">Créer un nouvel univers</a></div>
       <h2>Mes héros</h2>
-      <div class="heros">${H.map(h => `<div class="h"><div class="av">${h.apercu ? `<img src="${esc(h.apercu)}" alt="">` : '🧒'}</div><b>${esc(h.nom)}</b>
+      <div class="heros">${H.map(h => `<div class="h"><div class="av">${h.apercu ? `<img src="${esc(h.apercu)}" alt="">` : ''}</div><b>${esc(h.nom)}</b>
           <small>modifié le ${new Date(h.maj * 1000).toLocaleDateString('fr-FR')}</small>
           <button class="btn" data-ouvrir="${h.id}">Créer avec ${esc(h.nom)}</button><button class="lien" data-suppr="${h.id}" data-nom="${esc(h.nom)}">Supprimer</button></div>`).join('')}
         <a class="nouveau" href="/creer">+ Nouveau héros</a></div>
       <h2>Mes commandes</h2>
       ${K.length ? K.map(c => `<div class="cmd"><div><div class="q">${esc(c.quoi)}</div><div class="d">Commande du ${new Date(c.cree * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} · n° ${esc(c.id.toUpperCase())}</div>
           <span class="st ${c.statut === 'Expédié' ? 'ok' : ''}">${esc(c.statut)}</span></div><div class="m">${eur(c.montant)}</div>
-          ${(c.ebooks || []).length ? `<div class="t">${c.ebooks.map(e => `<a class="btn petit" href="${esc(e.url)}">📥 « ${esc(e.titre)} » (PDF)</a>${e.imprimer ? ` <a href="${esc(e.imprimer)}">Commander la version imprimée</a>` : ''}`).join('<br>')}</div>` : ''}
-          ${c.titres.length || c.suivi.length ? `<div class="t">${c.titres.map(t => '« ' + esc(t) + ' »').join(' · ')}${c.suivi.length ? `${c.titres.length ? '<br>' : ''}📦 ${c.suivi.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">Suivre le colis${c.suivi.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' · ')}` : ''}</div>` : ''}</div>`).join('')
+          ${(c.ebooks || []).length ? `<div class="t">${c.ebooks.map(e => `<a class="btn petit" href="${esc(e.url)}">« ${esc(e.titre)} » (PDF)</a>${e.imprimer ? ` <a href="${esc(e.imprimer)}">Commander la version imprimée</a>` : ''}`).join('<br>')}</div>` : ''}
+          ${c.titres.length || c.suivi.length ? `<div class="t">${c.titres.map(t => '« ' + esc(t) + ' »').join(' · ')}${c.suivi.length ? `${c.titres.length ? '<br>' : ''}${c.suivi.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">Suivre le colis${c.suivi.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' · ')}` : ''}</div>` : ''}</div>`).join('')
         : `<div class="vide">Aucune commande pour l'instant avec ${esc(C.email)}.</div>`}
       <div class="bas"><button id="out">Se déconnecter</button><button id="del">Supprimer mon compte</button><a href="/confidentialite">Données personnelles</a></div>`;
     document.querySelectorAll('[data-ouvrir]').forEach(b => b.onclick = async () => {
