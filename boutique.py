@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify, send_file, abort, redirect, Respo
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
 import calendrier, coloriage
-import printful, objets, legal, factures, comptes, apercu
+import printful, objets, legal, factures, comptes, apercu, recueil
 EXTRAS = {"calendrier": calendrier, "coloriage": coloriage}      # produits Lulu qui ne sont pas des livres (même colis que les livres)
 OBJETS = {k: objets for k in objets.KINDS}                         # objets Printful (gourde, tasse, sac) : leur propre colis
 NON_LIVRES = {**EXTRAS, **OBJETS}
@@ -777,6 +777,62 @@ def _verifier_imprimable(b):
         build_cover(b["id"])
 
 
+# ------------------------------------------------------------------ grand livre A4 (plusieurs histoires en un livre)
+def dossier_grand(origine):
+    return A.OUT / f"{origine}-grand"
+
+
+def jeton_grand(origine):
+    import hmac, hashlib, suivi
+    return hmac.new(suivi._secret(), f"grand:{origine}".encode(), hashlib.sha256).hexdigest()[:24]
+
+
+def composer_grand(origine):
+    """Recompose le grand livre A4 à partir des histoires VALIDÉES de la commande (aucun appel IA). Renvoie les infos du livre."""
+    tete = db.get(origine)
+    if not paiement.grand(tete["formule"]):
+        raise RuntimeError("cette commande n'est pas un grand livre")
+    n = paiement.FORMULES[tete["formule"]]["livres"]
+    livres = livres_du_pack(origine)
+    if len(livres) < n:
+        raise RuntimeError(f"{len(livres)}/{n} histoires créées")
+    faites = [b for b in livres if b.get("job_id") and fabrication.est_finalise(A.OUT / b["job_id"])]
+    if len(faites) < n:
+        raise RuntimeError(f"{len(faites)}/{n} histoires validées : le grand livre se compose quand chaque histoire est relue et validée")
+    form, _ = load_book(origine)
+    cadeau = {"de": form["cadeau_de"], "message": form.get("cadeau_message", "")} if form.get("cadeau_de") else None
+    out = dossier_grand(origine)
+    dossiers = [A.OUT / b["job_id"] for b in livres[:n]]
+    info = recueil.composer(dossiers, out, form.get("prenom") or "", cadeau=cadeau)
+    try:
+        dims = recueil.dimensions(info["pages"])
+    except Exception as e:
+        log(f"grand livre {origine} : gabarit de couverture indisponible ({e})"); dims = None
+    info["couverture"] = recueil.couverture(dossiers, out / "impression_couverture.pdf", form.get("prenom") or "", cadeau=cadeau, dims=dims, pages=info["pages"])
+    recueil.apercu_png(out / info["pdf"], out / "apercu_couverture.png", 0)
+    (out / "recueil.json").write_text(json.dumps(info, ensure_ascii=False, indent=1), encoding="utf-8")
+    return info
+
+
+@bp.get("/impression-grand/<origine>/<jeton>/<name>")
+def print_file_grand(origine, jeton, name):
+    """Fichiers du grand livre A4 téléchargés par Lulu (lien secret propre à la commande)."""
+    if not re.fullmatch(r"[a-f0-9]{12}", origine) or not secrets.compare_digest(jeton_grand(origine), jeton) or name not in ("interieur.pdf", "couverture.pdf"):
+        abort(404)
+    p = dossier_grand(origine) / f"impression_{name}"
+    return send_file(p, mimetype="application/pdf") if p.exists() else abort(404)
+
+
+@bp.get("/admin/grand/<origine>/<name>")
+def admin_file_grand(origine, name):
+    if not admin_ok():
+        abort(403)
+    if not re.fullmatch(r"[a-f0-9]{12}", origine) or not re.match(r"^[\w\-. ]+\.(pdf|png|json)$", name):
+        abort(404)
+    p = dossier_grand(origine) / name
+    return send_file(p) if p.exists() else abort(404)
+
+
 def send_to_print(oid):
     """Envoie TOUTE la commande chez les imprimeurs : livres + calendrier + cahier chez Lulu (un seul colis), objets chez Printful
     (une seule commande, son propre colis). Refusé tant qu'un produit n'est pas prêt. Ce qui est déjà parti n'est jamais renvoyé."""
@@ -817,8 +873,16 @@ def send_to_print(oid):
     pub = os.getenv("PUBLIC_URL", "").rstrip("/")
     if not pub.startswith("https://"):
         raise RuntimeError("Les imprimeurs téléchargent les fichiers : renseigne PUBLIC_URL (adresse https publique du site).")
+    grand = paiement.grand(tete["formule"])
     for b in a_lulu:
+        if grand and b["formule"] not in EXTRAS:          # histoire du grand livre : imprimée dans le livre A4, pas seule
+            continue
         _verifier_imprimable(b)
+    if grand and any(b["formule"] not in EXTRAS for b in a_lulu):
+        info = composer_grand(origine)
+        bloque = info["problemes"] + info["couverture"]["problemes"]
+        if bloque:
+            raise RuntimeError("Grand livre NON prêt à imprimer : " + " ; ".join(bloque))
     job = {}
     if a_lulu:
         job = _envoyer_lulu(origine, tete, a_lulu, pub)
@@ -833,7 +897,15 @@ def _envoyer_lulu(origine, tete, tout, pub):
     livres = [b for b in tout if b["formule"] not in EXTRAS]
     cals = [b for b in tout if b["formule"] in EXTRAS]
     items = []
+    grand = paiement.grand(tete["formule"]) and bool(livres)
+    if grand:                                    # les histoires partent en UN grand livre A4
+        info = json.loads((dossier_grand(origine) / "recueil.json").read_text(encoding="utf-8"))
+        j = jeton_grand(origine)
+        items.append({"id": f"{origine}-grand", "titre": info["titre"], "pod": recueil.POD,
+                      "interieur": f"{pub}/impression-grand/{origine}/{j}/interieur.pdf", "couverture": f"{pub}/impression-grand/{origine}/{j}/couverture.pdf"})
     for b in tout:
+        if grand and b["formule"] not in EXTRAS:
+            continue
         jeton = b["jeton"] or secrets.token_urlsafe(24)
         db.update(b["id"], jeton=jeton)
         it = {"id": b["id"], "titre": b["titre"] or "Mon Héros du Mois",
@@ -841,11 +913,11 @@ def _envoyer_lulu(origine, tete, tout, pub):
         if b["formule"] in EXTRAS:
             it["pod"] = EXTRAS[b["formule"]].POD
         items.append(it)
-    cost = lulu.cost_lignes([(24, lulu.POD_PACKAGE, len(livres))] + [(pages_extra(b["formule"], A.OUT / b["job_id"]), EXTRAS[b["formule"]].POD, 1) for b in cals],
+    cost = lulu.cost_lignes(([(info["pages"], recueil.POD, 1)] if grand else [(24, lulu.POD_PACKAGE, len(livres))]) + [(pages_extra(b["formule"], A.OUT / b["job_id"]), EXTRAS[b["formule"]].POD, 1) for b in cals],
                             tete["adresse"], tete["email"])
     job = lulu.create_print_job(origine, items, tete["adresse"], tete["email"])
     st = (job.get("status") or {}).get("name")
-    quoi = " + ".join(([f"{len(livres)} livre(s)"] if livres else []) + [NOMS_EXTRAS[b["formule"]] for b in cals])
+    quoi = " + ".join(([f"grand livre A4 ({len(livres)} histoires)" if grand else f"{len(livres)} livre(s)"] if livres else []) + [NOMS_EXTRAS[b["formule"]] for b in cals])
     for b in tout:
         db.update(b["id"], statut="envoyee_impression", lulu_id=str(job.get("id")), lulu_statut=st,
                   lulu_cout=f"{cost['total_ttc']} {cost['devise']} (colis : {quoi})" if b is tout[0] else None, erreur=None)
@@ -1259,6 +1331,18 @@ def admin_action(oid, action):
                                               extras=[NOMS_EXTRAS[b["formule"]] for b in ex]))
         if action == "verifier-lulu":
             return jsonify(ok=True, info=verifier_fichiers_lulu(oid))
+        if action == "grand-livre":               # grand livre A4 : composé à partir des histoires validées (aucun appel IA)
+            ori = o["origine"] or oid
+            info = composer_grand(ori)
+            return jsonify(ok=True, info=dict(info, lien=f"/admin/grand/{ori}/{info['pdf']}", interieur=f"/admin/grand/{ori}/impression_interieur.pdf",
+                                              couv=f"/admin/grand/{ori}/impression_couverture.pdf", image=f"/admin/grand/{ori}/apercu_couverture.png"))
+        if action == "grand-cout":
+            ori = o["origine"] or oid
+            n = paiement.FORMULES[db.get(ori)["formule"]]["livres"]
+            ex = extras_du_pack(ori)
+            lignes = [(recueil.nb_pages(n), recueil.POD, 1)] + [(pages_extra(b["formule"], A.OUT / (b["job_id"] or "_")), EXTRAS[b["formule"]].POD, 1) for b in ex]
+            return jsonify(ok=True, info=dict(lulu.cost_lignes(lignes, o["adresse"], o["email"]), livres=1, calendriers=len(ex),
+                                              extras=[f"grand livre A4 ({recueil.nb_pages(n)} pages)"] + [NOMS_EXTRAS[b["formule"]] for b in ex]))
         if action == "recomposer":                # calendrier : pages recomposées à partir des 13 images enregistrées (aucun appel IA)
             folder = A.OUT / (o["job_id"] or "_")
             mod = produit_de(folder)

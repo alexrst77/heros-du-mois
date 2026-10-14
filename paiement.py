@@ -40,6 +40,19 @@ FORMULES["ebook"] = {"nom": "E-book personnalisé (PDF)", "livres": 1, "prix_liv
 FORMULES["imprime"] = {"nom": "Version imprimée de son e-book", "livres": 1, "prix_livre": FORMULES["livre"]["prix_livre"],
                        "prix": FORMULES["livre"]["prix_livre"], "mode": "payment", "reimpression": True}
 
+# Grand livre A4 portrait (3 à 5 histoires, un monde par histoire, réunies en UN livre). Proposé seulement quand Alex a fixé ses
+# prix dans Railway (PRIX_GRAND_3, PRIX_GRAND_4, PRIX_GRAND_5, en centimes) : aucun prix par défaut, rien n'est inventé.
+for _n in (3, 4, 5):
+    _p = os.getenv(f"PRIX_GRAND_{_n}", "").strip()
+    if _p.isdigit() and int(_p) > 0:
+        FORMULES[f"grand{_n}"] = {"nom": f"Grand livre A4 · {_n} histoires", "livres": _n, "prix": int(_p), "prix_livre": int(_p) // _n,
+                                  "mode": "payment", "grand": True}
+PORT_GRAND = int(os.getenv("PORT_GRAND", "990"))          # un grand livre rigide A4 : un colis plus lourd
+
+
+def grand(formule):
+    return bool((FORMULES.get(formule) or {}).get("grand"))
+
 
 def numerique(formule):
     return bool((FORMULES.get(formule) or {}).get("numerique"))
@@ -47,7 +60,7 @@ def numerique(formule):
 
 def ebook_ajoute(formule, ebook):
     """La version e-book est-elle AJOUTÉE à des livres imprimés ? (la formule « ebook » la compte déjà)"""
-    return bool(ebook) and not numerique(formule) and FORMULES.get(formule, {}).get("livres", 0) > 0
+    return bool(ebook) and not numerique(formule) and not grand(formule) and FORMULES.get(formule, {}).get("livres", 0) > 0
 
 
 def objets_valides(objets, formule=None):
@@ -66,7 +79,7 @@ def frais_port(formule, pays="FR", physique=False):
     if numerique(formule):                      # e-book : rien à livrer, sauf un calendrier ou un cahier ajouté
         return PORT_FR[1] + SUPPLEMENT_PAYS.get((pays or "FR").upper(), SUPPLEMENT_PAYS["BE"]) if physique else 0
     n = FORMULES[formule]["livres"]
-    base = PORT_FR[1] if formule in EXTRAS else 0 if n >= 6 else PORT_FR.get(n, PORT_FR[3])
+    base = PORT_GRAND if grand(formule) else PORT_FR[1] if formule in EXTRAS else 0 if n >= 6 else PORT_FR.get(n, PORT_FR[3])
     return base + SUPPLEMENT_PAYS.get((pays or "FR").upper(), SUPPLEMENT_PAYS["BE"])
 
 
@@ -119,6 +132,8 @@ def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=(), pro
     out = []
     if numerique(formule):
         out.append(("E-book illustré personnalisé (PDF à télécharger)", 1, f["prix_livre"], "ebook"))
+    elif grand(formule):
+        out.append((f"Grand livre illustré personnalisé A4, {f['livres']} histoires", 1, f["prix"], "livre"))
     elif f["livres"]:
         out.append((f"Livre illustré personnalisé ({f['nom']})", f["livres"], f["prix_livre"], "livre"))
     if ebook_ajoute(formule, ebook):
@@ -145,7 +160,8 @@ def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=(), pro
 
 def grille():
     """Prix affichés par le site (en centimes) : une seule source pour la page d'accueil et la commande."""
-    return {"formules": {k: {"nom": f["nom"], "livres": f["livres"], "prix_livre": f["prix_livre"], "prix": f["prix"]} for k, f in FORMULES.items()},
+    return {"formules": {k: {"nom": f["nom"], "livres": f["livres"], "prix_livre": f["prix_livre"], "prix": f["prix"], "grand": bool(f.get("grand"))} for k, f in FORMULES.items()},
+            "port_grand": PORT_GRAND,
             "port_fr": {str(k): v for k, v in PORT_FR.items()}, "port_offert_des": 6, "supplement_pays": SUPPLEMENT_PAYS,
             "calendrier": {"seul": PRIX_CALENDRIER, "ajout": PRIX_CALENDRIER_AJOUT, "port": PORT_FR[1]},
             "coloriage": {"seul": PRIX_COLORIAGE, "ajout": PRIX_COLORIAGE_AJOUT, "port": PORT_FR[1]},
@@ -202,6 +218,9 @@ def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, co
     if numerique(formule):
         items.append({"price_data": {"currency": "eur", "unit_amount": f["prix_livre"],
                                      "product_data": {"name": "Mon Héros du Mois – e-book personnalisé (PDF à télécharger)"}}, "quantity": 1})
+    elif grand(formule):
+        items.append({"price_data": {"currency": "eur", "unit_amount": f["prix"],
+                                     "product_data": {"name": f"Mon Héros du Mois – grand livre A4 personnalisé ({f['livres']} histoires)"}}, "quantity": 1})
     elif f["livres"]:
         items.append({"price_data": {"currency": "eur", "unit_amount": f["prix_livre"],
                                      "product_data": {"name": f"Mon Héros du Mois – livre personnalisé ({f['nom']})"}}, "quantity": f["livres"]})

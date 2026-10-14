@@ -201,6 +201,7 @@ function boutons(o, e) {
   if (!['paiement', 'archive'].includes(e.k)) sec.push(b('budget', '💰 Coût IA détaillé'));
   if (e.k === 'pret' || e.k === 'valide') sec.push(b('mail-pret', o.pack_mail ? '📧 Renvoyer le mail « prêt »' : '📧 Envoyer le mail « prêt »'));
   if (['relire', 'pret', 'valide'].includes(e.k) && !o.objet) sec.push(b('couverture', '📐 Préparer la couverture'), b('cout', '🏷️ Prix Lulu'), b('verifier-lulu', '🔎 Vérifier les fichiers chez Lulu'));
+  if (/^grand\d$/.test(o.formule || '') && !['paiement', 'archive'].includes(e.k)) sec.unshift(b('grand-livre', '📚 Composer le grand livre A4 (sans IA)', 'main'), b('grand-cout', '🏷️ Prix Lulu du grand livre'));
   if (o.objet && ['relire', 'pret', 'valide'].includes(e.k)) sec.push(`<a class="btn" target="_blank" href="/admin/fichier/${o.id}/impression_objet.png${Q}">🖼️ Fichier d'impression</a>`, b('maquette-printful', '📸 Photo du produit fini (Printful)'));
   if (o.extra && e.k === 'relire') sec.push(b('recomposer', o.objet ? "🔁 Refaire le fichier d'impression (sans IA)" : '🔁 Recomposer les pages (sans IA)'));
   if (o.abonnement_id) sec.push(b('mois-suivant', '➕ Livre suivant'), b('arreter-abonnement', '⏹️ Arrêter l\'abonnement', 'danger'));
@@ -555,6 +556,7 @@ const CONFIRM = {
   'test-tasse': 'Fabriquer une tasse de test (illustration + fichier Printful) avec les avatars de cette commande ? (≈ 0,30 $ d\'IA, aucune commande Printful)',
   'test-sac': 'Fabriquer un sac à dos de test (illustration + fichier Printful) avec les avatars de cette commande ? (≈ 0,30 $ d\'IA, aucune commande Printful)',
   'maquette-printful': "Demander à Printful les photos du produit fini ? (gratuit, aucune commande, ≈ 30 s)",
+  'grand-livre': "Composer le grand livre A4 à partir des histoires validées ? (aucun appel IA, gratuit)",
   'printful-confirmer': "Confirmer la commande chez Printful ? Elle sera fabriquée, expédiée et FACTURÉE sur ta carte Printful."
 
 };
@@ -566,6 +568,11 @@ function resultat(action, j) {
     return { cls: i.ok ? 'ok' : 'err', html: `🔎 <b>${i.ok ? 'Fichiers acceptés par Lulu' : i.en_cours ? 'Lulu vérifie encore : relance dans une minute' : 'Lulu signale un problème'}</b>
       <table><tr><td>Intérieur</td><td class="r">${L('interior')}</td></tr><tr><td>Couverture</td><td class="r">${L('cover')}</td></tr></table>
       ${i.ok && i.calendrier ? '<div class="meta">C\'est noté pour tous les produits de ce type : ils peuvent partir à l\'impression.</div>' : ''}` }; }
+  if (action === 'grand-livre') return { cls: (i.problemes || []).length || !(i.couverture || {}).pret_a_imprimer ? 'err' : 'ok', html: `📚 <b>${esc(i.titre)}</b> · ${i.pages} pages A4 · ${(i.histoires || []).length} histoires
+      <div style="display:flex;gap:12px;align-items:flex-start;margin-top:8px"><img src="${i.image}${Q}" style="width:140px;border-radius:8px">
+      <div><a class="btn" target="_blank" href="${i.lien}${Q}">📖 Lire le grand livre</a> <a class="btn" target="_blank" href="${i.interieur}${Q}">Intérieur Lulu</a> <a class="btn" target="_blank" href="${i.couv}${Q}">Couverture Lulu</a>
+      <div class="meta" style="margin-top:6px">${(i.problemes || []).concat((i.couverture || {}).problemes || []).map(esc).join('<br>') || 'Prêt à imprimer.'}</div></div></div>` };
+  if (action === 'grand-cout') return resultat('cout', j);
   if (action === 'recomposer') return { cls: 'ok', html: '🔁 Fichiers recomposés : vérifie le résultat.' };
   if (action === 'imprimer' && i.printful) return { cls: 'ok', html: `🖨️ Envoyé.${i.lulu ? ' Lulu : travail ' + esc(i.lulu) + '.' : ''} Printful : commande ${esc(i.printful)} (${i.printful_statut === 'draft' ? 'brouillon : rien fabriqué ni facturé, bouton « Confirmer chez Printful » pour la lancer' : esc(i.printful_statut || '')}).` };
   if (action === 'maquette-printful') return { cls: 'ok', html: `📸 <b>Maquettes Printful</b> (aucune commande)<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${(i.images || []).map(m => `<a href="${esc(m.url)}" target="_blank" title="${esc(m.titre || '')}"><img src="${esc(m.url)}" style="width:150px;height:150px;object-fit:cover;border-radius:8px;background:#fff"></a>`).join('')}</div>` };

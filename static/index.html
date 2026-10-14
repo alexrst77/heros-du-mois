@@ -450,7 +450,12 @@
     { id: 'pack6', nom: '6 livres', txt: `${eur2(F.pack6.prix_livre)} le livre · livraison offerte`, tag: 'Livraison offerte' },
     { id: 'pack12', nom: '12 livres', txt: `${eur2(F.pack12.prix_livre)} le livre · livraison offerte`, tag: 'Le meilleur prix' },
     { id: 'fetes', nom: 'Les 6 livres de fête', txt: `Anniversaire + 5 fêtes · livraison offerte` }]
+    .concat(Object.keys(F).filter(k => F[k].grand).sort().map((k, i) => ({ id: k, nom: `Grand livre A4 · ${F[k].livres} histoires`,
+      txt: `${F[k].livres} mondes · 21 × 29,7 cm, rigide`, tag: i === 0 ? 'Nouveau' : '' })))
     .map(p => Object.assign(p, { px: eur2(F[p.id].prix), livres: F[p.id].livres }));
+  const GRANDS = Object.keys(F).filter(k => F[k].grand);
+  const isGrand = () => !!(F[S.commande.formule] || {}).grand;
+  const motLivre = () => isGrand() ? 'Histoire' : 'Livre';
   const isEbook = () => S.commande.formule === 'ebook';
   const physique = () => !isEbook() || !!S.commande.cal_ajout || !!S.commande.colo_ajout || objetsChoisis().length > 0;   // y a-t-il un colis ?
   const ebookAjout = () => !isEbook() && !!S.commande.ebook && ((F[S.commande.formule] || {}).livres || 0) > 0;
@@ -459,6 +464,7 @@
   const port = () => { if (OBJ[S.commande.formule]) return 0;           // objet seul : livraison comprise
     if (isEbook()) return S.commande.cal_ajout || S.commande.colo_ajout ? GR.calendrier.port + (GR.supplement_pays[S.commande.pays] ?? GR.supplement_pays.BE) : 0;   // e-book : rien à livrer
     const f = F[S.commande.formule] || F.pack6, n = f.livres;
+    if (f.grand) return GR.port_grand + (GR.supplement_pays[S.commande.pays] ?? GR.supplement_pays.BE);
     const base = S.commande.formule === 'calendrier' ? GR.calendrier.port : S.commande.formule === 'coloriage' ? GR.coloriage.port : n >= GR.port_offert_des ? 0 : (GR.port_fr[String(n)] ?? GR.port_fr['3']);
     return base + (GR.supplement_pays[S.commande.pays] ?? GR.supplement_pays.BE); };
   const prixCalAjout = () => S.commande.formule !== 'calendrier' && S.commande.cal_ajout ? GR.calendrier.ajout : 0;
@@ -534,7 +540,7 @@
   if (['sweat', 'robe'].includes(S.enfant.tenue)) S.enfant.tenue = 'tshirt';
   if (!S.enfant.naissance) S.enfant.naissance = String(new Date().getFullYear() - (+S.enfant.age || 5));
   if (!PLANS_IDS().includes(S.commande.formule)) S.commande.formule = 'pack6';   // anciennes formules (abonnement) : le pack de 6
-  function PLANS_IDS() { return ['livre', 'pack3', 'pack6', 'pack12', 'fetes', 'calendrier', 'coloriage']; }
+  function PLANS_IDS() { return ['livre', 'pack3', 'pack6', 'pack12', 'fetes', 'calendrier', 'coloriage'].concat(GRANDS); }
   const COLO = await (await fetch('/api/coloriage')).json();        // catalogue des pages à colorier (coloriage.py)
   const COLO_PAR = Object.fromEntries(COLO.themes.map(t => [t.cle, t]));
   if (!S.coloriage || !Array.isArray(S.coloriage.pages)) S.coloriage = { pages: COLO.par_defaut.slice() };
@@ -545,7 +551,7 @@
     const f = S.commande.formule;
     S.produits = { livres: !['calendrier', 'coloriage'].includes(f), calendrier: f === 'calendrier' || !!S.commande.cal_ajout, coloriage: f === 'coloriage' || !!S.commande.colo_ajout };
   }
-  if (!['livre', 'pack3', 'pack6', 'pack12', 'fetes', 'ebook'].includes(S.commande.pack)) S.commande.pack = ['livre', 'pack3', 'pack6', 'pack12', 'fetes', 'ebook'].includes(S.commande.formule) ? S.commande.formule : 'pack6';
+  if (!['livre', 'pack3', 'pack6', 'pack12', 'fetes', 'ebook'].concat(GRANDS).includes(S.commande.pack)) S.commande.pack = ['livre', 'pack3', 'pack6', 'pack12', 'fetes', 'ebook'].concat(GRANDS).includes(S.commande.formule) ? S.commande.formule : 'pack6';
   function sync() {                   // créations choisies -> formule payée + ajouts (même modèle que le serveur)
     const P = S.produits, c = S.commande;
     if (P.livres) { c.formule = c.pack; c.cal_ajout = !!P.calendrier; c.colo_ajout = !!P.coloriage; }
@@ -942,8 +948,8 @@
     if (n < 2 || S.commande.formule === 'fetes') return '';
     const sel = (k, key, list, v) => `<select data-suite="${k}" data-sk="${key}">${list.map(t => `<option ${v === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
     const un = h.occasion ? (FETES.find(u => u.cle === h.occasion) || {}).nom : h.univers;
-    return G(`Les ${n} aventures`, `<div class="suitebar"><button type="button" class="btn ghost" data-hasard="1">Au hasard</button><span class="hint">Pas envie de choisir ? On tire les aventures pour vous.</span></div>` + `<details class="multi suite" ${ouvert || OUVERT.suite ? 'open' : ''}><summary>Livre 1 : ${esc(h.theme)} · ${esc(un || '')}<br><small>Livres 2 à ${n} : déjà choisis pour vous, modifiables</small></summary>` +
-      `<div class="liste">${suiteDe().map((x, i) => `<div class="sl"><b>Livre ${i + 2}</b>${sel(i, 'theme', THEMES, x.theme)}${sel(i, 'univers', UNIVERS, x.univers)}</div>`).join('')}</div></details>`, 'thème et univers');
+    return G(isGrand() ? `Les ${n} histoires du grand livre` : `Les ${n} aventures`, `<div class="suitebar"><button type="button" class="btn ghost" data-hasard="1">Au hasard</button><span class="hint">Pas envie de choisir ? On tire les aventures pour vous.</span></div>` + `<details class="multi suite" ${ouvert || OUVERT.suite ? 'open' : ''}><summary>Livre 1 : ${esc(h.theme)} · ${esc(un || '')}<br><small>Livres 2 à ${n} : déjà choisis pour vous, modifiables</small></summary>` +
+      `<div class="liste">${suiteDe().map((x, i) => `<div class="sl"><b>${motLivre()} ${i + 2}</b>${sel(i, 'theme', THEMES, x.theme)}${sel(i, 'univers', UNIVERS, x.univers)}</div>`).join('')}</div></details>`, 'thème et univers');
   }
   function optionsCalendrier() {     // premier mois, fêtes de la famille, dates de famille (calendrier seul ou ajouté)
     const c = S.calendrier, h = S.histoire, pr = esc((S.enfant.prenom || 'votre enfant').trim());
@@ -1030,7 +1036,7 @@
         <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>`;
     const n = (F[c.formule] || {}).livres || 1, un = S.histoire.occasion ? (FETES.find(u => u.cle === S.histoire.occasion) || {}).nom : S.histoire.univers;
     const reg = (cle, titre, resume, corps) => `<details class="multi reg" data-ouv="${cle}" ${OUVERT[cle] ? 'open' : ''}><summary>${titre} <small>${resume}</small></summary><div class="reg-b">${corps}</div></details>`;
-    const hist = reg('hist', n > 1 ? `Personnaliser ses ${n} livres` : 'Personnaliser son livre', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : n > 1 ? `livre 1 : ${esc(S.histoire.theme)} · ${esc(un || '')}… thème et univers de chaque livre` : `${esc(S.histoire.theme)} · ${esc(un || '')}`, panelHistoire());
+    const hist = reg('hist', isGrand() ? `Personnaliser ses ${n} histoires` : n > 1 ? `Personnaliser ses ${n} livres` : 'Personnaliser son livre', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : n > 1 ? `${motLivre().toLowerCase()} 1 : ${esc(S.histoire.theme)} · ${esc(un || '')}… thème et monde de chaque ${isGrand() ? 'histoire' : 'livre'}` : `${esc(S.histoire.theme)} · ${esc(un || '')}`, panelHistoire());
     const regCal = reg('cal', 'Personnaliser le calendrier', `commence en ${esc(moisLib(S.calendrier.debut).toLowerCase())}${S.calendrier.dates.filter(x => (x.texte || '').trim()).length ? ` · ${S.calendrier.dates.filter(x => (x.texte || '').trim()).length} date(s) de famille` : ''}, modifiable`, optionsCalendrier());
     const regColo = reg('colo', `Choisir les ${COLO.nombre} coloriages du cahier`, `${S.coloriage.pages.length}/${COLO.nombre} choisies, notre sélection, modifiable`, pickerColoriage());
     return `<div class="confiance"><span>Créé avec l'IA</span><span>peaufiné par notre équipe avant impression</span><span>imprimé et livré chez vous</span><span>vous payez à la fin</span></div>` +
@@ -1059,9 +1065,9 @@
         `<div class="liste">${FETES.map(u => `<label><input type="checkbox" data-fete="${u.cle}" ${h.fetes.includes(u.cle) ? 'checked' : ''}> ${esc(u.puce)}</label>`).join('')}</div></details>` +
         `<p class="hint" style="margin:8px 0 0">Choisissez 6 fêtes (${h.fetes.length}/6) : un livre pour chacune, livrés ensemble dans un seul colis.</p>`, '6 à choisir');
     } else {
-      const l1 = `<div class="ln"><b>Livre 1</b>${sel('data-in="theme" aria-label="Thème du livre 1"', THEMES, h.theme)}` +
+      const l1 = `<div class="ln"><b>${motLivre()} 1</b>${sel('data-in="theme" aria-label="Thème du livre 1"', THEMES, h.theme)}` +
         (occ ? `<div class="occ-l">${esc(occ.nom)} <button type="button" class="lien" data-occ="0">changer</button></div>` : sel('data-in="univers" aria-label="Univers du livre 1"', UNIVERS, h.univers)) + `</div>`;
-      const suite = n > 1 ? suiteDe().map((x, i) => `<div class="ln"><b>Livre ${i + 2}</b>${sel(`data-suite="${i}" data-sk="theme" aria-label="Thème du livre ${i + 2}"`, THEMES, x.theme)}${sel(`data-suite="${i}" data-sk="univers" aria-label="Univers du livre ${i + 2}"`, UNIVERS, x.univers)}</div>`).join('') : '';
+      const suite = n > 1 ? suiteDe().map((x, i) => `<div class="ln"><b>${motLivre()} ${i + 2}</b>${sel(`data-suite="${i}" data-sk="theme" aria-label="Thème du livre ${i + 2}"`, THEMES, x.theme)}${sel(`data-suite="${i}" data-sk="univers" aria-label="Univers du livre ${i + 2}"`, UNIVERS, x.univers)}</div>`).join('') : '';
       livres = `<div class="livres-l"><div class="ln tete"><span></span><span>Thème</span><span>Univers</span></div>${l1}${suite}</div>` +
         (n > 1 ? `<button type="button" class="btn ghost petit" data-hasard="1" style="margin:10px 0 4px">Tout tirer au hasard</button>` : '');
     }
@@ -1102,7 +1108,7 @@
         : `<div class="moncompte">Vous avez un compte ? <a href="/compte?suite=/creer">Connectez-vous</a> pour retrouver vos héros et suivre vos commandes. Sinon, continuez simplement en invité.</div>`) +
       `<div class="moncolis"><div><b>Votre commande</b><span>${ch.join(' · ')}</span></div><button type="button" class="lien" data-t="creations">Modifier</button></div>` +
       (() => { const f = F[c.formule], pt = port(), n = f.livres;
-        return `<div class="recap">` + (isEbook() ? `<div><span>E-book (PDF)${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : n ? `<div><span>${n} livre${n > 1 ? 's' : ''} × ${eur2(f.prix_livre)}${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : '') +
+        return `<div class="recap">` + (isEbook() ? `<div><span>E-book (PDF)${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : f.grand ? `<div><span>Grand livre A4, ${n} histoires${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : n ? `<div><span>${n} livre${n > 1 ? 's' : ''} × ${eur2(f.prix_livre)}${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : '') +
           (ebookAjout() ? `<div><span>Version e-book de chaque livre (${n} × ${eur2(GR.ebook.ajout)})</span><span>${eur2(GR.ebook.ajout * n)}</span></div>` : '') +
           (isCal() ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(f.prix)}</span></div>` : c.cal_ajout ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(GR.calendrier.ajout)}</span></div>` : '') +
           (isColo() ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(f.prix)}</span></div>` : c.colo_ajout ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(GR.coloriage.ajout)}</span></div>` : '') +
@@ -1111,10 +1117,10 @@
           (OBJ[c.formule] ? `<div><span>Livraison</span><span><b class="offert">comprise</b></span></div>` : !physique() ? `<div><span>Livraison</span><span><b class="offert">par e-mail</b></span></div>` : `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>`) +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
           (c.promo ? '' : `<details class="promo" ${OUVERT.promo ? 'open' : ''} data-ouv="promo"><summary>Vous avez un code promo ?</summary><div class="promo-l"><input type="text" id="promoIn" maxlength="30" placeholder="Votre code" autocapitalize="characters"><button type="button" class="btn petit" data-promo="1">Appliquer</button></div><p class="promo-err" id="promoErr"></p></details>`) +
-          (n && n < 6 && !isEbook() ? `<div class="vers6"><div class="vers6-t">Plus que <b>${6 - n} livre${6 - n > 1 ? 's' : ''}</b> pour la livraison offerte, et ${eur2(F.pack6.prix_livre)} le livre</div>` +
+          (n && n < 6 && !isEbook() && !f.grand ? `<div class="vers6"><div class="vers6-t">Plus que <b>${6 - n} livre${6 - n > 1 ? 's' : ''}</b> pour la livraison offerte, et ${eur2(F.pack6.prix_livre)} le livre</div>` +
             `<div class="vers6-b"><i style="width:${Math.round(n / 6 * 100)}%"></i></div><button type="button" class="lien petit" data-pack-go="pack6">Passer à 6 livres (${eur2(F.pack6.prix)})</button></div>` : '') + `</div>`; })() +
       (offres.length ? `<div class="offres"><div class="offres-h">Pour compléter l'univers de ${pr} <span>créations : même colis, sans frais de port en plus · objets : livraison comprise</span></div>${offres.join('')}</div>` : '') +
-      (n0() && !isEbook() ? `<label class="toggle" style="margin:0 0 12px"><input type="checkbox" data-chk="ebook" ${c.ebook ? 'checked' : ''}> Ajouter la version e-book (PDF) de ${F[c.formule].livres > 1 ? 'chaque livre' : 'son livre'} : + ${eur2(GR.ebook.ajout)}${F[c.formule].livres > 1 ? ' par livre' : ''}</label>` : '') +
+      (n0() && !isEbook() && !isGrand() ? `<label class="toggle" style="margin:0 0 12px"><input type="checkbox" data-chk="ebook" ${c.ebook ? 'checked' : ''}> Ajouter la version e-book (PDF) de ${F[c.formule].livres > 1 ? 'chaque livre' : 'son livre'} : + ${eur2(GR.ebook.ajout)}${F[c.formule].livres > 1 ? ' par livre' : ''}</label>` : '') +
       (!physique() ? `<div class="delai"><b>E-book envoyé par e-mail sous 48 h</b><span>Créé juste après le paiement, peaufiné par notre équipe, puis envoyé avec un lien de téléchargement (aussi dans « Mon compte »). Vous pourrez commander la version imprimée plus tard, sans le recréer.</span></div>` :
       `<div class="delai"><b>Livraison estimée : ${delai()}</b>` +
       `<span>${(() => { const d = new Date(); return d.getMonth() >= 9 && d < new Date(d.getFullYear(), 11, 1) ? 'Commandée avant le 1er décembre, elle arrive pour Noël. ' : ''; })()}${nbCrea() > 1 || F[c.formule].livres > 1 ? 'Création et finitions, impression, puis un seul colis' : 'Création et finitions, impression, puis expédition'} : 7 à 15 jours ouvrés.${objetsChoisis().length ? ' Les objets arrivent dans un colis à part, dans les mêmes délais.' : ''}</span></div>`) +
@@ -1439,7 +1445,7 @@
     if (q.get('prenom')) { S.enfant.prenom = q.get('prenom').trim().slice(0, 20).replace(/^./, c => c.toUpperCase()); save(); }
     if (['fille', 'garcon'].includes(q.get('genre')) && q.get('genre') !== S.enfant.genre) {    // choisi d'un geste sur l'accueil
       S.enfant.genre = q.get('genre'); if (!COIF[S.enfant.genre].includes(S.enfant.coiffure)) S.enfant.coiffure = COIF[S.enfant.genre][0]; save(); }
-    if (['livre', 'pack3', 'pack6', 'pack12', 'fetes'].includes(q.get('formule'))) { S.commande.pack = q.get('formule'); S.produits = { livres: true, calendrier: false, coloriage: false }; save(); }
+    if (['livre', 'pack3', 'pack6', 'pack12', 'fetes'].concat(GRANDS).includes(q.get('formule'))) { S.commande.pack = q.get('formule'); S.produits = { livres: true, calendrier: false, coloriage: false }; save(); }
     if (['calendrier', 'coloriage'].includes(q.get('produit'))) { S.produits = { livres: false, calendrier: q.get('produit') === 'calendrier', coloriage: q.get('produit') === 'coloriage' }; save(); }
     else if (q.get('formule') === 'mensuel') { S.commande.formule = 'pack6'; save(); }
     if (['gourde', 'tasse', 'sac'].includes(q.get('produit'))) {               // objet : ajouté à la création choisie (un livre par défaut)
