@@ -689,6 +689,33 @@ async function vignettes(b) {
 }
 
 
+/* ================================================================ vraies photos (accueil) */
+let PREUVES = null;
+function chargerPreuves() { fetch('/admin/api/preuves' + Q, { headers: H }).then(r => r.json()).then(j => { PREUVES = j.preuves || []; render(); }).catch(() => {}); }
+function cartePreuves() {
+  if (PREUVES === null) { PREUVES = []; chargerPreuves(); }
+  const items = PREUVES.map((x, i) => `<div style="border:1.5px solid var(--line);border-radius:12px;padding:8px;width:170px">
+      ${x.type === 'video' ? `<video src="${x.url}" muted playsinline style="width:100%;border-radius:8px;aspect-ratio:1;object-fit:cover"></video>` : `<img src="${x.url}" alt="" style="width:100%;border-radius:8px;aspect-ratio:1;object-fit:cover">`}
+      <input value="${esc(x.legende || '')}" placeholder="Légende (facultatif)" onchange="legendePreuve('${x.id}', this.value)" style="width:100%;margin:6px 0;padding:6px 8px;border-radius:8px;border:1.5px solid var(--line);font:600 13px var(--texte)">
+      <div style="display:flex;gap:4px"><button class="btn" title="Avant" onclick="deplacerPreuve('${x.id}',-1)" ${i ? '' : 'disabled'}>◀</button><button class="btn" title="Après" onclick="deplacerPreuve('${x.id}',1)" ${i < PREUVES.length - 1 ? '' : 'disabled'}>▶</button><button class="btn" onclick="supprimerPreuve('${x.id}')">🗑️</button></div></div>`).join('');
+  return `<h2>Confiance</h2><div class="card" style="margin-bottom:18px"><h3>📸 Vraies photos de livres reçus (accueil du site)</h3>
+    <p class="meta" style="margin:0 0 10px">Les gens se méfient des créations IA : rien ne rassure plus qu'une vraie photo prise au téléphone (livre reçu, colis, pages, enfant qui lit — de dos ou avec l'accord des parents). Photos ou courtes vidéos MP4. La section « Ce que vous recevez vraiment » apparaît sur l'accueil dès la 1re photo. Les métadonnées (GPS…) sont retirées.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="file" id="pvF" accept="image/*,video/mp4,video/webm,video/quicktime" multiple><input id="pvL" placeholder="Légende (facultatif) : Livre de Jeade, reçu le 12 octobre" style="flex:1;min-width:220px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);font:600 14px var(--texte)"><button class="btn main" onclick="envoyerPreuves(this)">Ajouter</button></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">${items || '<span class="meta">Aucune photo pour l\'instant : la section est cachée sur le site.</span>'}</div></div>`;
+}
+async function envoyerPreuves(b) {
+  const f = document.getElementById('pvF'); if (!f.files.length) return toast('Choisis une photo ou une vidéo');
+  const fd = new FormData(); [...f.files].forEach(x => fd.append('fichier', x)); fd.append('legende', document.getElementById('pvL').value);
+  b.disabled = true; b.textContent = '⏳ Envoi…';
+  try { const r = await (await fetch('/admin/api/preuves' + Q, { method: 'POST', headers: H, body: fd })).json();
+    toast(r.ajoutes ? `📸 ${r.ajoutes} ajoutée(s) sur l'accueil` + (r.erreurs && r.erreurs.length ? ' · ' + r.erreurs.join(' ; ') : '') : '⚠️ ' + ((r.erreurs || []).join(' ; ') || r.erreur || 'erreur'));
+  } catch (_) { toast('⚠️ Envoi impossible (fichier trop lourd ?)'); }
+  b.disabled = false; b.textContent = 'Ajouter'; chargerPreuves();
+}
+async function supprimerPreuve(id) { if (!confirm('Retirer cette photo du site ?')) return; await fetch('/admin/api/preuves/' + id + '/supprimer' + Q, { method: 'POST', headers: H }); chargerPreuves(); }
+async function deplacerPreuve(id, sens) { await fetch('/admin/api/preuves/' + id + '/deplacer' + Q, { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify({ sens }) }); chargerPreuves(); }
+async function legendePreuve(id, legende) { await fetch('/admin/api/preuves/' + id + '/legende' + Q, { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify({ legende }) }); toast('Légende enregistrée'); }
+
 /* ================================================================ réglages */
 let TARIFS = null;
 function vueReglages() {
@@ -696,7 +723,7 @@ function vueReglages() {
   if (!TARIFS) fetch('/admin/api/tarifs' + Q, { headers: H }).then(r => r.json()).then(t => { TARIFS = t; render(); });
   const t = TARIFS, e = t && t.etat, m = t && t.tarifs.modeles;
   const res = RES._reg ? `<div class="result ${RES._reg.cls || ''}" style="margin:0 0 12px"><button class="x" onclick="delete RES._reg;render()">×</button>${RES._reg.html}</div>` : '';
-  return res + carteEntreprise() + `
+  return res + cartePreuves() + carteEntreprise() + `
   <h2>Production</h2><div class="grid2">
   <div class="card"><h3>💰 Plafond IA : ${D.plafond} $ par livre</h3>
     ${!t ? 'Chargement…' : `<div>${e.ok ? '<span class="pill p-green">✅ Fabrication autorisée</span>' : '<span class="pill p-red">⛔ Fabrication bloquée</span> ' + e.manque.map(esc).join(' ; ')}</div>

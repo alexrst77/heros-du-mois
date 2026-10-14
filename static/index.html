@@ -332,6 +332,34 @@
                    box-shadow:inset 0 0 0 7px #3E3550, inset -12px -6px 20px rgba(0,0,0,.25), 0 22px 26px -18px rgba(20,10,50,.6); }
   .scene.obj-sac::before { content:""; position:absolute; left:38%; right:38%; top:-11%; height:13%; border:8px solid #3E3550; border-bottom:0; border-radius:22px 22px 0 0; }
   @media (max-width:600px) { .scene.objet { max-width:none !important; } .scene.obj-tasse { width:66%; margin-left:10%; } .scene.obj-gourde { width:44%; } .scene.obj-sac { width:64%; } }
+  /* ---------- créateur d'avatar plus vivant : monde, animation, mini-avatar, carte de héros ---------- */
+  .mondes { display:flex; gap:10px; overflow-x:auto; padding:4px 2px 10px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
+  .mondes button { flex:0 0 84px; border:0; padding:0; background:none; cursor:pointer; text-align:center; font:800 12px/1.2 var(--texte); color:var(--encre); scroll-snap-align:start; }
+  .mondes button img { width:80px; height:80px; border-radius:16px; object-fit:cover; display:block; margin:0 auto 5px; border:2.5px solid var(--trait); transition:transform .2s; }
+  .mondes button.on img { border-color:var(--encre); box-shadow:3px 3px 0 var(--luciole); transform:scale(1.05) rotate(-2deg); }
+  .surp { display:flex; gap:8px; flex-wrap:wrap; margin:-4px 0 18px; }
+  .surp button { border:2px dashed var(--encre); background:#FFF8E6; border-radius:999px; padding:8px 14px; font:800 14px var(--texte); color:var(--encre); cursor:pointer; }
+  .surp button:active { transform:scale(.96); }
+  .couv.net .decor { filter:blur(3.5px) saturate(1.2) brightness(.84); }
+  @keyframes popav { 0% { transform:scale(.82) translateY(8%); } 55% { transform:scale(1.07) translateY(-2%); } 100% { transform:none; } }
+  .scene .big.pop > div, .scene .group.pop > div { animation:popav .5s cubic-bezier(.3,1.5,.5,1); transform-origin:50% 100%; }
+  .paillette { position:absolute; z-index:5; width:10px; height:10px; pointer-events:none; color:#FFE38A; font-size:18px; line-height:1; animation:paille .9s ease-out forwards; }
+  @keyframes paille { 0% { opacity:0; transform:translate(0,0) scale(.4); } 25% { opacity:1; } 100% { opacity:0; transform:translate(var(--dx),var(--dy)) scale(1.1) rotate(90deg); } }
+  #mini { position:fixed; right:10px; bottom:14px; z-index:40; width:72px; height:72px; border-radius:50%; overflow:hidden; border:3px solid var(--encre);
+          background:#2B2160 center/cover; box-shadow:4px 4px 0 var(--luciole); display:none; padding:0; cursor:pointer; }
+  #mini img { width:100%; height:100%; object-fit:contain; object-position:50% 100%; display:block; }
+  #mini.on { display:block; } #mini.pop img { animation:popav .5s cubic-bezier(.3,1.5,.5,1); transform-origin:50% 100%; }
+  @media (min-width:901px) { #mini { display:none !important; } }
+  dialog#fete { border:0; border-radius:24px; padding:0; max-width:min(440px, calc(100vw - 24px)); width:100%; background:var(--papier); color:var(--encre); box-shadow:0 30px 80px -20px rgba(20,10,60,.6); }
+  dialog#fete::backdrop { background:rgba(20,12,60,.65); }
+  #fete .in { padding:18px 18px 20px; text-align:center; }
+  #fete h3 { font:400 26px/1.15 var(--titre); margin:4px 0 6px; } #fete p { margin:0 0 12px; color:var(--encre-2); font-size:15px; }
+  #fete canvas { width:100%; height:auto; border-radius:16px; display:block; margin:0 0 14px; box-shadow:0 14px 30px -18px rgba(20,10,60,.7); }
+  #fete .acts { display:grid; gap:10px; } #fete .acts .btn { width:100%; }
+  .confetti { position:fixed; z-index:9999; top:-20px; width:9px; height:14px; border-radius:2px; pointer-events:none; animation:tombe linear forwards; }
+  @keyframes tombe { to { transform:translateY(110vh) rotate(720deg); } }
+  @media (prefers-reduced-motion: reduce) { .scene .big.pop > div, .scene .group.pop > div, #mini.pop img, .paillette, .confetti { animation:none !important; } .confetti, .paillette { display:none; } }
+  .confiance { display:flex; flex-wrap:wrap; gap:4px 12px; margin:0 0 14px; padding:10px 12px; border-radius:14px; background:#FFF8E6; border:1px solid #F3E2B5; font:800 13px/1.35 var(--texte); color:var(--encre-2); }
 </style>
 </head>
 <body>
@@ -389,6 +417,15 @@
   </div>
 </div>
 
+<button type="button" id="mini" aria-label="Voir l'avatar"></button>
+<dialog id="fete"><div class="in">
+  <div style="font-size:30px" aria-hidden="true">🎉</div>
+  <h3 id="feteT">L'équipe est prête !</h3>
+  <p id="feteP">Voici sa carte de héros. Gardez-la, envoyez-la à la famille : c'est gratuit.</p>
+  <canvas id="carte" width="1080" height="1350" aria-label="Carte de héros"></canvas>
+  <div class="acts"><button class="btn" type="button" id="feteGo">Choisir ses créations</button>
+    <button class="btn ghost" type="button" id="feteDl">📥 Garder sa carte de héros</button></div>
+</div></dialog>
 <script src="/static/mesure.js"></script>
 <script src="/static/avatar.js"></script>
 <script>
@@ -407,12 +444,12 @@
   const eur2 = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
   const F = GR.formules;
   const PLANS = [
-    { id: 'pack6', nom: '6 livres', txt: `${eur2(F.pack6.prix_livre)} le livre · livraison offerte`, tag: 'Notre conseil' },
-    { id: 'pack12', nom: '12 livres', txt: `${eur2(F.pack12.prix_livre)} le livre · livraison offerte`, tag: 'Le meilleur prix' },
+    { id: 'livre', nom: '1 livre', txt: 'Pour découvrir ou offrir · couverture rigide', tag: 'Pour commencer' },
+    { id: 'ebook', nom: 'E-book', txt: 'Son livre en PDF, à lire ce soir sur tablette ou téléphone', tag: 'Le moins cher' },
     { id: 'pack3', nom: '3 livres', txt: `Trois aventures, un même héros · ${eur2(F.pack3.prix_livre)} le livre` },
-    { id: 'livre', nom: '1 livre', txt: 'Pour découvrir ou offrir' },
-    { id: 'fetes', nom: 'Les 6 livres de fête', txt: `Anniversaire + 5 fêtes · livraison offerte` },
-    { id: 'ebook', nom: 'E-book', txt: 'Son livre en PDF, à lire sur tablette ou téléphone · envoyé par e-mail' }]
+    { id: 'pack6', nom: '6 livres', txt: `${eur2(F.pack6.prix_livre)} le livre · livraison offerte`, tag: 'Livraison offerte' },
+    { id: 'pack12', nom: '12 livres', txt: `${eur2(F.pack12.prix_livre)} le livre · livraison offerte`, tag: 'Le meilleur prix' },
+    { id: 'fetes', nom: 'Les 6 livres de fête', txt: `Anniversaire + 5 fêtes · livraison offerte` }]
     .map(p => Object.assign(p, { px: eur2(F[p.id].prix), livres: F[p.id].livres }));
   const isEbook = () => S.commande.formule === 'ebook';
   const physique = () => !isEbook() || !!S.commande.cal_ajout || !!S.commande.colo_ajout || objetsChoisis().length > 0;   // y a-t-il un colis ?
@@ -457,7 +494,7 @@
     coloriage: { pages: null },
     produits: { livres: true, calendrier: false, coloriage: false },
     objets: [],
-    commande: { formule: 'pack6', pack: 'pack6', cal_ajout: false, colo_ajout: false, email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
+    commande: { formule: 'livre', pack: 'livre', cal_ajout: false, colo_ajout: false, email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
   };
   let S;
   try { S = JSON.parse(localStorage.getItem('heros-avatar')) || null; } catch (_) { S = null; }
@@ -689,6 +726,7 @@
       big.innerHTML = h; $('stat').innerHTML = ''; who = e.prenom ? `L'équipe de ${e.prenom}` : "L'équipe au complet"; sub = 'Prêts pour l\'aventure';
     }
     $('who').innerHTML = esc(who) + (sub ? `<small>${esc(sub)}</small>` : '');
+    animer(which);
     let t = `<button data-go="enfant" class="${tab === 'enfant' ? 'on' : ''}" title="${esc(e.prenom || 'Enfant')}">${img(paintState('enfant', e))}</button>`;
     const surC = tab === 'compagnons';
     if (S.doudou.actif) t += `<button data-go="compagnons" data-foc="doudou" class="${surC && foc === 'doudou' ? 'on' : ''}" title="Doudou">${img(paintState('doudou', S.doudou))}</button>`;
@@ -700,6 +738,81 @@
     $('sauve').innerHTML = !ME.connecte ? `<a href="/compte?suite=/creer" style="color:var(--encre-2)">Se connecter pour enregistrer ${pr}</a>`
       : SAUVE === 'ok' ? `<span class="ok">✓ ${pr} est enregistré dans votre compte</span>` : `<button type="button" data-sauver="1">💾 Enregistrer ${pr} dans mon compte</button>`;
   }
+
+  /* ---------- vie de la scène : petit saut quand l'avatar change, paillettes, mini-avatar sur téléphone ---------- */
+  let DERN_VUE = '';
+  function animer(which) {
+    const big = $('big'), sc = document.querySelector('.scene');
+    sc.classList.toggle('net', tab === 'enfant' || tab === 'compagnons');
+    const cle = (which || 'groupe') + '|' + JSON.stringify(which ? cfgOf(which) : [S.enfant, S.doudou.actif, S.animaux.length, S.fratrie.length]) + '|' + S.histoire.univers;
+    const change = DERN_VUE && cle !== DERN_VUE; DERN_VUE = cle;
+    if (change) { big.classList.remove('pop'); void big.offsetWidth; big.classList.add('pop'); }
+    const mi = $('mini'), im = big.querySelector('img');
+    if (im) { mi.innerHTML = `<img src="${im.src}" alt="">`; const d = $('decor').style.backgroundImage; mi.style.backgroundImage = d || '';
+      if (change) { mi.classList.remove('pop'); void mi.offsetWidth; mi.classList.add('pop'); } }
+  }
+  function paillettes() {
+    const sc = document.querySelector('.scene'); if (!sc || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    for (let i = 0; i < 12; i++) { const p = document.createElement('i'); p.className = 'paillette'; p.textContent = i % 3 ? '✦' : '★';
+      p.style.left = (35 + Math.random() * 30) + '%'; p.style.top = (40 + Math.random() * 30) + '%';
+      p.style.setProperty('--dx', (Math.random() * 220 - 110) + 'px'); p.style.setProperty('--dy', (Math.random() * -160 - 20) + 'px');
+      p.style.animationDelay = (Math.random() * .15) + 's'; sc.appendChild(p); setTimeout(() => p.remove(), 1200); }
+  }
+  { const obs = new IntersectionObserver(es => es.forEach(x => $('mini').classList.toggle('on', !x.isIntersecting && (tab === 'enfant' || tab === 'compagnons'))), { threshold: .15 });
+    obs.observe(document.querySelector('.scene')); $('mini').onclick = () => document.querySelector('.stage').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  document.addEventListener('click', ev => { if (ev.target.closest('[data-k]') && (tab === 'enfant' || tab === 'compagnons')) setTimeout(paillettes, 60); }, true);
+
+  /* ---------- fin de l'avatar : confettis et carte de héros ---------- */
+  function confettis() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const C = ['#FFC23D', '#F2557A', '#7C5CFF', '#38C6A3', '#4AA8FF'];
+    for (let i = 0; i < 70; i++) { const c = document.createElement('i'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.background = C[i % C.length];
+      c.style.animationDuration = (1.8 + Math.random() * 1.6) + 's'; c.style.animationDelay = Math.random() * .5 + 's'; document.body.appendChild(c); setTimeout(() => c.remove(), 4200); }
+  }
+  const charge = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
+  async function dessinerCarte() {
+    const cv = $('carte'), x = cv.getContext('2d'), W = cv.width, Hh = cv.height, e = S.enfant;
+    const pr = (e.prenom || '').trim().replace(/^./, c => c.toUpperCase()) || 'Mon héros';
+    const u = UNIV.find(v => !v.fete && v.nom === S.histoire.univers) || UNIV.find(v => !v.fete);
+    try { await document.fonts.load('400 80px "Young Serif"'); await document.fonts.load('900 40px Nunito'); } catch (_) {}
+    x.fillStyle = '#24184D'; x.fillRect(0, 0, W, Hh);
+    const fond = u ? await charge(`/vignette/${u.cle}.webp`) : null;
+    if (fond) { x.save(); x.filter = 'blur(22px) brightness(.72) saturate(1.3)'; const k = Math.max(W / fond.width, Hh / fond.height) * 1.08; x.drawImage(fond, (W - fond.width * k) / 2, (Hh - fond.height * k) / 2, fond.width * k, fond.height * k); x.restore(); }
+    const g = x.createLinearGradient(0, 0, 0, Hh); g.addColorStop(0, 'rgba(20,12,60,.85)'); g.addColorStop(.35, 'rgba(20,12,60,.1)'); g.addColorStop(.8, 'rgba(20,12,60,.05)'); g.addColorStop(1, 'rgba(20,12,60,.85)');
+    x.fillStyle = g; x.fillRect(0, 0, W, Hh);
+    x.fillStyle = 'rgba(255,231,163,.85)'; for (let i = 0; i < 40; i++) { x.beginPath(); x.arc(Math.random() * W, Math.random() * Hh * .7, Math.random() * 3 + 1, 0, 7); x.fill(); }
+    x.textAlign = 'center'; x.fillStyle = '#FFE7A3'; x.font = '900 34px Nunito'; x.fillText('★  CARTE DE HÉROS  ★', W / 2, 92);
+    let t = 132; x.font = `400 ${t}px "Young Serif"`; while (x.measureText(pr).width > W - 120 && t > 60) { t -= 6; x.font = `400 ${t}px "Young Serif"`; }
+    x.shadowColor = 'rgba(0,0,0,.5)'; x.shadowBlur = 18; const gg = x.createLinearGradient(0, 120, 0, 120 + t); gg.addColorStop(0, '#FFF6D6'); gg.addColorStop(1, '#E2B656');
+    x.fillStyle = gg; x.fillText(pr, W / 2, 140 + t * .82); x.shadowBlur = 0;
+    x.fillStyle = '#fff'; x.font = '800 38px Nunito'; x.fillText(u ? 'Prêt pour ' + u.nom.replace(/^(Une |Un |La |Le |Les |L')/, m => m.toLowerCase()) : 'Prêt pour l\'aventure', W / 2, 205 + t * .82);
+    const team = [];      // le héros, puis ses compagnons
+    const L = [['enfant', S.enfant]].concat(S.fratrie.map(f => ['enfant', f])).concat(S.doudou.actif ? [['doudou', S.doudou]] : []).concat(S.animaux.map(a => ['animal', a]));
+    for (const [k, c] of L) team.push(await charge(paintState(k, c).url));
+    const base = Hh - 170, hero = team[0], autres = team.slice(1).filter(Boolean);
+    const placer = (im, cx, h) => { if (!im) return; const w = im.width * h / im.height; x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 30; x.drawImage(im, cx - w / 2, base - h, w, h); x.shadowBlur = 0; };
+    const n = autres.length; autres.forEach((im, i) => placer(im, W / 2 + (i % 2 ? 1 : -1) * (250 + Math.floor(i / 2) * 140), 360 - Math.floor(i / 2) * 40));
+    placer(hero, W / 2, n ? 700 : 760);
+    x.fillStyle = '#FFC23D'; x.font = '900 34px Nunito'; x.fillText('Mon Héros du Mois', W / 2, Hh - 92);
+    x.fillStyle = 'rgba(255,255,255,.8)'; x.font = '700 28px Nunito'; x.fillText(location.host.replace(/^www\./, ''), W / 2, Hh - 50);
+  }
+  async function feter() {
+    const d = $('fete'), pr = (S.enfant.prenom || '').trim().replace(/^./, c => c.toUpperCase());
+    $('feteT').textContent = pr ? `L'équipe de ${pr} est prête !` : "L'équipe est prête !";
+    confettis(); try { d.showModal(); } catch (_) { return; }
+    window.parcours && parcours('carte_heros');
+    dessinerCarte().catch(() => {});
+  }
+  $('feteGo').onclick = () => $('fete').close();
+  $('feteDl').onclick = async () => {
+    const cv = $('carte'), pr = (S.enfant.prenom || 'heros').trim();
+    window.mesure && mesure('carte_heros');
+    cv.toBlob(async b => {
+      const f = new File([b], `carte-de-heros-${pr}.png`, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: `La carte de héros de ${pr}` }); return; } catch (_) {} }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, 'image/png');
+  };
 
   /* ---------- contrôles ---------- */
   function swatches(obj, key, list) {
@@ -719,6 +832,8 @@
     return `<div class="row2">${G('Prénom *', `<input type="text" data-in="prenom" maxlength="20" placeholder="Léo" value="${esc(e.prenom)}">`)}
       ${G('Année de naissance *', `<select data-in="naissance">${ANNEES.map(a => `<option ${e.naissance == a ? 'selected' : ''}>${a}</option>`).join('')}</select>`, e.age ? `${e.age} ans` : '')}</div>` +
       G("C'est", chips(e, 'genre', O.genre)) +
+      G('Son monde', `<div class="mondes">${UNIV.filter(u => !u.fete).map(u => `<button type="button" data-monde="${esc(u.nom)}" class="${!S.histoire.occasion && S.histoire.univers === u.nom ? 'on' : ''}"><img src="/static/vitrine/univ/mini/${u.cle}.webp" alt="" loading="lazy" onerror="this.src='/vignette/${u.cle}.webp'">${esc(u.nom.replace(/^(Une|Un|La|Le|Les|L') ?/, '').replace(/^./, c => c.toUpperCase()))}</button>`).join('')}</div>`, 'le décor de son 1er livre') +
+      `<div class="surp"><button type="button" data-surprise="tenue">🎲 Tenue surprise</button><button type="button" data-surprise="monde">🌍 Monde surprise</button></div>` +
       G('Teint', swatches(e, 'peau', O.peau), sel(O.peau, e.peau)) +
       G('Coiffure', thumbs(e, 'coiffure', O.coiffure.filter(c => COIF[e.genre].includes(c.id)), id => `<img src="/static/avatars/${Avatar.pick(O.coiffure, id).img}.webp" alt="" loading="lazy">`), sel(O.coiffure, e.coiffure)) +
       G('Couleur des cheveux', swatches(e, 'couleur_cheveux', O.couleur_cheveux), sel(O.couleur_cheveux, e.couleur_cheveux)) +
@@ -918,10 +1033,11 @@
     const hist = reg('hist', n > 1 ? `✏️ Personnaliser ses ${n} livres` : '✏️ Personnaliser son livre', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : n > 1 ? `livre 1 : ${esc(S.histoire.theme)} · ${esc(un || '')}… thème et univers de chaque livre` : `${esc(S.histoire.theme)} · ${esc(un || '')}`, panelHistoire());
     const regCal = reg('cal', '✏️ Personnaliser le calendrier', `commence en ${esc(moisLib(S.calendrier.debut).toLowerCase())}${S.calendrier.dates.filter(x => (x.texte || '').trim()).length ? ` · ${S.calendrier.dates.filter(x => (x.texte || '').trim()).length} date(s) de famille` : ''}, modifiable`, optionsCalendrier());
     const regColo = reg('colo', `✏️ Choisir les ${COLO.nombre} coloriages du cahier`, `${S.coloriage.pages.length}/${COLO.nombre} choisies, notre sélection, modifiable`, pickerColoriage());
-    return `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr}. Tout est pré-réglé : touchez <b>« Personnaliser »</b> sous une création pour changer son thème, ses dates ou ses pages.</p>` +
+    return `<div class="confiance"><span>✨ Illustré avec l'IA</span><span>🧑 relu par un humain avant impression</span><span>📦 imprimé et livré chez vous</span><span>🔒 vous payez à la fin</span></div>` +
+      `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr}. Tout est pré-réglé : touchez <b>« Personnaliser »</b> sous une création pour changer son thème, ses dates ou ses pages.</p>` +
       apercuHTML() +
       `<div class="crea-l">` +
-      carte('livres', '/static/vitrine/couv_jade.webp', 'Ses livres d\'aventures', 'Une vraie histoire illustrée dont il est le héros, couverture rigide.', `Dès ${eur2(F.pack12.prix_livre)} le livre`, plans + hist) +
+      carte('livres', '/static/vitrine/couv_jade.webp', 'Ses livres d\'aventures', 'Une vraie histoire illustrée dont il est le héros, couverture rigide.', `E-book ${eur2(F.ebook.prix)} · livre imprimé ${eur2(F.livre.prix)}`, plans + hist) +
       carte('calendrier', '/static/vitrine/cal_photo_2.webp', 'Son calendrier', '12 mois illustrés avec lui, son anniversaire et vos dates de famille.',
             autre('calendrier') ? `${eur2(GR.calendrier.ajout)} <s>${eur2(GR.calendrier.seul)}</s> avec une autre création` : `${eur2(GR.calendrier.seul)} · ${eur2(GR.calendrier.ajout)} avec une autre création`, regCal) +
       carte('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 pages de coloriages et de jeux où il est le héros.',
@@ -1036,6 +1152,13 @@
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button'); if (!b) return;
     if (b.dataset.hasard) { hasard(); OUVERT.suite = true; return render(); }
+    if (b.dataset.monde) { S.histoire.univers = b.dataset.monde; S.histoire.occasion = ''; paillettes(); return render(); }
+    if (b.dataset.surprise) {
+      const au = l => l[Math.floor(Math.random() * l.length)];
+      if (b.dataset.surprise === 'tenue') { const e = S.enfant, O = OPT.enfant;
+        e.tenue = au(O.tenue.filter(t => !RETIREES.includes(t.id) && t.id !== e.tenue)).id; e.couleur_tenue = au(O.couleur_tenue.filter(c => c.id !== e.couleur_tenue)).id; }
+      else { S.histoire.univers = au(UNIVERS.filter(u => u !== S.histoire.univers)); S.histoire.occasion = ''; }
+      paillettes(); return render(); }
     if (b.dataset.promo) {
       const v = ($('promoIn').value || '').trim(); if (!v) return;
       b.disabled = true;
@@ -1132,13 +1255,15 @@
   $('next').onclick = () => {
     $('err').textContent = '';
     if (tab === 'enfant' && !S.enfant.prenom.trim()) { $('err').textContent = "Indiquez le prénom de l'enfant."; return; }
-    if (tab === 'compagnons' && S.doudou.actif && !(S.doudou.nom || '').trim()) { foc = 'doudou'; renderStage(); $('err').textContent = "Donnez un nom au doudou : il sera un vrai personnage de ses histoires."; return; }
+    if (tab === 'compagnons' && S.doudou.actif && !(S.doudou.nom || '').trim()) S.doudou.nom = 'Doudou';      // pas de blocage : nom modifiable plus tard
     if (tab === 'compagnons') { const i = S.animaux.findIndex(a => !(a.nom || '').trim()); if (i >= 0) { pet = i; foc = 'animaux'; render(); $('err').textContent = "Indiquez le nom de chaque animal."; return; } }
     if (tab === 'compagnons') { const i = S.fratrie.findIndex(f => !(f.prenom || '').trim()); if (i >= 0) { sib = i; foc = 'fratrie'; render(); $('err').textContent = "Indiquez le prénom de chaque frère et sœur."; return; } }
     if (tab === 'creations' && S.histoire.demo) return submit();
     if (tab === 'creations' && (sync(), rien())) { $('err').textContent = 'Choisissez au moins une création ou un objet.'; return; }
     if (tab === 'enfant' && window.mesure) mesure('avatar_termine');
-    if (tab !== 'commande') { const T = TABS(); tab = T[T.indexOf(tab) + 1]; render(); scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (tab !== 'commande') { const T = TABS(), avant = tab; tab = T[T.indexOf(tab) + 1]; render(); scrollTo({ top: 0, behavior: 'smooth' });
+      if (avant === 'compagnons' && !sessionStorage.getItem('fete')) { try { sessionStorage.setItem('fete', '1'); } catch (_) {} feter(); }
+      return; }
     submit();
   };
 

@@ -541,6 +541,38 @@
   @media (max-width:820px) { .burger { display:inline-flex; } }
   @media (max-width:440px) { .top .btn .long { display:none; } }
   @media (min-width:821px) { .menu-m { display:none !important; } }
+  /* ---------- « Oui, c'est de l'IA » : transparence et preuves ---------- */
+  .ia-badges { display:flex; flex-wrap:wrap; gap:6px 14px; margin:14px 0 0; padding:0; list-style:none; font:800 13.5px/1.3 var(--texte); color:var(--encre-2); }
+  .ia-badges li { display:flex; align-items:center; gap:6px; }
+  .ouv .ia-badges { color:#E9E3FF; }
+  .ia { padding:70px 0; background:linear-gradient(180deg, rgba(247,242,255,0), #FFF6DD 40%, rgba(247,242,255,0)); }
+  .ia .kick { display:inline-block; font:900 13px/1 var(--texte); letter-spacing:1.5px; text-transform:uppercase; background:var(--encre); color:#fff; padding:8px 12px; border-radius:999px; margin-bottom:14px; }
+  .ia h2 { max-width:24ch; }
+  .ia .lead { font-size:18px; max-width:62ch; color:var(--encre-2); margin:0 0 26px; }
+  .ia-g { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .ia-c { background:var(--papier); border:2px solid var(--encre); border-radius:20px; padding:18px 16px; box-shadow:5px 5px 0 var(--luciole); }
+  .ia-c i { font-style:normal; font-size:30px; display:block; margin-bottom:8px; }
+  .ia-c b { display:block; font:400 20px/1.2 var(--titre); margin-bottom:6px; }
+  .ia-c p { margin:0; font-size:15px; line-height:1.5; color:var(--encre-2); }
+  .ia-pq { margin:30px 0 0; display:grid; grid-template-columns:1.2fr 1fr; gap:22px; align-items:center; }
+  .ia-pq h3 { font:400 24px/1.2 var(--titre); margin:0 0 8px; }
+  .ia-pq p { margin:0 0 10px; color:var(--encre-2); }
+  .ia-cmp { background:var(--papier); border:1px solid var(--trait); border-radius:18px; padding:14px 16px; font-size:15px; }
+  .ia-cmp div { display:grid; grid-template-columns:1fr auto auto; gap:10px; padding:7px 0; border-bottom:1px solid var(--trait); }
+  .ia-cmp div:last-child { border-bottom:0; } .ia-cmp .h { font-weight:900; font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:var(--encre-2); }
+  .ia-cmp span:nth-child(2), .ia-cmp span:nth-child(3) { text-align:center; min-width:74px; }
+  .preuves { margin-top:34px; }
+  .preuves h3 { font:400 26px/1.2 var(--titre); margin:0 0 4px; } .preuves .sous { margin:0 0 14px; color:var(--encre-2); font-size:15px; }
+  .pv-l { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; padding:4px 2px 12px; }
+  .pv-l figure { flex:0 0 min(78vw, 300px); margin:0; scroll-snap-align:start; background:var(--papier); border:1px solid var(--trait); border-radius:16px; overflow:hidden; }
+  .pv-l img, .pv-l video { display:block; width:100%; aspect-ratio:4/5; object-fit:cover; background:#eee; }
+  .pv-l figcaption { padding:8px 12px 10px; font-size:14px; font-weight:700; color:var(--encre-2); }
+  .ia-moi { margin-top:30px; background:var(--encre); color:#fff; border-radius:22px; padding:22px; display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center; }
+  .ia-moi .rond { width:64px; height:64px; border-radius:50%; background:var(--luciole); color:var(--encre); display:grid; place-items:center; font:400 30px var(--titre); }
+  .ia-moi p { margin:0; color:#E9E3FF; } .ia-moi b { color:#fff; } .ia-moi a { color:var(--luciole); font-weight:800; }
+  .ia-moi .vend { display:block; margin-top:6px; font-size:13px; opacity:.8; }
+  @media (max-width:900px) { .ia-g { grid-template-columns:1fr 1fr; } .ia-pq { grid-template-columns:1fr; } }
+  @media (max-width:520px) { .ia { padding:52px 0; } .ia-g { grid-template-columns:1fr; } .ia-c { display:grid; grid-template-columns:44px 1fr; gap:0 10px; padding:14px; } .ia-c i { grid-row:span 2; margin:0; } .ia-moi { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -577,6 +609,9 @@
       </div>
       <p class="essai-n">Gratuit, sans inscription · 3 minutes</p>
     </form>
+    <ul class="ia-badges" aria-label="Comment c'est fait">
+      <li>✨ Illustré avec l'IA</li><li>👀 Couverture visible avant de payer</li><li>🧑 Relu par un humain</li><li>📦 Un vrai livre imprimé, livré chez vous</li>
+    </ul>
   </div>
 </section>
 
@@ -586,9 +621,9 @@
     <div class="fleches"><button type="button" id="rG" aria-label="Créations précédentes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" id="rD" aria-label="Créations suivantes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5l7 7-7 7"/></svg></button></div>
   </div>
   <ul class="etal-p" id="etalP">
-    <li class="prod"><a class="ph" href="/creer?formule=pack6" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/photo_04_r.webp" alt="Un livre Mon Héros du Mois tenu à deux mains" loading="lazy" style="object-position:50% 50%"></a>
+    <li class="prod"><a class="ph" href="/creer?formule=livre" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/photo_04_r.webp" alt="Un livre Mon Héros du Mois tenu à deux mains" loading="lazy" style="object-position:50% 50%"></a>
       <h3>Ses livres d'aventures</h3><p>Une vraie histoire illustrée dont il est le héros, couverture rigide.</p>
-      <div class="act"><a class="btn petit" href="/creer?formule=pack6">Créer</a><a class="voir" href="#livres">Voir</a></div></li>
+      <div class="act"><a class="btn petit" href="/creer?formule=livre">Créer</a><a class="voir" href="#livres">Voir</a></div></li>
     <li class="prod"><a class="ph" href="/creer?produit=calendrier" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/cal_photo_1_r.webp" alt="Un petit garçon tient son calendrier, son prénom en lettres dorées" loading="lazy" style="object-position:50% 30%"></a>
       <h3>Son calendrier</h3><p>12 mois illustrés avec lui, son anniversaire déjà marqué.</p>
       <div class="act"><a class="btn petit" href="/creer?produit=calendrier">Créer</a><a class="voir" href="#calendrier">Voir</a></div></li>
@@ -612,6 +647,44 @@
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>Livré en 7 à 15 jours ouvrés, réimprimé sans frais en cas de défaut</li>
       <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Paiement sécurisé, en une seule fois</li>
     </ul>
+  </div>
+</section>
+
+<section class="ia" id="ia" aria-labelledby="iaT">
+  <div class="wrap">
+    <span class="kick">Parlons franchement</span>
+    <h2 id="iaT">Oui, nos illustrations sont faites avec l'IA. Et votre livre, lui, est bien réel.</h2>
+    <p class="lead">On ne s'en cache pas : c'est l'IA qui permet de dessiner votre enfant, son doudou et ses animaux sur chaque page, pour le prix d'un livre ordinaire. Mais une machine ne fait pas tout, et vous ne payez pas dans le vide. Voici ce qui se passe vraiment.</p>
+    <div class="ia-g">
+      <div class="ia-c"><i>👀</i><b>Vous voyez avant de payer</b><p>Composez son avatar, puis demandez l'aperçu gratuit de sa vraie couverture. Vous commandez seulement si elle vous plaît.</p></div>
+      <div class="ia-c"><i>🧑</i><b>Un humain relit chaque page</b><p>Avant l'impression, chaque création est relue page par page. Un personnage raté, un détail bizarre : la page est refaite. Rien ne part sans validation.</p></div>
+      <div class="ia-c"><i>🖨️</i><b>Imprimé par un vrai imprimeur</b><p>Vos livres sont imprimés à la demande par Lulu, imprimeur de livres professionnel, puis expédiés chez vous avec un numéro de suivi.</p></div>
+      <div class="ia-c"><i>🛡️</i><b>Payé en sécurité, protégé</b><p>Paiement sécurisé par Stripe, commande suivie étape par étape dans « Mon compte ». Un défaut à la livraison ? Nous réimprimons sans frais.</p></div>
+    </div>
+    <div class="ia-pq">
+      <div>
+        <h3>Pourquoi l'IA ?</h3>
+        <p>Faire dessiner son enfant par un illustrateur, c'est des semaines d'attente et un budget à part. L'IA rend ce cadeau accessible : votre enfant (sans photo, juste son avatar), son doudou, son chat ou son petit frère, dans une histoire écrite pour lui.</p>
+        <p>Ce que l'IA ne fait pas : choisir à votre place, ni décider de ce qui part à l'impression. Ça, c'est nous.</p>
+      </div>
+      <div class="ia-cmp" role="table" aria-label="Ce que fait l'IA, ce que nous faisons">
+        <div class="h" role="row"><span>Étape</span><span>IA</span><span>Nous</span></div>
+        <div role="row"><span>Composer l'avatar</span><span></span><span>✓ vous</span></div>
+        <div role="row"><span>Dessiner les pages</span><span>✓</span><span></span></div>
+        <div role="row"><span>Relire chaque page, refaire si besoin</span><span></span><span>✓</span></div>
+        <div role="row"><span>Imprimer, relier, expédier</span><span></span><span>✓ Lulu</span></div>
+        <div role="row"><span>Répondre à vos questions</span><span></span><span>✓ un humain</span></div>
+      </div>
+    </div>
+    <div class="preuves" id="preuves" hidden>
+      <h3>Ce que vous recevez vraiment</h3>
+      <p class="sous">De vraies photos de livres reçus, prises au téléphone, sans retouche.</p>
+      <div class="pv-l" id="pvL"></div>
+    </div>
+    <div class="ia-moi">
+      <div class="rond" aria-hidden="true">A</div>
+      <p><b>Un doute avant de commander ? Écrivez-moi.</b> Je m'appelle Alex, j'ai créé Mon Héros du Mois et je réponds moi-même à chaque message : <a href="#contact">le formulaire</a>, <a href="mailto:monherosdumois@gmail.com">monherosdumois@gmail.com</a> ou <a href="https://www.instagram.com/monherosdumois/" rel="noopener" target="_blank">Instagram</a>.<span class="vend" id="vendeur"></span></p>
+    </div>
   </div>
 </section>
 
@@ -669,7 +742,7 @@
         <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM8 7h6M8 11h6"/></svg></span><div><b>20 pages, dont 18 pages d’histoire illustrées</b><span>Une histoire à lire à voix haute, pensée pour les 3 à 8 ans, avec la couverture et la quatrième.</span></div></li>
         <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></span><div><b>Un vrai livre relié</b><span>Couverture rigide, format carré, et son numéro de collection sur la couverture.</span></div></li>
       </ul>
-      <div class="l2"><a class="btn" href="/creer?formule=pack6">Créer ses livres</a><a class="voir" href="#feuilleter">Feuilleter un livre</a></div>
+      <div class="l2"><a class="btn" href="/creer?formule=livre">Créer ses livres</a><a class="voir" href="#feuilleter">Feuilleter un livre</a></div>
     </div>
   </div>
 </section>
@@ -862,6 +935,9 @@
   <div class="wrap">
     <h2 style="text-align:center;margin-left:auto;margin-right:auto">Vos questions</h2>
     <div class="faq">
+      <details><summary>C'est fait avec l'IA : est-ce que je reçois vraiment un livre ?</summary><p>Oui. L'IA dessine les illustrations, mais le livre est un vrai livre imprimé par Lulu, imprimeur professionnel, et livré chez vous avec un numéro de suivi. Chaque création est relue par nous avant l'impression, et vous pouvez voir sa couverture gratuitement avant de payer.</p></details>
+      <details><summary>Comment savoir que ce n'est pas une arnaque ?</summary><p>Vous voyez l'aperçu de sa couverture avant de payer. Le paiement passe par Stripe (nous ne voyons jamais votre carte), et vous suivez votre commande dans « Mon compte ». Nos coordonnées sont dans les <a href="/mentions-legales">mentions légales</a> et un humain répond à vos messages : écrivez-nous avant de commander si vous avez le moindre doute.</p></details>
+      <details><summary>Et si une illustration ne me plaît pas ?</summary><p>Avant de payer, vous voyez sa couverture. Après la commande, chaque page est relue avant l'impression et refaite si un personnage ou un détail ne va pas. Le livre étant personnalisé, il n'y a pas de droit de rétractation, mais un défaut d'impression ou un livre abîmé est réimprimé sans frais.</p></details>
       <details><summary>Quand vais-je recevoir le livre ?</summary><p>Le livre est créé juste après votre commande, puis relu avant d'être imprimé. Comptez 7 à 15 jours ouvrés pour le recevoir.</p></details>
       <details><summary>Pour quel âge ?</summary><p>Les histoires sont écrites pour être lues à voix haute aux enfants de 3 à 8 ans. Les phrases sont courtes et chaque livre compte 20 pages, dont 18 pages d’histoire illustrées.</p></details>
       <details><summary>Comment sont créés le texte et les illustrations ?</summary><p>Avec l'aide de l'intelligence artificielle, à partir de l'avatar et du thème que vous choisissez. Chaque livre est ensuite relu par nous avant l'impression : si une page ne va pas, nous la refaisons.</p></details>
@@ -1120,6 +1196,15 @@
     };
     pli($('plusUnivers'), $('cartesUnivers'), NU, 'Voir tous les univers', 'Réduire la liste');
     pli($('plusFetes'), $('cartesFetes'), NF, 'Voir toutes les occasions', 'Réduire la liste');
+  }).catch(() => {});
+
+  /* vraies photos (admin) et identité du vendeur : rien n'est affiché tant que ce n'est pas réel */
+  fetch('/api/preuves').then(r => r.json()).then(j => {
+    const v = j.vendeur || {};
+    if (v.nom) $('vendeur').textContent = [v.nom, v.ville, v.siret ? 'SIRET ' + v.siret : ''].filter(Boolean).join(' · ');
+    const l = j.preuves || []; if (!l.length) return;
+    $('pvL').innerHTML = l.map(p => `<figure>${p.type === 'video' ? `<video src="${p.url}" controls playsinline preload="metadata"></video>` : `<img src="${p.url}" alt="${esc(p.legende || 'Photo d\'un livre reçu')}" loading="lazy">`}${p.legende ? `<figcaption>${esc(p.legende)}</figcaption>` : ''}</figure>`).join('');
+    $('preuves').hidden = false;
   }).catch(() => {});
 
   /* avis : uniquement de vrais avis clients (static/avis.json) */

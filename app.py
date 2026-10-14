@@ -433,6 +433,8 @@ import comptes  # noqa: E402
 app.register_blueprint(comptes.bp)
 import suivi  # noqa: E402
 app.register_blueprint(suivi.bp)
+import preuves  # noqa: E402  vraies photos des livres reçus (admin -> accueil)
+app.register_blueprint(preuves.bp)
 
 if __name__ == "__main__":
     print("Ouvre http://localhost:8000 dans ton navigateur" + ("" if os.getenv("OPENAI_API_KEY") else "  (pas de clé OpenAI : mode démo)"))
