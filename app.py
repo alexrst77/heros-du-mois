@@ -275,7 +275,23 @@ def vitrine():
         return redirect("/creer?" + request.query_string.decode())
     base = (os.getenv("PUBLIC_URL") or request.host_url).rstrip("/")      # adresses absolues (partage, référencement)
     html = (ROOT / "static" / "vitrine.html").read_text(encoding="utf-8").replace("__BASE__", base)
+    verif = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()          # Search Console : balise de vérification
+    html = html.replace("__VERIF__", f'<meta name="google-site-verification" content="{verif}">' if re.fullmatch(r"[\w\-]{10,80}", verif) else "")
+    html = html.replace("__LDJSON__", _ld_accueil(html, base))
     return Response(html, mimetype="text/html")
+
+
+def _ld_accueil(html, base):
+    """Données structurées de l'accueil : le site et la FAQ (lue dans la page, donc toujours identique à ce qui est affiché)."""
+    import html as H
+    faq = []
+    for q, a in re.findall(r"<details><summary>(.*?)</summary><p>(.*?)</p></details>", html, re.S):
+        net = lambda t: H.unescape(re.sub(r"<[^>]+>", "", t)).strip()
+        faq.append({"@type": "Question", "name": net(q), "acceptedAnswer": {"@type": "Answer", "text": net(a)}})
+    ld = [{"@context": "https://schema.org", "@type": "WebSite", "name": "Mon Héros du Mois", "url": base + "/", "inLanguage": "fr-FR"}]
+    if faq:
+        ld.append({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": faq})
+    return '<script type="application/ld+json">' + json.dumps(ld, ensure_ascii=False).replace("</", "<\\/") + "</script>"
 
 
 @app.get("/creer")
@@ -435,6 +451,8 @@ import suivi  # noqa: E402
 app.register_blueprint(suivi.bp)
 import preuves  # noqa: E402  vraies photos des livres reçus (admin -> accueil)
 app.register_blueprint(preuves.bp)
+import seo  # noqa: E402  pages d'atterrissage pour Google
+app.register_blueprint(seo.bp)
 
 if __name__ == "__main__":
     print("Ouvre http://localhost:8000 dans ton navigateur" + ("" if os.getenv("OPENAI_API_KEY") else "  (pas de clé OpenAI : mode démo)"))

@@ -1537,15 +1537,16 @@ def api_mesure():
 
 @bp.get("/robots.txt")
 def robots():
-    return Response(f"User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /impression/\nDisallow: /objet/\n"
+    return Response(f"User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /impression/\nDisallow: /impression-grand/\nDisallow: /objet/\nDisallow: /telecharger/\nDisallow: /reprendre/\nDisallow: /rl\nDisallow: /stop-rappels\n"
                     f"Sitemap: {base_url()}/sitemap.xml\n", mimetype="text/plain")
 
 
 @bp.get("/sitemap.xml")
 def sitemap():
     b = base_url()
-    pages = [("/", "1.0"), ("/creer", "0.8"), ("/cgv", "0.2"), ("/mentions-legales", "0.1"), ("/confidentialite", "0.2")]
-    x = "".join(f"<url><loc>{b}{u}</loc><priority>{p}</priority></url>" for u, p in pages)
+    import seo
+    pages = [("/", "1.0"), ("/creer", "0.8")] + [(f"/{k}", "0.9") for k in seo.PAGES] + [("/cgv", "0.2"), ("/mentions-legales", "0.1"), ("/confidentialite", "0.2")]
+    x = "".join(f"<url><loc>{b}{u}</loc>" + (f"<lastmod>{seo.MAJ}</lastmod>" if u.strip("/") in seo.PAGES or u == "/" else "") + f"<priority>{p}</priority></url>" for u, p in pages)
     return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{x}</urlset>',
                     mimetype="application/xml")
 
