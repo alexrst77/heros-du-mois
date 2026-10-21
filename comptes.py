@@ -202,7 +202,7 @@ def commandes_de(cl):
             continue
         g = groupes.get(o["id"]) or [o]
         etats = {x["statut"] for x in g}
-        statut = ("Expédié" if etats <= {"expediee"} else "En impression" if etats & {"envoyee_impression", "expediee"} else
+        statut = ("Livré" if etats <= {"expediee"} and all(x.get("livree_le") for x in g) else "Expédié" if etats <= {"expediee"} else "En impression" if etats & {"envoyee_impression", "expediee"} else
                   STATUTS.get(o["statut"], "En cours"))
         out.append({"id": o["id"], "cree": o["cree"], "montant": o["montant"],
                     "quoi": (paiement.FORMULES.get(o["formule"]) or {}).get("nom") or o["formule"],

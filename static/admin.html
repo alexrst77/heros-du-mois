@@ -173,6 +173,7 @@ function etat(o) {
   if (o.statut === 'envoyee_impression' && o.printful_statut === 'draft') return { k: 'imprimeur', pill: ['p-gold', '📝', 'Brouillon Printful'], say: "Brouillon chez Printful : rien n'est fabriqué ni facturé tant que tu ne confirmes pas." };
   if (o.statut === 'envoyee_impression') return { k: 'imprimeur', pill: ['p-blue', '🖨️', "Chez l'imprimeur"], say: o.printful_id ? 'Printful : ' + esc(PRINTFUL_FR[o.printful_statut] || o.printful_statut || '') : o.lulu_statut ? 'Lulu : ' + esc(LULU_FR[o.lulu_statut] || o.lulu_statut) : '' };
   if (o.statut === 'expediee' && o.formule === 'ebook') return { k: 'expedie', pill: ['p-green', '📩', 'E-book envoyé'], say: 'Lien de téléchargement envoyé au client (aussi dans son compte).' };
+  if (o.statut === 'expediee' && o.livree_le) return { k: 'livre', pill: ['p-green', '🏠', 'Livré le ' + new Date(o.livree_le * 1000).toLocaleDateString('fr-FR')], say: 'Colis reçu par le client.' };
   if (o.statut === 'expediee') return { k: 'expedie', pill: ['p-green', '📦', 'Expédié'], say: (o.suivi || []).length ? 'Colis en route.' : '' };
   if (o.statut === 'annulee') return { k: 'archive', pill: ['p-grey', '🗂️', 'Archivé'], say: o.erreur === 'données effacées' ? 'Données effacées.' : '' };
   return { k: 'autre', pill: ['p-grey', '•', o.statut], say: '' };
@@ -196,7 +197,10 @@ function boutons(o, e) {
   if (e.k === 'bloque' && o.budget && (o.budget.incertain > 0 || o.budget.reserve > 0) && !o.en_cours) main = b('budget', '💰 Régler l\'appel incertain', 'main');
   else if (e.k === 'bloque') main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main');
   if (e.k === 'imprimeur') main = (o.printful_statut === 'draft' ? b('printful-confirmer', '✅ Confirmer chez Printful (payant)', 'gold') : '') + b('suivi', '🔄 Actualiser le suivi', o.printful_statut === 'draft' ? '' : 'main');
-  if (e.k === 'expedie') main = (o.suivi || []).map(u => `<a class="btn main" target="_blank" href="${esc(u)}">📍 Suivre le colis</a>`).join('');
+  if (e.k === 'livre') main = b('pas-livre', '↩️ Pas encore livré');
+  if (e.k === 'imprimeur' && !o.printful_statut) main += b('livre', '🏠 Colis livré', 'ok');
+  if (e.k === 'expedie' && o.formule !== 'ebook') main = b('livre', '🏠 Colis livré', 'ok') + (o.suivi || []).map(u => `<a class="btn" target="_blank" href="${esc(u)}">📍 Suivre le colis</a>`).join('');
+  if (e.k === 'expedie' && o.formule === 'ebook') main = (o.suivi || []).map(u => `<a class="btn main" target="_blank" href="${esc(u)}">📍 Suivre le colis</a>`).join('');
   const sec = [];
   if (!['paiement', 'archive'].includes(e.k)) sec.push(b('budget', '💰 Coût IA détaillé'));
   if (e.k === 'pret' || e.k === 'valide') sec.push(b('mail-pret', o.pack_mail ? '📧 Renvoyer le mail « prêt »' : '📧 Envoyer le mail « prêt »'));
@@ -210,7 +214,7 @@ function boutons(o, e) {
     sec.push(b('test-calendrier', '🧪 Calendrier de test (≈ 1,50 $)'), b('test-coloriage', '🧪 Cahier de coloriage de test (≈ 2,50 $)'),
              b('test-gourde', '🧪 Gourde de test (≈ 0,30 $)'), b('test-tasse', '🧪 Tasse de test (≈ 0,30 $)'), b('test-sac', '🧪 Sac de test (≈ 0,30 $)'));
   if (e.k === 'relire') sec.push(b('relancer', '♻️ Refaire tout le livre', 'danger'));
-  if (['expedie', 'bloque', 'archive'].includes(e.k) && o.job_id && o.erreur !== 'données effacées') sec.push(b('effacer', '🧹 Effacer les données', 'danger'));
+  if (['expedie', 'livre', 'bloque', 'archive'].includes(e.k) && o.job_id && o.erreur !== 'données effacées') sec.push(b('effacer', '🧹 Effacer les données', 'danger'));
   if (!o.en_cours) sec.push(b('supprimer', '🗑️ Supprimer la commande', 'danger'));
   return { main, sec: sec.join('') };
 }
@@ -222,7 +226,7 @@ function carte(o) {
   const titre = o.titre || (o.prenom ? `${o.calendrier ? 'Le calendrier' : o.coloriage ? 'Le cahier de coloriage' : o.objet ? NOMX[o.objet].replace(/^./, c => c.toUpperCase()) : 'Le livre'} de ${esc(o.prenom)}` : 'En préparation');
   const cov = o.vignette ? `<div class="cover"><img loading="lazy" src="/admin/vignette/${o.id}${Q}&v=${o.finalise ? 1 : 0}" alt=""></div>` : `<div class="cover">${e.k === 'fabrication' ? '🎨' : o.objet ? (FORMULE[o.formule] || '').split(' ')[0] : '📖'}</div>`;
   const PL = o.plafond || D.plafond, bud = o.budget ? o.budget.total : null, pct = bud != null ? Math.min(100, bud / PL * 100) : 0;
-  const issues = (o.controle || []).length && !['pret', 'imprimeur', 'expedie', 'archive', 'valide'].includes(e.k)   // déjà relu et validé : plus utile
+  const issues = (o.controle || []).length && !['pret', 'imprimeur', 'expedie', 'livre', 'archive', 'valide'].includes(e.k)   // déjà relu et validé : plus utile
     ? `<div class="issues"><b>Le contrôle a remarqué :</b><ul>${o.controle.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
   const err = o.erreur && o.erreur !== 'données effacées' && e.k !== 'pret' ? `<div class="issues red">${esc(o.erreur.replace(/^Fabrication : /, ''))}</div>` : '';
   const files = (o.fichiers || []).map(f => `<a target="_blank" href="/admin/fichier/${o.id}/${encodeURIComponent(f)}${Q}">${esc(f)}</a>`).join('')
@@ -281,8 +285,8 @@ function vueTableau() {
 }
 
 /* ================================================================ commandes */
-const FILTRES = { actifs: '📚 En cours', relire: '👀 À relire', fabrication: '🎨 Fabrication', pret: '✅ Prêts', imprimeur: "🖨️ Chez l'imprimeur", bloque: '⚠️ Bloqués', expedie: '📦 Expédiés', essai: '🧪 Essais', archive: '🗂️ Archivés', tout: 'Tout' };
-const filtreOk = (k, f, o) => f === 'tout' || (f === 'actifs' ? !['archive', 'expedie', 'essai', 'imprimeur'].includes(k) || (k === 'imprimeur' && o && o.printful_statut === 'draft') : k === f);   // chez l'imprimeur : rien à faire, sauf brouillon Printful à confirmer
+const FILTRES = { actifs: '📚 En cours', relire: '👀 À relire', fabrication: '🎨 Fabrication', pret: '✅ Prêts', imprimeur: "🖨️ Chez l'imprimeur", bloque: '⚠️ Bloqués', expedie: '📦 Expédiés', livre: '🏠 Livrés', essai: '🧪 Essais', archive: '🗂️ Archivés', tout: 'Tout' };
+const filtreOk = (k, f, o) => f === 'tout' || (f === 'actifs' ? !['archive', 'expedie', 'livre', 'essai', 'imprimeur'].includes(k) || (k === 'imprimeur' && o && o.printful_statut === 'draft') : k === f);   // chez l'imprimeur : rien à faire, sauf brouillon Printful à confirmer
 let CHERCHE = '';
 function vueCommandes() {
   const ks = D.commandes.map(o => [o, etat(o).k]);
@@ -291,7 +295,7 @@ function vueCommandes() {
   return `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><input id="cherche" value="${esc(CHERCHE)}" placeholder="🔎 Chercher : nom, e-mail, référence…" style="flex:1;min-width:220px;font:600 14px var(--texte);padding:10px 12px;border:1.5px solid var(--line);border-radius:12px" oninput="CHERCHE=this.value;clearTimeout(window._ch);window._ch=setTimeout(()=>{render();const i=document.getElementById('cherche');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)"></div>
     <div class="chips">${Object.entries(FILTRES).map(([k, t]) => { const c = ks.filter(([o, x]) => filtreOk(x, k, o)).length; return `<button class="${k === FILTRE ? 'on' : ''}" onclick="FILTRE='${k}';render()">${t}<em>${c}</em></button>`; }).join('')}</div>
     ${rows.length ? liste(rows) : '<div class="empty"><div class="big">🌙</div>Aucune commande ici.</div>'}
-    ${D.abonnements.length ? '<h2>Abonnements (ancienne formule)</h2>' + vueAbos() : ''}`;
+`;
 }
 function vueAbos() {
   const S = D.abonnements;
@@ -546,6 +550,8 @@ const CONFIRM = {
   imprimer: "Envoyer chez l'imprimeur (tous les livres de la commande, un seul colis) ? En mode réel, c'est une vraie commande payée.",
   effacer: "Effacer définitivement les données et fichiers de cette commande ?",
   'arreter-abonnement': "Arrêter cet abonnement ?",
+  livre: "Le client a reçu son colis ? Tout le colis sera noté « livré ».",
+  'pas-livre': "Remettre ce colis en « expédié » (pas encore livré) ?",
   'essai-apercu': "Lancer un essai aperçu (couverture + 1 double page, ≈ 1 $) ?",
   'essai-brouillon': "Lancer un essai brouillon (tout le livre en petite qualité, ≈ 0,5 $) ?",
   'mois-suivant': "Fabriquer maintenant le livre suivant de cet abonnement ?",
@@ -588,7 +594,7 @@ function resultat(action, j) {
   const T = { finaliser: '✅ Livre validé et sauvegardé.', relancer: '▶️ Fabrication relancée.', 'refaire-refusees': '🔁 Images refusées relancées.',
               imprimer: "🖨️ Envoyé à l'imprimeur.", suivi: '🔄 Suivi actualisé.', 'mail-pret': '📧 Mail envoyé à ' + esc(i.envoye_a || ''),
               'essai-apercu': '🧪 Essai aperçu lancé.', 'essai-brouillon': '🧪 Essai brouillon lancé.', 'mois-suivant': '➕ Livre suivant lancé.',
-              'arreter-abonnement': '⏹️ Abonnement arrêté.', 'test-calendrier': '🧪 Calendrier de test lancé : il apparaît dans la liste (5 à 10 minutes).', 'test-coloriage': '🧪 Cahier de test lancé : il apparaît dans la liste (10 à 15 minutes).', 'test-gourde': '🧪 Gourde de test lancée (2 à 3 minutes).', 'test-tasse': '🧪 Tasse de test lancée (2 à 3 minutes).', 'test-sac': '🧪 Sac de test lancé (2 à 3 minutes).', effacer: '🧹 Données effacées.', 'valider-paiement-test': '💳 Paiement simulé.' };
+              'arreter-abonnement': '⏹️ Abonnement arrêté.', livre: '🏠 Noté : colis livré.', 'pas-livre': '↩️ Remis en « expédié ».', 'test-calendrier': '🧪 Calendrier de test lancé : il apparaît dans la liste (5 à 10 minutes).', 'test-coloriage': '🧪 Cahier de test lancé : il apparaît dans la liste (10 à 15 minutes).', 'test-gourde': '🧪 Gourde de test lancée (2 à 3 minutes).', 'test-tasse': '🧪 Tasse de test lancée (2 à 3 minutes).', 'test-sac': '🧪 Sac de test lancé (2 à 3 minutes).', effacer: '🧹 Données effacées.', 'valider-paiement-test': '💳 Paiement simulé.' };
   return { cls: 'ok', html: T[action] || '✅ Fait.' };
 }
 async function act(id, action, btn) {

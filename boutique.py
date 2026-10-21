@@ -1387,6 +1387,14 @@ def admin_action(oid, action):
             return jsonify(ok=True, info={"printful_statut": (r or {}).get("status")})
         if action == "suivi":
             return jsonify(ok=True, info=refresh_print(oid))
+        if action in ("livre", "pas-livre"):     # colis reçu par le client (Lulu ne le signale pas : noté à la main)
+            ori = o["origine"] or oid
+            colis_ = [x for x in db.lister(100000) if x["origine"] == ori and x["statut"] in ("envoyee_impression", "expediee")
+                      and (not o.get("lulu_id") or x.get("lulu_id") == o.get("lulu_id")) and (not o.get("printful_id") or x.get("printful_id") == o.get("printful_id"))]
+            for x in colis_:
+                db.update(x["id"], statut="expediee", livree_le=time.time() if action == "livre" else None)
+            log(f"commande {ori} : colis " + ("livré" if action == "livre" else "remis « expédié »") + f" ({len(colis_)} produit(s))")
+            return jsonify(ok=True, info={"n": len(colis_)})
         if action == "relancer":
             if o["statut"] not in ("erreur", "generation", "payee", "a_verifier"):
                 raise RuntimeError("seulement avant l'envoi à l'impression")

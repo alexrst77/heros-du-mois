@@ -143,7 +143,9 @@ def demander_auto(maintenant=None):
         groupe = [x for x in db.lister(100000) if x["origine"] == ori]
         if not groupe or not all(x["statut"] in ("expediee", "annulee") for x in groupe) or not any(x["statut"] == "expediee" for x in groupe):
             continue
-        if (o.get("maj") or 0) > maintenant - DELAI_JOURS * 86400 or not o.get("email") or suivi.desinscrit(o["email"]):
+        livre = max((x.get("livree_le") or 0) for x in groupe)
+        trop_tot = (livre > maintenant - 2 * 86400) if livre else ((o.get("maj") or 0) > maintenant - DELAI_JOURS * 86400)
+        if trop_tot or not o.get("email") or suivi.desinscrit(o["email"]):          # 2 jours après la livraison, sinon 10 après l'expédition
             continue
         prenom = ""
         try:
