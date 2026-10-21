@@ -246,7 +246,12 @@ def references(snap, cfg, refs, folder, progress):
     """Un portrait propre par personnage (base : avatar recoloré du navigateur), contrôlé contre sa fiche, 2 corrections au plus."""
     out, rapport = {}, {}
     by = {p["id"]: p for p in snap["personnages"]}
-    for c in cfg["personnages"]:
+
+    def un(c):                                          # un personnage : portrait (caché) + contrôle (mémorisé)
+        with G.verrou_portrait(c):                     # jumeaux, ou portrait déjà en cours (peint en avance) : jamais deux fois
+            return _un(c)
+
+    def _un(c):
         progress(f"Référence : {c['nom']}")
         r = refs.get(c["id"], {})
         neuf = not G.portrait_en_cache(c)
@@ -260,8 +265,14 @@ def references(snap, cfg, refs, folder, progress):
         best = (src, v, 0)
         dst = Path(folder) / f"portrait_{c['id']}.png"
         shutil.copy(best[0], dst)
-        out[c["id"]] = dst
-        rapport[c["id"]] = {"fichier": dst.name, "empreinte": fsha(dst), "variante": best[2], **best[1]}
+        return c["id"], dst, {"fichier": dst.name, "empreinte": fsha(dst), "variante": best[2], **best[1]}
+
+    with ThreadPoolExecutor(max_workers=max(1, min(6, len(cfg["personnages"])))) as ex:   # tous en même temps : l'attente = le plus lent
+        futs = [ex.submit(contextvars.copy_context().run, un, c) for c in cfg["personnages"]]
+        res = [f.result() for f in futs]
+    for cid, dst, rap in res:                           # même ordre qu'avant (ordre des personnages)
+        out[cid] = dst
+        rapport[cid] = rap
     return out, rapport
 
 

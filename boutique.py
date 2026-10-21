@@ -101,6 +101,12 @@ def apercu_lancer():
     return jsonify(rep), code
 
 
+@bp.post("/api/apercu/portrait")
+def apercu_portrait():
+    rep, code = apercu.prechauffer(A, request.get_json(force=True, silent=True) or {}, apercu.visiteur(request))
+    return jsonify(rep), code
+
+
 @bp.get("/api/apercu/restants")
 def apercu_restants():
     cl = comptes.client_courant()

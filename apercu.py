@@ -93,6 +93,60 @@ def lancer(A, data, vis):
     return {"id": pid, "restants": restants(vis)}, 200
 
 
+PORTRAITS_JOUR = int(os.getenv("PORTRAITS_JOUR", "80"))
+with db._db() as _c:
+    _c.execute("create table if not exists prechauffes (vis text, cree real)")
+
+
+def prechauffer(A, data, vis):
+    """Fin de l'étape 1 : le portrait du héros est peint tout de suite, pendant que le parent compose son équipe.
+    Il est mis en cache : la couverture (fin de l'avatar) et le livre le réutilisent gratuitement. Rien n'est renvoyé au navigateur."""
+    import generator as G, comptes
+    cl = comptes.client_courant()
+    vis = ("c:" + cl["id"]) if cl else ("v:" + vis)
+    if not os.getenv("OPENAI_API_KEY"):
+        return {"ok": False}, 200
+    with db._db() as c:
+        if c.execute("select count(*) from prechauffes where vis=? and cree>?", (vis, time.time() - 86400)).fetchone()[0] >= 3 or \
+           c.execute("select count(*) from prechauffes where cree>?", (time.time() - 86400,)).fetchone()[0] >= PORTRAITS_JOUR or restants(vis) <= 0:
+            return {"ok": False}, 200
+    form, err = A.parse_book(data)
+    if err or not form.get("avatar"):
+        return {"ok": False}, 200
+    cfg = G.build_config(form)
+    heros = next((x for x in cfg.get("personnages", []) if x["id"] == "heros"), None)
+    if not heros or G.portrait_en_cache(heros):
+        return {"ok": True, "cache": True}, 200
+    with db._lock, db._db() as c:
+        c.execute("insert into prechauffes values (?,?)", (vis, time.time()))
+    folder = DOSSIER / ("p-" + secrets.token_hex(6)); folder.mkdir(parents=True)
+    guides = A.save_avatar_pngs(data.get("avatar_png") or {}, folder)
+    previews = A.save_previews(data.get("apercus") or {}, folder)
+    refs = A.browser_refs(guides, previews)
+    threading.Thread(target=_portrait, args=(heros, refs, folder), daemon=True).start()
+    return {"ok": True}, 200
+
+
+def _portrait(c, refs, folder):
+    import generator as G, procede as P, budget as BU
+    livre = f"portrait-{folder.name}"
+    BU.PLAFONDS[livre] = 0.4
+    jeton = BU.LIVRE.set(livre)
+    try:
+        G.check_budget()
+        r = refs.get(c["id"], {})
+        with G.verrou_portrait(c):
+            src = G.draw_portrait(c, r.get("guide"), 0, base=r.get("apercu"), etape="portrait heros (en avance)")
+            controle = Path(str(src) + ".controle.json")
+            if not controle.exists():
+                controle.write_text(json.dumps(P._vision(P.SYSTEM_REF, P.fiche(c), src), ensure_ascii=False))
+    except Exception as e:
+        print("portrait en avance impossible :", type(e).__name__, e)
+    finally:
+        BU.LIVRE.reset(jeton)
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 def _run(pid, form, cfg, refs, folder):
     import generator as G, procede as P, budget as BU, boutique as B
     livre = f"apercu-{pid}"

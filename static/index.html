@@ -1061,7 +1061,7 @@
     APV = Math.max(APV, srv); return Math.min(Math.round(APV), plafond);
   }
   setInterval(() => { const a = S.apercu; if (!a || a.statut !== 'en_cours') { APV = 0; return; }
-    const plafond = (+a.pct || 0) < 60 ? 59 : 96; if (APV < plafond) APV += (plafond - APV) * .04 + .15;
+    const plafond = (+a.pct || 0) < 60 ? 59 : 97; if (APV < plafond) APV += (plafond - APV) * ((+a.pct || 0) < 60 ? .04 : .022) + .05;
     const el = document.getElementById('apPct'); if (el) el.textContent = apPct() + ' %'; }, 1000);
   function suivreApercu() {
     clearTimeout(APT);
@@ -1318,6 +1318,8 @@
     if (tab === 'creations' && S.histoire.demo) return submit();
     if (tab === 'creations' && (sync(), rien())) { $('err').textContent = 'Choisissez au moins une création ou un objet.'; return; }
     if (tab === 'enfant' && window.mesure) mesure('avatar_termine');
+    if (tab === 'enfant' && APR.restants !== 0 && !apercuValide())       // son portrait se peint pendant qu'on compose l'équipe : la couverture sera prête plus vite
+      basePayload().then(p => fetch('/api/apercu/portrait', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) })).catch(() => {});
     if (tab !== 'commande') { const T = TABS(), avant = tab; tab = T[T.indexOf(tab) + 1]; render(); scrollTo({ top: 0, behavior: 'smooth' });
       if (avant === 'compagnons' && !sessionStorage.getItem('fete')) { try { sessionStorage.setItem('fete', '1'); } catch (_) {} feter(); }
       return; }

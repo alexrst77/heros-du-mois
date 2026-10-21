@@ -398,6 +398,16 @@ def portrait_path(c, variant=0):
     return REF_DIR / f"{c['cle']}_{variant}{_m('suffix', '')}.png"     # un brouillon ne remplace jamais un vrai portrait
 
 
+_VERROUS, _VERROU = {}, __import__("threading").Lock()
+
+
+def verrou_portrait(c):
+    """Un seul portrait à la fois par personnage dans tout le site : le portrait peint en avance (fin de l'étape 1) et celui
+    de la couverture ne sont jamais payés deux fois ; le second attend le premier, puis le reprend du cache."""
+    with _VERROU:
+        return _VERROUS.setdefault(str(portrait_path(c)), __import__("threading").Lock())
+
+
 def portrait_en_cache(c):
     return portrait_path(c).exists()
 
