@@ -379,7 +379,7 @@
   <div id="builder" class="layout">
     <aside class="stage">
       <div class="scene couv"><div class="decor" id="decor"></div><svg class="fl" id="fl" xmlns="http://www.w3.org/2000/svg"></svg>
-        <div class="ctitre" id="ctitre"></div><div id="big" class="big"></div><div class="dos" aria-hidden="true"><i></i><b id="dosnum">1</b></div></div>
+        <div class="ctitre" id="ctitre"></div><div id="big" class="big"></div><div class="dos" aria-hidden="true"><i>★</i><b id="dosnum">1</b></div></div>
       <p class="couvnote" id="couvnote">* Aperçu pour présenter l'équipe : la vraie couverture est illustrée sur mesure avec votre héros.</p>
       <div id="stat"></div>
       <div class="who" id="who"></div>
@@ -761,7 +761,7 @@
   }
   function paillettes() {
     const sc = document.querySelector('.scene'); if (!sc || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    for (let i = 0; i < 12; i++) { const p = document.createElement('i'); p.className = 'paillette'; p.textContent = i % 3 ? '' : '';
+    for (let i = 0; i < 12; i++) { const p = document.createElement('i'); p.className = 'paillette'; p.textContent = i % 3 ? '✦' : '★';
       p.style.left = (35 + Math.random() * 30) + '%'; p.style.top = (40 + Math.random() * 30) + '%';
       p.style.setProperty('--dx', (Math.random() * 220 - 110) + 'px'); p.style.setProperty('--dy', (Math.random() * -160 - 20) + 'px');
       p.style.animationDelay = (Math.random() * .15) + 's'; sc.appendChild(p); setTimeout(() => p.remove(), 1200); }
@@ -789,7 +789,7 @@
     const g = x.createLinearGradient(0, 0, 0, Hh); g.addColorStop(0, 'rgba(20,12,60,.85)'); g.addColorStop(.35, 'rgba(20,12,60,.1)'); g.addColorStop(.8, 'rgba(20,12,60,.05)'); g.addColorStop(1, 'rgba(20,12,60,.85)');
     x.fillStyle = g; x.fillRect(0, 0, W, Hh);
     x.fillStyle = 'rgba(255,231,163,.85)'; for (let i = 0; i < 40; i++) { x.beginPath(); x.arc(Math.random() * W, Math.random() * Hh * .7, Math.random() * 3 + 1, 0, 7); x.fill(); }
-    x.textAlign = 'center'; x.fillStyle = '#FFE7A3'; x.font = '900 34px Nunito'; x.fillText(' CARTE DE HÉROS  ', W / 2, 92);
+    x.textAlign = 'center'; x.fillStyle = '#FFE7A3'; x.font = '900 34px Nunito'; x.fillText('★  CARTE DE HÉROS  ★', W / 2, 92);
     let t = 132; x.font = `400 ${t}px "Young Serif"`; while (x.measureText(pr).width > W - 120 && t > 60) { t -= 6; x.font = `400 ${t}px "Young Serif"`; }
     x.shadowColor = 'rgba(0,0,0,.5)'; x.shadowBlur = 18; const gg = x.createLinearGradient(0, 120, 0, 120 + t); gg.addColorStop(0, '#FFF6D6'); gg.addColorStop(1, '#E2B656');
     x.fillStyle = gg; x.fillText(pr, W / 2, 140 + t * .82); x.shadowBlur = 0;

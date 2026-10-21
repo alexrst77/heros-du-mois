@@ -723,6 +723,24 @@ async function supprimerPreuve(id) { if (!confirm('Retirer cette photo du site ?
 async function deplacerPreuve(id, sens) { await fetch('/admin/api/preuves/' + id + '/deplacer' + Q, { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify({ sens }) }); chargerPreuves(); }
 async function legendePreuve(id, legende) { await fetch('/admin/api/preuves/' + id + '/legende' + Q, { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify({ legende }) }); toast('Légende enregistrée'); }
 
+/* ================================================================ avis clients (vérifiés) */
+let AVIS = null;
+function chargerAvis() { fetch('/admin/api/avis' + Q, { headers: H }).then(r => r.json()).then(j => { AVIS = j; render(); }).catch(() => {}); }
+function carteAvis() {
+  if (AVIS === null) { AVIS = { avis: [], resume: {} }; chargerAvis(); }
+  const st = { attente: '<span class="pill p-gold">À vérifier</span>', publie: '<span class="pill p-green">Publié</span>', refuse: '<span class="pill p-red">Refusé</span>' };
+  const l = (AVIS.avis || []).map(a => `<div style="border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 8px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${'★'.repeat(a.note)}${'☆'.repeat(5 - a.note)}</b> ${esc(a.nom)} · ${esc(a.date)} · commande ${esc(a.origine)} ${st[a.statut] || ''}</div>
+      <div style="margin:6px 0">${esc(a.texte)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${(a.photos || []).map(p => `<a href="/avis-photo/${p}${Q}" target="_blank"><img src="/avis-photo/${p}${Q}" style="width:90px;height:90px;object-fit:cover;border-radius:8px"></a>`).join('')}</div>
+      <div class="acts">${a.statut !== 'publie' ? `<button class="btn ok" onclick="modererAvis('${a.id}','publier')">Publier</button>` : ''}${a.statut !== 'refuse' ? `<button class="btn" onclick="modererAvis('${a.id}','refuser')">Refuser</button>` : ''}</div></div>`).join('');
+  const r = AVIS.resume || {};
+  return `<div class="card" style="margin-bottom:18px"><h3>⭐ Avis clients vérifiés ${r.nombre ? `· ${r.nombre} publiés, ${String(r.moyenne).replace('.', ',')}/5` : ''}</h3>
+    <p class="meta" style="margin:0 0 10px">Une demande d'avis part toute seule 10 jours après l'expédition (une seule fois, jamais aux désinscrits) ; le lien est aussi dans « Mon compte » du client. La loi impose de publier les avis négatifs comme positifs : ne refuse que ceux hors sujet, injurieux ou avec des données personnelles (nom complet, adresse, visage d'enfant sans accord).</p>
+    ${l || '<span class="meta">Aucun avis pour l\'instant.</span>'}</div>`;
+}
+async function modererAvis(id, action) { await fetch('/admin/api/avis/' + id + '/' + action + Q, { method: 'POST', headers: H }); chargerAvis(); }
+
 /* ================================================================ réglages */
 let TARIFS = null;
 function vueReglages() {
@@ -730,7 +748,7 @@ function vueReglages() {
   if (!TARIFS) fetch('/admin/api/tarifs' + Q, { headers: H }).then(r => r.json()).then(t => { TARIFS = t; render(); });
   const t = TARIFS, e = t && t.etat, m = t && t.tarifs.modeles;
   const res = RES._reg ? `<div class="result ${RES._reg.cls || ''}" style="margin:0 0 12px"><button class="x" onclick="delete RES._reg;render()">×</button>${RES._reg.html}</div>` : '';
-  return res + cartePreuves() + carteEntreprise() + `
+  return res + cartePreuves() + carteAvis() + carteEntreprise() + `
   <h2>Production</h2><div class="grid2">
   <div class="card"><h3>💰 Plafond IA : ${D.plafond} $ par livre</h3>
     ${!t ? 'Chargement…' : `<div>${e.ok ? '<span class="pill p-green">✅ Fabrication autorisée</span>' : '<span class="pill p-red">⛔ Fabrication bloquée</span> ' + e.manque.map(esc).join(' ; ')}</div>

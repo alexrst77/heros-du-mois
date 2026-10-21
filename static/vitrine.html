@@ -980,18 +980,8 @@ __LDJSON__
 </section>
 </main>
 
-<footer>
-  <div class="in wrap">
-    <a href="/" aria-label="Mon Héros du Mois, accueil"><img src="/static/marque/logo-480.webp" alt="Mon Héros du Mois" class="logo-full" width="480" height="186" style="width:200px;margin:0" loading="lazy"></a>
-    <nav class="pied-l" aria-label="Nos créations"><a href="/livre-personnalise-enfant">Livre personnalisé enfant</a><a href="/livre-personnalise-noel">Livre de Noël personnalisé</a><a href="/livre-anniversaire-personnalise">Livre d'anniversaire</a><a href="/livre-doudou-personnalise">Livre avec son doudou</a><a href="/livre-emotions-enfant">Peur du noir, émotions, bébé</a><a href="/calendrier-personnalise-enfant">Calendrier personnalisé</a><a href="/cahier-coloriage-personnalise">Cahier de coloriage personnalisé</a><a href="/cadeau-personnalise-enfant">Idées cadeaux enfant</a></nav>
-    <a href="/cgv">Conditions de vente</a>
-    <a href="/mentions-legales">Mentions légales</a>
-    <a href="/confidentialite">Confidentialité</a>
-    <a href="#" onclick="window.mesureChoix && mesureChoix();return false">Cookies</a>
-    <a href="#contact">Nous contacter</a>
-    <span>Paiement sécurisé par Stripe</span>
-  </div>
-</footer>
+__PIED__
+__BARRE__
 
 <script>
 (function () {
@@ -1210,10 +1200,12 @@ __LDJSON__
     $('preuves').hidden = false;
   }).catch(() => {});
 
-  /* avis : uniquement de vrais avis clients (static/avis.json) */
-  fetch('/static/avis.json').then(r => r.json()).then(list => {
-    if (!Array.isArray(list) || !list.length) return;
-    $('avis').innerHTML = list.map(a => `<figure><div class="etoiles" aria-label="${a.note || 5} étoiles sur 5">${''.repeat(a.note || 5)}</div><blockquote>${esc(a.texte)}</blockquote><figcaption>${esc(a.nom)}${a.ville ? ', ' + esc(a.ville) : ''}</figcaption></figure>`).join('');
+  /* avis : uniquement des avis VÉRIFIÉS (clients ayant reçu leur commande), avec leurs photos */
+  fetch('/api/avis').then(r => r.json()).then(j => {
+    const list = (j.avis || []).slice(0, 6); if (!list.length) return;
+    const r = j.resume || {};
+    $('avis').innerHTML = list.map(a => `<figure><div class="etoiles" aria-label="${a.note} étoiles sur 5">${'★'.repeat(a.note)}${'☆'.repeat(5 - a.note)}</div>${(a.photos || []).slice(0, 1).map(p => `<img src="${p}" alt="Photo du livre reçu" loading="lazy" style="width:100%;border-radius:14px;margin-top:10px">`).join('')}<blockquote>${esc(a.texte)}</blockquote><figcaption>${esc(a.nom)}</figcaption></figure>`).join('') +
+      `<p style="grid-column:1/-1;margin:4px 0 0;font-size:14px;color:var(--encre-2)">${r.nombre >= 3 ? `<b>${r.nombre} avis vérifiés, ${String(r.moyenne).replace('.', ',')}/5.</b> ` : ''}Avis vérifiés : seuls les clients ayant reçu leur commande peuvent en laisser un ; tous sont publiés, positifs comme négatifs. <a href="/avis-clients">Tous les avis</a></p>`;
     $('avisBloc').hidden = false;
   }).catch(() => {});
 })();

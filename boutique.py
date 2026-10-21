@@ -648,6 +648,11 @@ def _scheduler():
                 if s["formule"] == "fetes":
                     check_fetes(s)
             purge_old()
+            try:
+                import avis
+                avis.demander_auto()               # une demande d'avis, 10 jours après l'expédition
+            except Exception:
+                traceback.print_exc()
             if lulu.configured():
                 for o in db.lister(statut="envoyee_impression"):
                     refresh_print(o["id"])

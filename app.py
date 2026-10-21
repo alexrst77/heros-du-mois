@@ -278,6 +278,8 @@ def vitrine():
     verif = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()          # Search Console : balise de vérification
     html = html.replace("__VERIF__", f'<meta name="google-site-verification" content="{verif}">' if re.fullmatch(r"[\w\-]{10,80}", verif) else "")
     html = html.replace("__LDJSON__", _ld_accueil(html, base))
+    import seo
+    html = html.replace("__PIED__", seo.pied()).replace("__BARRE__", seo.barre())
     return Response(html, mimetype="text/html")
 
 
@@ -453,6 +455,8 @@ import preuves  # noqa: E402  vraies photos des livres reçus (admin -> accueil)
 app.register_blueprint(preuves.bp)
 import seo  # noqa: E402  pages d'atterrissage pour Google
 app.register_blueprint(seo.bp)
+import avis  # noqa: E402  avis clients vérifiés, avec photos
+app.register_blueprint(avis.bp)
 
 if __name__ == "__main__":
     print("Ouvre http://localhost:8000 dans ton navigateur" + ("" if os.getenv("OPENAI_API_KEY") else "  (pas de clé OpenAI : mode démo)"))

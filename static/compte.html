@@ -99,6 +99,7 @@
       <h2>Mes commandes</h2>
       ${K.length ? K.map(c => `<div class="cmd"><div><div class="q">${esc(c.quoi)}</div><div class="d">Commande du ${new Date(c.cree * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} · n° ${esc(c.id.toUpperCase())}</div>
           <span class="st ${c.statut === 'Expédié' ? 'ok' : ''}">${esc(c.statut)}</span></div><div class="m">${eur(c.montant)}</div>
+          ${c.avis ? `<div class="t"><a class="btn petit" href="${esc(c.avis)}">Donner mon avis (avec une photo du livre)</a></div>` : ''}
           ${(c.ebooks || []).length ? `<div class="t">${c.ebooks.map(e => `<a class="btn petit" href="${esc(e.url)}">« ${esc(e.titre)} » (PDF)</a>${e.imprimer ? ` <a href="${esc(e.imprimer)}">Commander la version imprimée</a>` : ''}`).join('<br>')}</div>` : ''}
           ${c.titres.length || c.suivi.length ? `<div class="t">${c.titres.map(t => '« ' + esc(t) + ' »').join(' · ')}${c.suivi.length ? `${c.titres.length ? '<br>' : ''}${c.suivi.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">Suivre le colis${c.suivi.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' · ')}` : ''}</div>` : ''}</div>`).join('')
         : `<div class="vide">Aucune commande pour l'instant avec ${esc(C.email)}.</div>`}

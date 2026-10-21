@@ -180,6 +180,15 @@ def _ebooks(origine):
         return []
 
 
+def _avis_lien(origine):
+    """Lien « Donner mon avis » : commande expédiée, avis pas encore donné."""
+    try:
+        import avis
+        return avis.lien(origine, "") if avis.peut_noter(origine) and not avis.deja(origine) else None
+    except Exception:
+        return None
+
+
 def commandes_de(cl):
     import paiement
     out, tous = [], db.lister(100000)
@@ -199,7 +208,7 @@ def commandes_de(cl):
                     "quoi": (paiement.FORMULES.get(o["formule"]) or {}).get("nom") or o["formule"],
                     "titres": [x["titre"] for x in g if x.get("titre")][:12], "statut": statut,
                     "suivi": sorted({u for x in g for u in (x.get("suivi") or []) if isinstance(u, str) and u.startswith("http")}),
-                    "ebooks": _ebooks(o["id"])})
+                    "ebooks": _ebooks(o["id"]), "avis": _avis_lien(o["id"])})
     return sorted(out, key=lambda x: -x["cree"])
 
 
