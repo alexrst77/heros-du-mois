@@ -104,7 +104,7 @@ def apercu_lancer():
 @bp.get("/api/apercu/restants")
 def apercu_restants():
     cl = comptes.client_courant()
-    return jsonify(restants=apercu.restants("c:" + cl["id"]) if cl else apercu.MAX_VISITEUR, max=apercu.MAX_VISITEUR, connecte=bool(cl))
+    return jsonify(restants=apercu.restants(("c:" + cl["id"]) if cl else ("v:" + apercu.visiteur(request))), max=apercu.MAX_VISITEUR, connecte=bool(cl))
 
 
 @bp.get("/api/apercu/<pid>")

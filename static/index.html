@@ -361,6 +361,7 @@
   .confetti { position:fixed; z-index:9999; top:-20px; width:9px; height:14px; border-radius:2px; pointer-events:none; animation:tombe linear forwards; }
   @keyframes tombe { to { transform:translateY(110vh) rotate(720deg); } }
   @media (prefers-reduced-motion: reduce) { .scene .big.pop > div, .scene .group.pop > div, #mini.pop img, .paillette, .confetti { animation:none !important; } .confetti, .paillette { display:none; } }
+  .scene .ia-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:8; animation:popav .5s ease; }
   .confiance span + span::before { content:"·"; margin-right:8px; color:#C9A54A; }
   .confiance { display:flex; flex-wrap:wrap; gap:4px 12px; margin:0 0 14px; padding:10px 12px; border-radius:14px; background:#FFF8E6; border:1px solid #F3E2B5; font:800 13px/1.35 var(--texte); color:var(--encre-2); }
 </style>
@@ -735,6 +736,12 @@
     }
     $('who').innerHTML = esc(who) + (sub ? `<small>${esc(sub)}</small>` : '');
     animer(which);
+    { const sc = document.querySelector('.scene'); let im = sc.querySelector('.ia-img');
+      const ok = apercuValide() && (tab === 'creations' || tab === 'commande') && !sc.classList.contains('cal') && !sc.classList.contains('colo') && !sc.classList.contains('objet');
+      if (ok) { if (!im) { im = document.createElement('img'); im.className = 'ia-img'; im.alt = 'Sa couverture peinte'; sc.appendChild(im); } if (im.getAttribute('src') !== S.apercu.image) im.src = S.apercu.image;
+        $('couvnote').textContent = "Sa couverture, peinte par l'IA avec ses personnages : c'est elle qui sera sur son livre 1 si vous gardez cette équipe et ce monde."; }
+      else if (im) im.remove();
+      if (!ok && apercuEnCours() && (tab === 'creations' || tab === 'commande')) $('couvnote').textContent = `Sa vraie couverture est en train d'être peinte (${apPct()} %) : elle s'affichera ici.`; }
     let t = `<button data-go="enfant" class="${tab === 'enfant' ? 'on' : ''}" title="${esc(e.prenom || 'Enfant')}">${img(paintState('enfant', e))}</button>`;
     const surC = tab === 'compagnons';
     if (S.doudou.actif) t += `<button data-go="compagnons" data-foc="doudou" class="${surC && foc === 'doudou' ? 'on' : ''}" title="Doudou">${img(paintState('doudou', S.doudou))}</button>`;
@@ -784,8 +791,26 @@
     const u = UNIV.find(v => !v.fete && v.nom === S.histoire.univers) || UNIV.find(v => !v.fete);
     try { await document.fonts.load('400 80px "Young Serif"'); await document.fonts.load('900 40px Nunito'); } catch (_) {}
     x.fillStyle = '#24184D'; x.fillRect(0, 0, W, Hh);
+    const flou = (img, fx) => {                   // flou par réduction puis agrandissement : marche aussi sur iPhone
+      const t = document.createElement('canvas'); t.width = Math.max(8, Math.round(W / fx)); t.height = Math.max(8, Math.round(Hh / fx));
+      const tx = t.getContext('2d'); const k = Math.max(t.width / img.width, t.height / img.height); tx.drawImage(img, (t.width - img.width * k) / 2, (t.height - img.height * k) / 2, img.width * k, img.height * k);
+      x.save(); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(t, 0, 0, W, Hh); x.fillStyle = 'rgba(20,12,60,.35)'; x.fillRect(0, 0, W, Hh); x.restore(); };
+    if (apercuValide()) {                         // la vraie couverture, peinte par l'IA avec ses personnages, dans son monde
+      const ia = await charge(S.apercu.image);
+      if (ia) {
+        flou(ia, 30);
+        const c = W - 80, y0 = 150;
+        x.save(); x.shadowColor = 'rgba(0,0,0,.55)'; x.shadowBlur = 40; x.fillStyle = '#000'; x.fillRect(40, y0, c, c); x.restore();
+        x.drawImage(ia, 40, y0, c, c);
+        x.textAlign = 'center'; x.fillStyle = '#FFE7A3'; x.font = '900 34px Nunito'; x.fillText('★  CARTE DE HÉROS  ★', W / 2, 98);
+        x.fillStyle = '#FFC23D'; x.font = '900 34px Nunito'; x.fillText('Mon Héros du Mois', W / 2, Hh - 92);
+        x.fillStyle = 'rgba(255,255,255,.85)'; x.font = '700 28px Nunito'; x.fillText(location.host.replace(/^www\./, ''), W / 2, Hh - 50);
+        $('feteP').textContent = `Sa couverture, peinte pour ${pr}. Gardez-la, envoyez-la à la famille : c'est gratuit.`;
+        return;
+      }
+    }
     const fond = u ? await charge(`/vignette/${u.cle}.webp`) : null;
-    if (fond) { x.save(); x.filter = 'blur(22px) brightness(.72) saturate(1.3)'; const k = Math.max(W / fond.width, Hh / fond.height) * 1.08; x.drawImage(fond, (W - fond.width * k) / 2, (Hh - fond.height * k) / 2, fond.width * k, fond.height * k); x.restore(); }
+    if (fond) flou(fond, 40);
     const g = x.createLinearGradient(0, 0, 0, Hh); g.addColorStop(0, 'rgba(20,12,60,.85)'); g.addColorStop(.35, 'rgba(20,12,60,.1)'); g.addColorStop(.8, 'rgba(20,12,60,.05)'); g.addColorStop(1, 'rgba(20,12,60,.85)');
     x.fillStyle = g; x.fillRect(0, 0, W, Hh);
     x.fillStyle = 'rgba(255,231,163,.85)'; for (let i = 0; i < 40; i++) { x.beginPath(); x.arc(Math.random() * W, Math.random() * Hh * .7, Math.random() * 3 + 1, 0, 7); x.fill(); }
@@ -803,12 +828,20 @@
     placer(hero, W / 2, n ? 700 : 760);
     x.fillStyle = '#FFC23D'; x.font = '900 34px Nunito'; x.fillText('Mon Héros du Mois', W / 2, Hh - 92);
     x.fillStyle = 'rgba(255,255,255,.8)'; x.font = '700 28px Nunito'; x.fillText(location.host.replace(/^www\./, ''), W / 2, Hh - 50);
+    majAttenteCarte();
+  }
+  function majAttenteCarte() {                    // pendant la peinture : le texte dit ce qui se passe
+    const pr = (S.enfant.prenom || '').trim().replace(/^./, c => c.toUpperCase()) || 'votre héros';
+    if (apercuValide()) return;
+    $('feteP').textContent = apercuEnCours() ? `Nous peignons ${pr} et son équipe dans son monde, avec l'IA : sa vraie couverture arrive ici dans 1 à 2 minutes (${apPct()} %). Vous pouvez continuer.`
+      : "Voici sa carte de héros. Gardez-la, envoyez-la à la famille : c'est gratuit.";
   }
   async function feter() {
     const d = $('fete'), pr = (S.enfant.prenom || '').trim().replace(/^./, c => c.toUpperCase());
-    $('feteT').textContent = pr ? `L'équipe de ${pr} est prête !` : "L'équipe est prête !";
+    $('feteT').textContent = pr ? `L'équipe de ${pr} est prête\u00a0!` : "L'équipe est prête\u00a0!";
     confettis(); try { d.showModal(); } catch (_) { return; }
     window.parcours && parcours('carte_heros');
+    await lancerApercuAuto();
     dessinerCarte().catch(() => {});
   }
   $('feteGo').onclick = () => $('fete').close();
@@ -990,13 +1023,27 @@
   fetch('/api/apercu/restants').then(r => r.json()).then(j => { APR.restants = j.restants; APR.max = j.max; if (tab === 'creations') render(); }).catch(() => {});
   function apercuHTML() {
     const a = S.apercu, pr = esc((S.enfant.prenom || 'votre enfant').trim()), reste = APR.restants;
-    const bouton = (txt) => !ME.connecte ? `<a class="btn petit" href="/compte?suite=${encodeURIComponent('/creer?etape=creations')}">Se connecter pour voir sa couverture</a><span class="ap-n">gratuit, sans mot de passe</span>`
-      : reste === 0 ? (a && a.statut === 'pret' ? '' : `<p class="hint" style="margin:8px 0 0">L'aperçu de sa couverture a déjà été fait : la couverture finale sera créée à la commande.</p>`)
+    const bouton = (txt) => reste === 0 ? (a && a.statut === 'pret' ? '' : `<p class="hint" style="margin:8px 0 0">L'aperçu de sa couverture a déjà été fait : la couverture finale sera créée à la commande.</p>`)
       : `<button type="button" class="btn petit" data-apercu="1">${txt}</button><span class="ap-n">${reste == null ? '' : reste > 1 ? reste + ' aperçus possibles' : 'un seul aperçu : vérifiez ses personnages avant'}</span>`;
     if (a && a.statut === 'en_cours') return `<div class="ap-c"><div class="ap-wait"><span class="ap-rond"><i></i><b id="apPct">${apPct()} %</b></span><div><b>Nous peignons la couverture de ${pr}…</b><span>${esc(a.etape || 'Préparation')} · environ 1 à 2 minutes, vous pouvez continuer.</span></div></div></div>`;
     if (a && a.statut === 'pret') return `<div class="ap-c ok"><img src="${a.image}" alt="Aperçu de la couverture de ${pr}"><div><b>La couverture de ${pr}</b><span>C'est cette illustration qui sera sur son livre 1, si vous gardez ces personnages et cet univers.</span>${APR.restants ? `<div class="ap-a">${bouton('Une autre version')}</div>` : ''}</div></div>`;
     return `<div class="ap-c"><div class="ap-ico"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div><b>Voir sa vraie couverture avant de commander</b><span>Nous peignons ${pr} et ses compagnons dans l'univers du livre 1. C'est gratuit.</span>` +
       (a && a.erreur ? `<span class="ap-err">${esc(a.erreur)}</span>` : '') + `<div class="ap-a">${bouton('Voir sa couverture')}</div></div></div>`;
+  }
+  const apKey = () => JSON.stringify([keyOf('enfant', S.enfant), (S.enfant.prenom || '').trim(), S.doudou.actif ? [keyOf('doudou', S.doudou), (S.doudou.nom || '').trim()] : 0,
+    S.animaux.map(a => [keyOf('animal', a), (a.nom || '').trim()]), S.fratrie.map(f => [keyOf('enfant', f), (f.prenom || '').trim()]), S.histoire.univers, S.histoire.occasion || '']);   // ce qui se voit sur la couverture
+  window.mhmApKey = apKey;
+  const apercuValide = () => !!(S.apercu && S.apercu.statut === 'pret' && S.apercu.image && S.apercu.cle === apKey());
+  const apercuEnCours = () => !!(S.apercu && S.apercu.statut === 'en_cours' && S.apercu.cle === apKey());
+  async function lancerApercuAuto() {      // fin de l'avatar : sa couverture est peinte par l'IA avec SES personnages, dans SON monde
+    if (apercuValide() || apercuEnCours() || APR.restants === 0 || !(S.enfant.prenom || '').trim()) return;
+    try {
+      const r = await fetch('/api/apercu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(await basePayload()) });
+      const j = await r.json();
+      if (!r.ok) { if (r.status === 429) APR.restants = 0; return; }
+      APR.restants = j.restants; S.apercu = { id: j.id, statut: 'en_cours', etape: 'Préparation', cle: apKey() }; save(); window.parcours && parcours('apercu'); suivreApercu();
+      if (tab === 'creations') render();
+    } catch (_) {}
   }
   async function lancerApercu(b) {
     if (!(S.enfant.prenom || '').trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez d'abord le prénom."; return; }
@@ -1005,7 +1052,7 @@
       const r = await fetch('/api/apercu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(await basePayload()) });
       const j = await r.json();
       if (!r.ok) { S.apercu = { statut: 'erreur', erreur: j.erreur }; if (r.status === 429) APR.restants = 0; render(); return; }
-      APR.restants = j.restants; S.apercu = { id: j.id, statut: 'en_cours', etape: 'Préparation' }; save(); render(); suivreApercu();
+      APR.restants = j.restants; S.apercu = { id: j.id, statut: 'en_cours', etape: 'Préparation', cle: apKey() }; save(); render(); suivreApercu();
     } catch (_) { S.apercu = { statut: 'erreur', erreur: 'Connexion perdue, réessayez.' }; render(); }
   }
   let APT = null, APV = 0;
@@ -1022,7 +1069,9 @@
     APT = setTimeout(async () => {
       try {
         const j = await (await fetch('/api/apercu/' + S.apercu.id)).json();
-        S.apercu = Object.assign({}, S.apercu, j); save();
+        const avant = S.apercu.statut; S.apercu = Object.assign({}, S.apercu, j); save();
+        if (avant !== 'pret' && j.statut === 'pret' && $('fete').open) dessinerCarte().catch(() => {});
+        else if ($('fete').open) majAttenteCarte();
         if (j.statut === 'refuse') fetch('/api/apercu/restants').then(r => r.json()).then(x => { APR.restants = x.restants; render(); });
         if (tab === 'creations') render(); else renderStage();
       } catch (_) {}

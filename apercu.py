@@ -65,9 +65,7 @@ def lancer(A, data, vis):
     Réservé aux visiteurs connectés (compte client) : les 2 essais sont comptés par compte."""
     import generator as G, comptes
     cl = comptes.client_courant()
-    if not cl:
-        return {"erreur": "Connectez-vous (gratuit, sans mot de passe) pour voir sa couverture.", "connexion": True}, 401
-    vis = "c:" + cl["id"]
+    vis = ("c:" + cl["id"]) if cl else ("v:" + vis)       # sans compte : un aperçu par connexion internet (lancé à la fin de l'avatar)
     if restants(vis) <= 0:
         return {"erreur": "Vous avez déjà vu l'aperçu de sa couverture : la couverture finale sera créée à la commande, avec les mêmes personnages."}, 429
     with db._db() as c:
