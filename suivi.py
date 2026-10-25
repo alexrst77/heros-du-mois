@@ -26,6 +26,8 @@ create table if not exists parcours (vid text primary key, client_id text, premi
 create table if not exists relances (cle text primary key, envoye real, email text, sujet text);
 """)
     for _sql in ("alter table parcours add column campagne text",          # utm_campaign (ex. noel_oct26)
+                 "alter table parcours add column ville text", "alter table parcours add column region text",
+                 "alter table parcours add column pays text",              # localisation approximative (jamais l'adresse IP)
                  "alter table relances add column clic real",              # la personne a cliqué le lien du mail
                  "create table if not exists desinscrits (email text primary key, le real)"):
         try:
@@ -74,6 +76,15 @@ def evenement():
         cl = None
     now = time.time()
     mobile = 1 if re.search(r"Mobi|Android|iPhone", request.headers.get("User-Agent", "")) else 0
+    with db._db() as c:
+        r0 = c.execute("select pays from parcours where vid=?", (v,)).fetchone()
+    loc = None
+    if not r0 or not r0["pays"]:                       # une seule fois par visiteur : ville, région, pays (l'IP n'est pas gardée)
+        try:
+            import geoloc
+            loc = geoloc.localiser(geoloc.ip_de(request), request.headers.get("CF-IPCountry"))
+        except Exception:
+            loc = None
     with db._lock, db._db() as c:
         r = c.execute("select * from parcours where vid=?", (v,)).fetchone()
         if not r:
@@ -86,6 +97,8 @@ def evenement():
             src = _source(d.get("r"), d.get("u"))
             if src != "direct":                        # revenu par une pub ou un lien : c'est elle qu'on retient (dernier clic)
                 c.execute("update parcours set source=?, campagne=? where vid=?", (src, _campagne(d.get("u")), v))
+        if loc and loc.get("pays"):
+            c.execute("update parcours set ville=?, region=?, pays=? where vid=?", (loc.get("ville"), loc.get("region"), loc["pays"], v))
         if secrets.randbelow(200) == 0:
             c.execute("delete from parcours where derniere < ?", (now - GARDE,))
     return ("", 204)
@@ -122,7 +135,7 @@ def donnees(jours=30):
     now = time.time(); depuis = now - jours * 86400
     with db._db() as c:
         P = [dict(r) for r in c.execute("select * from parcours where derniere > ?", (depuis,))]
-        tous_p = [dict(r) for r in c.execute("select vid, client_id, visites, derniere, etape, apercu, commande from parcours where client_id is not null or commande is not null")]
+        tous_p = [dict(r) for r in c.execute("select vid, client_id, visites, derniere, etape, apercu, commande, ville, region, pays from parcours where client_id is not null or commande is not null")]
         clients = [dict(r) for r in c.execute("select * from clients order by cree desc")]
         heros = {}
         for r in c.execute("select client_id, nom, maj from heros order by maj desc"):
@@ -152,6 +165,20 @@ def donnees(jours=30):
         x["visiteurs"] += 1; x["configurateur"] += p["etape"] >= 1; x["paiement"] += p["etape"] >= 5
         if p["commande"] in montants:
             x["payes"] += 1; x["ca"] += montants[p["commande"]]
+    # où sont les visiteurs (ville / région / pays approximatifs)
+    def lieux(cle):
+        t = {}
+        for p in P:
+            k = cle(p)
+            if not k:
+                continue
+            x = t.setdefault(k, {"lieu": k, "visiteurs": 0, "configurateur": 0, "payes": 0})
+            x["visiteurs"] += 1; x["configurateur"] += (p["etape"] or 0) >= 1; x["payes"] += p["commande"] in ok_ids
+        return sorted(t.values(), key=lambda x: (-x["payes"], -x["visiteurs"]))[:15]
+    localises = sum(1 for p in P if p.get("pays"))
+    geo = {"localises": localises, "villes": lieux(lambda p: p.get("ville") and (p["ville"] + (f" ({p['region']})" if p.get("region") else ""))),
+           "regions": lieux(lambda p: p.get("region") and (p["region"] + ("" if p.get("pays") == "France" else f", {p['pays']}"))),
+           "pays": lieux(lambda p: p.get("pays"))}
     # clients (comptes)
     par_client = {}
     for p in tous_p:
@@ -159,6 +186,8 @@ def donnees(jours=30):
             s = par_client.setdefault(p["client_id"], {"visites": 0, "derniere": 0, "etape": 0, "apercu": 0})
             s["visites"] += p["visites"] or 0; s["derniere"] = max(s["derniere"], p["derniere"] or 0)
             s["etape"] = max(s["etape"], p["etape"] or 0); s["apercu"] = max(s["apercu"], p["apercu"] or 0)
+            if p.get("ville") or p.get("pays"):
+                s["lieu"] = ", ".join(x for x in (p.get("ville"), p.get("pays")) if x)
     liste = []
     for cl in clients:
         mes = [o for o in cmds if o["client_id"] == cl["id"] or (o["email"] or "").lower() == cl["email"]]
@@ -166,7 +195,7 @@ def donnees(jours=30):
         s = par_client.get(cl["id"], {})
         liste.append({"id": cl["id"], "email": cl["email"], "nom": cl["nom"], "cree": cl["cree"],
                       "derniere": max(cl["vu"] or 0, s.get("derniere") or 0), "visites": s.get("visites") or 0,
-                      "etape": ETAPES[s.get("etape") or 0], "apercu": bool(s.get("apercu")),
+                      "etape": ETAPES[s.get("etape") or 0], "apercu": bool(s.get("apercu")), "lieu": s.get("lieu"),
                       "heros": [h["nom"] for h in heros.get(cl["id"], [])], "commandes": len(ok), "total": sum(o["montant"] or 0 for o in ok),
                       "non_payees": sum(1 for o in mes if o["statut"] == "attente_paiement"),
                       "relance": relances.get("cli:" + cl["id"]),
@@ -181,9 +210,10 @@ def donnees(jours=30):
         p = par_cmd.get(o["id"]) or {}
         attente.append({"id": o["id"], "cree": o["cree"], "email": o["email"], "formule": o["formule"], "montant": o["montant"],
                         "prenom": _prenom(o["id"]), "visites": p.get("visites"), "apercu": bool(p.get("apercu")),
+                        "lieu": ", ".join(x for x in (p.get("ville"), p.get("pays")) if x) or None,
                         "a_paye_depuis": (o["email"] or "").lower() in payees_emails,
                         "stripe": bool(o["stripe_session"]), "relance": relances.get("cmd:" + o["id"])})
-    return {"jours": jours, "par_appareil": par_app, "entonnoir": [{"etape": e, "n": n} for e, n in zip(ETAPES, ent)] + [{"etape": "Payé", "n": payes}],
+    return {"jours": jours, "par_appareil": par_app, "geo": geo, "entonnoir": [{"etape": e, "n": n} for e, n in zip(ETAPES, ent)] + [{"etape": "Payé", "n": payes}],
             "sources": sorted(sources.items(), key=lambda x: -x[1])[:8],
             "campagnes": sorted(camp.values(), key=lambda x: (-x["ca"], -x["visiteurs"]))[:15],
             "visiteurs": len(P), "mobile": sum(1 for p in P if p["mobile"]), "visites": sum(p["visites"] or 0 for p in P),
