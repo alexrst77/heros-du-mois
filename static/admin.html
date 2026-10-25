@@ -365,6 +365,7 @@ function vueClients() {
         <div class="meta">Arrêt : ${o.stripe ? 'sur la page de paiement Stripe (tout était rempli)' : 'avant la page de paiement'}${o.a_paye_depuis ? ' · <b style="color:#138A6E">a commandé depuis avec ce mail</b>' : ''}</div></div>
         <div class="acts" style="margin:0">${btnRel('cmd', o.id, o.relance, !o.a_paye_depuis)}</div></div></div>`).join('')
       : '<div class="empty"><div class="big">🎉</div>Personne n\'a abandonné au paiement.</div>'}
+    ${(C.recuperes || []).length ? `<div class="card"><h3>✅ Ventes récupérées (${C.recuperes.length})</h3>${C.recuperes.map(o => `<div class="meta" style="margin:4px 0"><b>${esc(o.prenom || 'Sans prénom')}</b> · ${esc(o.email || '')} · a payé ensuite <b>${eur(o.montant || 0)}</b>${o.relance ? ' · après ta relance ✉️' : ''}</div>`).join('')}</div>` : ''}
     <h2>👤 Comptes clients</h2>
     <input value="${esc(CLI_Q)}" id="cliq" placeholder="🔎 Chercher : e-mail, nom, héros…" style="width:100%;font:600 14px var(--texte);padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:10px" oninput="CLI_Q=this.value;clearTimeout(window._cq);window._cq=setTimeout(()=>{render();const i=document.getElementById('cliq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
     ${L.length ? `<div class="card" style="overflow-x:auto"><table><tr><th>Client</th><th>Inscrit</th><th>Dernière visite</th><th class="r">Visites</th><th>Héros</th><th>Plus loin atteint</th><th class="r">Commandes</th><th></th></tr>

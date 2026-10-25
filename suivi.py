@@ -203,11 +203,16 @@ def donnees(jours=30):
     # commandes non finalisées (paiement lancé mais pas payé)
     par_cmd = {p["commande"]: p for p in tous_p if p["commande"]}
     payees_emails = {(o["email"] or "").lower() for o in cmds if payee(o)}
-    attente = []
+    attente, recuperes = [], []
     for o in sorted(cmds, key=lambda o: -o["cree"]):
         if o["statut"] != "attente_paiement":
             continue
         p = par_cmd.get(o["id"]) or {}
+        apres = [x for x in cmds if payee(x) and (x["email"] or "").lower() == (o["email"] or "").lower() and (x["cree"] or 0) > (o["cree"] or 0)]
+        if apres:                                       # il a payé une commande depuis : plus un abandon, une vente récupérée
+            recuperes.append({"id": o["id"], "email": o["email"], "prenom": _prenom(o["id"]), "commande": apres[0]["id"],
+                              "relance": relances.get("cmd:" + o["id"]), "montant": apres[0]["montant"]})
+            continue
         attente.append({"id": o["id"], "cree": o["cree"], "email": o["email"], "formule": o["formule"], "montant": o["montant"],
                         "prenom": _prenom(o["id"]), "visites": p.get("visites"), "apercu": bool(p.get("apercu")),
                         "lieu": ", ".join(x for x in (p.get("ville"), p.get("pays")) if x) or None,
@@ -221,7 +226,7 @@ def donnees(jours=30):
             "pub_meta": sum(1 for p in P if re.search(r"facebook|instagram|^fb$|^ig$|^meta", (p["source"] or "").lower())),
             "clients": liste, "nouveaux_7j": sum(1 for c in clients if (c["cree"] or 0) > now - 7 * 86400),
             "clients_payants": sum(1 for c in liste if c["commandes"]),
-            "attente": attente, "mail": __import__("boutique").mail_configure(),
+            "attente": attente, "recuperes": recuperes, "mail": __import__("boutique").mail_configure(),
             "relances": {k: {"nom": SEGMENTS[k], "a_relancer": len(v), "stats": stats_relances()[k]} for k, v in eligibles().items()}}
 
 
