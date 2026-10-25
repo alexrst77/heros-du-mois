@@ -159,6 +159,9 @@ def order_create():
         addr = {"nom": re.sub(r"\s+", " ", str(a0.get("nom") or "")).strip()[:80], "pays": "FR"}
     if c.get("cgv") is not True:
         return jsonify(erreur="Merci d'accepter les conditions générales de vente."), 400
+    if c.get("sans_nouveautes") is True:          # opposition à la prospection dès la commande
+        with db._lock, db._db() as cx:
+            cx.execute("insert or replace into desinscrits values (?,?)", (email.lower(), time.time()))
     ebook = num or paiement.ebook_ajoute(formule, c.get("ebook"))
     if ebook and c.get("renonce_retractation") is not True:      # contenu numérique : demande expresse + renonciation (art. L221-28 13°)
         return jsonify(erreur="Pour l'e-book, cochez la case : vous demandez sa création immédiate et renoncez au droit de rétractation."), 400

@@ -503,7 +503,7 @@
     coloriage: { pages: null },
     produits: { livres: true, calendrier: false, coloriage: false },
     objets: [],
-    commande: { formule: 'livre', pack: 'livre', cal_ajout: false, colo_ajout: false, email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
+    commande: { formule: 'livre', pack: 'livre', cal_ajout: false, colo_ajout: false, email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, sans_news: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
   };
   let S;
   try { S = JSON.parse(localStorage.getItem('heros-avatar')) || null; } catch (_) { S = null; }
@@ -1186,6 +1186,7 @@
       `<div class="row2">${G('Code postal', inp('code_postal', '77000', 'autocomplete="postal-code"'))}${G('Ville', inp('ville', '', 'autocomplete="address-level2"'))}</div>` +
       `<div class="row2">${G('Pays', `<select data-in="pays">${[['FR', 'France'], ['BE', 'Belgique'], ['LU', 'Luxembourg'], ['CH', 'Suisse'], ['MC', 'Monaco']].map(([v, l]) => `<option value="${v}" ${c.pays === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}${G('Téléphone', inp('telephone', 'pour le transporteur', 'type="tel" autocomplete="tel"'))}</div>`) +
       `<label class="check"><input type="checkbox" data-chk="cgv" ${c.cgv ? 'checked' : ''}><span>J'accepte les <a href="/cgv" target="_blank">conditions de vente</a> et je reconnais qu'un produit personnalisé n'ouvre pas de droit de rétractation.</span></label>` +
+      `<label class="check"><input type="checkbox" data-chk="sans_news" ${c.sans_news ? 'checked' : ''}><span>Je ne souhaite pas recevoir vos nouveautés par e-mail (quelques e-mails par an au plus, désinscription possible à tout moment).</span></label>` +
       (avecEbook() ? `<label class="check"><input type="checkbox" data-chk="renonce" ${c.renonce ? 'checked' : ''}><span>Je demande la création immédiate de l'e-book et je renonce expressément à mon droit de rétractation pour ce contenu numérique.</span></label>` : '') +
       `<ul class="garanties"><li>Paiement sécurisé par Stripe</li><li>Chaque illustration vérifiée et retravaillée avant l'impression</li><li>Un défaut à la livraison ? Réimpression sans frais</li><li>Aucune photo de votre enfant, données effacées après livraison</li></ul>`;
   }
@@ -1380,7 +1381,7 @@
       if (avecEbook() && !c.renonce) { $('err').textContent = "Pour l'e-book, cochez la case de création immédiate (contenu numérique)."; return; }
       if (c.cadeau && !c.cadeau_de.trim()) { $('err').textContent = 'Indiquez de la part de qui est le cadeau.'; return; }
       const dates = S.calendrier.dates.filter(x => x.j && x.m && (x.texte || '').trim()).map(x => ({ date: `${String(x.m).padStart(2, '0')}-${String(x.j).padStart(2, '0')}`, texte: x.texte.trim() }));
-      payload.commande = { v: window.parcoursId ? parcoursId() : '', formule: c.formule, email: c.email.trim(), cgv: true, ebook: ebookAjout(), renonce_retractation: avecEbook() && !!c.renonce, code_promo: c.promo ? c.promo.code : '', apercu: S.apercu && S.apercu.statut === 'pret' ? S.apercu.id : '',
+      payload.commande = { v: window.parcoursId ? parcoursId() : '', formule: c.formule, email: c.email.trim(), cgv: true, sans_nouveautes: !!c.sans_news, ebook: ebookAjout(), renonce_retractation: avecEbook() && !!c.renonce, code_promo: c.promo ? c.promo.code : '', apercu: S.apercu && S.apercu.statut === 'pret' ? S.apercu.id : '',
         calendrier: { actif: avecCal(), debut: S.calendrier.debut, dates },
         coloriage: { actif: avecColo(), pages: S.coloriage.pages },
         objets: objetsChoisis(),

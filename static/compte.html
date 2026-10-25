@@ -40,6 +40,7 @@
   .cmd .st.ok { background:#E3F2EA; color:var(--mousse); }
   .cmd .t { grid-column:1/-1; color:var(--encre-2); font-size:14px; } .cmd .t a { color:var(--encre); font-weight:700; }
   .vide { color:var(--encre-2); background:var(--papier); border:1px dashed var(--trait); border-radius:18px; padding:20px; text-align:center; }
+  .news { display:flex; gap:10px; align-items:center; font-weight:700; cursor:pointer; } .news input { width:20px; height:20px; accent-color:var(--violet, #5A33C9); } .news small { font-weight:400; color:var(--encre-2); }
   .bas { margin-top:40px; display:flex; gap:16px; flex-wrap:wrap; font-size:14px; }
   .bas button { background:none; border:0; color:var(--encre-2); font:600 14px var(--texte); cursor:pointer; text-decoration:underline; padding:0; }
 </style>
@@ -103,6 +104,9 @@
           ${(c.ebooks || []).length ? `<div class="t">${c.ebooks.map(e => `<a class="btn petit" href="${esc(e.url)}">« ${esc(e.titre)} » (PDF)</a>${e.imprimer ? ` <a href="${esc(e.imprimer)}">Commander la version imprimée</a>` : ''}`).join('<br>')}</div>` : ''}
           ${c.titres.length || c.suivi.length ? `<div class="t">${c.titres.map(t => '« ' + esc(t) + ' »').join(' · ')}${c.suivi.length ? `${c.titres.length ? '<br>' : ''}${c.suivi.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">Suivre le colis${c.suivi.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' · ')}` : ''}</div>` : ''}</div>`).join('')
         : `<div class="vide">Aucune commande pour l'instant avec ${esc(C.email)}.</div>`}
+      <h2>E-mails</h2>
+      <label class="news"><input type="checkbox" id="news" ${C.nouveautes ? 'checked' : ''}> Recevoir nos nouveautés et offres par e-mail <small>(quelques e-mails par an au plus)</small></label>
+      <p style="margin:6px 0 0;color:var(--encre-2);font-size:14px">Les e-mails liés à vos commandes (confirmation, expédition) sont toujours envoyés.</p>
       <div class="bas"><button id="out">Se déconnecter</button><button id="del">Supprimer mon compte</button><a href="/confidentialite">Données personnelles</a></div>`;
     document.querySelectorAll('[data-ouvrir]').forEach(b => b.onclick = async () => {
       b.disabled = true;
@@ -114,6 +118,7 @@
       if (!confirm(`Supprimer ${b.dataset.nom} de vos héros enregistrés ?`)) return;
       await fetch('/api/compte/heros/' + b.dataset.suppr, { method: 'DELETE' }); C = await (await fetch('/api/compte', { cache: 'no-store' })).json(); vueCompte();
     });
+    $('news').onchange = async e => { await fetch('/api/compte/nouveautes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oui: e.target.checked }) }); };
     $('out').onclick = async () => { await fetch('/api/compte/deconnexion', { method: 'POST' }); location.href = '/'; };
     $('del').onclick = async () => {
       if (!confirm("Supprimer votre compte et vos héros enregistrés ? Vos commandes et factures sont conservées (obligation légale). C'est définitif.")) return;

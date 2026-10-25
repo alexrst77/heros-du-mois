@@ -221,7 +221,14 @@ def mon_compte():
     with db._db() as c:
         hs = [dict(r) for r in c.execute("select id, nom, apercu, maj from heros where client_id=? order by maj desc", (cl["id"],))]
     return jsonify(connecte=True, email=cl["email"], nom=cl.get("nom") or "", adresse=json.loads(cl["adresse"]) if cl.get("adresse") else None,
-                   heros=hs, commandes=commandes_de(cl), **base)
+                   heros=hs, commandes=commandes_de(cl), nouveautes=_nouveautes(cl["email"]), **base)
+
+
+def _nouveautes(email):
+    """Reçoit-il nos nouveautés ? Oui s'il l'a accepté, ou s'il a déjà commandé sans s'y opposer ; jamais s'il s'est désinscrit."""
+    import campagnes
+    e = (email or "").lower()
+    return e in campagnes.audience("tous")
 
 
 @bp.get("/api/compte/heros/<hid>")

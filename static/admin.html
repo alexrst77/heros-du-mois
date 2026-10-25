@@ -363,18 +363,68 @@ function vueClients() {
         <b>${esc(o.prenom || 'Sans prénom')}</b> · ${esc(FORMULE[o.formule] || o.formule)} · <b>${eur(o.montant || 0)}</b>
         <div class="meta">${esc(o.email || '')} · ${ilya(o.cree)}${o.lieu ? ' · 📍 ' + esc(o.lieu) : ''}${o.visites ? ` · ${o.visites} visite${o.visites > 1 ? 's' : ''}` : ''}${o.apercu ? ' · a vu l\'aperçu de couverture' : ''}</div>
         <div class="meta">Arrêt : ${o.stripe ? 'sur la page de paiement Stripe (tout était rempli)' : 'avant la page de paiement'}${o.a_paye_depuis ? ' · <b style="color:#138A6E">a commandé depuis avec ce mail</b>' : ''}</div></div>
-        <div class="acts" style="margin:0">${btnRel('cmd', o.id, o.relance, !o.a_paye_depuis)}</div></div></div>`).join('')
+        <div class="acts" style="margin:0">${btnRel('cmd', o.id, o.relance, !o.a_paye_depuis)}${C.mail && o.email ? `<button class="btn" onclick="composer({email:'${esc(o.email)}'})">✍️ Écrire</button>` : ''}</div></div></div>`).join('')
       : '<div class="empty"><div class="big">🎉</div>Personne n\'a abandonné au paiement.</div>'}
     ${(C.recuperes || []).length ? `<div class="card"><h3>✅ Ventes récupérées (${C.recuperes.length})</h3>${C.recuperes.map(o => `<div class="meta" style="margin:4px 0"><b>${esc(o.prenom || 'Sans prénom')}</b> · ${esc(o.email || '')} · a payé ensuite <b>${eur(o.montant || 0)}</b>${o.relance ? ' · après ta relance ✉️' : ''}</div>`).join('')}</div>` : ''}
+    ${vueCampagnes()}
     <h2>👤 Comptes clients</h2>
     <input value="${esc(CLI_Q)}" id="cliq" placeholder="🔎 Chercher : e-mail, nom, héros…" style="width:100%;font:600 14px var(--texte);padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:10px" oninput="CLI_Q=this.value;clearTimeout(window._cq);window._cq=setTimeout(()=>{render();const i=document.getElementById('cliq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
     ${L.length ? `<div class="card" style="overflow-x:auto"><table><tr><th>Client</th><th>Inscrit</th><th>Dernière visite</th><th class="r">Visites</th><th>Héros</th><th>Plus loin atteint</th><th class="r">Commandes</th><th></th></tr>
       ${L.map(c => `<tr><td><b>${esc(c.nom || c.email.split('@')[0])}</b><div class="meta">${esc(c.email)}${c.lieu ? ' · 📍 ' + esc(c.lieu) : ''}</div></td><td>${new Date(c.cree * 1000).toLocaleDateString('fr-FR')}</td><td>${ilya(c.derniere)}</td>
         <td class="r">${c.visites || '—'}</td><td>${c.heros.length ? esc(c.heros.slice(0, 3).join(', ')) : '—'}</td><td>${esc(c.etape)}${c.apercu ? ' · aperçu vu' : ''}</td>
         <td class="r">${c.commandes ? `<b>${c.commandes}</b> · ${eur(c.total)}` : c.non_payees ? '<span class="meta">paiement non fini</span>' : '—'}</td>
-        <td class="r">${btnRel('cli', c.id, c.relance, c.relancable)}</td></tr>`).join('')}</table></div>`
+        <td class="r" style="white-space:nowrap">${btnRel('cli', c.id, c.relance, c.relancable)}${C.mail ? ` <button class="btn" onclick="composer({email:'${esc(c.email)}'})">✍️ Écrire</button>` : ''}</td></tr>`).join('')}</table></div>`
       : '<div class="empty"><div class="big">👤</div>Aucun compte client' + (q ? ' pour cette recherche' : ' pour l\'instant') + '.</div>'}
     <p class="meta">Les visites des comptes sont comptées quand la personne est connectée. Relance : un seul e-mail par création ou par compte, envoyé seulement quand tu cliques. Les visiteurs sans compte ni commande restent anonymes.</p>`;
+}
+
+/* ================================================================ e-mails aux clients (personnel ou campagne) */
+let CAMP = null;
+function campCharger() { fetch('/admin/api/campagnes' + Q, { headers: H }).then(r => r.json()).then(c => { CAMP = c; if (TAB === 'clients') render(); }); }
+const MODELES = {
+  perso: { sujet: 'Votre création sur Mon Héros du Mois', bouton: 'Reprendre ma création', lien: '/creer',
+    message: "Bonjour {prenom},\n\nJ'ai vu que vous aviez commencé à créer le héros de votre enfant sur Mon Héros du Mois. Est-ce que quelque chose vous a bloqué ? Si vous avez une question, répondez simplement à ce mail : je vous réponds personnellement.\n\nAlexandre\nMon Héros du Mois" },
+  campagne: { sujet: '', bouton: 'Créer son livre', lien: '/creer',
+    message: "Bonjour {prenom},\n\n(écris ici ta nouveauté)\n\nAlexandre\nMon Héros du Mois" } };
+function vueCampagnes() {
+  if (!CAMP) { campCharger(); return ''; }
+  const A = CAMP.audiences;
+  return `<div class="card"><h3>📣 E-mails aux clients</h3>
+    <p class="meta" style="margin:0 0 10px">Nouveautés, offre de Noël… envoyé seulement aux personnes qui y ont droit : clients ayant déjà commandé (sauf opposition) et inscrits qui ont accepté les nouveautés. Les désinscrits ne reçoivent jamais rien. Lien de désinscription dans chaque e-mail.</p>
+    <div class="acts" style="margin:0">${Object.entries(A).map(([k, a]) => `<button class="btn ${k === 'tous' ? 'main' : ''}" ${a.n && CAMP.mail ? '' : 'disabled'} onclick="composer({audience:'${k}'})">✍️ ${esc(a.nom)} (${a.n})</button>`).join('')}</div>
+    ${CAMP.mail ? '' : '<p class="meta" style="color:var(--red)">Envoi de mail non configuré (BREVO_API_KEY dans Railway).</p>'}
+    ${CAMP.historique.length ? `<table style="margin-top:12px"><tr><th>Date</th><th>Sujet</th><th>À qui</th><th class="r">Envoyés</th><th class="r">Clics</th><th class="r">Achats après</th></tr>
+      ${CAMP.historique.map(x => `<tr><td>${new Date(x.cree * 1000).toLocaleDateString('fr-FR')}</td><td><b>${esc(x.sujet)}</b>${x.statut === 'en_cours' ? ' <span class="meta">(envoi en cours)</span>' : ''}</td>
+        <td>${x.audience.startsWith('perso:') ? esc(x.audience.slice(6)) : esc((A[x.audience] || {}).nom || x.audience)}</td><td class="r">${x.envoyes}/${x.prevus}</td><td class="r">${x.clics}</td><td class="r">${x.achats ? '<b>' + x.achats + '</b>' : '0'}</td></tr>`).join('')}</table>` : ''}
+  </div>`;
+}
+function composer(o) {
+  const perso = !!o.email, m = MODELES[perso ? 'perso' : 'campagne'], liens = (CAMP && CAMP.liens) || { '/creer': 'Créer son avatar' };
+  const n = perso ? 1 : CAMP.audiences[o.audience].n;
+  document.getElementById('dlgIn').innerHTML = `<h3>✍️ ${perso ? 'E-mail à ' + esc(o.email) : esc(CAMP.audiences[o.audience].nom) + ' : ' + n + ' personne' + (n > 1 ? 's' : '')}</h3>
+    <div style="display:grid;gap:10px">
+      <label class="champ"><span>Sujet</span><input id="mSujet" maxlength="120" value="${esc(o.sujet || m.sujet)}"></label>
+      <label class="champ"><span>Message ({prenom} sera remplacé par le prénom quand on le connaît)</span><textarea id="mMsg" rows="9" style="font:500 14px/1.45 var(--texte);padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;width:100%">${esc(m.message)}</textarea></label>
+      <div class="form"><label class="champ"><span>Texte du bouton (vide = pas de bouton)</span><input id="mBtn" maxlength="40" value="${esc(m.bouton)}"></label>
+        <label class="champ"><span>Le bouton mène à</span><select id="mLien">${Object.entries(liens).map(([u, t]) => `<option value="${esc(u)}" ${u === m.lien ? 'selected' : ''}>${esc(t)} (${esc(u)})</option>`).join('')}</select></label></div>
+      <p class="meta" id="mInfo" style="margin:0">${perso ? 'Un e-mail personnel, envoyé tout de suite. La personne pourra répondre directement à ce mail.' : `Envoyé en tâche de fond (environ ${Math.max(1, Math.round(n * .4 / 60))} min). Fais d'abord un test pour voir le rendu.`}</p>
+      <div class="acts" style="margin:0"><button class="btn" onclick="mailEnvoi(null,this)">👀 M'envoyer un test</button>
+        <button class="btn main" onclick="mailEnvoi(${esc(JSON.stringify(o))},this)">✉️ Envoyer${perso ? '' : ' aux ' + n}</button><button class="btn" onclick="document.getElementById('dlg').close()">Annuler</button></div>
+    </div>`;
+  document.getElementById('dlg').showModal();
+}
+async function mailEnvoi(o, b) {
+  const v = id => document.getElementById(id).value;
+  const corps = { sujet: v('mSujet'), message: v('mMsg'), bouton: v('mBtn'), lien: v('mLien') };
+  if (o && o.audience && !confirm(`Envoyer « ${corps.sujet} » à ${CAMP.audiences[o.audience].n} personne(s) ? Impossible d'annuler une fois parti.`)) return;
+  const url = !o ? '/admin/api/campagnes/test' : o.email ? '/admin/api/ecrire' : '/admin/api/campagnes/envoyer';
+  b.disabled = true; const t = b.textContent; b.textContent = 'Envoi…';
+  const r = await fetch(url + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign(corps, o || { audience: 'clients' })) });
+  const j = await r.json().catch(() => ({})); b.disabled = false; b.textContent = t;
+  const info = document.getElementById('mInfo');
+  if (!r.ok) { info.innerHTML = '<b style="color:var(--red)">' + esc(j.erreur || 'Sujet et message obligatoires, ou envoi impossible.') + '</b>'; return; }
+  if (!o) { info.innerHTML = '<b style="color:#138A6E">Test envoyé à ' + esc(j.a) + '.</b> Regarde ta boîte mail.'; return; }
+  document.getElementById('dlg').close(); alert(o.email ? 'E-mail envoyé ✉️' : `C'est parti : ${j.n} e-mail(s) en cours d'envoi.`); CAMP = null; render();
 }
 
 /* ================================================================ messages */
@@ -815,7 +865,7 @@ function render() {
   const c = D.config;
   document.getElementById('bas').innerHTML = `${c.stripe === 'live' ? '🟢 Stripe réel' : c.stripe === 'test' ? '🟡 Stripe test' : '⚪️ Stripe simulé'}<br>${c.lulu === 'production' ? '🟢 Lulu réel' : c.lulu === 'non configuré' ? '⚪️ Lulu non branché' : '🟡 Lulu bac à sable'}<br><a href="/" target="_blank">Voir le site ↗</a>`;
   document.getElementById('titre').textContent = (TABS.find(x => x[0] === TAB) || TABS[0])[2];
-  document.getElementById('teteActs').innerHTML = TAB === 'clients' ? `<button class="btn" onclick="CLI=null;render()">↻ Actualiser</button>` : TAB === 'commandes' || TAB === 'tableau' ? `<button class="btn" onclick="load()">↻ Actualiser</button>` : TAB === 'rentabilite' ? `<button class="btn" onclick="RENTA=null;render()">↻ Recharger les ventes</button>` : '';
+  document.getElementById('teteActs').innerHTML = TAB === 'clients' ? `<button class="btn" onclick="CLI=null;CAMP=null;render()">↻ Actualiser</button>` : TAB === 'commandes' || TAB === 'tableau' ? `<button class="btn" onclick="load()">↻ Actualiser</button>` : TAB === 'rentabilite' ? `<button class="btn" onclick="RENTA=null;render()">↻ Recharger les ventes</button>` : '';
   const y = scrollY, f = document.activeElement && document.activeElement.id;
   if (TAB === 'reglages' && f && /^(v_|t_|pfq)/.test(f)) return;   // saisie en cours : on ne touche à rien
   if (TAB === 'rentabilite' && RENTA && document.getElementById('simRes') && f && f.startsWith('h_')) return;   // ne pas casser la saisie

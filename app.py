@@ -457,6 +457,8 @@ import seo  # noqa: E402  pages d'atterrissage pour Google
 app.register_blueprint(seo.bp)
 import avis  # noqa: E402  avis clients vérifiés, avec photos
 app.register_blueprint(avis.bp)
+import campagnes  # noqa: E402
+app.register_blueprint(campagnes.bp)
 
 if __name__ == "__main__":
     print("Ouvre http://localhost:8000 dans ton navigateur" + ("" if os.getenv("OPENAI_API_KEY") else "  (pas de clé OpenAI : mode démo)"))

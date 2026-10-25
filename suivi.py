@@ -337,6 +337,8 @@ def lien_relance():
     if ok:
         with db._lock, db._db() as c:
             c.execute("update relances set clic=coalesce(clic, ?) where cle=?", (time.time(), cle))
+        if cle.startswith("camp:"):
+            __import__("campagnes").noter_clic(cle)
     if not u.startswith("/") or u.startswith("//"):
         u = "/"
     return redirect(u)
@@ -348,11 +350,15 @@ def stop_rappels():
     if e and hmac.compare_digest(t, _jeton_mail(e)):
         with db._lock, db._db() as c:
             c.execute("insert or replace into desinscrits values (?,?)", (e, time.time()))
-        msg = "C'est noté : vous ne recevrez plus de rappel de notre part. Les e-mails liés à vos commandes (confirmation, livraison) restent envoyés."
+            try:
+                c.execute("delete from consentements where email=?", (e,))
+            except Exception:
+                pass
+        msg = "C'est noté : vous ne recevrez plus de rappel ni de nouveautés de notre part. Les e-mails liés à vos commandes (confirmation, livraison) restent envoyés."
     else:
         msg = "Ce lien n'est pas valable."
     return (f"<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><link rel=stylesheet href=/static/theme.css>"
-            f"<div style='max-width:520px;margin:60px auto;padding:24px;font:17px/1.6 Nunito,system-ui'><h1 style='font-family:var(--titre)'>Rappels</h1><p>{escape(msg)}</p>"
+            f"<div style='max-width:520px;margin:60px auto;padding:24px;font:17px/1.6 Nunito,system-ui'><h1 style='font-family:var(--titre)'>Désinscription</h1><p>{escape(msg)}</p>"
             f"<p><a href='/'>Retour au site</a></p></div>")
 
 
