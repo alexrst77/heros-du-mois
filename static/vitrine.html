@@ -472,64 +472,6 @@ __LDJSON__
   .obj-plus.deux { grid-template-columns:repeat(2, minmax(0,1fr)); } .obj-plus.deux img { aspect-ratio:3/2; }
   @media (max-width:760px) { .obj-plus { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 
-  /* ================================================ « Fête foraine du soir » : décors des livres, couleurs des livres */
-  .noel { background:var(--rose); color:#fff; font-weight:800; } .noel b { color:var(--soleil); }
-  .top { background:color-mix(in srgb, #fff 82%, transparent); border-bottom:2.5px solid var(--encre); }
-  /* ouverture : le décor spatial d'un vrai livre, lavé de violet */
-  .ouv { position:relative; color:#fff; padding:64px 0 70px; background:
-      linear-gradient(100deg, rgba(36,24,77,.92) 0%, rgba(46,26,110,.72) 48%, rgba(242,85,122,.28) 100%),
-      url("/static/vitrine/fond_espace.webp") center 40% / cover; }
-  @media (max-width:700px) { .ouv { background-image:linear-gradient(180deg, rgba(36,24,77,.9), rgba(46,26,110,.78)), url("/static/vitrine/fond_espace_m.webp"); padding:34px 0 40px; } }
-  .ouv h1 { color:#fff; text-shadow:0 2px 18px rgba(20,10,50,.55); font-size:clamp(36px, 5.2vw, 66px); max-width:17ch; }
-  .ouv p.intro { color:#F1E9FF; font-weight:600; }
-  .ouv .essai { background:#fff; color:var(--encre); border:2.5px solid var(--encre); box-shadow:8px 8px 0 var(--luciole); border-radius:22px; transform:rotate(-1.2deg); }
-  .ouv .essai input { border:2.5px solid var(--encre); }
-  /* vague entre deux bandes */
-  .vague-h, .vague-b { position:relative; }
-  .vague-h::before, .vague-b::after { content:""; position:absolute; left:0; right:0; height:22px; pointer-events:none; z-index:2;
-    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='22' viewBox='0 0 80 22'%3E%3Cpath d='M0 22 V11 Q20 0 40 11 T80 11 V22z' fill='%23F7F2FF'/%3E%3C/svg%3E") repeat-x 0 0 / 80px 22px; }
-  .vague-h::before { top:-1px; transform:scaleY(-1); } .vague-b::after { bottom:-1px; }
-  /* le rayon : violet électrique, étiquettes fluo */
-  .rayon { background:linear-gradient(160deg, #2E1A6E, #4B2BA8 60%, #6B3A9E); }
-  .rayon::before { opacity:.9; }
-  .prod .ph { border:3px solid #fff; box-shadow:7px 7px 0 var(--rose); }
-  .prod:nth-child(3n+2) .ph { box-shadow:7px 7px 0 var(--luciole); } .prod:nth-child(3n) .ph { box-shadow:7px 7px 0 var(--cyan); }
-  .prod .prix { background:var(--soleil); border:2px solid var(--encre); box-shadow:none; }
-  .prod.nouveau .ph::after { background:var(--rose); color:#fff; border:2px solid #fff; }
-  .rayon-h p, .prod p, .rayon .rassure { color:#E7DCFF; }
-  .rayon .rassure svg { color:var(--luciole); }
-  /* titres : un trait de feutre rose dessous */
-  .bloc h2 { position:relative; padding-bottom:10px; }
-  .bloc h2::after { content:""; position:absolute; left:0; bottom:0; width:120px; height:10px;
-    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='10' viewBox='0 0 120 10'%3E%3Cpath d='M3 6 Q 20 1 40 5 T 80 5 T 117 4' stroke='%23F2557A' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat; }
-  #questions h2::after, .fin h2::after { left:50%; margin-left:-60px; }
-  /* étapes et cartes : autocollants à contour encre */
-  .etape .vis { border:2.5px solid var(--encre); box-shadow:6px 6px 0 var(--rose); }
-  .etape:nth-child(2) .vis { box-shadow:6px 6px 0 var(--luciole); } .etape:nth-child(3) .vis { box-shadow:6px 6px 0 var(--cyan); }
-  .etape h3::before { background:var(--soleil) !important; border:2px solid var(--encre); color:var(--encre) !important; }
-  .obj img { border:2.5px solid var(--encre); box-shadow:7px 7px 0 var(--rose); }
-  .obj:nth-child(2) img { box-shadow:7px 7px 0 var(--luciole); } .obj:nth-child(3) img { box-shadow:7px 7px 0 var(--cyan); }
-  .objets { background:transparent; }
-  .formule { border:2.5px solid var(--encre); box-shadow:5px 5px 0 var(--trait); }
-  .formule.phare { background:var(--violet); border-color:var(--encre); box-shadow:8px 8px 0 var(--rose); }
-  .formule.phare .sous, .formule.phare li { color:#EFE6FF; }
-  .formule .etiq { background:var(--soleil); border:2px solid var(--encre); }
-  .formule .port { background:#FBE7EE; } .formule .port.offert { background:#D7F3EE; color:#0E6B60; }
-  .carte { border:2.5px solid var(--encre) !important; box-shadow:4px 4px 0 var(--rose); }
-  .carte:nth-child(3n+2) { box-shadow:4px 4px 0 var(--luciole); } .carte:nth-child(3n) { box-shadow:4px 4px 0 var(--cyan); }
-  /* feuilleter : sous l'océan d'un livre */
-  .nuit { background:linear-gradient(120deg, rgba(36,24,77,.86), rgba(90,51,201,.7) 55%, rgba(242,85,122,.55)), url("/static/vitrine/fond_ocean.webp") center / cover; }
-  @media (max-width:700px) { .nuit { background-image:linear-gradient(180deg, rgba(36,24,77,.88), rgba(90,51,201,.76)), url("/static/vitrine/fond_ocean_m.webp"); } }
-  .nuit .sous { color:#F1E9FF; }
-  /* univers : la forêt des lucioles */
-  .mondes { background:linear-gradient(180deg, rgba(247,242,255,.86), rgba(247,242,255,.94)), url("/static/vitrine/fond_foret.webp") center / cover; }
-  /* fin : les cristaux de l'espace, en grand */
-  .fin { background:linear-gradient(120deg, rgba(242,85,122,.86), rgba(90,51,201,.82)), url("/static/vitrine/fond_cristaux.webp") center / cover;
-         border:3px solid var(--encre); box-shadow:10px 10px 0 var(--luciole); }
-  .fin h2 { text-shadow:0 2px 16px rgba(20,10,50,.5); } .fin p { color:#fff; font-weight:600; }
-  .fin h2::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='10' viewBox='0 0 120 10'%3E%3Cpath d='M3 6 Q 20 1 40 5 T 80 5 T 117 4' stroke='%23FFC23D' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); }
-  .contact { border:2.5px solid var(--encre) !important; box-shadow:7px 7px 0 var(--luciole) !important; }
-
   /* menu du téléphone (en haut à gauche) : les mêmes liens que le bandeau de l'ordinateur */
   .burger { display:none; flex:none; width:40px; height:40px; border:2px solid var(--encre); border-radius:12px; background:#fff; cursor:pointer;
             flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0; }
@@ -577,6 +519,143 @@ __LDJSON__
   .ia-moi .vend { display:block; margin-top:6px; font-size:13px; opacity:.8; }
   @media (max-width:900px) { .ia-g { grid-template-columns:1fr 1fr; } .ia-pq { grid-template-columns:1fr; } }
   @media (max-width:520px) { .ia { padding:52px 0; } .ia-g { grid-template-columns:1fr; } .ia-c { display:grid; grid-template-columns:44px 1fr; gap:0 10px; padding:14px; } .ia-c i { grid-row:span 2; margin:0; } .ia-moi { grid-template-columns:1fr; } }
+  /* ================================================ « Librairie » : sobre, chaleureux, papier crème (remplace l'ancien décor violet) */
+  :root { --fond:#FBF7F1; --sable:#F3EBDD; --encre-2:#4F4867; --trait:#E8DFD0; }
+  html, body { background:var(--fond); }
+  body { background-image:none; }
+  .btn { border:0; box-shadow:0 10px 22px -12px rgba(36,24,77,.55); font-weight:800; }
+  .btn:hover { transform:translateY(-1px); box-shadow:0 14px 26px -12px rgba(36,24,77,.6); }
+  .btn:active { transform:none; box-shadow:0 6px 14px -10px rgba(36,24,77,.6); }
+  .btn.clair { background:var(--encre); color:#fff; box-shadow:0 10px 22px -12px rgba(36,24,77,.55); }
+  .btn.clair:hover { box-shadow:0 14px 26px -12px rgba(36,24,77,.6); }
+  .btn.ghost { background:transparent; border:1.5px solid var(--encre); box-shadow:none; }
+  .btn.ghost:hover { background:#fff; box-shadow:none; }
+  .noel { background:var(--encre); color:#FFF7E8; font-weight:600; } .noel b { color:var(--luciole); }
+  .top { background:color-mix(in srgb, var(--fond) 90%, transparent); border-bottom:1px solid var(--trait); }
+  .burger { border:1.5px solid var(--trait); }
+  .bloc { padding:76px 0; }
+  .bloc h2 { padding-bottom:0; } .bloc h2::after { display:none; }
+  h2 { letter-spacing:-.4px; max-width:28ch; } .aussi .rayon-h p { color:var(--encre-2); } .centre { text-align:center; margin-left:auto; margin-right:auto; }
+  .kick { font:800 13px/1 var(--texte); letter-spacing:1.4px; text-transform:uppercase; color:#B5532E; margin:0 0 14px; }
+  @media (max-width:640px) { .bloc { padding:56px 0; } }
+
+  /* ouverture : le concept, et une vraie scène de lecture */
+  .ouv { padding:44px 0 56px; background:var(--fond); color:var(--encre); }
+  .ouv-in { display:grid; grid-template-columns:1.1fr .9fr; gap:56px; align-items:center; }
+  .ouv h1 { font:400 clamp(36px, 5vw, 60px)/1.06 var(--titre); margin:0 0 18px; letter-spacing:-.8px; max-width:15ch; color:var(--encre); text-shadow:none; }
+  .ouv p.intro { font-size:19px; line-height:1.55; color:var(--encre-2); max-width:50ch; margin:0 0 26px; font-weight:400; }
+  .ouv .essai { background:#fff; border:1px solid var(--trait); border-radius:20px; padding:18px; max-width:500px; box-shadow:0 24px 50px -34px rgba(36,24,77,.45); transform:none; }
+  .ouv .essai label { font-size:15px; margin-bottom:8px; }
+  .ouv .essai input { border:1.5px solid var(--trait); font-size:17px; padding:12px 14px; }
+  .ouv .essai input:focus { border-color:var(--encre); }
+  .genres { margin-top:12px; }
+  .genre { flex-direction:row; justify-content:center; gap:10px; border:1.5px solid var(--encre); border-radius:999px; background:var(--luciole); box-shadow:none; padding:8px 14px 8px 8px; font:800 16px var(--texte); }
+  .genre:hover { transform:translateY(-1px); background:#FFCB55; } .genre:active { transform:none; box-shadow:none; }
+  .genre img { width:44px; height:44px; }
+  .essai-n { font-size:14px; margin-top:12px; }
+  .ouv-photo { margin:0; position:relative; }
+  .ouv-photo img { display:block; width:100%; height:auto; aspect-ratio:4/4.4; object-fit:cover; border-radius:28px; box-shadow:0 40px 70px -40px rgba(36,24,77,.55); }
+  .ouv-photo figcaption { position:absolute; left:16px; bottom:16px; background:rgba(255,255,255,.92); color:var(--encre); font:700 13px var(--texte); padding:7px 12px; border-radius:999px; }
+  @media (max-width:900px) { .ouv { padding:26px 0 40px; } .ouv-in { grid-template-columns:1fr; gap:28px; } .ouv-photo img { aspect-ratio:4/3; } .ouv p.intro { font-size:17px; } }
+
+  /* le concept : quatre choix */
+  .concept { background:#fff; border-top:1px solid var(--trait); border-bottom:1px solid var(--trait); }
+  .choix { list-style:none; padding:0; margin:40px 0 0; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:22px; counter-reset:c; }
+  .choix li { counter-increment:c; }
+  .choix .cv { aspect-ratio:1; border-radius:22px; background:var(--sable); overflow:hidden; display:grid; place-items:center; margin-bottom:16px; position:relative; }
+  .choix .cv::before { content:counter(c); position:absolute; left:12px; top:12px; width:30px; height:30px; border-radius:50%; background:#fff; color:var(--encre); font:800 14px/30px var(--texte); text-align:center; z-index:1; }
+  .choix .av img { width:86%; height:auto; margin-top:12%; }
+  .choix .comp { display:flex; align-items:flex-end; justify-content:center; padding:0 6% 8%; }
+  .choix .comp img { width:50%; height:auto; margin:0 -4%; } .choix .comp img:last-child { width:46%; }
+  .choix .mondes3 { display:block; }
+  .choix .mondes3 img { position:absolute; width:58%; aspect-ratio:1; object-fit:cover; border-radius:14px; border:4px solid #fff; box-shadow:0 14px 24px -14px rgba(36,24,77,.6); }
+  .choix .mondes3 img:nth-child(1) { left:8%; top:12%; transform:rotate(-6deg); } .choix .mondes3 img:nth-child(2) { right:8%; top:22%; transform:rotate(5deg); }
+  .choix .mondes3 img:nth-child(3) { left:22%; bottom:6%; transform:rotate(-1deg); z-index:1; }
+  .choix .themes { display:flex; flex-wrap:wrap; align-content:center; justify-content:center; gap:8px; padding:14%; }
+  .choix .themes span { background:#fff; border-radius:999px; padding:7px 12px; font:700 13px var(--texte); color:var(--encre); box-shadow:0 6px 14px -10px rgba(36,24,77,.5); }
+  .choix .themes span:nth-child(odd) { transform:rotate(-2deg); } .choix .themes span:nth-child(even) { transform:rotate(2deg); }
+  .choix b { display:block; font:400 23px/1.2 var(--titre); margin-bottom:6px; }
+  .choix p { margin:0; color:var(--encre-2); font-size:16px; line-height:1.5; }
+  .concept-bas { margin-top:36px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .concept-bas span { color:var(--encre-2); font-size:15px; }
+  @media (max-width:980px) { .choix { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  @media (max-width:520px) { .choix { grid-template-columns:1fr 1fr; gap:14px; } .choix b { font-size:19px; } .choix p { font-size:14.5px; } .choix .themes { padding:8%; gap:5px; } .choix .themes span { font-size:11px; padding:5px 8px; } }
+
+  /* univers */
+  .mondes { background:var(--fond); }
+  .cartes { margin-top:28px; }
+  .carte { border:0 !important; box-shadow:0 18px 34px -26px rgba(36,24,77,.6) !important; border-radius:18px; }
+  .carte .vis { border-radius:12px; }
+  .h-occ { font:400 24px/1.2 var(--titre); margin:48px 0 0; }
+  .plus { margin-top:20px; }
+
+  /* feuilleter */
+  .nuit { background:#211B3F; padding:80px 0; }
+  .nuit::before, .nuit::after { display:none; }
+  .nuit .sous { color:#CFC9E6; }
+  .etal button > span { color:#BDB6DA; }
+  .faits { list-style:none; padding:0; margin:48px 0 0; display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; border-top:1px solid rgba(255,255,255,.14); padding-top:28px; }
+  .faits li { color:#CFC9E6; font-size:15px; } .faits b { display:block; color:#fff; font:400 21px/1.2 var(--titre); margin-bottom:2px; }
+  @media (max-width:760px) { .faits { grid-template-columns:1fr 1fr; gap:18px; } }
+
+  /* coloriage, mis en avant */
+  .coloriage { background:#EAF4EF; }
+  .colo { display:grid; grid-template-columns:1.05fr 1fr; gap:56px; align-items:center; }
+  .colo .kick { color:#0E6B60; }
+  .colo-photos { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .colo-photos img { width:100%; height:100%; display:block; border-radius:18px; object-fit:cover; aspect-ratio:3/4; box-shadow:0 24px 44px -30px rgba(36,24,77,.55); }
+  .colo-photos img.grande { grid-column:1/-1; aspect-ratio:1300/1052; }
+  .liste-c { list-style:none; padding:0; margin:22px 0; display:grid; gap:10px; }
+  .liste-c li { position:relative; padding-left:28px; color:var(--encre-2); }
+  .liste-c li::before { content:""; position:absolute; left:3px; top:8px; width:12px; height:7px; border-left:2.5px solid var(--mousse); border-bottom:2.5px solid var(--mousse); transform:rotate(-45deg); }
+  .liste-c b { color:var(--encre); }
+  .prix-l { margin:0 0 18px; color:var(--encre-2); } .prix-l b { font:800 26px/1 var(--texte); color:var(--encre); } .prix-l span { display:block; font-size:14px; margin-top:4px; }
+  @media (max-width:900px) { .colo { grid-template-columns:1fr; gap:30px; } .colo > div:last-child { order:-1; } }
+
+  /* formules */
+  .formule { border:1px solid var(--trait); box-shadow:none; border-radius:20px; background:#fff; padding:24px 22px; }
+  .formule.phare { background:var(--encre); border-color:var(--encre); box-shadow:0 30px 60px -34px rgba(36,24,77,.8); }
+  .formule.phare .sous, .formule.phare li { color:#DCD6F2; }
+  .formule .etiq { background:var(--luciole); border:0; }
+  .formule ul { margin:16px 0 22px; }
+  .petit-note a { color:var(--encre); font-weight:700; }
+
+  /* le même héros, partout */
+  .aussi { background:#fff; border-top:1px solid var(--trait); overflow:hidden; }
+  .rayon-h h2 { color:var(--encre); font-size:clamp(28px, 3.4vw, 40px); }
+  .fleches button { border:1.5px solid var(--trait); color:var(--encre); }
+  .fleches button:hover:not(:disabled) { background:var(--sable); }
+  .etal-p { padding-top:10px; }
+  .prod { width:clamp(220px, 22vw, 262px); }
+  .prod .ph { border:0; box-shadow:0 22px 40px -28px rgba(36,24,77,.7) !important; background:var(--sable); }
+  .prod h3 { color:var(--encre); font-size:21px; }
+  .prod p { color:var(--encre-2); } .prod p b { color:var(--encre); white-space:nowrap; }
+  .prod .lien { margin-top:10px; font-weight:800; color:var(--encre); font-size:15px; }
+
+  /* comment nous le fabriquons */
+  .ia { background:var(--fond); padding:76px 0; }
+  .ia h2 { max-width:none; }
+  .ia-pq { margin:0; grid-template-columns:1.1fr 1fr; gap:40px; }
+  .ia-pq p { font-size:17px; }
+  .ia-cmp { background:#fff; border:1px solid var(--trait); }
+  .ia-moi { background:#fff; color:var(--encre); border:1px solid var(--trait); }
+  .ia-moi p { color:var(--encre-2); } .ia-moi b { color:var(--encre); } .ia-moi a { color:var(--encre); }
+  .ia-moi .rond { background:var(--sable); }
+  @media (max-width:900px) { .ia-pq { grid-template-columns:1fr; gap:24px; } }
+  @media (max-width:420px) { .genre { font-size:15px; padding:6px 10px 6px 6px; gap:6px; } .genre img { width:36px; height:36px; } }
+  .fin img { height:auto; }
+
+  .bloc.doux { background:#fff; }
+  .avis figure { border:1px solid var(--trait); }
+  .faq summary { font-size:17px; }
+  .contact { border:1px solid var(--trait) !important; box-shadow:0 24px 50px -36px rgba(36,24,77,.45) !important; }
+
+  .fin { display:grid; grid-template-columns:1.2fr .8fr; gap:0; padding:0; text-align:left; background:var(--encre); border:0; box-shadow:none; border-radius:28px; overflow:hidden; }
+  .fin > div { padding:56px 48px; align-self:center; }
+  .fin h2 { margin-left:0; text-shadow:none; color:#fff; }
+  .fin p { color:#DCD6F2; font-weight:400; margin:0 0 26px; }
+  .fin img { width:100%; height:100%; object-fit:cover; display:block; min-height:280px; }
+  @media (max-width:760px) { .fin { grid-template-columns:1fr; } .fin > div { padding:36px 24px; } .fin img { max-height:260px; } }
 </style>
 </head>
 <body>
@@ -586,90 +665,188 @@ __LDJSON__
     <button type="button" class="burger" id="burger" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="menuMobile"><span></span><span></span><span></span></button>
     <a href="/" class="logo" aria-label="Mon Héros du Mois, accueil"><img class="logo-img" src="/static/marque/logo-h.webp" alt="Mon Héros du Mois" width="640" height="247"></a>
     <nav aria-label="Navigation principale">
-      <a href="#livres">Livres</a><a href="#calendrier">Calendrier</a><a href="#coloriage">Coloriage</a><a href="#objets">Objets</a><a href="#comment">Comment ça marche</a><a href="#questions">Questions</a><a href="/compte">Mon compte</a>
+      <a href="#concept">Le concept</a><a href="#univers">Univers</a><a href="#feuilleter">Nos livres</a><a href="#coloriage">Coloriage</a><a href="#formules">Tarifs</a><a href="#questions">Questions</a><a href="/compte">Mon compte</a>
     </nav>
-    <a class="btn petit" href="/creer">Créer<span class="long"> son avatar</span></a>
+    <a class="btn petit" href="/creer">Créer<span class="long"> son livre</span></a>
   </div>
   <div class="menu-m" id="menuMobile" role="navigation" aria-label="Menu" hidden>
-    <a href="#livres">Livres</a><a href="#calendrier">Calendrier</a><a href="#coloriage">Coloriage</a><a href="#objets">Objets</a>
-    <a href="#comment">Comment ça marche</a><a href="#questions">Questions</a><a href="/compte">Mon compte</a>
+    <a href="#concept">Le concept</a><a href="#univers">Univers</a><a href="#feuilleter">Nos livres</a><a href="#coloriage">Coloriage</a>
+    <a href="#formules">Tarifs</a><a href="#questions">Questions</a><a href="/compte">Mon compte</a>
   </div>
 </header>
 
 <main>
-<section class="ouv vague-b">
-  <div class="in wrap">
-    <h1>Créez son avatar gratuitement</h1>
-    <div>
-      <p class="intro">Avec son doudou et ses animaux, en 3 minutes, sans inscription. Il devient le héros de ses livres, de son calendrier, de son cahier de coloriage et de ses objets de tous les jours.</p>
+<section class="ouv" aria-labelledby="h1">
+  <div class="wrap ouv-in">
+    <div class="ouv-txt">
+      <p class="kick">Livre personnalisé pour enfant</p>
+      <h1 id="h1">Une histoire unique, écrite pour votre enfant</h1>
+      <p class="intro">Il en est le héros, avec son doudou et ses animaux. Vous choisissez tout : son apparence, l'univers de l'aventure et ce que l'histoire lui raconte. Nous l'illustrons, l'imprimons et vous l'envoyons.</p>
+      <form class="essai" action="/creer" method="get">
+        <label for="prenom">Son prénom <small>(facultatif)</small></label>
+        <input id="prenom" name="prenom" maxlength="20" placeholder="Léo" autocomplete="off">
+        <div class="genres">
+          <button class="genre" type="submit" name="genre" value="fille"><img src="/static/avatars/enfant-long-lisse.webp" alt="" width="56" height="56"><span>Une fille</span></button>
+          <button class="genre" type="submit" name="genre" value="garcon"><img src="/static/avatars/enfant-court-lisse.webp" alt="" width="56" height="56"><span>Un garçon</span></button>
+        </div>
+        <p class="essai-n">Gratuit et sans inscription. Vous voyez sa couverture avant de payer.</p>
+      </form>
     </div>
-    <form class="essai" action="/creer" method="get">
-      <label for="prenom">Son prénom <small>(facultatif)</small></label>
-      <input id="prenom" name="prenom" maxlength="20" placeholder="Léo" autocomplete="off">
-      <div class="genre-l">C'est…</div>
-      <div class="genres">
-        <button class="genre" type="submit" name="genre" value="fille"><img src="/static/avatars/enfant-long-lisse.webp" alt="" width="96" height="96"><span>Une fille</span></button>
-        <button class="genre" type="submit" name="genre" value="garcon"><img src="/static/avatars/enfant-court-lisse.webp" alt="" width="96" height="96"><span>Un garçon</span></button>
-      </div>
-      <p class="essai-n">Gratuit, sans inscription · 3 minutes</p>
-    </form>
-    <ul class="ia-badges" aria-label="Comment c'est fait">
-      <li>Créé avec l'IA</li><li>Peaufiné par notre équipe</li><li>Couverture visible avant de payer</li><li>Un vrai livre imprimé, livré chez vous</li>
+    <figure class="ouv-photo">
+      <img src="/static/vitrine/photo_03.webp" alt="Une maman et sa fille lisent le livre de Mila" width="800" height="1000" fetchpriority="high">
+      <figcaption>« Mila et le secret de l'océan », un de nos livres</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="bloc concept" id="concept" aria-labelledby="conceptT">
+  <div class="wrap">
+    <h2 id="conceptT">Vous choisissez tout, de A à Z</h2>
+    <p class="sous">Pas de livre tout fait où l'on change seulement le prénom : chaque histoire est écrite pour votre enfant, à partir de vos choix.</p>
+    <ol class="choix">
+      <li><div class="cv av"><img src="/static/vitrine/jade_avatar.webp" alt="L'avatar de Jade" loading="lazy" width="480" height="480"></div>
+        <b>Le héros</b><p>Coiffure, couleur de peau, yeux, lunettes, tenue : il lui ressemble. Aucune photo demandée.</p></li>
+      <li><div class="cv comp"><img src="/static/avatars/doudou-ours.webp" alt="" loading="lazy"><img src="/static/avatars/animal-chien.webp" alt="" loading="lazy"></div>
+        <b>Ses compagnons</b><p>Son doudou et jusqu'à trois animaux, avec leur nom. Ils vivent l'aventure avec lui.</p></li>
+      <li><div class="cv mondes3"><img src="/static/vitrine/univ/mini/desert.webp" alt="" loading="lazy"><img src="/static/vitrine/univ/mini/espace.webp" alt="" loading="lazy"><img src="/static/vitrine/univ/mini/mer.webp" alt="" loading="lazy"></div>
+        <b>L'univers</b><p><span data-n="univers">15</span> mondes : forêt enchantée, espace, océan, désert et oasis… ou une fête de famille.</p></li>
+      <li><div class="cv themes"><span>La peur du noir</span><span>La rentrée</span><span>Un petit frère</span><span>La confiance en soi</span><span>Les émotions</span></div>
+        <b>Le thème</b><p>Ce que l'histoire l'aide à vivre : <span data-n="themes">29</span> thèmes au choix, ou une aventure juste pour rire.</p></li>
+    </ol>
+    <div class="concept-bas"><a class="btn" href="/creer">Composer son histoire</a><span>Environ 3 minutes, sans inscription</span></div>
+  </div>
+</section>
+
+<section class="bloc mondes" id="univers" aria-labelledby="universT">
+  <div class="wrap">
+    <h2 id="universT">Dans quel monde partira-t-il ?</h2>
+    <p class="sous">Choisissez l'univers de son livre : il sera déjà sélectionné quand vous composerez l'histoire.</p>
+    <ul class="cartes" id="cartesUnivers" aria-label="Les univers"></ul>
+    <button type="button" class="btn ghost plus" id="plusUnivers" aria-expanded="false" aria-controls="cartesUnivers">Voir tous les univers</button>
+    <h3 id="fetes" class="h-occ">Ou une occasion spéciale</h3>
+    <ul class="cartes petites" id="cartesFetes" aria-label="Les fêtes et occasions"></ul>
+    <button type="button" class="btn ghost plus" id="plusFetes" aria-expanded="false" aria-controls="cartesFetes">Voir toutes les occasions</button>
+  </div>
+</section>
+
+<section class="nuit" id="feuilleter">
+  <div class="wrap">
+    <h2>Feuilletez quelques-uns de nos livres</h2>
+    <p class="sous">Trois exemples parmi tous ceux qu'on peut créer. Le vôtre aura son histoire à lui, avec votre enfant en héros.</p>
+    <div class="etal" id="etal">
+      <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp" alt="" loading="lazy"></span><b>Noé</b><span>La poussière d'étoiles</span></button>
+      <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp?v=2" alt="" loading="lazy"></span><b>Léo</b><span>La forêt enchantée</span></button>
+      <button type="button" data-l="mila"><span class="cv"><img src="/static/vitrine/mila_00.webp" alt="" loading="lazy"></span><b>Mila</b><span>Le secret de l'océan</span></button>
+    </div>
+    <div class="lecteur" id="lecteur" hidden>
+    <p class="sous" id="sousLivre"></p>
+    <div class="flip" id="flip">
+      <div class="livre-o ferme" id="livreO" tabindex="0" aria-label="Livre à feuilleter"></div>
+      <span class="ouvrir" id="ouvrir">Cliquez pour ouvrir le livre</span>
+    </div>
+    <div class="lecture" id="lecture" hidden></div>
+    <div class="tourne">
+      <button type="button" id="prev" aria-label="Page précédente"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span id="compteur" aria-live="polite">Couverture</span>
+      <button type="button" id="next" aria-label="Page suivante"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="miniatures" id="minis"></div>
+    </div>
+    <ul class="faits">
+      <li><b>20 pages</b>dont 18 pages d'histoire illustrées</li>
+      <li><b>Couverture rigide</b>format carré 21,6 cm</li>
+      <li><b>3 à 8 ans</b>à lire à voix haute</li>
+      <li><b>7 à 15 jours</b>ouvrés pour le recevoir</li>
     </ul>
   </div>
 </section>
 
-<section class="rayon vague-b" aria-labelledby="rayonT">
+<section class="bloc coloriage" id="coloriage" aria-labelledby="coloT">
+  <div class="wrap colo">
+    <div class="colo-photos">
+      <img class="grande" src="/static/vitrine/colo_photo_1.webp" alt="Le cahier de coloriage ouvert : une page déjà coloriée par l'enfant et une page à colorier avec son doudou" loading="lazy" width="1300" height="1052">
+      <img src="/static/vitrine/colo_photo_3.webp" alt="Le cahier de coloriage de Léo posé sur une table, avec des crayons de couleur" loading="lazy" width="1004" height="1300">
+      <img src="/static/vitrine/colo_photo_4.webp" alt="Le cahier de coloriage de Léa, au jardin avec son ours en peluche" loading="lazy" width="867" height="1300">
+    </div>
+    <div>
+      <p class="kick">Introuvable en librairie</p>
+      <h2 id="coloT">Son cahier de coloriage, dont il est le héros</h2>
+      <p class="sous">30 pages à colorier où votre enfant, son doudou et ses animaux sont dessinés à chaque page. Vous choisissez les scènes : astronaute, pompier, pirate, à la plage, à Noël…</p>
+      <ul class="liste-c">
+        <li><b>18 coloriages choisis par vous</b> parmi près de 70 idées, chacun titré à son prénom</li>
+        <li><b>12 pages de jeux</b> : coloriages magiques, points à relier, labyrinthes, dessins à terminer</li>
+        <li><b>Grand format à spirale</b>, 21,6 × 27,9 cm, imprimé au recto : les feutres ne traversent pas</li>
+      </ul>
+      <p class="prix-l">Seul : <b data-px="coloriage">24,90 €</b> livraison comprise <span>ou ajouté à un livre, dans le même colis</span></p>
+      <a class="btn" href="/creer?produit=coloriage">Créer son cahier de coloriage</a>
+    </div>
+  </div>
+</section>
+
+<section class="bloc" id="formules" aria-labelledby="formT">
+  <div class="wrap">
+    <h2 id="formT">Combien d'aventures ?</h2>
+    <p class="sous">Un seul paiement, un seul colis. Plus vous prenez de livres, moins chacun coûte. Le prix exact, livraison comprise, s'affiche avant le paiement.</p>
+    <div class="formules quatre">
+      <div class="formule">
+        <h3>1 livre</h3>
+        <p class="sous">Pour découvrir ou offrir.</p>
+        <ul><li>Relié, couverture rigide</li><li>L'univers ou la fête de votre choix</li></ul>
+        <a class="btn clair" href="/creer?formule=livre">Créer ce livre</a>
+      </div>
+      <div class="formule">
+        <h3>3 livres</h3>
+        <p class="sous">Trois aventures, un même héros.</p>
+        <ul><li>3 univers différents</li><li>Numérotés 1, 2, 3 pour sa collection</li></ul>
+        <a class="btn clair" href="/creer?formule=pack3">Choisir 3 livres</a>
+      </div>
+      <div class="formule phare">
+        <span class="etiq">Notre conseil</span>
+        <h3>6 livres</h3>
+        <p class="sous">De quoi lire pendant six mois.</p>
+        <ul><li>Livraison offerte</li><li>À offrir, avec votre petit mot imprimé</li></ul>
+        <a class="btn" href="/creer?formule=pack6">Choisir 6 livres</a>
+      </div>
+      <div class="formule">
+        <span class="etiq">Le meilleur prix</span>
+        <h3>12 livres</h3>
+        <p class="sous">Une aventure pour chaque mois.</p>
+        <ul><li>Livraison offerte</li><li>La collection numérotée de 1 à 12</li></ul>
+        <a class="btn clair" href="/creer?formule=pack12">Choisir 12 livres</a>
+      </div>
+    </div>
+    <p class="sous petit-note">Aussi : <a href="/creer?formule=fetes">les 6 livres de fête</a> (son anniversaire et 5 fêtes de votre choix). Livraison en France, Belgique, Luxembourg, Monaco et Suisse. <a href="/tarifs">Tous les tarifs</a></p>
+  </div>
+</section>
+
+<section class="bloc aussi" id="aussi" aria-labelledby="rayonT">
   <div class="wrap rayon-h">
-    <div><h2 id="rayonT">Tout son univers</h2><p>Choisissez une création ou plusieurs : vous ne composez son avatar qu'une fois.</p></div>
+    <div><h2 id="rayonT">Le même héros, partout</h2><p class="sous">Son avatar est composé une fois : retrouvez-le sur son calendrier et ses objets de tous les jours.</p></div>
     <div class="fleches"><button type="button" id="rG" aria-label="Créations précédentes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" id="rD" aria-label="Créations suivantes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5l7 7-7 7"/></svg></button></div>
   </div>
   <ul class="etal-p" id="etalP">
-    <li class="prod"><a class="ph" href="/creer?formule=livre" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/photo_04_r.webp" alt="Un livre Mon Héros du Mois tenu à deux mains" loading="lazy" style="object-position:50% 50%"></a>
-      <h3>Ses livres d'aventures</h3><p>Une vraie histoire illustrée dont il est le héros, couverture rigide.</p>
-      <div class="act"><a class="btn petit" href="/creer?formule=livre">Créer</a><a class="voir" href="#livres">Voir</a></div></li>
-    <li class="prod"><a class="ph" href="/creer?produit=calendrier" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/cal_photo_1_r.webp" alt="Un petit garçon tient son calendrier, son prénom en lettres dorées" loading="lazy" style="object-position:50% 30%"></a>
-      <h3>Son calendrier</h3><p>12 mois illustrés avec lui, son anniversaire déjà marqué.</p>
-      <div class="act"><a class="btn petit" href="/creer?produit=calendrier">Créer</a><a class="voir" href="#calendrier">Voir</a></div></li>
-    <li class="prod"><a class="ph" href="/creer?produit=coloriage" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/colo_photo_2_r.webp" alt="Léo montre son cahier de coloriage" loading="lazy" style="object-position:50% 50%"></a>
-      <h3>Son cahier de coloriage</h3><p>30 pages de coloriages et de jeux où il est le héros.</p>
-      <div class="act"><a class="btn petit" href="/creer?produit=coloriage">Créer</a><a class="voir" href="#coloriage">Voir</a></div></li>
-    <li class="prod nouveau"><a class="ph" href="/creer?produit=gourde" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_gourde_gabin_r.webp" alt="Gabin tient sa gourde illustrée à son prénom" loading="lazy" style="object-position:50% 50%"></a>
-      <h3>Sa gourde à paille</h3><p>Son héros tout autour, son prénom dessus. Pour l'école et les balades.</p>
-      <div class="act"><a class="btn petit" href="/creer?produit=gourde">Créer</a><a class="voir" href="#objets">Voir</a></div></li>
-    <li class="prod nouveau"><a class="ph" href="/creer?produit=tasse" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_tasse_lea_r.webp" alt="Léa boit dans sa tasse émaillée illustrée" loading="lazy" style="object-position:50% 70%"></a>
-      <h3>Sa tasse émaillée</h3><p>Incassable, pour le chocolat chaud du soir.</p>
-      <div class="act"><a class="btn petit" href="/creer?produit=tasse">Créer</a><a class="voir" href="#objets">Voir</a></div></li>
-    <li class="prod nouveau"><a class="ph" href="/creer?produit=sac" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_sac_mael_r.webp" alt="Le sac à dos illustré de Maël posé sur un bureau" loading="lazy" style="object-position:40% 50%"></a>
-      <h3>Son sac à dos</h3><p>Illustré avec son héros et son prénom, pour l'école et les sorties.</p>
-      <div class="act"><a class="btn petit" href="/creer?produit=sac">Créer</a><a class="voir" href="#objets">Voir</a></div></li>
+    <li class="prod" id="calendrier"><a class="ph" href="/creer?produit=calendrier" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/cal_photo_1_r.webp" alt="" loading="lazy" style="object-position:50% 30%"></a>
+      <h3>Son calendrier</h3><p>12 mois illustrés avec lui, son anniversaire et vos dates déjà marqués. <b data-px="calendrier"></b></p>
+      <a class="lien" href="/creer?produit=calendrier">Créer son calendrier</a></li>
+    <li class="prod" id="objets"><a class="ph" href="/creer?produit=gourde" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_gourde_gabin_r.webp" alt="" loading="lazy"></a>
+      <h3>Sa gourde à paille</h3><p>Son héros tout autour, son prénom dessus. <b data-px="gourde"></b></p>
+      <a class="lien" href="/creer?produit=gourde">Créer sa gourde</a></li>
+    <li class="prod"><a class="ph" href="/creer?produit=tasse" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_tasse_lea_r.webp" alt="" loading="lazy" style="object-position:50% 70%"></a>
+      <h3>Sa tasse émaillée</h3><p>Incassable, pour le chocolat chaud du soir. <b data-px="tasse"></b></p>
+      <a class="lien" href="/creer?produit=tasse">Créer sa tasse</a></li>
+    <li class="prod"><a class="ph" href="/creer?produit=sac" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_sac_mael_r.webp" alt="" loading="lazy" style="object-position:40% 50%"></a>
+      <h3>Son sac à dos</h3><p>Pour l'école et les sorties. <b data-px="sac"></b></p>
+      <a class="lien" href="/creer?produit=sac">Créer son sac</a></li>
   </ul>
-  <div class="wrap">
-    <ul class="rassure">
-      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Aucune photo de votre enfant : son avatar suffit</li>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Illustrations créées avec l'IA, retravaillées une par une avant l'impression</li>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>Livré en 7 à 15 jours ouvrés, réimprimé sans frais en cas de défaut</li>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Paiement sécurisé, en une seule fois</li>
-    </ul>
-  </div>
 </section>
 
-<section class="ia" id="ia" aria-labelledby="iaT">
+<section class="bloc ia" id="ia" aria-labelledby="iaT">
   <div class="wrap">
-    <span class="kick">Parlons franchement</span>
-    <h2 id="iaT">Oui, nos illustrations sont faites avec l'IA. Et votre livre, lui, est bien réel.</h2>
-    <p class="lead">On ne s'en cache pas : c'est l'IA qui permet de dessiner votre enfant, son doudou et ses animaux sur chaque page, pour le prix d'un livre ordinaire. Mais l'IA ne fait qu'une partie du travail, et vous ne payez pas dans le vide. Voici ce qui se passe vraiment.</p>
-    <div class="ia-g">
-      <div class="ia-c"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></i><b>Vous voyez avant de payer</b><p>Composez son avatar, puis demandez l'aperçu gratuit de sa vraie couverture. Vous commandez seulement si elle vous plaît.</p></div>
-      <div class="ia-c"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></i><b>Peaufiné par notre équipe</b><p>L'IA propose, nous retravaillons. Chaque page est vérifiée et reprise : un visage, une couleur, un détail qui ne va pas, et l'illustration est refaite jusqu'à ce qu'elle soit juste. Rien ne part sans notre validation.</p></div>
-      <div class="ia-c"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></svg></i><b>Imprimé par un vrai imprimeur</b><p>Vos livres sont imprimés à la demande par Lulu, imprimeur de livres professionnel, puis expédiés chez vous avec un numéro de suivi.</p></div>
-      <div class="ia-c"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></i><b>Payé en sécurité, protégé</b><p>Paiement sécurisé par Stripe, commande suivie étape par étape dans « Mon compte ». Un défaut à la livraison ? Nous réimprimons sans frais.</p></div>
-    </div>
     <div class="ia-pq">
       <div>
-        <h3>Pourquoi l'IA ?</h3>
-        <p>Faire dessiner son enfant par un illustrateur, c'est des semaines d'attente et un budget à part. L'IA rend ce cadeau accessible : votre enfant (sans photo, juste son avatar), son doudou, son chat ou son petit frère, dans une histoire écrite pour lui.</p>
-        <p>L'IA nous donne une base. Ensuite, il y a un vrai travail derrière : nous reprenons les illustrations, refaisons celles qui ne vont pas et validons chaque page avant l'impression.</p>
+        <h2 id="iaT">Comment nous le fabriquons</h2>
+        <p>Les illustrations sont dessinées avec l'aide de l'IA : c'est ce qui permet de mettre votre enfant, son doudou et ses animaux sur chaque page, pour le prix d'un livre ordinaire.</p>
+        <p>Ensuite, chaque page est vérifiée et retravaillée par notre équipe ; celles qui ne vont pas sont refaites. Le livre est imprimé par un imprimeur professionnel, puis expédié avec un numéro de suivi.</p>
       </div>
       <div class="ia-cmp" role="table" aria-label="Ce que fait l'IA, ce que nous faisons">
         <div class="h" role="row"><span>Étape</span><span>IA</span><span>Nous</span></div>
@@ -692,242 +869,6 @@ __LDJSON__
   </div>
 </section>
 
-<section class="bloc" id="comment">
-  <div class="wrap">
-    <h2>Un avatar, puis tout son univers</h2>
-    <div class="etapes">
-      <div class="etape">
-        <div class="vis"><div class="avatars"><img loading="lazy" decoding="async" src="/static/avatars/doudou-ours.webp" alt=""><img loading="lazy" decoding="async" src="/static/vitrine/jade_avatar.webp" alt="Avatar de Jade"><img loading="lazy" decoding="async" src="/static/avatars/animal-chien.webp" alt=""></div></div>
-        <h3>Composez son avatar</h3>
-        <p>Coiffure, yeux, tenue : vous voyez le résultat en direct. Ajoutez son doudou et jusqu'à trois animaux. Aucune photo n'est demandée.</p>
-      </div>
-      <div class="etape">
-        <div class="vis"><div class="eventail" aria-hidden="true"><img loading="lazy" decoding="async" src="/static/vitrine/cal_photo_2.webp" alt=""><img loading="lazy" decoding="async" src="/static/vitrine/obj_tasse_noah2.webp" alt="" style="object-position:30% 50%"><img loading="lazy" decoding="async" src="/static/vitrine/colo_photo_3.webp" alt=""></div></div>
-        <h3>Choisissez ses créations</h3>
-        <p>Livres, calendrier, cahier de coloriage, gourde, tasse, sac à dos : tout est réglé d'office pour lui, vous changez ce que vous voulez.</p>
-      </div>
-      <div class="etape">
-        <div class="vis photo"><img src="/static/vitrine/photo_02_l.webp" alt="Le livre de Jade et la vallée des dinosaures posé sur une table" loading="lazy"></div>
-        <h3>Recevez tout chez vous</h3>
-        <p>Nous illustrons et relisons chaque création avant de l'imprimer. Elle arrive chez vous en 7 à 15 jours ouvrés.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="bloc doux" id="livres">
-  <div class="wrap livres-in">
-    <div class="scene3d" id="scene3d" aria-hidden="true">
-      <div class="halo"></div>
-      <i class="luciole" style="left:12%;top:22%"></i><i class="luciole" style="left:84%;top:16%;animation-delay:-2s"></i>
-      <i class="luciole" style="left:90%;top:64%;animation-delay:-4s"></i><i class="luciole" style="left:8%;top:70%;animation-delay:-1s"></i>
-      <div class="ombre"></div>
-      <div class="livre">
-        <div class="dos"></div><div class="tranche"></div><div class="pages"></div>
-        <div class="h-fin"><img loading="lazy" decoding="async" src="/static/vitrine/noe_05_d.webp" alt=""><span class="h-txt">Une mélodie circule de cristal en cristal, puis s’éloigne vers une montagne en croissant. « Tu entends ? » souffle Noé. Luma se remet à briller. « C’est la chanson des comètes ! Elles connaissent tous les chemins du ciel. »<em>10</em></span></div>
-        <div class="h-flt" style="--z:4px;--d:3"><i class="h-r"><img loading="lazy" decoding="async" src="/static/vitrine/noe_04_d.webp" alt=""><span class="h-txt">Luma laisse tomber quelques grains de lumière pour tracer un chemin. Mais un souffle les emporte aussitôt. Noé les regarde filer entre les rochers. « Attends… Ils vont peut-être quelque part. Suivons-les doucement. »<em>8</em></span></i><i class="h-v h-pg"><img loading="lazy" decoding="async" src="/static/vitrine/noe_05_g.webp" alt=""><span class="h-txt">Les grains les conduisent dans une vallée de cristaux. Ting… ting… Chaque cristal chante une note légère. Noé s’accroupit pour mieux écouter. Son ours dépasse de son sac, comme s’il écoutait lui aussi. Luma cesse un instant de trembler.<em>9</em></span></i></div>
-        <div class="h-flt" style="--z:6px;--d:2"><i class="h-r"><img loading="lazy" decoding="async" src="/static/vitrine/noe_03_d.webp" alt=""><span class="h-txt">Noé regarde le ciel, puis ses petites bottes. « Je ne sais pas voler aussi haut… » Luma baisse ses pointes. Il se rapproche d’elle. « Mais je peux chercher avec toi. Nous n’avons pas besoin de tout savoir pour commencer. »<em>6</em></span></i><i class="h-v h-pg"><img loading="lazy" decoding="async" src="/static/vitrine/noe_04_g.webp" alt=""><span class="h-txt">Noé grimpe sur une butte et lève le bras. Encore un peu… juste un peu ! Le cerf-volant reste bien trop loin. Il redescend en faisant un petit bond. « Bon. Il nous faut une autre idée ! »<em>7</em></span></i></div>
-        <div class="h-flt" style="--z:8px;--d:1"><i class="h-r"><img loading="lazy" decoding="async" src="/static/vitrine/noe_02_d.webp" alt=""><span class="h-txt">Un pas, puis un autre… Noé avance dans la nuit comme sur un tapis moelleux. Au bout du sentier, une petite lune argentée les attend. Tout autour flottent des nuages violets. « C’est encore plus beau que dans mes rêves ! »<em>4</em></span></i><i class="h-v h-pg"><img loading="lazy" decoding="async" src="/static/vitrine/noe_03_g.webp" alt=""><span class="h-txt">Sur la lune, Luma montre un dessin d’étoiles très haut dans le ciel. On dirait un cerf-volant ! Mais un coin est tout sombre. « C’est ma place, murmure-t-elle. Sans moi, mes amies ne peuvent plus terminer notre dessin. »<em>5</em></span></i></div>
-        <div class="h-flt" style="--z:10px;--d:0"><i class="h-r"><img loading="lazy" decoding="async" src="/static/vitrine/noe_01_d.webp" alt=""><span class="h-txt">C’est une petite étoile, pas plus grande qu’une pomme. « Je m’appelle Luma. J’ai glissé de mon coin de ciel et je ne retrouve plus le chemin. » Noé soulève son ours. « Alors, nous allons t’aider tous les deux ! »<em>2</em></span></i><i class="h-v h-pg"><img loading="lazy" decoding="async" src="/static/vitrine/noe_02_g.webp" alt=""><span class="h-txt">Luma secoue une pointe. Une poussière brillante tourbillonne autour de Noé : le voilà dans une combinaison, avec un casque tout rond ! Il installe son ours sur son sac. Devant la fenêtre, un sentier de lumière se déroule.<em>3</em></span></i></div>
-        <div class="h-couv">
-          <div class="h-face">
-            <img loading="lazy" decoding="async" src="/static/vitrine/noe_00.webp" alt="">
-          </div>
-          <i class="h-v garde"><b>Noé</b><span>et la poussière d'étoiles</span><em>Une aventure de<br>Mon Héros du Mois</em></i>
-        </div>
-      </div>
-    </div>
-    <div>
-      <h2>Ses livres d'aventures</h2>
-      <p class="sous">Une vraie histoire illustrée, imprimée et reliée, dont votre enfant est le héros. Peur du noir, rentrée, confiance en soi : l'histoire l'aide avec ce qu'il vit en ce moment.</p>
-      <ul class="points">
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span><div><b>Votre enfant, héros de chaque page</b><span>Son prénom, sa coiffure, ses couleurs et sa tenue guident les illustrations, du début à la fin.</span></div></li>
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4c-2 3-2 6 0 8M17 4c2 3 2 6 0 8"/><circle cx="12" cy="14" r="6"/></svg></span><div><b>Son doudou et ses animaux</b><span>Ils l'accompagnent dans l'histoire, avec leur nom et leurs couleurs.</span></div></li>
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM8 7h6M8 11h6"/></svg></span><div><b>20 pages, dont 18 pages d’histoire illustrées</b><span>Une histoire à lire à voix haute, pensée pour les 3 à 8 ans, avec la couverture et la quatrième.</span></div></li>
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg></span><div><b>Un vrai livre relié</b><span>Couverture rigide, format carré, et son numéro de collection sur la couverture.</span></div></li>
-      </ul>
-      <div class="l2"><a class="btn" href="/creer?formule=livre">Créer ses livres</a><a class="voir" href="#feuilleter">Feuilleter un livre</a></div>
-    </div>
-  </div>
-</section>
-
-<section class="nuit vague-h vague-b" id="feuilleter">
-  <div class="wrap">
-    <h2>Feuilletez nos livres</h2>
-    <p class="sous">Cliquez sur un livre pour l'ouvrir. Dans le vôtre, votre enfant, son doudou et ses animaux deviennent les héros de l'aventure.</p>
-    <div class="etal" id="etal">
-      <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp" alt="" loading="lazy"></span><b>Noé</b><span>La poussière d'étoiles</span></button>
-      <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp?v=2" alt="" loading="lazy"></span><b>Léo</b><span>La forêt enchantée</span></button>
-      <button type="button" data-l="mila"><span class="cv"><img src="/static/vitrine/mila_00.webp" alt="" loading="lazy"></span><b>Mila</b><span>Le secret de l'océan</span></button>
-    </div>
-    <div class="lecteur" id="lecteur" hidden>
-    <p class="sous" id="sousLivre"></p>
-    <div class="flip" id="flip">
-      <div class="livre-o ferme" id="livreO" tabindex="0" aria-label="Livre à feuilleter"></div>
-      <span class="ouvrir" id="ouvrir">Cliquez pour ouvrir le livre</span>
-    </div>
-    <div class="lecture" id="lecture" hidden></div>
-    <div class="tourne">
-      <button type="button" id="prev" aria-label="Page précédente"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <span id="compteur" aria-live="polite">Couverture</span>
-      <button type="button" id="next" aria-label="Page suivante"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5l7 7-7 7"/></svg></button>
-    </div>
-    <div class="miniatures" id="minis"></div>
-    </div>
-  </div>
-</section>
-
-<section class="bloc etoiles-fines" id="formules">
-  <div class="wrap">
-    <h2>Choisissez combien d'aventures, on livre tout ensemble</h2>
-    <p class="sous">Un seul paiement, un seul colis. Plus vous prenez de livres, moins chaque livre coûte, et la livraison est offerte dès 6 livres.</p>
-    <div class="formules quatre">
-      <div class="formule">
-        <h3>1 livre</h3>
-        <p class="sous">Pour découvrir ou offrir.</p>
-        <span class="port">Relié, couverture rigide</span>
-        <ul><li>Album relié de 20 pages, dont 18 pages d’histoire illustrées</li><li>L'univers ou la fête de votre choix</li></ul>
-        <a class="btn clair" href="/creer?formule=livre">Créer ce livre</a>
-      </div>
-      <div class="formule">
-        <h3>3 livres</h3>
-        <p class="sous">Trois aventures, un même héros.</p>
-        <span class="port">Un seul colis</span>
-        <ul><li>3 univers différents</li><li>Numérotés 1, 2, 3 pour sa collection</li></ul>
-        <a class="btn clair" href="/creer?formule=pack3">Choisir 3 livres</a>
-      </div>
-      <div class="formule phare">
-        <span class="etiq">Notre conseil</span>
-        <h3>6 livres</h3>
-        <p class="sous">De quoi lire pendant six mois.</p>
-        <span class="port offert">Livraison offerte</span>
-        <ul><li>6 aventures pour sa collection</li><li>À offrir, avec votre petit mot imprimé</li></ul>
-        <a class="btn" href="/creer?formule=pack6">Choisir 6 livres</a>
-      </div>
-      <div class="formule">
-        <span class="etiq">Le meilleur prix</span>
-        <h3>12 livres</h3>
-        <p class="sous">Une aventure pour chaque mois de l'année.</p>
-        <span class="port offert">Livraison offerte</span>
-        <ul><li>La collection complète, numérotée de 1 à 12</li><li>Un univers différent dans chaque livre</li></ul>
-        <a class="btn clair" href="/creer?formule=pack12">Choisir 12 livres</a>
-      </div>
-    </div>
-    <div class="fetes-bande">
-      <div><h3>Les 6 livres de fête</h3><p>Son anniversaire et 5 fêtes de votre choix (Noël, Pâques, Aïd, Diwali…), livrés ensemble.</p></div>
-      <a class="btn clair" href="/creer?formule=fetes">Choisir ses fêtes</a>
-    </div>
-    <p class="sous petit-note">Livraison en France, Belgique, Luxembourg, Monaco et Suisse. Le prix exact, livraison comprise, s'affiche avant le paiement.</p>
-  </div>
-</section>
-
-<section class="bloc galerie">
-  <div class="wrap">
-    <h2>Un vrai livre, à lire ensemble</h2>
-    <p class="sous">Couverture rigide, format carré 21,6 cm : un album qu'on garde, qu'on relit et qu'on se passe entre frères et sœurs.</p>
-  </div>
-  <div class="defile" aria-label="Photos des livres"><div class="piste">
-      <img src="/static/vitrine/photo_01.webp?v=2" alt="Les livres de Mila, Noé, Léo et Jade" loading="lazy">
-      <img src="/static/vitrine/photo_03.webp" alt="Une maman et sa fille lisent le livre de Mila" loading="lazy">
-      <img src="/static/vitrine/photo_06.webp" alt="Un enfant tient le livre de Noé" loading="lazy">
-      <img src="/static/vitrine/photo_04.webp" alt="Le livre de Mila tenu à deux mains" loading="lazy">
-      <img src="/static/vitrine/photo_08.webp" alt="Le livre de Noé ouvert le soir sous la couette" loading="lazy">
-      <img src="/static/vitrine/photo_10.webp?v=2" alt="Les quatre livres sur un présentoir" loading="lazy">
-      <img src="/static/vitrine/photo_05.webp" alt="Le livre de Mila ouvert sur le sable" loading="lazy">
-      <img src="/static/vitrine/photo_09.webp" alt="Le livre de Noé sur le lit, à côté d'un ours en peluche" loading="lazy">
-      <img src="/static/vitrine/photo_01.webp?v=2" alt="" loading="lazy" aria-hidden="true">
-      <img src="/static/vitrine/photo_03.webp" alt="" loading="lazy" aria-hidden="true">
-      <img src="/static/vitrine/photo_06.webp" alt="" loading="lazy" aria-hidden="true">
-      <img src="/static/vitrine/photo_04.webp" alt="" loading="lazy" aria-hidden="true">
-      <img src="/static/vitrine/photo_08.webp" alt="" loading="lazy" aria-hidden="true">
-      <img src="/static/vitrine/photo_10.webp?v=2" alt="" loading="lazy" aria-hidden="true">
-      <img src="/static/vitrine/photo_05.webp" alt="" loading="lazy" aria-hidden="true">
-      <img src="/static/vitrine/photo_09.webp" alt="" loading="lazy" aria-hidden="true">
-  </div></div>
-</section>
-
-<section class="bloc calendrier" id="calendrier">
-  <div class="wrap cal">
-    <div class="cal-photos">
-      <img class="grand" src="/static/vitrine/cal_photo_1.webp" alt="Un petit garçon tient fièrement son calendrier, avec son prénom en lettres dorées sur la couverture" loading="lazy" width="1300" height="1188">
-      <img src="/static/vitrine/cal_photo_2.webp" alt="Le calendrier ouvert au mois de juin, accroché au mur : un pique-nique aux fraises" loading="lazy" width="1139" height="1300">
-      <img src="/static/vitrine/cal_photo_3.webp" alt="Le mois de juillet : un château de sable, et son anniversaire marqué sur la grille" loading="lazy" width="1139" height="1300">
-      <img src="/static/vitrine/cal_photo_4.webp" alt="Le mois d'avril tenu à deux mains : des flaques sous un parapluie rouge" loading="lazy" width="1139" height="1300">
-    </div>
-    <div>
-      <h2>Le calendrier de son année</h2>
-      <p class="sous">Douze illustrations de saison, avec votre enfant, son doudou et ses animaux : la neige en janvier, les flaques d'avril, la plage en juillet… À accrocher dans sa chambre ou dans la cuisine, pour compter les jours jusqu'à son anniversaire.</p>
-      <ul class="points">
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><div><b>Ses dates, déjà marquées</b><span>Son anniversaire (« Noah a 6 ans ! »), les fêtes de votre famille, les jours fériés et vos dates à vous : anniversaire de Mamie, rentrée, spectacle.</span></div></li>
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></span><div><b>Le même héros que dans ses livres</b><span>Le même avatar, illustré mois après mois. Le mois de son anniversaire devient sa fête illustrée.</span></div></li>
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 7l2-3h12l2 3M5 7v12h14V7"/></svg></span><div><b>Grand format, à spirale</b><span>28 × 22 cm à l'italienne, papier épais, impression couleur premium. Il commence le mois de votre choix.</span></div></li>
-      </ul>
-      <a class="btn" href="/creer?produit=calendrier">Créer son calendrier</a>
-    </div>
-  </div>
-</section>
-
-<section class="bloc coloriage" id="coloriage">
-  <div class="wrap cal">
-    <div>
-      <h2>Son cahier de coloriage</h2>
-      <p class="sous">30 pages où votre enfant est le héros, avec son doudou et ses animaux : 18 coloriages choisis par vous parmi près de 70 idées (astronaute, pompier, pirate, à la plage, à Noël…), plus des jeux : coloriages magiques, points à relier, labyrinthes, dessins à terminer.</p>
-      <ul class="points">
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20l4-1 10-10-3-3L5 16z"/><path d="M14 6l3 3"/></svg></span><div><b>18 coloriages choisis par vous, 12 pages de jeux</b><span>Aventures, vie de tous les jours, fêtes, métiers, sports, animaux. Chaque coloriage porte un titre à son prénom.</span></div></li>
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h5"/></svg></span><div><b>Des pages « Dessine… »</b><span>Dessine Nino, ton doudou ; dessine ta maison… Et la première page : « Ce cahier appartient à », son prénom en lettres à colorier.</span></div></li>
-        <li><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 7l2-3h12l2 3M5 7v12h14V7"/></svg></span><div><b>Grand format, à spirale</b><span>21,6 × 27,9 cm, il reste bien à plat. Imprimé au recto seulement : les feutres ne traversent pas sur le dessin suivant.</span></div></li>
-      </ul>
-      <a class="btn" href="/creer?produit=coloriage">Créer son cahier de coloriage</a>
-    </div>
-    <div class="colo-photos">
-      <img src="/static/vitrine/colo_photo_1.webp" alt="Le cahier de coloriage ouvert : une page déjà coloriée par l'enfant et une page à colorier avec son doudou" loading="lazy" width="1300" height="1052">
-      <div class="quatre">
-        <img src="/static/vitrine/colo_photo_3.webp" alt="Le cahier de coloriage de Léo posé sur une table, avec des crayons de couleur" loading="lazy" width="1004" height="1300">
-        <img src="/static/vitrine/colo_photo_2.webp" alt="Léo montre fièrement son cahier de coloriage" loading="lazy" width="867" height="1300">
-        <img src="/static/vitrine/colo_photo_4.webp" alt="Le cahier de coloriage de Léa, au jardin avec son ours en peluche" loading="lazy" width="867" height="1300">
-        <img src="/static/vitrine/colo_photo_5.webp" alt="Léa tient son cahier de coloriage" loading="lazy" width="867" height="1300">
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="bloc objets" id="objets">
-  <div class="wrap">
-    <h2>Ses objets de tous les jours</h2>
-    <p class="sous">Le même héros, avec son prénom, sur ce qu'il emporte partout. Chaque objet est illustré pour lui, puis fabriqué par notre atelier partenaire. À commander seul ou avec ses livres, son calendrier ou son cahier, livraison comprise.</p>
-    <div class="obj-l">
-      <div class="obj"><img src="/static/vitrine/obj_gourde_gabin.webp" alt="Gabin montre sa gourde à paille illustrée à son prénom" loading="lazy">
-        <h3>Sa gourde à paille</h3><p>Gourde CamelBak à paille, son héros tout autour et son prénom sur le devant. Pour la cantine, le sport et les balades.</p>
-        <a class="btn clair" href="/creer?produit=gourde">Créer sa gourde</a></div>
-      <div class="obj"><img src="/static/vitrine/obj_tasse_noah2.webp" alt="La tasse émaillée de Noah, avec son doudou et son chien sous les étoiles" loading="lazy" style="object-position:38% 50%">
-        <h3>Sa tasse émaillée</h3><p>Une tasse en métal émaillé, incassable et légère, illustrée d'une scène du soir. Pour le chocolat chaud avant l'histoire.</p>
-        <a class="btn clair" href="/creer?produit=tasse">Créer sa tasse</a></div>
-      <div class="obj"><img src="/static/vitrine/obj_sac_mael.webp" alt="Le sac à dos illustré de Maël" loading="lazy" style="object-position:40% 50%">
-        <h3>Son sac à dos</h3><p>Le devant entièrement illustré, avec son héros et son prénom. Pour l'école, le centre de loisirs et les week-ends.</p>
-        <a class="btn clair" href="/creer?produit=sac">Créer son sac</a></div>
-    </div>
-    <div class="obj-plus deux" aria-hidden="true">
-      <img src="/static/vitrine/obj_tasse_lea2.webp" alt="" loading="lazy" style="object-position:45% 50%">
-      <img src="/static/vitrine/obj_tasse_noah.webp" alt="" loading="lazy" style="object-position:40% 50%">
-    </div>
-    <p class="sous petit-note">Livraison comprise dans le prix. Les objets sont fabriqués par un atelier partenaire et arrivent dans un colis à part, dans les mêmes délais que le reste de la commande.</p>
-  </div>
-</section>
-
-<section class="bloc etoiles-fines mondes" id="univers">
-  <div class="wrap">
-    <h2>Dans quel monde partira votre enfant ?</h2>
-    <p class="sous">Un univers différent pour chaque livre. Choisissez celui de son premier livre : vous le retrouverez déjà sélectionné dans la création.</p>
-    <ul class="cartes" id="cartesUnivers" aria-label="Les univers"></ul>
-    <button type="button" class="btn ghost plus" id="plusUnivers" aria-expanded="false" aria-controls="cartesUnivers">Voir tous les univers</button>
-
-    <h2 id="fetes" class="h-occ">Une occasion spéciale</h2>
-    <p class="sous">Son anniversaire ou une fête de votre famille : le livre arrive juste avant, avec votre enfant en héros de la fête.</p>
-    <ul class="cartes petites" id="cartesFetes" aria-label="Les fêtes et occasions"></ul>
-    <button type="button" class="btn ghost plus" id="plusFetes" aria-expanded="false" aria-controls="cartesFetes">Voir toutes les occasions</button>
-  </div>
-</section>
-
 <section class="bloc doux" id="avisBloc" hidden>
   <div class="wrap">
     <h2>Ce qu'en disent les familles</h2>
@@ -935,24 +876,21 @@ __LDJSON__
   </div>
 </section>
 
-<section class="bloc etoiles-fines" id="questions">
+<section class="bloc" id="questions">
   <div class="wrap">
-    <h2 style="text-align:center;margin-left:auto;margin-right:auto">Vos questions</h2>
+    <h2 class="centre">Vos questions</h2>
     <div class="faq">
-      <details><summary>C'est fait avec l'IA : est-ce que je reçois vraiment un livre ?</summary><p>Oui. L'IA dessine les illustrations, mais le livre est un vrai livre imprimé par Lulu, imprimeur professionnel, et livré chez vous avec un numéro de suivi. Chaque illustration est vérifiée et retravaillée par notre équipe avant l'impression, et vous pouvez voir sa couverture gratuitement avant de payer.</p></details>
-      <details><summary>Comment savoir que ce n'est pas une arnaque ?</summary><p>Vous voyez l'aperçu de sa couverture avant de payer. Le paiement passe par Stripe (nous ne voyons jamais votre carte), et vous suivez votre commande dans « Mon compte ». Nos coordonnées sont dans les <a href="/mentions-legales">mentions légales</a> et un humain répond à vos messages : écrivez-nous avant de commander si vous avez le moindre doute.</p></details>
+      <details><summary>Qu'est-ce que je peux personnaliser ?</summary><p>Le héros (coiffure, couleur de peau, yeux, lunettes, tenue), son doudou et jusqu'à trois animaux avec leur nom, l'univers de l'aventure ou une fête, et le thème de l'histoire : la peur du noir, la rentrée, l'arrivée d'un petit frère, la confiance en soi… ou une aventure juste pour rire. L'histoire est écrite à partir de ces choix.</p></details>
+      <details><summary>C'est fait avec l'IA : est-ce que je reçois vraiment un livre ?</summary><p>Oui. L'IA aide à dessiner les illustrations, mais le livre est un vrai livre imprimé par Lulu, imprimeur professionnel, et livré chez vous avec un numéro de suivi. Chaque illustration est vérifiée et retravaillée par notre équipe avant l'impression, et vous voyez sa couverture gratuitement avant de payer.</p></details>
       <details><summary>Et si une illustration ne me plaît pas ?</summary><p>Avant de payer, vous voyez sa couverture. Après la commande, notre équipe reprend chaque page avant l'impression et refait celles où un personnage ou un détail ne va pas. Le livre étant personnalisé, il n'y a pas de droit de rétractation, mais un défaut d'impression ou un livre abîmé est réimprimé sans frais.</p></details>
       <details><summary>Quand vais-je recevoir le livre ?</summary><p>Le livre est créé juste après votre commande, puis peaufiné par notre équipe avant d'être imprimé. Comptez 7 à 15 jours ouvrés pour le recevoir.</p></details>
       <details><summary>Pour quel âge ?</summary><p>Les histoires sont écrites pour être lues à voix haute aux enfants de 3 à 8 ans. Les phrases sont courtes et chaque livre compte 20 pages, dont 18 pages d’histoire illustrées.</p></details>
-      <details><summary>Comment sont créés le texte et les illustrations ?</summary><p>Avec l'aide de l'intelligence artificielle, à partir de l'avatar et du thème que vous choisissez. Chaque illustration est ensuite vérifiée et retravaillée par notre équipe avant l'impression : si une page ne va pas, nous la refaisons.</p></details>
-      <details><summary>Comment arrivent les livres d'un pack ?</summary><p>Tous les livres de la commande sont créés, peaufinés un par un, puis imprimés et expédiés ensemble dans un seul colis. Ils sont numérotés à la suite sur la couverture, pour sa collection.</p></details>
-      <details><summary>Comment fonctionne le calendrier ?</summary><p>Vous choisissez le premier mois (janvier, ou n'importe quel mois à venir) : il couvre les 12 mois suivants. Chaque mois a son illustration avec votre enfant, son doudou et ses animaux. Son anniversaire, les fêtes que vous cochez, les jours fériés et vos dates de famille sont imprimés sur la grille. Il peut être commandé seul ou avec des livres, dans le même colis.</p></details>
-      <details><summary>Comment choisir les pages du cahier de coloriage ?</summary><p>À la création, nous vous proposons une sélection de 18 coloriages variés. Vous retirez et ajoutez ce que vous voulez parmi près de 70 idées (astronaute, pompier, plage, Noël, football, chatons…), ou vous complétez au hasard. Nous ajoutons 12 pages de jeux (coloriages magiques, points à relier, labyrinthes…). Chaque coloriage est dessiné avec votre enfant, son doudou et ses animaux, et titrée à son prénom.</p></details>
-      <details><summary>Proposez-vous des objets avec son héros ?</summary><p>Oui : une gourde à paille, une tasse émaillée incassable et un sac à dos, illustrés avec votre enfant, son doudou et ses animaux, avec son prénom. Ils s'ajoutent à une commande de livres, de calendrier ou de cahier, livraison comprise, et arrivent dans un colis à part, dans les mêmes délais.</p></details>
+      <details><summary>Comment choisir les pages du cahier de coloriage ?</summary><p>À la création, nous vous proposons une sélection de 18 coloriages variés. Vous retirez et ajoutez ce que vous voulez parmi près de 70 idées (astronaute, pompier, plage, Noël, football, chatons…), ou vous complétez au hasard. Nous ajoutons 12 pages de jeux. Chaque coloriage est dessiné avec votre enfant, son doudou et ses animaux, et titré à son prénom.</p></details>
+      <details><summary>Comment savoir que ce n'est pas une arnaque ?</summary><p>Vous voyez l'aperçu de sa couverture avant de payer. Le paiement passe par Stripe (nous ne voyons jamais votre carte), et vous suivez votre commande dans « Mon compte ». Nos coordonnées sont dans les <a href="/mentions-legales">mentions légales</a> et un humain répond à vos messages : écrivez-nous avant de commander si vous avez le moindre doute.</p></details>
       <details><summary>Que deviennent les informations sur mon enfant ?</summary><p>Elles servent uniquement à créer ses livres. Nous ne les partageons pas et nous les effaçons après la livraison du dernier livre.</p></details>
-      <details><summary>Le livre arrive abîmé, que se passe-t-il ?</summary><p>Envoyez-nous une photo dans les 30 jours via le formulaire ci-dessous : nous le réimprimons sans frais.</p></details>
       <details><summary>Je veux l'offrir, comment faire ?</summary><p>Cochez « C'est pour offrir » à la commande : votre petit mot est imprimé au dos de chaque livre.</p></details>
     </div>
+    <p class="sous centre" style="margin-top:18px"><a href="/aide">Toutes les questions dans le centre d'aide</a></p>
     <form class="contact" id="contact" novalidate>
       <h3>Une question ? Écrivez-nous</h3>
       <p class="sous">Nous vous répondons par e-mail sous 48 h.</p>
@@ -972,9 +910,12 @@ __LDJSON__
 <section class="bloc">
   <div class="wrap">
     <div class="fin">
-      <h2>Ce soir, votre enfant est le héros</h2>
-      <p>Composez son avatar en quelques minutes, puis choisissez ses créations. Vous ne payez qu'à la fin.</p>
-      <a class="btn" href="/creer">Créer son univers</a>
+      <div>
+        <h2>Ce soir, c'est lui le héros</h2>
+        <p>Composez son histoire en quelques minutes. Vous voyez sa couverture avant de payer.</p>
+        <a class="btn" href="/creer">Composer son histoire</a>
+      </div>
+      <img src="/static/vitrine/photo_08.webp" alt="Le livre de Noé ouvert le soir sous la couette" loading="lazy" width="800" height="1000">
     </div>
   </div>
 </section>
@@ -996,7 +937,7 @@ __BARRE__
   { const d = new Date(), lim = new Date(d.getFullYear(), 11, 1); if (d.getMonth() >= 9 && d < lim) $('noel').hidden = false; }
   /* le livre 3D s'ouvre quand on arrive sur la section des livres (et pas pendant qu'on est en haut de la page) */
   { const sc = $('scene3d');
-    if ('IntersectionObserver' in window) { const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { sc.classList.add('anim'); io.disconnect(); } }, { threshold: .45 }); io.observe(sc); }
+    if (!sc) {} else if ('IntersectionObserver' in window) { const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { sc.classList.add('anim'); io.disconnect(); } }, { threshold: .45 }); io.observe(sc); }
     else sc.classList.add('anim'); }
   /* rayon des créations : flèches (ordinateur), glisser au doigt (téléphone) */
   { const r = $('etalP'), g = $('rG'), d = $('rD');
@@ -1012,7 +953,7 @@ __BARRE__
   /* prix : une seule source (le serveur), au cas où ils changent */
   fetch('/api/tarifs').then(r => r.json()).then(t => {
     const e = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
-    const P = { livre12: t.formules.pack12.prix_livre, calendrier: t.calendrier.seul, coloriage: t.coloriage.seul };
+    const P = { livre: t.formules.livre.prix, livre12: t.formules.pack12.prix_livre, calendrier: t.calendrier.seul, coloriage: t.coloriage.seul };
     Object.entries(t.objets || {}).forEach(([k, v]) => { P[k] = v.prix; });
     document.querySelectorAll('[data-px]').forEach(x => { if (P[x.dataset.px] != null) x.textContent = e(P[x.dataset.px]); });
   }).catch(() => {});
@@ -1177,7 +1118,8 @@ __BARRE__
     };
     const un = l.filter(u => !u.fete).sort((a, b) => rang(ordreU, a.cle) - rang(ordreU, b.cle) || (!!b.img - !!a.img));
     const fe = l.filter(u => u.fete).sort((a, b) => rang(ordreF, a.cle) - rang(ordreF, b.cle));
-    const NU = 6, NF = 6;
+    const NU = matchMedia('(max-width:640px)').matches ? 6 : 12, NF = 6;
+    document.querySelectorAll('[data-n="univers"]').forEach(x => { x.textContent = un.length; });
     $('cartesUnivers').innerHTML = un.map((u, i) => carte(u, i, false, i >= NU)).join('');
     $('cartesFetes').innerHTML = fe.map((u, i) => carte(u, i + 3, true, i >= NF)).join('');
     const pli = (btn, ul, n, plus, moins) => {

@@ -129,11 +129,16 @@
   /* réglages des créations : bien visibles (bouton « Personnaliser ») */
   .crea-b .reg { border:2px solid var(--luciole); background:color-mix(in srgb, var(--luciole) 14%, #fff); }
   .crea-b .reg > summary { padding:13px 118px 13px 14px; }
-  .crea-b .reg > summary::after { content:"Personnaliser"; width:auto; height:auto; border:0; transform:translateY(-50%); right:12px; top:50%;
+  .crea-b .reg > summary::after { content:"Choisir"; width:auto; height:auto; border:0; transform:translateY(-50%); right:12px; top:50%;
     background:var(--encre); color:#fff; font:800 13px var(--texte); padding:8px 12px; border-radius:999px; }
   .crea-b .reg[open] > summary::after { content:"Fermer"; transform:translateY(-50%); background:#fff; color:var(--encre); box-shadow:inset 0 0 0 2px var(--encre); }
   @media (max-width:440px) { .crea-b .reg > summary { padding-right:14px; padding-bottom:52px; } .crea-b .reg > summary::after { top:auto; bottom:10px; transform:none; left:14px; right:auto; }
     .crea-b .reg[open] > summary::after { transform:none; } }
+  .reg.voyant { border:2px solid var(--luciole); background:color-mix(in srgb, var(--luciole) 14%, #fff); margin-top:16px; }
+  .reg.voyant > summary { padding:13px 104px 13px 14px; font-size:16px; }
+  .reg.voyant > summary::after { content:"Modifier"; width:auto; height:auto; border:0; transform:translateY(-50%); right:12px; top:50%;
+    background:var(--encre); color:#fff; font:800 13px var(--texte); padding:8px 12px; border-radius:999px; }
+  .reg.voyant[open] > summary::after { content:"Fermer"; background:#fff; color:var(--encre); box-shadow:inset 0 0 0 2px var(--encre); }
   .reg-b { padding:16px 14px 2px; border-top:1px solid var(--trait); }
   .reg-b input[type=text], .reg-b input[type=email], .reg-b input[type=tel] { width:100%; height:auto; }
   .reg-b .liste input[type=checkbox] { width:19px; height:19px; }
@@ -878,7 +883,7 @@
       G('Teint', swatches(e, 'peau', O.peau), sel(O.peau, e.peau)) +
       G('Coiffure', thumbs(e, 'coiffure', O.coiffure.filter(c => COIF[e.genre].includes(c.id)), id => `<img src="/static/avatars/${Avatar.pick(O.coiffure, id).img}.webp" alt="" loading="lazy">`), sel(O.coiffure, e.coiffure)) +
       G('Couleur des cheveux', swatches(e, 'couleur_cheveux', O.couleur_cheveux), sel(O.couleur_cheveux, e.couleur_cheveux)) +
-      `<details class="multi reg" data-ouv="aff" ${OUVERT.aff ? 'open' : ''}><summary>Plus de détails <small>anniversaire, tenue, yeux ${esc(sel(O.yeux, e.yeux).toLowerCase())}, ${e.lunettes === 'aucune' ? 'sans lunettes' : 'lunettes'}, ${esc(sel(O.tenue, e.tenue).toLowerCase())}${e.taches === 'oui' ? ', taches de rousseur' : ''}</small></summary><div class="reg-b">` +
+      `<details class="multi reg voyant" data-ouv="aff" ${OUVERT.aff ? 'open' : ''}><summary>Tenue, yeux, lunettes, anniversaire <small>yeux ${esc(sel(O.yeux, e.yeux).toLowerCase())}, ${e.lunettes === 'aucune' ? 'sans lunettes' : 'lunettes'}, ${esc(sel(O.tenue, e.tenue).toLowerCase())}${e.taches === 'oui' ? ', taches de rousseur' : ''}</small></summary><div class="reg-b">` +
       G('Son anniversaire', `<div class="row2" style="gap:0 10px"><select data-in="anniv_j" aria-label="Jour"><option value="">Jour</option>${Array.from({ length: 31 }, (_, i) => `<option ${e.anniv_j == i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>` +
         `<select data-in="anniv_m" aria-label="Mois"><option value="">Mois</option>${MOIS.map((m, i) => `<option value="${i + 1}" ${e.anniv_m == i + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select></div>`, 'facultatif · pour fêter son anniversaire') +
       G('Couleur de la tenue', swatches(e, 'couleur_tenue', O.couleur_tenue), sel(O.couleur_tenue, e.couleur_tenue)) +
@@ -906,7 +911,7 @@
       G('Espèce', thumbs({ type: chien ? 'chien' : p.type }, 'type', O.type.filter(t => !t.race), id => `<img src="/static/avatars/${Avatar.pick(O.type, id).img}.webp" alt="" loading="lazy">`)) +
       (chien ? G('Race', chips(p, 'type', races)) : '') +
       (!hors.includes('couleur') ? G(ty.couleur_fr || 'Couleur', swatches(p, 'couleur', colors), sel(colors, p.couleur)) : '') +
-      `<details class="multi reg" data-ouv="affa" ${OUVERT.affa ? 'open' : ''}><summary>Plus de détails <small>${det}</small></summary><div class="reg-b">` +
+      `<details class="multi reg voyant" data-ouv="affa" ${OUVERT.affa ? 'open' : ''}><summary>Plus de réglages <small>${det}</small></summary><div class="reg-b">` +
       G('Taille', chips(p, 'taille', O.taille)) +
       (!hors.includes('motif') ? G(p.type === 'oiseau' ? 'Ventre' : 'Motif', chips(p, 'motif', p.type === 'oiseau' ? O.motif.filter(m => m.id === 'uni' || m.id === 'ventre') : O.motif)) : '') +
       (!hors.includes('motif') && p.motif !== 'uni' ? G('Deuxième couleur', swatches(p, 'couleur2', O.couleur2), sel(O.couleur2, p.couleur2)) : '') +
@@ -923,7 +928,7 @@
       G('Teint', swatches(f, 'peau', O.peau), sel(O.peau, f.peau)) +
       G('Coiffure', thumbs(f, 'coiffure', O.coiffure.filter(c => COIF[f.genre].includes(c.id)), id => `<img src="/static/avatars/${Avatar.pick(O.coiffure, id).img}.webp" alt="" loading="lazy">`), sel(O.coiffure, f.coiffure)) +
       G('Couleur des cheveux', swatches(f, 'couleur_cheveux', O.couleur_cheveux), sel(O.couleur_cheveux, f.couleur_cheveux)) +
-      `<details class="multi reg" data-ouv="affs" ${OUVERT.affs ? 'open' : ''}><summary>Plus de détails <small>tenue, yeux, lunettes, taches de rousseur</small></summary><div class="reg-b">` +
+      `<details class="multi reg voyant" data-ouv="affs" ${OUVERT.affs ? 'open' : ''}><summary>Tenue, yeux, lunettes <small>tenue, yeux, lunettes, taches de rousseur</small></summary><div class="reg-b">` +
       G('Couleur de la tenue', swatches(f, 'couleur_tenue', O.couleur_tenue), sel(O.couleur_tenue, f.couleur_tenue)) +
       G('Tenue', chips(f, 'tenue', O.tenue.filter(t => !RETIREES.includes(t.id)))) +
       G('Yeux', swatches(f, 'yeux', O.yeux), sel(O.yeux, f.yeux)) +
@@ -1087,11 +1092,12 @@
         <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>`;
     const n = (F[c.formule] || {}).livres || 1, un = S.histoire.occasion ? (FETES.find(u => u.cle === S.histoire.occasion) || {}).nom : S.histoire.univers;
     const reg = (cle, titre, resume, corps) => `<details class="multi reg" data-ouv="${cle}" ${OUVERT[cle] ? 'open' : ''}><summary>${titre} <small>${resume}</small></summary><div class="reg-b">${corps}</div></details>`;
-    const hist = reg('hist', isGrand() ? `Personnaliser ses ${n} histoires` : n > 1 ? `Personnaliser ses ${n} livres` : 'Personnaliser son livre', c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : n > 1 ? `${motLivre().toLowerCase()} 1 : ${esc(S.histoire.theme)} · ${esc(un || '')}… thème et monde de chaque ${isGrand() ? 'histoire' : 'livre'}` : `${esc(S.histoire.theme)} · ${esc(un || '')}`, panelHistoire());
-    const regCal = reg('cal', 'Personnaliser le calendrier', `commence en ${esc(moisLib(S.calendrier.debut).toLowerCase())}${S.calendrier.dates.filter(x => (x.texte || '').trim()).length ? ` · ${S.calendrier.dates.filter(x => (x.texte || '').trim()).length} date(s) de famille` : ''}, modifiable`, optionsCalendrier());
+    if (OUVERT.hist === undefined) OUVERT.hist = true;      // le choix du thème et de l'univers est ouvert d'office : c'est le cœur du concept
+    const hist = reg('hist', c.formule === 'fetes' ? 'Choisir ses 6 fêtes' : isGrand() ? `Choisir ses ${n} histoires : thème et univers` : n > 1 ? `Choisir l'histoire de chaque livre : thème et univers` : `Choisir son histoire : thème et univers`, c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : n > 1 ? `${motLivre()} 1 : ${esc(S.histoire.theme)} · ${esc(un || '')}… les ${n} sont modifiables` : `Thème : ${esc(S.histoire.theme)} · Univers : ${esc(un || '')}`, panelHistoire());
+    const regCal = reg('cal', 'Choisir ses dates et le premier mois', `commence en ${esc(moisLib(S.calendrier.debut).toLowerCase())}${S.calendrier.dates.filter(x => (x.texte || '').trim()).length ? ` · ${S.calendrier.dates.filter(x => (x.texte || '').trim()).length} date(s) de famille` : ''}, modifiable`, optionsCalendrier());
     const regColo = reg('colo', `Choisir les ${COLO.nombre} coloriages du cahier`, `${S.coloriage.pages.length}/${COLO.nombre} choisies, notre sélection, modifiable`, pickerColoriage());
     return `<div class="confiance"><span>Créé avec l'IA</span><span>peaufiné par notre équipe avant impression</span><span>imprimé et livré chez vous</span><span>vous payez à la fin</span></div>` +
-      `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr}. Tout est pré-réglé : touchez <b>« Personnaliser »</b> sous une création pour changer son thème, ses dates ou ses pages.</p>` +
+      `<p class="hint" style="margin:0 0 14px;font-size:15px">Choisissez une ou plusieurs créations pour ${pr}. Pour son livre, vous choisissez <b>le thème</b> (la peur du noir, la rentrée, un petit frère…) et <b>l'univers</b> de l'aventure : c'est juste en dessous.</p>` +
       apercuHTML() +
       `<div class="crea-l">` +
       carte('livres', '/static/vitrine/couv_jade.webp', 'Ses livres d\'aventures', 'Une vraie histoire illustrée dont il est le héros, couverture rigide.', `E-book ${eur2(F.ebook.prix)} · livre imprimé ${eur2(F.livre.prix)}`, plans + hist) +
