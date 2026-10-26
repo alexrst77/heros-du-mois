@@ -71,6 +71,26 @@ def dye(rgb, w, base, target):
     return r * (1 - w) + r2 * w, g * (1 - w) + g2 * w, b * (1 - w) + b2 * w
 
 
+def hair_light(rgb, w, base, target):
+    """Cheveux éclaircis (blond, roux, châtain clair) : couleur atteinte sans grain ni aplat, mèches sombres gardées,
+    ombres chaudes, bords des mèches recouverts. Même formule que avatar.js (hairLight)."""
+    r, g, b = rgb
+    hb, sb, lb = [float(v) for v in rgb2hsl(*[np.array(v / 255) for v in base])]
+    ht, st, lt = [float(v) for v in rgb2hsl(*hexrgb(target))]
+    h, s, l = rgb2hsl(r, g, b)
+    dh = ((h - hb + 1.5) % 1) - .5
+    l2 = np.where(l <= lb, lt * np.power(np.maximum(l, 0) / max(lb, 1e-3), .8),
+                  np.minimum(.95, lt + (l - lb) * (1 - lt) / max(1 - lb, 1e-3) * 1.1))
+    ombre = np.maximum(0, lt - l2)
+    r2, g2, b2 = hsl2rgb(ht + dh * .15 - ombre * .09, np.minimum(1, st * (.8 + .2 * np.minimum(2, s / max(sb, .05))) + ombre * .25), l2)
+    w = np.minimum(1, w * 1.5)
+    return r * (1 - w) + r2 * w, g * (1 - w) + g2 * w, b * (1 - w) + b2 * w
+
+
+def plus_clair(base, target):
+    return float(rgb2hsl(*hexrgb(target))[2]) > float(rgb2hsl(*[np.array(v / 255) for v in base])[2])
+
+
 def iris(rgb, w, target):
     r, g, b = rgb
     ht, st, lt = [float(v) for v in rgb2hsl(*hexrgb(target))]
@@ -195,7 +215,8 @@ def paint(name, t):
     rgb = (px[..., 0], px[..., 1], px[..., 2])
     for i, k in enumerate("RG"):
         if t.get(k) and k in st:
-            rgb = dye(rgb, M[..., i], st[k], t[k]) if (t.get("dye") and k == "R") else shift_zone(rgb, M[..., i], st[k], t[k])
+            rgb = dye(rgb, M[..., i], st[k], t[k]) if (t.get("dye") and k == "R") else \
+                hair_light(rgb, M[..., i], st[k], t[k]) if (k == "R" and plus_clair(st[k], t[k])) else shift_zone(rgb, M[..., i], st[k], t[k])
     if t.get("motif") and t.get("M") and "R" in st:       # motif des animaux, dans la couleur 2
         wm = motif_weight(t["motif"], st, size) * M[..., 0] * (1 - M[..., 1])
         rgb = shift_zone(rgb, wm, st["R"], t["M"])

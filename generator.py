@@ -1026,7 +1026,7 @@ def recolor_model(kind, cfg):
     try:
         name = paint_name(kind, cfg)
         t = recolor_targets(kind, cfg)
-        out = CACHE / f"base_{hashlib.sha1(json.dumps([name, t, 'v8'], sort_keys=True).encode()).hexdigest()[:16]}.png"
+        out = CACHE / f"base_{hashlib.sha1(json.dumps([name, t, 'v9'], sort_keys=True).encode()).hexdigest()[:16]}.png"
         if out.exists():
             return out
         if True:                                                 # même calcul que l'aperçu du navigateur (static/avatar.js)

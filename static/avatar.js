@@ -257,6 +257,14 @@
     const l2 = l <= z.lb ? l * z.lt / Math.max(z.lb, 1e-3) : Math.min(.97, z.lt + (l - z.lb) * .8 * (1 - z.lt) / Math.max(1 - z.lb, 1e-3));
     return hsl2rgb(z.ht + dh * .06, Math.min(1, z.stt * (.88 + .12 * Math.min(2, s / Math.max(z.sb, .05)))), l2);
   }
+  /* cheveux éclaircis (blond, roux, châtain clair) : la couleur choisie est atteinte sans grain ni aplat ; les mèches sombres
+     restent des mèches (relief proportionnel), les reflets montent doucement. Même formule que avatar_paint.py (hair_light). */
+  function hairLight(h, s, l, z) {
+    const dh = ((h - z.hb + 1.5) % 1) - .5;
+    const l2 = l <= z.lb ? z.lt * Math.pow(l / Math.max(z.lb, 1e-3), .8) : Math.min(.95, z.lt + (l - z.lb) * (1 - z.lt) / Math.max(1 - z.lb, 1e-3) * 1.1);
+    const ombre = Math.max(0, z.lt - l2);                 // ombres plus chaudes (blond doré, pas olive)
+    return hsl2rgb(z.ht + dh * .15 - ombre * .09, Math.min(1, z.stt * (.8 + .2 * Math.min(2, s / Math.max(z.sb, .05))) + ombre * .25), l2);
+  }
   const WHITE = '#F4F0E6';
   function tenueAt(kind, X, Y, g, k, main, white) {     // couleur du vêtement en (X, Y) et détail peint (-1 sombre, +1 clair)
     const nx = g.neck[0] * k, ny = g.neck[1] * k, hw = g.hw * k, y0 = g.box[1] * k, y1 = g.box[3] * k;
@@ -344,9 +352,10 @@
         let r = px[p] / 255, g = px[p + 1] / 255, b = px[p + 2] / 255;
         const mix = (w, c) => { r = r * (1 - w) + c[0] * w; g = g * (1 - w) + c[1] * w; b = b * (1 - w) + c[2] * w; };
         for (const [z, i] of [[zR, 0], [zG, 1]]) {
-          const w = M[p + i] / 255; if (!z || w < .01) continue;
+          let w = M[p + i] / 255; if (!z || w < .01) continue;
+          if (i === 0 && !targets.dye && z.lt > z.lb) w = Math.min(1, w * 1.5);      // bords des mèches : pas de reste de brun
           const [h, s, l] = rgb2hsl(r, g, b);
-          mix(w, targets.dye && i === 0 ? dye(h, s, l, z) : hsl2rgb(h + z.dh, Math.min(1, s * z.ks), lightMap(l, z.lb, z.lt)));
+          mix(w, targets.dye && i === 0 ? dye(h, s, l, z) : i === 0 && z.lt > z.lb ? hairLight(h, s, l, z) : hsl2rgb(h + z.dh, Math.min(1, s * z.ks), lightMap(l, z.lb, z.lt)));
         }
         if (zM) { const n = p / 4, X = n % P.w, Y = (n - X) / P.w, w = motifW(targets.motif, st, X, Y, k) * (M[p] / 255) * (1 - M[p + 1] / 255);
           if (w > .01) { const [h, s, l] = rgb2hsl(r, g, b); mix(w, hsl2rgb(h + zM.dh, Math.min(1, s * zM.ks), lightMap(l, zM.lb, zM.lt))); } }
