@@ -1,5 +1,7 @@
 /* Mon Héros du Mois : thème commun (vitrine, création du livre, pages annexes) */
 @font-face { font-family: "Young Serif"; src: url("/static/fonts/YoungSerif-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Grandstander"; src: url("/static/fonts/grandstander-latin-800-normal.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Grandstander"; src: url("/static/fonts/grandstander-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 @font-face { font-family: "Nunito"; src: url("/static/fonts/Nunito.woff") format("woff"); font-weight: 200 1000; font-display: swap; }
 :root {
   /* « Fête foraine du soir » : les couleurs des livres (nuit prune, corail, lagon, lucioles) */
@@ -17,7 +19,7 @@
   --joue: #F2557A;
   --trait: #E6DAF7;
   --erreur: #C4122F;
-  --titre: "Young Serif", Georgia, serif;
+  --titre: "Grandstander", "Nunito", system-ui, sans-serif;      /* titres d'album jeunesse, ronds et lisibles */
   --texte: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 * { box-sizing: border-box; }
@@ -28,7 +30,7 @@ img { max-width: 100%; }
 a { color: var(--encre); }
 :focus-visible { outline: 3px solid var(--luciole); outline-offset: 2px; border-radius: 6px; }
 .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
-h2 { font: 400 clamp(30px, 3.8vw, 44px)/1.1 var(--titre); margin: 0 0 12px; letter-spacing: -.3px; max-width: 22ch; }
+h2 { font: 800 clamp(30px, 3.8vw, 44px)/1.1 var(--titre); margin: 0 0 12px; letter-spacing: -.3px; max-width: 22ch; }
 .sous { color: var(--encre-2); font-size: 18px; margin: 0; max-width: 60ch; }
 .bloc { padding: 84px 0; }
 .bloc.doux { background: linear-gradient(180deg, rgba(247,242,255,0), #FBE7EE 50%, rgba(247,242,255,0)); }

@@ -122,7 +122,7 @@ __LDJSON__
   .nuit::before, .nuit::after { content:""; position:absolute; left:0; right:0; height:40px; pointer-events:none; }
   .nuit::before { top:-40px; background:linear-gradient(180deg, rgba(26,31,74,0), rgba(26,31,74,.08)); }
   .nuit { background:var(--nuit); color:#EEF0FF; padding:84px 0 92px; position:relative; }
-  .nuit h2 { color:#fff; }
+  .nuit h2 { color:#fff; max-width:24ch; }
   .nuit .sous { color:#C4C9EE; }
   .double { margin-top:36px; grid-template-columns:1fr 1fr; background:var(--papier); border-radius:6px; overflow:hidden; position:relative;
             box-shadow:0 40px 80px -30px rgba(0,0,0,.7), 0 0 0 10px rgba(255,255,255,.04); }
@@ -519,143 +519,193 @@ __LDJSON__
   .ia-moi .vend { display:block; margin-top:6px; font-size:13px; opacity:.8; }
   @media (max-width:900px) { .ia-g { grid-template-columns:1fr 1fr; } .ia-pq { grid-template-columns:1fr; } }
   @media (max-width:520px) { .ia { padding:52px 0; } .ia-g { grid-template-columns:1fr; } .ia-c { display:grid; grid-template-columns:44px 1fr; gap:0 10px; padding:14px; } .ia-c i { grid-row:span 2; margin:0; } .ia-moi { grid-template-columns:1fr; } }
-  /* ================================================ « Librairie » : sobre, chaleureux, papier crème (remplace l'ancien décor violet) */
-  :root { --fond:#FBF7F1; --sable:#F3EBDD; --encre-2:#4F4867; --trait:#E8DFD0; }
-  html, body { background:var(--fond); }
-  body { background-image:none; }
-  .btn { border:0; box-shadow:0 10px 22px -12px rgba(36,24,77,.55); font-weight:800; }
-  .btn:hover { transform:translateY(-1px); box-shadow:0 14px 26px -12px rgba(36,24,77,.6); }
-  .btn:active { transform:none; box-shadow:0 6px 14px -10px rgba(36,24,77,.6); }
-  .btn.clair { background:var(--encre); color:#fff; box-shadow:0 10px 22px -12px rgba(36,24,77,.55); }
-  .btn.clair:hover { box-shadow:0 14px 26px -12px rgba(36,24,77,.6); }
-  .btn.ghost { background:transparent; border:1.5px solid var(--encre); box-shadow:none; }
-  .btn.ghost:hover { background:#fff; box-shadow:none; }
-  .noel { background:var(--encre); color:#FFF7E8; font-weight:600; } .noel b { color:var(--luciole); }
-  .top { background:color-mix(in srgb, var(--fond) 90%, transparent); border-bottom:1px solid var(--trait); }
-  .burger { border:1.5px solid var(--trait); }
-  .bloc { padding:76px 0; }
-  .bloc h2 { padding-bottom:0; } .bloc h2::after { display:none; }
-  h2 { letter-spacing:-.4px; max-width:28ch; } .aussi .rayon-h p { color:var(--encre-2); } .centre { text-align:center; margin-left:auto; margin-right:auto; }
-  .kick { font:800 13px/1 var(--texte); letter-spacing:1.4px; text-transform:uppercase; color:#B5532E; margin:0 0 14px; }
-  @media (max-width:640px) { .bloc { padding:56px 0; } }
+  /* ================================================ « Livre de chevet » : papier découpé, nuit bleue, couleurs d'album jeunesse */
+  @font-face { font-family:"Grandstander"; src:url("/static/fonts/grandstander-latin-800-normal.woff2") format("woff2"); font-weight:800; font-display:swap; }
+  @font-face { font-family:"Grandstander"; src:url("/static/fonts/grandstander-latin-700-normal.woff2") format("woff2"); font-weight:700; font-display:swap; }
+  @font-face { font-family:"Grandstander"; src:url("/static/fonts/grandstander-latin-600-normal.woff2") format("woff2"); font-weight:600; font-display:swap; }
+  :root { --titre:"Grandstander", "Nunito", system-ui, sans-serif;
+          --nuit:#22306B; --nuit-2:#2D3E86; --ciel-c:#D7ECFB; --soleil:#FFC845; --soleil-f:#E0A21A; --framboise:#F0607A; --menthe:#A9E4D0;
+          --papier:#FFFDF7; --encre:#1E2350; --encre-2:#4A4F74; --trait:#E4E2EE; }
+  html, body { background:var(--papier); } body { background-image:none; color:var(--encre); font-size:18px; }
+  h1, h2, h3 { font-family:var(--titre); font-weight:800; letter-spacing:-.2px; }
+  h2 { font-size:clamp(30px, 4.2vw, 48px); line-height:1.08; max-width:20ch; } .bloc h2::after { display:none; } .bloc h2 { padding-bottom:0; }
+  .sous { font-size:18px; line-height:1.6; color:var(--encre-2); } .centre { text-align:center; margin-left:auto; margin-right:auto; }
+  .bloc { padding:80px 0; } @media (max-width:640px) { .bloc { padding:58px 0; } }
+  /* boutons « jouet » : relief en bas, ils s'enfoncent au clic */
+  .btn { border:0; border-radius:999px; background:var(--soleil); color:var(--encre); font:800 17px/1 var(--texte); padding:16px 26px; box-shadow:0 5px 0 var(--soleil-f); }
+  .btn:hover { transform:translateY(-1px); box-shadow:0 6px 0 var(--soleil-f); }
+  .btn:active { transform:translateY(4px); box-shadow:0 1px 0 var(--soleil-f); }
+  .btn.clair { background:var(--nuit); color:#fff; box-shadow:0 5px 0 #141C45; } .btn.clair:hover { box-shadow:0 6px 0 #141C45; } .btn.clair:active { box-shadow:0 1px 0 #141C45; }
+  .btn.ghost { background:#fff; color:var(--encre); box-shadow:0 4px 0 var(--trait); border:2px solid var(--trait); } .btn.ghost:hover { box-shadow:0 5px 0 var(--trait); }
+  .btn.petit { padding:12px 18px; font-size:15px; }
+  .noel { background:var(--framboise); color:#fff; font-weight:700; } .noel b { color:#fff; text-decoration:underline; text-decoration-thickness:2px; }
+  .top { background:color-mix(in srgb, var(--papier) 92%, transparent); border-bottom:0; box-shadow:0 1px 0 var(--trait); }
+  .top nav a { font-weight:700; } .burger { border:2px solid var(--trait); }
 
-  /* ouverture : le concept, et une vraie scène de lecture */
-  .ouv { padding:44px 0 56px; background:var(--fond); color:var(--encre); }
-  .ouv-in { display:grid; grid-template-columns:1.1fr .9fr; gap:56px; align-items:center; }
-  .ouv h1 { font:400 clamp(36px, 5vw, 60px)/1.06 var(--titre); margin:0 0 18px; letter-spacing:-.8px; max-width:15ch; color:var(--encre); text-shadow:none; }
-  .ouv p.intro { font-size:19px; line-height:1.55; color:var(--encre-2); max-width:50ch; margin:0 0 26px; font-weight:400; }
-  .ouv .essai { background:#fff; border:1px solid var(--trait); border-radius:20px; padding:18px; max-width:500px; box-shadow:0 24px 50px -34px rgba(36,24,77,.45); transform:none; }
-  .ouv .essai label { font-size:15px; margin-bottom:8px; }
-  .ouv .essai input { border:1.5px solid var(--trait); font-size:17px; padding:12px 14px; }
-  .ouv .essai input:focus { border-color:var(--encre); }
-  .genres { margin-top:12px; }
-  .genre { flex-direction:row; justify-content:center; gap:10px; border:1.5px solid var(--encre); border-radius:999px; background:var(--luciole); box-shadow:none; padding:8px 14px 8px 8px; font:800 16px var(--texte); }
-  .genre:hover { transform:translateY(-1px); background:#FFCB55; } .genre:active { transform:none; box-shadow:none; }
-  .genre img { width:44px; height:44px; }
-  .essai-n { font-size:14px; margin-top:12px; }
-  .ouv-photo { margin:0; position:relative; }
-  .ouv-photo img { display:block; width:100%; height:auto; aspect-ratio:4/4.4; object-fit:cover; border-radius:28px; box-shadow:0 40px 70px -40px rgba(36,24,77,.55); }
-  .ouv-photo figcaption { position:absolute; left:16px; bottom:16px; background:rgba(255,255,255,.92); color:var(--encre); font:700 13px var(--texte); padding:7px 12px; border-radius:999px; }
-  @media (max-width:900px) { .ouv { padding:26px 0 40px; } .ouv-in { grid-template-columns:1fr; gap:28px; } .ouv-photo img { aspect-ratio:4/3; } .ouv p.intro { font-size:17px; } }
+  /* ouverture : la nuit d'un album, le livre qui s'ouvre tout seul */
+  .ouv { position:relative; overflow:hidden; background:var(--nuit); color:#fff; padding:56px 0 120px; }
+  .ouv .ciel { position:absolute; inset:0; pointer-events:none; }
+  .ouv .lune { position:absolute; right:5%; top:34px; width:84px; fill:#FFE9A8; transform:rotate(-18deg); }
+  .ouv .et { position:absolute; width:22px; color:var(--soleil); } .ouv .et svg { width:100%; fill:currentColor; display:block; }
+  .ouv .e1 { left:4%; top:40px; transform:rotate(12deg); } .ouv .e2 { left:44%; top:26px; width:16px; transform:rotate(-8deg); color:#FFE9A8; }
+  .ouv .e3 { right:18%; top:150px; width:14px; color:#fff; } .ouv .e4 { left:2%; bottom:150px; width:16px; color:var(--framboise); transform:rotate(20deg); }
+  .ouv .e5 { right:3%; bottom:190px; width:26px; transform:rotate(-14deg); }
+  .ouv-in { position:relative; display:grid; grid-template-columns:1fr minmax(0, 520px); grid-template-areas:"txt livre" "form livre"; gap:22px 48px; align-items:start; }
+  .ouv-txt { grid-area:txt; align-self:end; } .ouv .scene3d { grid-area:livre; align-self:center; } .ouv .essai { grid-area:form; }
+  .ouv h1 { font:800 clamp(38px, 5.4vw, 66px)/1.02 var(--titre); color:#fff; margin:0 0 18px; max-width:13ch; letter-spacing:-.5px; text-shadow:none; }
+  .ouv p.intro { font-size:19px; line-height:1.6; color:#DCE3FF; max-width:46ch; margin:0; font-weight:500; }
+  .ouv .essai { background:#fff; color:var(--encre); border:0; border-radius:26px; padding:20px; max-width:480px; transform:rotate(-1deg); box-shadow:0 8px 0 #141C45; outline:2px dashed #C9D3F5; outline-offset:-10px; }
+  .ouv .essai label { font:800 16px var(--texte); margin-bottom:8px; } .ouv .essai label small { font-weight:600; }
+  .ouv .essai input { border:2px solid var(--trait); border-radius:14px; font:700 18px var(--texte); padding:12px 14px; }
+  .ouv .essai input:focus { border-color:var(--nuit); }
+  .genres { margin-top:12px; gap:10px; }
+  .genre { flex-direction:row; justify-content:center; gap:10px; border:0; border-radius:999px; background:var(--soleil); box-shadow:0 5px 0 var(--soleil-f); padding:8px 16px 8px 8px; font:800 17px var(--texte); color:var(--encre); }
+  .genre + .genre { background:var(--menthe); box-shadow:0 5px 0 #6CBFA4; }
+  .genre:hover { transform:translateY(-1px); } .genre:active { transform:translateY(4px); box-shadow:none; }
+  .genre img { width:44px; height:44px; background:#fff; }
+  .essai-n { font-size:14.5px; color:var(--encre-2); margin:14px 0 0; }
+  .ouv .scene3d { height:460px; }
+  .ouv .halo { background:radial-gradient(circle, rgba(255,232,168,.55) 0%, rgba(255,232,168,0) 62%); }
+  .ouv .ombre { background:radial-gradient(closest-side, rgba(10,14,40,.6), transparent); }
+  .collines { position:absolute; left:0; right:0; bottom:-1px; width:100%; height:90px; display:block; }
+  .collines .c1 { fill:var(--nuit-2); } .collines .c2 { fill:var(--ciel-c); }
+  @media (max-width:900px) {
+    .ouv { padding:30px 0 96px; }
+    .ouv-in { grid-template-columns:1fr; grid-template-areas:"txt" "livre" "form"; gap:8px; }
+    .ouv .scene3d { height:330px; } .ouv .livre { --w:min(250px, 64vw); }
+    .ouv p.intro { font-size:17px; } .ouv .lune { width:54px; top:14px; right:4%; }
+    .collines { height:56px; } .ouv .e1, .ouv .e2 { display:none; }
+  }
+  @media (max-width:420px) { .genre { font-size:15px; padding:6px 12px 6px 6px; gap:6px; } .genre img { width:36px; height:36px; } }
 
-  /* le concept : quatre choix */
-  .concept { background:#fff; border-top:1px solid var(--trait); border-bottom:1px solid var(--trait); }
-  .choix { list-style:none; padding:0; margin:40px 0 0; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:22px; counter-reset:c; }
-  .choix li { counter-increment:c; }
-  .choix .cv { aspect-ratio:1; border-radius:22px; background:var(--sable); overflow:hidden; display:grid; place-items:center; margin-bottom:16px; position:relative; }
-  .choix .cv::before { content:counter(c); position:absolute; left:12px; top:12px; width:30px; height:30px; border-radius:50%; background:#fff; color:var(--encre); font:800 14px/30px var(--texte); text-align:center; z-index:1; }
-  .choix .av img { width:86%; height:auto; margin-top:12%; }
-  .choix .comp { display:flex; align-items:flex-end; justify-content:center; padding:0 6% 8%; }
-  .choix .comp img { width:50%; height:auto; margin:0 -4%; } .choix .comp img:last-child { width:46%; }
+  /* le concept : quatre choix, quatre formes de papier découpé */
+  .concept { background:var(--ciel-c); }
+  .choix { list-style:none; padding:0; margin:44px 0 0; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:28px; counter-reset:c; position:relative; }
+  .choix li { counter-increment:c; position:relative; }
+  .choix .cv { aspect-ratio:1; display:grid; place-items:center; margin-bottom:16px; position:relative; overflow:visible; }
+  .choix .cv::after { content:""; position:absolute; inset:0; z-index:0; }
+  .choix .cv > * { position:relative; z-index:1; }
+  .choix li:nth-child(1) .cv::after { background:var(--soleil); border-radius:58% 42% 52% 48% / 46% 56% 44% 54%; }
+  .choix li:nth-child(2) .cv::after { background:var(--menthe); border-radius:44% 56% 40% 60% / 58% 42% 58% 42%; }
+  .choix li:nth-child(3) .cv::after { background:#FFB3C0; border-radius:50% 50% 46% 54% / 40% 52% 48% 60%; }
+  .choix li:nth-child(4) .cv::after { background:#fff; border-radius:56% 44% 60% 40% / 50% 46% 54% 50%; }
+  .choix .cv::before { content:counter(c); position:absolute; left:2%; top:2%; z-index:2; width:40px; height:40px; border-radius:50%; background:var(--nuit); color:#fff; font:800 19px/40px var(--titre); text-align:center; }
+  .choix .av img { width:78%; height:auto; margin-top:10%; }
+  .choix .comp { display:flex; align-items:center; justify-content:center; }
+  .choix .comp img { width:48%; height:auto; margin:0 -4%; } .choix .comp img:last-child { width:44%; margin-top:14%; }
   .choix .mondes3 { display:block; }
-  .choix .mondes3 img { position:absolute; width:58%; aspect-ratio:1; object-fit:cover; border-radius:14px; border:4px solid #fff; box-shadow:0 14px 24px -14px rgba(36,24,77,.6); }
-  .choix .mondes3 img:nth-child(1) { left:8%; top:12%; transform:rotate(-6deg); } .choix .mondes3 img:nth-child(2) { right:8%; top:22%; transform:rotate(5deg); }
-  .choix .mondes3 img:nth-child(3) { left:22%; bottom:6%; transform:rotate(-1deg); z-index:1; }
-  .choix .themes { display:flex; flex-wrap:wrap; align-content:center; justify-content:center; gap:8px; padding:14%; }
-  .choix .themes span { background:#fff; border-radius:999px; padding:7px 12px; font:700 13px var(--texte); color:var(--encre); box-shadow:0 6px 14px -10px rgba(36,24,77,.5); }
-  .choix .themes span:nth-child(odd) { transform:rotate(-2deg); } .choix .themes span:nth-child(even) { transform:rotate(2deg); }
-  .choix b { display:block; font:400 23px/1.2 var(--titre); margin-bottom:6px; }
-  .choix p { margin:0; color:var(--encre-2); font-size:16px; line-height:1.5; }
-  .concept-bas { margin-top:36px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
-  .concept-bas span { color:var(--encre-2); font-size:15px; }
+  .choix .mondes3 img { position:absolute; width:52%; aspect-ratio:1; object-fit:cover; border-radius:16px; border:5px solid #fff; z-index:1; }
+  .choix .mondes3 img:nth-child(1) { left:10%; top:12%; transform:rotate(-8deg); } .choix .mondes3 img:nth-child(2) { right:8%; top:20%; transform:rotate(6deg); }
+  .choix .mondes3 img:nth-child(3) { left:26%; bottom:8%; transform:rotate(-2deg); z-index:2; }
+  .choix .themes { display:flex; flex-wrap:wrap; align-content:center; justify-content:center; gap:7px; padding:16%; }
+  .choix .themes span { background:var(--ciel-c); border-radius:999px; padding:7px 12px; font:700 13.5px var(--texte); color:var(--encre); }
+  .choix .themes span:nth-child(odd) { transform:rotate(-3deg); background:#FFE7A0; } .choix .themes span:nth-child(3n) { background:#D4F2E7; transform:rotate(2deg); }
+  .choix b { display:block; font:800 25px/1.15 var(--titre); margin-bottom:6px; }
+  .choix p { margin:0; color:var(--encre-2); font-size:16.5px; line-height:1.5; }
+  .concept-bas { margin-top:40px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .concept-bas span { color:var(--encre-2); font-size:15.5px; font-weight:600; }
   @media (max-width:980px) { .choix { grid-template-columns:repeat(2, minmax(0,1fr)); } }
-  @media (max-width:520px) { .choix { grid-template-columns:1fr 1fr; gap:14px; } .choix b { font-size:19px; } .choix p { font-size:14.5px; } .choix .themes { padding:8%; gap:5px; } .choix .themes span { font-size:11px; padding:5px 8px; } }
+  @media (max-width:520px) { .choix { gap:22px 14px; } .choix b { font-size:20px; } .choix p { font-size:15px; } .choix .cv::before { width:32px; height:32px; font-size:16px; line-height:32px; }
+    .choix .themes { padding:10%; gap:4px; } .choix .themes span { font-size:11.5px; padding:5px 8px; } }
 
-  /* univers */
-  .mondes { background:var(--fond); }
-  .cartes { margin-top:28px; }
-  .carte { border:0 !important; box-shadow:0 18px 34px -26px rgba(36,24,77,.6) !important; border-radius:18px; }
-  .carte .vis { border-radius:12px; }
-  .h-occ { font:400 24px/1.2 var(--titre); margin:48px 0 0; }
-  .plus { margin-top:20px; }
+  /* univers : des vignettes collées dans un album */
+  .mondes { background:var(--papier); }
+  .cartes { margin-top:30px; gap:18px; }
+  .carte { border:0 !important; background:#fff; padding:8px 8px 12px; border-radius:20px; box-shadow:0 4px 0 var(--trait) !important; }
+  .cartes li:nth-child(odd) .carte { transform:rotate(-1.2deg); } .cartes li:nth-child(even) .carte { transform:rotate(1deg); }
+  .carte:hover { transform:rotate(0) translateY(-3px) !important; }
+  .carte .vis { border-radius:14px; }
+  .carte b { font:700 16px/1.2 var(--titre); }
+  .h-occ { font:800 28px/1.1 var(--titre); margin:56px 0 0; }
+  .plus { margin-top:24px; }
 
-  /* feuilleter */
-  .nuit { background:#211B3F; padding:80px 0; }
+  /* feuilleter : la nuit, entre deux nuages */
+  .nuit { background:var(--nuit); padding:110px 0 120px; position:relative; }
   .nuit::before, .nuit::after { display:none; }
-  .nuit .sous { color:#CFC9E6; }
-  .etal button > span { color:#BDB6DA; }
-  .faits { list-style:none; padding:0; margin:48px 0 0; display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; border-top:1px solid rgba(255,255,255,.14); padding-top:28px; }
-  .faits li { color:#CFC9E6; font-size:15px; } .faits b { display:block; color:#fff; font:400 21px/1.2 var(--titre); margin-bottom:2px; }
+  .nuages { position:absolute; left:0; right:0; width:100%; height:44px; display:block; fill:var(--papier); }
+  .nuages.haut { top:-1px; } .nuages.bas { bottom:-1px; fill:var(--soleil); }
+  .nuit h2 { color:#fff; max-width:24ch; } .nuit .sous { color:#CFD8FF; }
+  .etal button > b { font:800 clamp(18px,2.2vw,26px)/1.1 var(--titre); } .etal button > span { color:#AFBCF0; }
+  .faits { list-style:none; padding:26px 0 0; margin:52px 0 0; display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; border-top:2px dashed rgba(255,255,255,.22); }
+  .faits li { color:#CFD8FF; font-size:15.5px; } .faits b { display:block; color:var(--soleil); font:800 24px/1.15 var(--titre); margin-bottom:2px; }
   @media (max-width:760px) { .faits { grid-template-columns:1fr 1fr; gap:18px; } }
 
-  /* coloriage, mis en avant */
-  .coloriage { background:#EAF4EF; }
+  /* coloriage : la page jaune, avec sa pastille */
+  .coloriage { background:var(--soleil); }
   .colo { display:grid; grid-template-columns:1.05fr 1fr; gap:56px; align-items:center; }
-  .colo .kick { color:#0E6B60; }
-  .colo-photos { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .colo-photos img { width:100%; height:100%; display:block; border-radius:18px; object-fit:cover; aspect-ratio:3/4; box-shadow:0 24px 44px -30px rgba(36,24,77,.55); }
-  .colo-photos img.grande { grid-column:1/-1; aspect-ratio:1300/1052; }
+  .colo > div:last-child { position:relative; }
+  .pastille { position:absolute; right:0; top:-46px; width:118px; height:118px; border-radius:50%; background:var(--framboise); color:#fff; display:grid; place-items:center; text-align:center;
+              font:800 16px/1.1 var(--titre); padding:14px; transform:rotate(12deg); box-shadow:0 5px 0 #C4405A; }
+  .coloriage h2 { max-width:14ch; } .coloriage .sous { color:#4A3B10; }
+  .colo-photos { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .colo-photos img { width:100%; height:100%; display:block; border-radius:20px; object-fit:cover; aspect-ratio:3/4; border:6px solid #fff; }
+  .colo-photos img.grande { grid-column:1/-1; aspect-ratio:1300/1052; transform:rotate(-1.5deg); }
+  .colo-photos img:nth-child(2) { transform:rotate(2deg); } .colo-photos img:nth-child(3) { transform:rotate(-2deg); }
   .liste-c { list-style:none; padding:0; margin:22px 0; display:grid; gap:10px; }
-  .liste-c li { position:relative; padding-left:28px; color:var(--encre-2); }
-  .liste-c li::before { content:""; position:absolute; left:3px; top:8px; width:12px; height:7px; border-left:2.5px solid var(--mousse); border-bottom:2.5px solid var(--mousse); transform:rotate(-45deg); }
+  .liste-c li { position:relative; padding-left:34px; color:#4A3B10; }
+  .liste-c li::before { content:""; position:absolute; left:0; top:3px; width:22px; height:22px; border-radius:50%; background:#fff;
+                        background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%2322306B' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-size:16px; background-position:center; background-repeat:no-repeat; }
   .liste-c b { color:var(--encre); }
-  .prix-l { margin:0 0 18px; color:var(--encre-2); } .prix-l b { font:800 26px/1 var(--texte); color:var(--encre); } .prix-l span { display:block; font-size:14px; margin-top:4px; }
-  @media (max-width:900px) { .colo { grid-template-columns:1fr; gap:30px; } .colo > div:last-child { order:-1; } }
+  .prix-l { margin:0 0 20px; color:#4A3B10; } .prix-l b { font:800 30px/1 var(--titre); color:var(--encre); } .prix-l span { display:block; font-size:14.5px; margin-top:4px; }
+  .coloriage .btn { background:var(--nuit); color:#fff; box-shadow:0 5px 0 #141C45; }
+  @media (max-width:900px) { .colo { grid-template-columns:1fr; gap:34px; } .colo > div:last-child { order:-1; } .pastille { width:96px; height:96px; font-size:14px; top:-70px; right:-4px; } }
 
   /* formules */
-  .formule { border:1px solid var(--trait); box-shadow:none; border-radius:20px; background:#fff; padding:24px 22px; }
-  .formule.phare { background:var(--encre); border-color:var(--encre); box-shadow:0 30px 60px -34px rgba(36,24,77,.8); }
-  .formule.phare .sous, .formule.phare li { color:#DCD6F2; }
-  .formule .etiq { background:var(--luciole); border:0; }
+  #formules { background:var(--papier); }
+  .formules.quatre { gap:18px; margin-top:40px; }
+  .formule { border:0; border-radius:24px; background:#fff; padding:0 22px 24px; box-shadow:0 5px 0 var(--trait); overflow:hidden; }
+  .formule::before { content:""; display:block; height:14px; margin:0 -22px 20px; background:var(--ciel-c); }
+  .formule:nth-child(2)::before { background:var(--menthe); } .formule:nth-child(4)::before { background:#FFB3C0; }
+  .formule.phare { background:var(--nuit); box-shadow:0 5px 0 #141C45; transform:none; } .formule.phare::before { background:var(--soleil); }
+  .formule.phare h3 { color:#fff; } .formule.phare .sous, .formule.phare li { color:#D6DEFF; }
+  .formule h3 { font:800 28px/1.1 var(--titre); }
+  .formule .etiq { background:var(--soleil); border:0; font-weight:800; }
+  .formule.phare .etiq { background:var(--framboise); color:#fff; }
   .formule ul { margin:16px 0 22px; }
-  .petit-note a { color:var(--encre); font-weight:700; }
+  .petit-note { margin-top:18px; } .petit-note a { color:var(--encre); font-weight:800; }
 
   /* le même héros, partout */
-  .aussi { background:#fff; border-top:1px solid var(--trait); overflow:hidden; }
-  .rayon-h h2 { color:var(--encre); font-size:clamp(28px, 3.4vw, 40px); }
-  .fleches button { border:1.5px solid var(--trait); color:var(--encre); }
-  .fleches button:hover:not(:disabled) { background:var(--sable); }
-  .etal-p { padding-top:10px; }
+  .aussi { background:var(--menthe); overflow:hidden; }
+  .rayon-h h2 { color:var(--encre); } .aussi .rayon-h p { color:#2E4A42; }
+  .fleches button { border:0; background:#fff; color:var(--encre); box-shadow:0 4px 0 #6CBFA4; }
+  .fleches button:hover:not(:disabled) { background:#fff; }
+  .etal-p { padding-top:12px; padding-bottom:20px; }
   .prod { width:clamp(220px, 22vw, 262px); }
-  .prod .ph { border:0; box-shadow:0 22px 40px -28px rgba(36,24,77,.7) !important; background:var(--sable); }
-  .prod h3 { color:var(--encre); font-size:21px; }
-  .prod p { color:var(--encre-2); } .prod p b { color:var(--encre); white-space:nowrap; }
-  .prod .lien { margin-top:10px; font-weight:800; color:var(--encre); font-size:15px; }
+  .prod .ph { border:6px solid #fff; border-radius:22px; box-shadow:none !important; background:#fff; }
+  .prod:nth-child(odd) .ph { transform:rotate(-1.5deg); } .prod:nth-child(even) .ph { transform:rotate(1.5deg); }
+  .prod h3 { color:var(--encre); font:800 22px/1.15 var(--titre); }
+  .prod p { color:#2E4A42; } .prod p b { color:var(--encre); white-space:nowrap; }
+  .prod .lien { margin-top:10px; font-weight:800; color:var(--encre); font-size:15.5px; }
 
   /* comment nous le fabriquons */
-  .ia { background:var(--fond); padding:76px 0; }
+  .ia { background:var(--papier); padding:80px 0; }
   .ia h2 { max-width:none; }
   .ia-pq { margin:0; grid-template-columns:1.1fr 1fr; gap:40px; }
-  .ia-pq p { font-size:17px; }
-  .ia-cmp { background:#fff; border:1px solid var(--trait); }
-  .ia-moi { background:#fff; color:var(--encre); border:1px solid var(--trait); }
+  .ia-pq p { font-size:17.5px; color:var(--encre-2); }
+  .ia-cmp { background:#fff; border:0; border-radius:22px; box-shadow:0 5px 0 var(--trait); padding:16px 18px; }
+  .ia-cmp span:nth-child(3) { color:#138A6E; font-weight:900; } .ia-cmp span:nth-child(2) { color:var(--framboise); font-weight:900; }
+  .ia-moi { background:var(--ciel-c); color:var(--encre); border:0; border-radius:26px; }
   .ia-moi p { color:var(--encre-2); } .ia-moi b { color:var(--encre); } .ia-moi a { color:var(--encre); }
-  .ia-moi .rond { background:var(--sable); }
+  .ia-moi .rond { background:var(--soleil); font:800 30px var(--titre); }
   @media (max-width:900px) { .ia-pq { grid-template-columns:1fr; gap:24px; } }
-  @media (max-width:420px) { .genre { font-size:15px; padding:6px 10px 6px 6px; gap:6px; } .genre img { width:36px; height:36px; } }
-  .fin img { height:auto; }
 
   .bloc.doux { background:#fff; }
-  .avis figure { border:1px solid var(--trait); }
-  .faq summary { font-size:17px; }
-  .contact { border:1px solid var(--trait) !important; box-shadow:0 24px 50px -36px rgba(36,24,77,.45) !important; }
+  .avis figure { border:0; border-radius:22px; box-shadow:0 5px 0 var(--trait); }
+  #questions { background:var(--papier); }
+  .faq details { border-bottom:2px dotted var(--trait); }
+  .faq summary { font-size:18px; font-weight:800; }
+  .faq summary::after { font:800 28px var(--titre); color:var(--framboise); }
+  .contact { border:0 !important; border-radius:26px; box-shadow:0 6px 0 var(--trait) !important; background:#fff; }
+  .contact h3 { font:800 28px/1.15 var(--titre); }
+  .contact input, .contact select, .contact textarea { border-color:var(--trait); }
 
-  .fin { display:grid; grid-template-columns:1.2fr .8fr; gap:0; padding:0; text-align:left; background:var(--encre); border:0; box-shadow:none; border-radius:28px; overflow:hidden; }
-  .fin > div { padding:56px 48px; align-self:center; }
-  .fin h2 { margin-left:0; text-shadow:none; color:#fff; }
-  .fin p { color:#DCD6F2; font-weight:400; margin:0 0 26px; }
+  .fin { display:grid; grid-template-columns:1.2fr .8fr; gap:0; padding:0; text-align:left; background:var(--nuit); border:0; box-shadow:0 6px 0 #141C45; border-radius:32px; overflow:hidden; position:relative; }
+  .fin > div { padding:92px 48px 56px; align-self:center; position:relative; }
+  .fin > div::before { content:""; position:absolute; left:46px; top:24px; width:44px; height:44px; border-radius:50%; box-shadow:-10px 4px 0 0 #FFE9A8; transform:rotate(-20deg); }
+  .fin h2 { margin:0 0 12px; color:#fff; text-shadow:none; max-width:14ch; }
+  .fin p { color:#D6DEFF; font-weight:500; margin:0 0 26px; }
   .fin img { width:100%; height:100%; object-fit:cover; display:block; min-height:280px; }
-  @media (max-width:760px) { .fin { grid-template-columns:1fr; } .fin > div { padding:36px 24px; } .fin img { max-height:260px; } }
+  @media (max-width:760px) { .fin { grid-template-columns:1fr; } .fin > div { padding:84px 24px 34px; } .fin img { max-height:260px; height:auto; } }
 </style>
 </head>
 <body>
@@ -677,26 +727,44 @@ __LDJSON__
 
 <main>
 <section class="ouv" aria-labelledby="h1">
+  <div class="ciel" aria-hidden="true">
+    <svg class="lune" viewBox="0 0 100 100"><path d="M64 8a44 44 0 1 0 28 58A36 36 0 1 1 64 8z"/></svg>
+    <i class="et e1"><svg viewBox="0 0 40 40"><path d="M20 3c1.6 0 2.4 9.6 4.6 11.2S36 15.6 36.5 17.2c.5 1.6-8.4 5.4-9.2 7.9-.8 2.5 3.6 11.2 2.3 12.2-1.3 1-8-5.8-9.6-5.8s-8.3 6.8-9.6 5.8c-1.3-1 3.1-9.7 2.3-12.2C11.9 22.6 3 18.8 3.5 17.2 4 15.6 13.2 15.8 15.4 14.2 17.6 12.6 18.4 3 20 3z"/></svg></i><i class="et e2"><svg viewBox="0 0 40 40"><path d="M20 3c1.6 0 2.4 9.6 4.6 11.2S36 15.6 36.5 17.2c.5 1.6-8.4 5.4-9.2 7.9-.8 2.5 3.6 11.2 2.3 12.2-1.3 1-8-5.8-9.6-5.8s-8.3 6.8-9.6 5.8c-1.3-1 3.1-9.7 2.3-12.2C11.9 22.6 3 18.8 3.5 17.2 4 15.6 13.2 15.8 15.4 14.2 17.6 12.6 18.4 3 20 3z"/></svg></i><i class="et e3"><svg viewBox="0 0 40 40"><path d="M20 3c1.6 0 2.4 9.6 4.6 11.2S36 15.6 36.5 17.2c.5 1.6-8.4 5.4-9.2 7.9-.8 2.5 3.6 11.2 2.3 12.2-1.3 1-8-5.8-9.6-5.8s-8.3 6.8-9.6 5.8c-1.3-1 3.1-9.7 2.3-12.2C11.9 22.6 3 18.8 3.5 17.2 4 15.6 13.2 15.8 15.4 14.2 17.6 12.6 18.4 3 20 3z"/></svg></i><i class="et e4"><svg viewBox="0 0 40 40"><path d="M20 3c1.6 0 2.4 9.6 4.6 11.2S36 15.6 36.5 17.2c.5 1.6-8.4 5.4-9.2 7.9-.8 2.5 3.6 11.2 2.3 12.2-1.3 1-8-5.8-9.6-5.8s-8.3 6.8-9.6 5.8c-1.3-1 3.1-9.7 2.3-12.2C11.9 22.6 3 18.8 3.5 17.2 4 15.6 13.2 15.8 15.4 14.2 17.6 12.6 18.4 3 20 3z"/></svg></i><i class="et e5"><svg viewBox="0 0 40 40"><path d="M20 3c1.6 0 2.4 9.6 4.6 11.2S36 15.6 36.5 17.2c.5 1.6-8.4 5.4-9.2 7.9-.8 2.5 3.6 11.2 2.3 12.2-1.3 1-8-5.8-9.6-5.8s-8.3 6.8-9.6 5.8c-1.3-1 3.1-9.7 2.3-12.2C11.9 22.6 3 18.8 3.5 17.2 4 15.6 13.2 15.8 15.4 14.2 17.6 12.6 18.4 3 20 3z"/></svg></i>
+  </div>
   <div class="wrap ouv-in">
     <div class="ouv-txt">
-      <p class="kick">Livre personnalisé pour enfant</p>
       <h1 id="h1">Une histoire unique, écrite pour votre enfant</h1>
-      <p class="intro">Il en est le héros, avec son doudou et ses animaux. Vous choisissez tout : son apparence, l'univers de l'aventure et ce que l'histoire lui raconte. Nous l'illustrons, l'imprimons et vous l'envoyons.</p>
-      <form class="essai" action="/creer" method="get">
-        <label for="prenom">Son prénom <small>(facultatif)</small></label>
-        <input id="prenom" name="prenom" maxlength="20" placeholder="Léo" autocomplete="off">
-        <div class="genres">
-          <button class="genre" type="submit" name="genre" value="fille"><img src="/static/avatars/enfant-long-lisse.webp" alt="" width="56" height="56"><span>Une fille</span></button>
-          <button class="genre" type="submit" name="genre" value="garcon"><img src="/static/avatars/enfant-court-lisse.webp" alt="" width="56" height="56"><span>Un garçon</span></button>
-        </div>
-        <p class="essai-n">Gratuit et sans inscription. Vous voyez sa couverture avant de payer.</p>
-      </form>
+      <p class="intro">Il en est le héros, avec son doudou et ses animaux. Vous choisissez son apparence, l'univers de l'aventure et ce que l'histoire lui raconte. Nous l'illustrons, l'imprimons et vous l'envoyons.</p>
     </div>
-    <figure class="ouv-photo">
-      <img src="/static/vitrine/photo_03.webp" alt="Une maman et sa fille lisent le livre de Mila" width="800" height="1000" fetchpriority="high">
-      <figcaption>« Mila et le secret de l'océan », un de nos livres</figcaption>
-    </figure>
+    <div class="scene3d" id="scene3d" aria-hidden="true">
+      <div class="halo"></div>
+      <div class="ombre"></div>
+      <div class="livre">
+        <div class="dos"></div><div class="tranche"></div><div class="pages"></div>
+        <div class="h-fin"><img decoding="async" src="/static/vitrine/noe_05_d.webp" alt=""><span class="h-txt">Une mélodie circule de cristal en cristal, puis s’éloigne vers une montagne en croissant. « Tu entends ? » souffle Noé. Luma se remet à briller. « C’est la chanson des comètes ! Elles connaissent tous les chemins du ciel. »<em>10</em></span></div>
+        <div class="h-flt" style="--z:4px;--d:3"><i class="h-r"><img decoding="async" src="/static/vitrine/noe_04_d.webp" alt=""><span class="h-txt">Luma laisse tomber quelques grains de lumière pour tracer un chemin. Mais un souffle les emporte aussitôt. Noé les regarde filer entre les rochers. « Attends… Ils vont peut-être quelque part. Suivons-les doucement. »<em>8</em></span></i><i class="h-v h-pg"><img decoding="async" src="/static/vitrine/noe_05_g.webp" alt=""><span class="h-txt">Les grains les conduisent dans une vallée de cristaux. Ting… ting… Chaque cristal chante une note légère. Noé s’accroupit pour mieux écouter. Son ours dépasse de son sac, comme s’il écoutait lui aussi. Luma cesse un instant de trembler.<em>9</em></span></i></div>
+        <div class="h-flt" style="--z:6px;--d:2"><i class="h-r"><img decoding="async" src="/static/vitrine/noe_03_d.webp" alt=""><span class="h-txt">Noé regarde le ciel, puis ses petites bottes. « Je ne sais pas voler aussi haut… » Luma baisse ses pointes. Il se rapproche d’elle. « Mais je peux chercher avec toi. Nous n’avons pas besoin de tout savoir pour commencer. »<em>6</em></span></i><i class="h-v h-pg"><img decoding="async" src="/static/vitrine/noe_04_g.webp" alt=""><span class="h-txt">Noé grimpe sur une butte et lève le bras. Encore un peu… juste un peu ! Le cerf-volant reste bien trop loin. Il redescend en faisant un petit bond. « Bon. Il nous faut une autre idée ! »<em>7</em></span></i></div>
+        <div class="h-flt" style="--z:8px;--d:1"><i class="h-r"><img decoding="async" src="/static/vitrine/noe_02_d.webp" alt=""><span class="h-txt">Un pas, puis un autre… Noé avance dans la nuit comme sur un tapis moelleux. Au bout du sentier, une petite lune argentée les attend. Tout autour flottent des nuages violets. « C’est encore plus beau que dans mes rêves ! »<em>4</em></span></i><i class="h-v h-pg"><img decoding="async" src="/static/vitrine/noe_03_g.webp" alt=""><span class="h-txt">Sur la lune, Luma montre un dessin d’étoiles très haut dans le ciel. On dirait un cerf-volant ! Mais un coin est tout sombre. « C’est ma place, murmure-t-elle. Sans moi, mes amies ne peuvent plus terminer notre dessin. »<em>5</em></span></i></div>
+        <div class="h-flt" style="--z:10px;--d:0"><i class="h-r"><img decoding="async" src="/static/vitrine/noe_01_d.webp" alt=""><span class="h-txt">C’est une petite étoile, pas plus grande qu’une pomme. « Je m’appelle Luma. J’ai glissé de mon coin de ciel et je ne retrouve plus le chemin. » Noé soulève son ours. « Alors, nous allons t’aider tous les deux ! »<em>2</em></span></i><i class="h-v h-pg"><img decoding="async" src="/static/vitrine/noe_02_g.webp" alt=""><span class="h-txt">Luma secoue une pointe. Une poussière brillante tourbillonne autour de Noé : le voilà dans une combinaison, avec un casque tout rond ! Il installe son ours sur son sac. Devant la fenêtre, un sentier de lumière se déroule.<em>3</em></span></i></div>
+        <div class="h-couv">
+          <div class="h-face">
+            <img decoding="async" src="/static/vitrine/noe_00.webp" alt="">
+          </div>
+          <i class="h-v garde"><b>Noé</b><span>et la poussière d'étoiles</span><em>Une aventure de<br>Mon Héros du Mois</em></i>
+        </div>
+      </div>
+    </div>
+    <form class="essai" action="/creer" method="get">
+      <label for="prenom">Son prénom <small>(facultatif)</small></label>
+      <input id="prenom" name="prenom" maxlength="20" placeholder="Léo" autocomplete="off">
+      <div class="genres">
+        <button class="genre" type="submit" name="genre" value="fille"><img src="/static/avatars/enfant-long-lisse.webp" alt="" width="56" height="56"><span>Une fille</span></button>
+        <button class="genre" type="submit" name="genre" value="garcon"><img src="/static/avatars/enfant-court-lisse.webp" alt="" width="56" height="56"><span>Un garçon</span></button>
+      </div>
+      <p class="essai-n">Gratuit et sans inscription. Vous voyez sa couverture avant de payer.</p>
+    </form>
   </div>
+  <svg class="collines" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true"><path class="c1" d="M0 70 C 200 20 380 30 560 60 S 900 110 1120 60 S 1360 20 1440 40 V120 H0z"/><path class="c2" d="M0 96 C 240 60 420 70 640 92 S 1020 120 1240 88 S 1400 76 1440 84 V120 H0z"/></svg>
 </section>
 
 <section class="bloc concept" id="concept" aria-labelledby="conceptT">
@@ -719,7 +787,7 @@ __LDJSON__
 
 <section class="bloc mondes" id="univers" aria-labelledby="universT">
   <div class="wrap">
-    <h2 id="universT">Dans quel monde partira-t-il ?</h2>
+    <h2 id="universT">Dans quel monde partira-t-il&nbsp;?</h2>
     <p class="sous">Choisissez l'univers de son livre : il sera déjà sélectionné quand vous composerez l'histoire.</p>
     <ul class="cartes" id="cartesUnivers" aria-label="Les univers"></ul>
     <button type="button" class="btn ghost plus" id="plusUnivers" aria-expanded="false" aria-controls="cartesUnivers">Voir tous les univers</button>
@@ -730,6 +798,7 @@ __LDJSON__
 </section>
 
 <section class="nuit" id="feuilleter">
+  <svg class="nuages haut" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H1440V30c-40 0-50 26-90 26s-48-22-86-22-50 24-92 24-46-26-88-26-52 28-94 28-44-24-86-24-50 22-92 22-48-26-90-26-50 28-92 28-46-24-88-24-50 22-92 22-48-26-90-26-52 26-94 26-44-22-86-22-50 24-90 24-48-22-90-22-46 18-80 18z"/></svg>
   <div class="wrap">
     <h2>Feuilletez quelques-uns de nos livres</h2>
     <p class="sous">Trois exemples parmi tous ceux qu'on peut créer. Le vôtre aura son histoire à lui, avec votre enfant en héros.</p>
@@ -759,6 +828,7 @@ __LDJSON__
       <li><b>7 à 15 jours</b>ouvrés pour le recevoir</li>
     </ul>
   </div>
+  <svg class="nuages bas" viewBox="0 0 1440 60" preserveAspectRatio="none" aria-hidden="true" style="transform:scaleY(-1)"><path d="M0 0H1440V30c-40 0-50 26-90 26s-48-22-86-22-50 24-92 24-46-26-88-26-52 28-94 28-44-24-86-24-50 22-92 22-48-26-90-26-50 28-92 28-46-24-88-24-50 22-92 22-48-26-90-26-52 26-94 26-44-22-86-22-50 24-90 24-48-22-90-22-46 18-80 18z"/></svg>
 </section>
 
 <section class="bloc coloriage" id="coloriage" aria-labelledby="coloT">
@@ -769,7 +839,7 @@ __LDJSON__
       <img src="/static/vitrine/colo_photo_4.webp" alt="Le cahier de coloriage de Léa, au jardin avec son ours en peluche" loading="lazy" width="867" height="1300">
     </div>
     <div>
-      <p class="kick">Introuvable en librairie</p>
+      <span class="pastille" aria-hidden="true">Introuvable en librairie</span>
       <h2 id="coloT">Son cahier de coloriage, dont il est le héros</h2>
       <p class="sous">30 pages à colorier où votre enfant, son doudou et ses animaux sont dessinés à chaque page. Vous choisissez les scènes : astronaute, pompier, pirate, à la plage, à Noël…</p>
       <ul class="liste-c">
@@ -785,7 +855,7 @@ __LDJSON__
 
 <section class="bloc" id="formules" aria-labelledby="formT">
   <div class="wrap">
-    <h2 id="formT">Combien d'aventures ?</h2>
+    <h2 id="formT">Combien d'aventures&nbsp;?</h2>
     <p class="sous">Un seul paiement, un seul colis. Plus vous prenez de livres, moins chacun coûte. Le prix exact, livraison comprise, s'affiche avant le paiement.</p>
     <div class="formules quatre">
       <div class="formule">
@@ -892,7 +962,7 @@ __LDJSON__
     </div>
     <p class="sous centre" style="margin-top:18px"><a href="/aide">Toutes les questions dans le centre d'aide</a></p>
     <form class="contact" id="contact" novalidate>
-      <h3>Une question ? Écrivez-nous</h3>
+      <h3>Une question&nbsp;? Écrivez-nous</h3>
       <p class="sous">Nous vous répondons par e-mail sous 48 h.</p>
       <div class="cg">
         <label>Votre prénom<input name="nom" maxlength="80" autocomplete="given-name"></label>
