@@ -254,6 +254,34 @@ def _eur(c):
     return f"{c / 100:.2f}".replace(".", ",") + " €"
 
 
+def _port_lignes(g):
+    """Frais de livraison, lus dans la grille de prix (une seule source pour /tarifs et /livraison)."""
+    return [("1 livre, un calendrier ou un cahier seul", _eur(g["port_fr"]["1"])), ("2 à 5 livres", _eur(g["port_fr"]["3"])),
+            ("6 livres et plus", "offerte"), ("E-book seul", "par e-mail, sans frais"),
+            ("La Réunion", "prix réel de l'envoi, sans marge, affiché avant le paiement"),
+            ("Belgique, Luxembourg, Monaco", "+ " + _eur(g["supplement_pays"]["BE"])), ("Suisse", "+ " + _eur(g["supplement_pays"]["CH"]))]
+
+
+def _livraison():
+    import paiement as P
+    g = P.grille()
+    t = "<table class='t'>" + "".join(f"<tr><td>{a}</td><td>{b}</td></tr>" for a, b in _port_lignes(g)) + "</table>"
+    return [("Les délais", ["<ul><li><b>Livres, calendrier, cahier de coloriage</b> : comptez 7 à 15 jours ouvrés après la commande. Ce délai comprend la création, "
+                            "la vérification et les retouches par notre équipe, l'impression, puis l'expédition.</li>"
+                            "<li><b>Objets</b> (gourde, tasse, sac à dos) : fabriqués par un atelier partenaire, ils arrivent dans un colis à part, dans les mêmes délais.</li>"
+                            "<li><b>E-book</b> : envoyé par e-mail sous 48 h, avec un lien de téléchargement (aussi dans « Mon compte »).</li>"
+                            "<li><b>Pour Noël</b> : commandez avant le 1er décembre.</li></ul>"]),
+            ("Les frais de livraison", [t, "Un seul colis pour les livres, le calendrier et le cahier de coloriage d'une même commande. Les objets ont la livraison comprise dans leur prix. "
+                                           "Le montant exact de la livraison s'affiche toujours avant le paiement."]),
+            ("Où livrons-nous ?", ["France métropolitaine, La Réunion, Belgique, Luxembourg, Suisse et Monaco.",
+                                   "Pour La Réunion : livres, calendrier et cahier de coloriage (pas encore les objets). Vous payez le prix réel de l'envoi chez notre imprimeur, sans marge "
+                                   "et sans livraison offerte ; le délai est plus long qu'en métropole. Des taxes locales (octroi de mer) peuvent être demandées à la réception."]),
+            ("Suivre son colis", ["Dès l'expédition, le numéro de suivi est disponible dans <a href=\"/compte\">« Mon compte »</a>."]),
+            ("Colis abîmé, défaut, retours", ["Livre abîmé ou défaut d'impression : envoyez-nous une photo dans les 30 jours <a href=\"/#contact\">via le formulaire</a>, "
+                                              "nous le réimprimons sans frais.",
+                                              "Chaque création étant personnalisée, il n'y a pas de droit de rétractation ni de retour (voir les <a href=\"/cgv\">conditions de vente</a>)."])]
+
+
 def _tarifs():
     import paiement as P
     g = P.grille(); F = g["formules"]
@@ -266,10 +294,7 @@ def _tarifs():
     autres = [("Calendrier seul", _eur(g["calendrier"]["seul"])), ("Calendrier avec une autre création", _eur(g["calendrier"]["ajout"])),
               ("Cahier de coloriage seul", _eur(g["coloriage"]["seul"])), ("Cahier de coloriage avec une autre création", _eur(g["coloriage"]["ajout"]))]
     autres += [(v["nom"] + ", livraison comprise", _eur(v["prix"])) for v in g["objets"].values()]
-    port = [("1 livre, un calendrier ou un cahier seul", _eur(g["port_fr"]["1"])), ("2 à 5 livres", _eur(g["port_fr"]["3"])),
-            ("6 livres et plus", "offerte"), ("E-book seul", "par e-mail, sans frais"),
-            ("La Réunion", "prix réel de l'envoi, sans marge, affiché avant le paiement"),
-            ("Belgique, Luxembourg, Monaco", "+ " + _eur(g["supplement_pays"]["BE"])), ("Suisse", "+ " + _eur(g["supplement_pays"]["CH"]))]
+    port = _port_lignes(g)
     return [("Ses livres d'aventures", [lignes(livres), "Couverture rigide, 18 pages illustrées. Les livres d'une commande partent ensemble, dans un seul colis."]),
             ("E-book", [lignes(ebook), "Le PDF à lire sur tablette ou téléphone, envoyé par e-mail. Vous pourrez commander la version imprimée plus tard, sans recréer le livre."]),
             ("Calendrier, cahier de coloriage et objets", [lignes(autres)]),
@@ -308,7 +333,7 @@ def _idees():
             ("Exemples d'associations", ["<ul><li>La peur du noir dans une forêt enchantée</li><li>La rentrée chez les dinosaures</li><li>L'arrivée d'un bébé au fond de la mer</li><li>La confiance en soi dans la ville des super-héros</li></ul>"])]
 
 
-CONSTRUIRE = {"tarifs": _tarifs, "avis-clients": _avis, "idees-histoires": _idees}
+CONSTRUIRE = {"livraison": _livraison, "tarifs": _tarifs, "avis-clients": _avis, "idees-histoires": _idees}
 
 PAGES.update({
     "tarifs": dict(titre="Tarifs des livres personnalisés",
@@ -331,6 +356,15 @@ PAGES.update({
                             image=("/static/vitrine/photo_02.webp", "Le livre « Jade et la vallée des dinosaures » posé sur une table"), cta=("Choisir son histoire", "/creer"), sections=[],
                             faq=[("Peut-on proposer sa propre idée ?", "Oui, en partie : indiquez ses passions et un mot pour nous à la commande, l'histoire en tient compte.")],
                             liens=["livre-emotions-enfant", "livre-personnalise-par-age", "livre-personnalise-enfant"]),
+    "livraison": dict(titre="Livraison : délais, frais et suivi",
+                      desc="Délais de livraison (7 à 15 jours ouvrés), frais selon le pays et le nombre de livres, livraison offerte dès 6 livres en France, suivi du colis et réimpression en cas de défaut.",
+                      h1="Livraison et retours", kicker="Livraison",
+                      intro="Les délais, les frais et ce qui se passe si le colis arrive abîmé.",
+                      image=("/static/vitrine/photo_07.webp", "Un livre personnalisé dans sa boîte cadeau"), cta=("Créer son avatar gratuitement", "/creer"), sections=[],
+                      faq=[("Les livres d'un pack arrivent-ils ensemble ?", "Oui : les livres, le calendrier et le cahier d'une même commande partent dans un seul colis."),
+                           ("Puis-je faire livrer à une autre adresse pour offrir ?", "Oui : indiquez l'adresse du destinataire à la commande et cochez « C'est pour offrir »."),
+                           ("Puis-je suivre ma commande ?", "Oui, dans « Mon compte », avec le numéro de suivi dès l'expédition.")],
+                      liens=["tarifs", "aide", "cadeau-personnalise-enfant"]),
     "aide": dict(titre="Centre d'aide : commande et livraison",
                  desc="Toutes les réponses : comment créer l'avatar, délais de livraison, paiement, e-book, cadeau, défaut d'impression, données de l'enfant.",
                  h1="Centre d'aide", kicker="Questions fréquentes", intro="Les réponses aux questions les plus fréquentes. Une autre question ? Écrivez-nous, un humain vous répond.",
@@ -354,7 +388,7 @@ COURT = {"livre-personnalise-enfant": "Livre personnalisé enfant", "livre-perso
          "cahier-coloriage-personnalise": "Cahier de coloriage personnalisé", "cadeau-personnalise-enfant": "Idées cadeaux enfant",
          "livre-grand-frere-grande-soeur": "Grand frère, grande sœur", "livre-paques-personnalise": "Livre de Pâques",
          "livre-personnalise-par-age": "Par âge", "tarifs": "Tarifs", "avis-clients": "Avis clients", "idees-histoires": "Idées d'histoires",
-         "aide": "Centre d'aide"}
+         "aide": "Centre d'aide", "livraison": "Livraison et retours"}
 
 CSS = """
 .top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--ciel) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--trait)}
@@ -378,7 +412,8 @@ h1{font:400 clamp(32px,4.6vw,52px)/1.08 var(--titre);margin:0 0 16px;letter-spac
 .voir ul{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:10px}
 .voir a{display:inline-block;padding:10px 16px;border-radius:999px;background:var(--papier);border:1.5px solid var(--encre);font-weight:800;text-decoration:none}
 table.t{width:100%;border-collapse:collapse;background:var(--papier);border:1px solid var(--trait);border-radius:16px;overflow:hidden;margin:6px 0 10px}
-table.t td{padding:12px 16px;border-bottom:1px solid var(--trait);color:var(--encre)}table.t td:last-child{text-align:right;font-weight:800;white-space:nowrap}
+table.t td{padding:12px 16px;border-bottom:1px solid var(--trait);color:var(--encre)}table.t td:last-child{text-align:right;font-weight:800;min-width:7.5em}
+@media (max-width:520px){table.t td{padding:10px 12px;font-size:15px}}
 table.t tr:last-child td{border-bottom:0}
 .avs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin:8px 0}
 .av{margin:0;background:var(--papier);border:1px solid var(--trait);border-radius:18px;padding:16px}.av img{width:100%;border-radius:12px;margin:8px 0 0}
@@ -424,7 +459,7 @@ def pied():
             + col("Inspiration", [("Idées d'histoires", "/idees-histoires"), ("Par âge", "/livre-personnalise-par-age"), ("Peur du noir, émotions", "/livre-emotions-enfant"),
                                   ("Livre avec son doudou", "/livre-doudou-personnalise"), ("Livre personnalisé enfant", "/livre-personnalise-enfant"),
                                   ("Calendrier personnalisé", "/calendrier-personnalise-enfant"), ("Cahier de coloriage", "/cahier-coloriage-personnalise")])
-            + col("Service", [("Centre d'aide", "/aide"), ("Mon compte", "/compte"), ("Nous contacter", "/#contact"), ("Conditions de vente", "/cgv"),
+            + col("Service", [("Livraison et retours", "/livraison"), ("Centre d'aide", "/aide"), ("Mon compte", "/compte"), ("Nous contacter", "/#contact"), ("Conditions de vente", "/cgv"),
                               ("Mentions légales", "/mentions-legales"), ("Confidentialité", "/confidentialite")])
             + "</div><div class='bas'><div class='paie'><b>Paiement sécurisé</b>" + CB + "</div>"
             + "<a href='https://www.instagram.com/monherosdumois/' rel='noopener' target='_blank'>Instagram</a></div></div></footer>"

@@ -107,7 +107,7 @@
       <h2>E-mails</h2>
       <label class="news"><input type="checkbox" id="news" ${C.nouveautes ? 'checked' : ''}> Recevoir nos nouveautés et offres par e-mail <small>(quelques e-mails par an au plus)</small></label>
       <p style="margin:6px 0 0;color:var(--encre-2);font-size:14px">Les e-mails liés à vos commandes (confirmation, expédition) sont toujours envoyés.</p>
-      <div class="bas"><button id="out">Se déconnecter</button><button id="del">Supprimer mon compte</button><a href="/confidentialite">Données personnelles</a></div>`;
+      <div class="bas"><button id="out">Se déconnecter</button><button id="del">Supprimer mon compte</button><a href="/confidentialite">Données personnelles</a><a href="/livraison">Livraison et retours</a></div>`;
     document.querySelectorAll('[data-ouvrir]').forEach(b => b.onclick = async () => {
       b.disabled = true;
       const j = await (await fetch('/api/compte/heros/' + b.dataset.ouvrir)).json();
