@@ -739,17 +739,18 @@ async function devisDestination(b) {
   b.disabled = false; b.textContent = 'Demander le devis';
   if (r.erreur) { RES._reg = { cls: 'err', html: '⚠️ ' + esc(r.erreur) }; return render(); }
   const f = x => x == null || x === '' ? '—' : parseFloat(x).toFixed(2).replace('.', ',') + ' €';
-  const L = r.lignes.filter(x => !x.ref), ref = r.lignes.find(x => x.ref && !x.erreur), ok = L.filter(x => !x.erreur), ko = L.filter(x => x.erreur);
+  const L = r.lignes.filter(x => !x.ref), refs = r.lignes.filter(x => x.ref && !x.erreur), ref = refs.find(x => x.quantite === 1), ok = L.filter(x => !x.erreur), ko = L.filter(x => x.erreur);
+  const ecart = x => { const fr = x.niveau === 'MAIL' && refs.find(y => y.quantite === x.quantite); return fr ? f(parseFloat(x.port_ttc) - parseFloat(fr.port_ttc)) : '—'; };
   const opts = Array.isArray(r.options) ? r.options : (r.options && r.options.results) || [];
   const delai = n => { const o = opts.find(x => (x.level || x.shipping_level || x.name) === n); if (!o) return '';
     const a = o.total_days_min ?? o.min_delivery_days ?? o.days_min ?? o.transit_time_min, z = o.total_days_max ?? o.max_delivery_days ?? o.days_max ?? o.transit_time_max;
     return a != null || z != null ? `${a ?? '?'} à ${z ?? '?'} j` : ''; };
   const pays = sel.options[sel.selectedIndex].text;
   document.getElementById('dlgIn').innerHTML = `<h3>🌍 Livrer à ${esc(r.ville)} (${esc(pays)}) : devis Lulu</h3>
-    ${ok.length ? `<table><tr><th>Livraison</th><th class="r">Livres</th><th class="r">Impression</th><th class="r">Port</th><th class="r">Total TTC</th><th class="r">Délai annoncé</th></tr>
-      ${ok.map(x => `<tr><td>${esc(r.noms[x.niveau] || x.niveau)}</td><td class="r">${x.quantite}</td><td class="r">${f(x.impression_ttc)}</td><td class="r">${f(x.port_ttc)}</td><td class="r"><b>${f(x.total_ttc)}</b></td><td class="r">${delai(x.niveau) || '—'}</td></tr>`).join('')}</table>`
+    ${ok.length ? `<div style="overflow-x:auto"><table><tr><th>Livraison</th><th class="r">Livres</th><th class="r">Impression</th><th class="r">Port</th><th class="r">Total TTC</th><th class="r">Port en plus vs France</th><th class="r">Délai annoncé</th></tr>
+      ${ok.map(x => `<tr><td>${esc(r.noms[x.niveau] || x.niveau)}</td><td class="r">${x.quantite}</td><td class="r">${f(x.impression_ttc)}</td><td class="r">${f(x.port_ttc)}</td><td class="r"><b>${f(x.total_ttc)}</b></td><td class="r"><b>${ecart(x)}</b></td><td class="r">${delai(x.niveau) || '—'}</td></tr>`).join('')}</table></div>`
       : `<p><b>Lulu ne propose aucun envoi vers cette adresse.</b></p>`}
-    ${ref ? `<p class="meta">Pour comparer, 1 livre en économique vers Melun : port <b>${f(ref.port_ttc)}</b>, total <b>${f(ref.total_ttc)}</b>.${ok.find(x => x.niveau === 'MAIL' && x.quantite === 1) ? ` Écart de port : <b>${f(parseFloat(ok.find(x => x.niveau === 'MAIL' && x.quantite === 1).port_ttc) - parseFloat(ref.port_ttc))}</b> par livre seul.` : ''}</p>` : ''}
+    ${refs.length ? `<p class="meta">Même colis en économique vers Melun : ${refs.map(x => `${x.quantite} livre${x.quantite > 1 ? 's' : ''} : port <b>${f(x.port_ttc)}</b>`).join(' · ')}.</p>` : ''}
     ${ko.length ? `<p class="meta">Non proposé : ${ko.map(x => esc(r.noms[x.niveau] || x.niveau) + (x.quantite > 1 ? ' × ' + x.quantite : '')).join(', ')}.</p>` : ''}
     <p class="meta">Les taxes locales (octroi de mer, TVA d'outre-mer, droits de douane) ne sont pas toujours dans le devis Lulu : elles peuvent être demandées au client à la livraison. Les livres seulement : cahiers, calendriers et objets non compris.</p>
     <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;

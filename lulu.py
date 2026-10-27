@@ -209,7 +209,8 @@ def devis_destination(pays, code_postal, ville, email, pages=24):
     for q in (3, 6):
         un("MAIL", q)
     fr = {"nom": "Devis test", "adresse1": "1 rue de la Mairie", "code_postal": "77000", "ville": "Melun", "pays": "FR", "telephone": "0600000000"}
-    un("MAIL", 1, fr, True)
+    for q in (1, 3, 6):
+        un("MAIL", q, fr, True)
     try:
         options = options_livraison(pays, pages)
     except Exception as e:
