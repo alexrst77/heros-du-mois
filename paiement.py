@@ -71,12 +71,20 @@ def objets_valides(objets, formule=None):
 PORT_FR = {1: int(os.getenv("PORT_1", "790")), 3: int(os.getenv("PORT_3", "990"))}
 SUPPLEMENT_PAYS = {"FR": 0, "BE": int(os.getenv("PORT_SUPPL_UE", "400")), "LU": int(os.getenv("PORT_SUPPL_UE", "400")),
                    "MC": int(os.getenv("PORT_SUPPL_UE", "400")), "CH": int(os.getenv("PORT_SUPPL_CH", "900")),
-                   "RE": 0}                      # La Réunion : même prix qu'en France (le surcoût Lulu est pris en charge)
+                   "RE": 0}                      # La Réunion : voir PAYS_PORT_REEL (port réel de Lulu)
 
 
-def frais_port(formule, pays="FR", physique=False):
+PAYS_PORT_REEL = {"RE"}       # La Réunion : le client paie le port réel de Lulu pour SON colis, sans marge et sans livraison offerte
+PORT_REEL = None              # fonction (formule, calendrier, coloriage) -> centimes, branchée par boutique.py (devis Lulu)
+
+
+def frais_port(formule, pays="FR", physique=False, calendrier=False, coloriage=False):
     if formule in OBJETS:                       # objet seul : livraison comprise dans son prix (atelier Printful)
         return 0
+    if (pays or "FR").upper() in PAYS_PORT_REEL and PORT_REEL:
+        if numerique(formule) and not (physique or calendrier or coloriage):
+            return 0
+        return PORT_REEL(formule, bool(calendrier), bool(coloriage))
     if numerique(formule):                      # e-book : rien à livrer, sauf un calendrier ou un cahier ajouté
         return PORT_FR[1] + SUPPLEMENT_PAYS.get((pays or "FR").upper(), SUPPLEMENT_PAYS["BE"]) if physique else 0
     n = FORMULES[formule]["livres"]
@@ -122,7 +130,7 @@ def remise(formule, pays="FR", calendrier=False, coloriage=False, objets=(), pro
 
 
 def total(formule, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None, ebook=False):
-    return (_brut(formule, pays, calendrier, coloriage, objets, ebook) + frais_port(formule, pays, physique=bool(calendrier or coloriage))
+    return (_brut(formule, pays, calendrier, coloriage, objets, ebook) + frais_port(formule, pays, physique=bool(calendrier or coloriage), calendrier=calendrier, coloriage=coloriage)
             - remise(formule, pays, calendrier, coloriage, objets, promo, ebook))
 
 
@@ -153,7 +161,7 @@ def lignes(formule, pays="FR", calendrier=False, coloriage=False, objets=(), pro
     if r:
         c, pct = promo_valide(promo)
         out.append((f"Remise code {c} (-{pct} %)", 1, -r, "remise"))
-    port = frais_port(formule, pays, physique=bool(calendrier or coloriage))
+    port = frais_port(formule, pays, physique=bool(calendrier or coloriage), calendrier=calendrier, coloriage=coloriage)
     if port:
         out.append(("Livraison", 1, port, "port"))
     return out
@@ -239,7 +247,7 @@ def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, co
     for k in ([formule] if formule in OBJETS else []) + objets_valides(objets, formule):
         items.append({"price_data": {"currency": "eur", "unit_amount": OBJETS[k]["prix"],
                                      "product_data": {"name": f"Mon Héros du Mois – {OBJETS[k]['nom'].lower()} (livraison comprise)"}}, "quantity": 1})
-    port = frais_port(formule, pays, physique=bool(calendrier or coloriage) if numerique(formule) else False)
+    port = frais_port(formule, pays, physique=bool(calendrier or coloriage) if numerique(formule) else False, calendrier=calendrier, coloriage=coloriage)
     if port:
         items.append({"price_data": {"currency": "eur", "unit_amount": port, "product_data": {"name": "Livraison (un seul colis)"}}, "quantity": 1})
     data = {"mode": "payment", "customer_email": email, "client_reference_id": order_id, "locale": "fr", "line_items": items,

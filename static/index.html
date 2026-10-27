@@ -469,7 +469,20 @@
   const ebookAjout = () => !isEbook() && !!S.commande.ebook && ((F[S.commande.formule] || {}).livres || 0) > 0;
   const avecEbook = () => isEbook() || ebookAjout();
   const n0 = () => ((F[S.commande.formule] || {}).livres || 0) > 0;
+  /* La Réunion : port réel de l'imprimeur pour ce colis (sans marge, pas de livraison offerte), demandé au serveur */
+  const PORT_REEL = {};
+  const portReel = () => {
+    const c = S.commande, k = [c.formule, c.cal_ajout ? 1 : 0, c.colo_ajout ? 1 : 0, physique() ? 1 : 0].join('|'), v = PORT_REEL[k];
+    if (v === undefined) {
+      PORT_REEL[k] = null;
+      fetch(`/api/port?pays=RE&formule=${encodeURIComponent(c.formule)}&cal=${c.cal_ajout ? 1 : 0}&colo=${c.colo_ajout ? 1 : 0}&phys=${physique() ? 1 : 0}`)
+        .then(r => r.json()).then(j => { PORT_REEL[k] = j.erreur ? { err: j.erreur } : j.port; render(); }).catch(() => { PORT_REEL[k] = { err: 'Livraison vers La Réunion : calcul impossible pour le moment.' }; render(); });
+      return null;
+    }
+    return v;
+  };
   const port = () => { if (OBJ[S.commande.formule]) return 0;           // objet seul : livraison comprise
+    if (S.commande.pays === 'RE') { const v = portReel(); return typeof v === 'number' ? v : 0; }
     if (isEbook()) return S.commande.cal_ajout || S.commande.colo_ajout ? GR.calendrier.port + (GR.supplement_pays[S.commande.pays] ?? GR.supplement_pays.BE) : 0;   // e-book : rien à livrer
     const f = F[S.commande.formule] || F.pack6, n = f.livres;
     if (f.grand) return GR.port_grand + (GR.supplement_pays[S.commande.pays] ?? GR.supplement_pays.BE);
@@ -1158,7 +1171,7 @@
       `<b>+ ${eur2(GR.calendrier.ajout)}</b> <s>${eur2(GR.calendrier.seul)}</s>`, ajout('calendrier')));
     if (!P.coloriage) offres.push(offre('coloriage', '/static/vitrine/colo_photo_3.webp', 'Son cahier de coloriage', '30 pages de coloriages et de jeux où il est le héros.',
       `<b>+ ${eur2(GR.coloriage.ajout)}</b> <s>${eur2(GR.coloriage.seul)}</s>`, ajout('coloriage')));
-    Object.keys(OBJ).filter(k => !objetsChoisis().includes(k)).forEach(k => offres.push(offre(k, OBJ_INFO[k].img, OBJ_INFO[k].court,
+    Object.keys(OBJ).filter(k => !objetsChoisis().includes(k) && c.pays !== 'RE').forEach(k => offres.push(offre(k, OBJ_INFO[k].img, OBJ_INFO[k].court,
       OBJ_INFO[k].txt + ' Livré à part.', `<b>+ ${eur2(OBJ[k].prix)}</b> livraison comprise`, `<button type="button" class="btn" data-objet-ajout="${k}">Ajouter</button>`)));
     const retirer = k => nbCrea() > 1 ? ` <button type="button" class="lien petit" data-retirer="${k}">retirer</button>` : '';
     return (ME.connecte ? `<div class="moncompte">Connecté avec <b>${esc(ME.email)}</b> : ${esc((S.enfant.prenom || 'votre héros').trim())} sera enregistré dans <a href="/compte">votre compte</a>, avec le suivi de la commande.</div>`
@@ -1171,15 +1184,15 @@
           (isColo() ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(f.prix)}</span></div>` : c.colo_ajout ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(GR.coloriage.ajout)}</span></div>` : '') +
           objetsChoisis().map(k => `<div><span>${OBJ_INFO[k].court} <small>(livraison comprise)</small> <button type="button" class="lien petit" data-objet="${k}">retirer</button></span><span style="white-space:nowrap">${eur2(OBJ[k].prix)}</span></div>`).join('') +
           (remiseC() ? `<div class="remise"><span>Code ${esc(c.promo.code)} (-${c.promo.pourcent} %) <button type="button" class="lien petit" data-promo-retirer="1">retirer</button></span><span>− ${eur2(remiseC())}</span></div>` : '') +
-          (OBJ[c.formule] ? `<div><span>Livraison</span><span><b class="offert">comprise</b></span></div>` : !physique() ? `<div><span>Livraison</span><span><b class="offert">par e-mail</b></span></div>` : `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>`) +
+          (OBJ[c.formule] ? `<div><span>Livraison</span><span><b class="offert">comprise</b></span></div>` : !physique() ? `<div><span>Livraison</span><span><b class="offert">par e-mail</b></span></div>` : (c.pays === 'RE' ? (v => `<div><span>Livraison vers La Réunion <small>(prix de l'imprimeur, sans marge)</small></span><span>${typeof v === 'number' ? eur2(v) : v && v.err ? '<b>indisponible</b>' : 'calcul…'}</span></div>`)(portReel()) : `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>`)) +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
           (c.promo ? '' : `<details class="promo" ${OUVERT.promo ? 'open' : ''} data-ouv="promo"><summary>Vous avez un code promo ?</summary><div class="promo-l"><input type="text" id="promoIn" maxlength="30" placeholder="Votre code" autocapitalize="characters"><button type="button" class="btn petit" data-promo="1">Appliquer</button></div><p class="promo-err" id="promoErr"></p></details>`) +
-          (n && n < 6 && !isEbook() && !f.grand ? `<div class="vers6"><div class="vers6-t">Plus que <b>${6 - n} livre${6 - n > 1 ? 's' : ''}</b> pour la livraison offerte, et ${eur2(F.pack6.prix_livre)} le livre</div>` +
+          (n && n < 6 && !isEbook() && !f.grand && c.pays !== 'RE' ? `<div class="vers6"><div class="vers6-t">Plus que <b>${6 - n} livre${6 - n > 1 ? 's' : ''}</b> pour la livraison offerte, et ${eur2(F.pack6.prix_livre)} le livre</div>` +
             `<div class="vers6-b"><i style="width:${Math.round(n / 6 * 100)}%"></i></div><button type="button" class="lien petit" data-pack-go="pack6">Passer à 6 livres (${eur2(F.pack6.prix)})</button></div>` : '') + `</div>`; })() +
       (offres.length ? `<div class="offres"><div class="offres-h">Pour compléter l'univers de ${pr} <span>créations : même colis, sans frais de port en plus · objets : livraison comprise</span></div>${offres.join('')}</div>` : '') +
       (n0() && !isEbook() && !isGrand() ? `<label class="toggle" style="margin:0 0 12px"><input type="checkbox" data-chk="ebook" ${c.ebook ? 'checked' : ''}> Ajouter la version e-book (PDF) de ${F[c.formule].livres > 1 ? 'chaque livre' : 'son livre'} : + ${eur2(GR.ebook.ajout)}${F[c.formule].livres > 1 ? ' par livre' : ''}</label>` : '') +
       (!physique() ? `<div class="delai"><b>E-book envoyé par e-mail sous 48 h</b><span>Créé juste après le paiement, peaufiné par notre équipe, puis envoyé avec un lien de téléchargement (aussi dans « Mon compte »). Vous pourrez commander la version imprimée plus tard, sans le recréer.</span></div>` :
-      (c.pays === 'RE' ? `<div class="delai"><b>Livraison à La Réunion</b><span>Même prix qu'en métropole. Le colis part de chez notre imprimeur : comptez un délai plus long qu'en métropole, avec un numéro de suivi dès l'expédition. Des taxes locales (octroi de mer) peuvent être demandées à la réception.${objetsChoisis().length ? ' <b>La gourde, la tasse et le sac ne sont pas encore livrés à La Réunion : retirez-les pour commander.</b>' : ''}</span></div>` :
+      (c.pays === 'RE' ? `<div class="delai"><b>Livraison à La Réunion</b><span>Vous payez le prix exact de l'envoi chez notre imprimeur, sans marge (pas de livraison offerte). Le colis part de chez notre imprimeur : comptez un délai plus long qu'en métropole, avec un numéro de suivi dès l'expédition. Des taxes locales (octroi de mer) peuvent être demandées à la réception.${objetsChoisis().length ? ' <b>La gourde, la tasse et le sac ne sont pas encore livrés à La Réunion : retirez-les pour commander.</b>' : ''}</span></div>` :
       `<div class="delai"><b>Livraison estimée : ${delai()}</b>` +
       `<span>${(() => { const d = new Date(); return d.getMonth() >= 9 && d < new Date(d.getFullYear(), 11, 1) ? 'Commandée avant le 1er décembre, elle arrive pour Noël. ' : ''; })()}${nbCrea() > 1 || F[c.formule].livres > 1 ? 'Création et finitions, impression, puis un seul colis' : 'Création et finitions, impression, puis expédition'} : 7 à 15 jours ouvrés.${objetsChoisis().length ? ' Les objets arrivent dans un colis à part, dans les mêmes délais.' : ''}</span></div>`)) +
       `<label class="toggle" style="margin-bottom:12px"><input type="checkbox" data-chk="cadeau" ${c.cadeau ? 'checked' : ''}> C'est pour offrir</label>` +
@@ -1299,6 +1312,7 @@
   document.addEventListener('input', ev => {
     const el = ev.target;
     if (el.dataset.cd !== undefined && el.dataset.ck === 'texte') { S.calendrier.dates[+el.dataset.cd].texte = el.value; save(); return; }
+    if (el.dataset.in === 'pays') return;              // le pays se règle au « change » (le récap et la livraison sont recalculés)
     if (el.dataset.in) { target(el)[el.dataset.in] = el.value; const tg = cible(el); if (tg === 'doudou' || tg === 'animaux' || tg === 'fratrie') foc = tg; renderStage(); save();
       if (['fratrie', 'animaux', 'doudou'].includes(tg) && ['prenom', 'nom'].includes(el.dataset.in)) { const eq = document.querySelector('.equipe'); if (eq) eq.outerHTML = equipeHTML(); const nm = tg === 'fratrie' ? sibName(S.fratrie[sib], sib) : tg === 'animaux' ? petName(S.animaux[pet], pet) : 'Le doudou'; const h3 = document.querySelector('.eq-ed h3'); if (h3) h3.textContent = nm; const del = document.querySelector('.eq-ed .btn.danger'); if (del && tg !== 'doudou') del.textContent = 'Retirer ' + nm; }
     }
@@ -1314,7 +1328,7 @@
       $('err').textContent = ''; return render(); }
     if (el.dataset.suite !== undefined) { const x = suiteDe()[+el.dataset.suite]; x[el.dataset.sk] = el.value; x[el.dataset.sk === 'theme' ? 'perso_t' : 'perso_u'] = true; OUVERT.suite = true; return render(); }
     if (el.dataset.chk) { target(el)[el.dataset.chk] = el.checked; if (cible(el) === 'doudou') foc = 'doudou'; render(); }
-    else if (el.tagName === 'SELECT' && el.dataset.in) { const o = target(el); o[el.dataset.in] = el.value; if (cible(el) === 'fratrie' && el.dataset.in === 'naissance') { o.age = ageDe(o); foc = 'fratrie'; } if (['naissance', 'anniv_j', 'anniv_m'].includes(el.dataset.in)) return render(); renderStage(); save(); }
+    else if (el.tagName === 'SELECT' && el.dataset.in) { const o = target(el); o[el.dataset.in] = el.value; if (cible(el) === 'fratrie' && el.dataset.in === 'naissance') { o.age = ageDe(o); foc = 'fratrie'; } if (['naissance', 'anniv_j', 'anniv_m', 'pays'].includes(el.dataset.in)) { save(); return render(); } renderStage(); save(); }
   });
   $('prev').onclick = () => { const T = TABS(); tab = T[Math.max(0, T.indexOf(tab) - 1)]; render(); scrollTo({ top: 0, behavior: 'smooth' }); };
   $('next').onclick = () => {
@@ -1385,6 +1399,7 @@
       for (const [k, l] of physique() ? [['nom', 'le nom du destinataire'], ['adresse1', "l'adresse"], ['code_postal', 'le code postal'], ['ville', 'la ville'], ['telephone', 'le téléphone']] : [])
         if (!String(c[k]).trim()) { $('err').textContent = `Indiquez ${l}.`; return; }
       if (!c.cgv) { $('err').textContent = 'Cochez la case des conditions de vente.'; return; }
+      if (c.pays === 'RE' && physique() && typeof portReel() !== 'number') { $('err').textContent = (portReel() || {}).err || 'Calcul de la livraison vers La Réunion en cours, un instant…'; return; }
       if (c.pays === 'RE' && physique() && objetsChoisis().length) { $('err').textContent = 'La gourde, la tasse et le sac ne sont pas encore livrés à La Réunion : retirez-les pour commander.'; return; }
       if (avecEbook() && !c.renonce) { $('err').textContent = "Pour l'e-book, cochez la case de création immédiate (contenu numérique)."; return; }
       if (c.cadeau && !c.cadeau_de.trim()) { $('err').textContent = 'Indiquez de la part de qui est le cadeau.'; return; }

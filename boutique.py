@@ -82,6 +82,66 @@ def log(msg):
     print(time.strftime("[%d/%m %H:%M] "), msg, flush=True)
 
 
+# ------------------------------------------------------------------ port réel (La Réunion)
+_PORT_CACHE = {}
+
+
+def port_reel(formule, cal=False, colo=False):
+    """Port Lulu réel (économique, TTC) du colis vers La Réunion, en centimes, sans marge. Devis mis en cache 12 h."""
+    import math
+    f = paiement.FORMULES[formule]
+    n = 0 if paiement.numerique(formule) or formule in EXTRAS else f["livres"]
+    cal = cal or formule == "calendrier"; colo = colo or formule == "coloriage"
+    cle = (formule, n, cal, colo)
+    hit = _PORT_CACHE.get(cle)
+    if hit and time.time() - hit[1] < 12 * 3600:
+        return hit[0]
+    lignes = []
+    if n:
+        lignes.append((recueil.nb_pages(n), recueil.POD, 1) if paiement.grand(formule) else (24, lulu.POD_PACKAGE, n))
+    if cal:
+        lignes.append((calendrier.PAGES, calendrier.POD, 1))
+    if colo:
+        lignes.append((2 * (len(coloriage.ORDRE) + 2), coloriage.POD, 1))
+    if not lignes:
+        return 0
+    if not lulu.configured():
+        raise PortError("Livraison à La Réunion : devis de l'imprimeur indisponible (Lulu non branché).")
+    addr = {"nom": "Devis", "adresse1": "1 rue de Paris", "code_postal": "97400", "ville": "Saint-Denis", "pays": "RE", "telephone": "0262000000"}
+    try:
+        d = lulu.cost_lignes(lignes, addr, CONTACT, "MAIL")
+        if (d.get("devise") or "EUR") != "EUR":
+            raise ValueError(f"devise {d.get('devise')}")
+        v = int(math.ceil(round(float(d["port_ttc"]) * 100, 4)))
+    except Exception as e:
+        log(f"port La Réunion indisponible ({cle}) : {e}")
+        raise PortError("Le calcul de la livraison vers La Réunion n'a pas abouti. Réessayez dans un instant.")
+    _PORT_CACHE[cle] = (v, time.time())
+    return v
+
+
+class PortError(Exception):
+    pass
+
+
+paiement.PORT_REEL = port_reel
+
+
+@bp.get("/api/port")
+def api_port():
+    """Port d'une commande vers un pays au port réel (La Réunion) : affiché avant le paiement."""
+    pays = (request.args.get("pays") or "FR").upper()
+    formule = request.args.get("formule") or "livre"
+    if formule not in paiement.FORMULES:
+        abort(400)
+    try:
+        v = paiement.frais_port(formule, pays, physique=request.args.get("phys") == "1",
+                                calendrier=request.args.get("cal") == "1", coloriage=request.args.get("colo") == "1")
+    except PortError as e:
+        return jsonify(erreur=str(e)), 503
+    return jsonify(port=v)
+
+
 # ------------------------------------------------------------------ commande
 def parse_address(a):
     a = {k: str((a or {}).get(k, "")).strip()[:120] for k in ("nom", "adresse1", "adresse2", "code_postal", "ville", "pays", "telephone")}
@@ -220,7 +280,11 @@ def order_create():
     promo = promo[0] if promo else None
     if promo:
         form["code_promo"] = promo
-    lignes = paiement.lignes(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo, ebook=ebook)   # pour la facture
+    try:
+        lignes = paiement.lignes(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo, ebook=ebook)   # pour la facture
+    except PortError as e:
+        shutil.rmtree(folder, ignore_errors=True)
+        return jsonify(erreur=str(e)), 503
     (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {k: p.name for k, p in guides.items()},
                                                    "apercus": {k: p.name for k, p in previews.items()}, "lignes": lignes}, ensure_ascii=False), encoding="utf-8")
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
@@ -347,7 +411,10 @@ def commander_imprime(oid):
     nid = uuid.uuid4().hex[:12]
     folder = STORE / nid; folder.mkdir(parents=True)
     lignes = [("Livre imprimé : version papier de son e-book « " + (b.get("titre") or "son livre") + " »", 1, paiement.FORMULES["imprime"]["prix_livre"], "livre")]
-    port = paiement.frais_port("livre", addr["pays"])
+    try:
+        port = paiement.frais_port("livre", addr["pays"])
+    except PortError as e:
+        return jsonify(erreur=str(e)), 503
     lignes.append(("Livraison", 1, port, "port"))
     (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {}, "apercus": {}, "lignes": lignes}, ensure_ascii=False), encoding="utf-8")
     montant = sum(q * u for _, q, u, _ in lignes)

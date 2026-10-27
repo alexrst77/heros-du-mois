@@ -268,7 +268,7 @@ def _tarifs():
     autres += [(v["nom"] + ", livraison comprise", _eur(v["prix"])) for v in g["objets"].values()]
     port = [("1 livre, un calendrier ou un cahier seul", _eur(g["port_fr"]["1"])), ("2 à 5 livres", _eur(g["port_fr"]["3"])),
             ("6 livres et plus", "offerte"), ("E-book seul", "par e-mail, sans frais"),
-            ("La Réunion", "même prix qu'en France (livres, calendrier, cahier)"),
+            ("La Réunion", "prix réel de l'envoi, sans marge, affiché avant le paiement"),
             ("Belgique, Luxembourg, Monaco", "+ " + _eur(g["supplement_pays"]["BE"])), ("Suisse", "+ " + _eur(g["supplement_pays"]["CH"]))]
     return [("Ses livres d'aventures", [lignes(livres), "Couverture rigide, 18 pages illustrées. Les livres d'une commande partent ensemble, dans un seul colis."]),
             ("E-book", [lignes(ebook), "Le PDF à lire sur tablette ou téléphone, envoyé par e-mail. Vous pourrez commander la version imprimée plus tard, sans recréer le livre."]),
