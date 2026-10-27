@@ -1633,8 +1633,14 @@ def admin_action(oid, action):
 
 
 # ------------------------------------------------------------------ pages légales, référencement
+CHEMINS_LEGAUX = {"cgv": "/cgv", "mentions": "/mentions-legales", "confidentialite": "/confidentialite"}
+
+
 def _page_legale(nom):
-    return Response(legal.page(nom), mimetype="text/html")
+    """Page légale, avec son adresse officielle (canonical absolue vers elle-même)."""
+    url = escape(base_url() + CHEMINS_LEGAUX[nom], {'"': "&quot;"})
+    html = legal.page(nom).replace("</head>", f'<link rel="canonical" href="{url}">\n</head>', 1)
+    return Response(html, mimetype="text/html")
 
 
 @bp.get("/cgv")
