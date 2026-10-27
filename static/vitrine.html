@@ -748,7 +748,7 @@ __LDJSON__
         <div class="h-flt" style="--z:10px;--d:0"><i class="h-r"><img decoding="async" src="/static/vitrine/noe_01_d.webp" alt=""><span class="h-txt">C’est une petite étoile, pas plus grande qu’une pomme. « Je m’appelle Luma. J’ai glissé de mon coin de ciel et je ne retrouve plus le chemin. » Noé soulève son ours. « Alors, nous allons t’aider tous les deux ! »<em>2</em></span></i><i class="h-v h-pg"><img decoding="async" src="/static/vitrine/noe_02_g.webp" alt=""><span class="h-txt">Luma secoue une pointe. Une poussière brillante tourbillonne autour de Noé : le voilà dans une combinaison, avec un casque tout rond ! Il installe son ours sur son sac. Devant la fenêtre, un sentier de lumière se déroule.<em>3</em></span></i></div>
         <div class="h-couv">
           <div class="h-face">
-            <img decoding="async" src="/static/vitrine/noe_00.webp" alt="">
+            <img decoding="async" src="/static/vitrine/noe_00.webp?v=3" alt="">
           </div>
           <i class="h-v garde"><b>Noé</b><span>et la poussière d'étoiles</span><em>Une aventure de<br>Mon Héros du Mois</em></i>
         </div>
@@ -803,9 +803,9 @@ __LDJSON__
     <h2>Feuilletez quelques-uns de nos livres</h2>
     <p class="sous">Trois exemples parmi tous ceux qu'on peut créer. Le vôtre aura son histoire à lui, avec votre enfant en héros.</p>
     <div class="etal" id="etal">
-      <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp" alt="" loading="lazy"></span><b>Noé</b><span>La poussière d'étoiles</span></button>
-      <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp?v=2" alt="" loading="lazy"></span><b>Léo</b><span>La forêt enchantée</span></button>
-      <button type="button" data-l="mila"><span class="cv"><img src="/static/vitrine/mila_00.webp" alt="" loading="lazy"></span><b>Mila</b><span>Le secret de l'océan</span></button>
+      <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp?v=3" alt="" loading="lazy"></span><b>Noé</b><span>La poussière d'étoiles</span></button>
+      <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp?v=3" alt="" loading="lazy"></span><b>Léo</b><span>La forêt enchantée</span></button>
+      <button type="button" data-l="mila"><span class="cv"><img src="/static/vitrine/mila_00.webp?v=3" alt="" loading="lazy"></span><b>Mila</b><span>Le secret de l'océan</span></button>
     </div>
     <div class="lecteur" id="lecteur" hidden>
     <p class="sous" id="sousLivre"></p>
@@ -834,8 +834,8 @@ __LDJSON__
 <section class="bloc coloriage" id="coloriage" aria-labelledby="coloT">
   <div class="wrap colo">
     <div class="colo-photos">
-      <img class="grande" src="/static/vitrine/colo_photo_1.webp" alt="Le cahier de coloriage ouvert : une page déjà coloriée par l'enfant et une page à colorier avec son doudou" loading="lazy" width="1300" height="1052">
-      <img src="/static/vitrine/colo_photo_3.webp" alt="Le cahier de coloriage de Léo posé sur une table, avec des crayons de couleur" loading="lazy" width="1004" height="1300">
+      <img class="grande" src="/static/vitrine/colo_photo_1.webp?v=2" alt="Le cahier de coloriage ouvert : une page déjà coloriée par l'enfant et une page à colorier avec son doudou" loading="lazy" width="1000" height="809">
+      <img src="/static/vitrine/colo_photo_3.webp?v=2" alt="Le cahier de coloriage de Léo posé sur une table, avec des crayons de couleur" loading="lazy" width="800" height="1036">
       <img src="/static/vitrine/colo_photo_4.webp" alt="Le cahier de coloriage de Léa, au jardin avec son ours en peluche" loading="lazy" width="867" height="1300">
     </div>
     <div>
@@ -1051,7 +1051,7 @@ __BARRE__
   function livrePages(id, T, sous, alt) {
     const pg = n => `<img src="${V}${id}_p${pad(n)}.webp" alt="" loading="lazy">`;
     return { sous, n: T.length / 2, img: i => V + `${id}_p${pad(2 * i - 1)}.webp`, mini: i => V + `${id}_${pad(i)}_s.webp?v=2`, pdf: true,
-      couv: `<div class="face recto couv"><img loading="lazy" decoding="async" src="${V}${id}_00.webp?v=2" alt="${alt}"></div>`,
+      couv: `<div class="face recto couv"><img loading="lazy" decoding="async" src="${V}${id}_00.webp?v=3" alt="${alt}"></div>`,
       gauche: i => pg(2 * i - 1),
       droite: i => ({ cls: 'mi', html: pg(2 * i) }),
       dos: pg(19), dosImg: true,

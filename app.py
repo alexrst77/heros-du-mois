@@ -2,6 +2,9 @@
 """Serveur « Mon Héros du Mois » : éditeur d'avatars -> histoire -> storyboard -> planche personnages (validée)
 -> aperçu couverture + 2 doubles pages (validé) -> livre complet de 20 pages + contrôle qualité.
 Lancement : python app.py   puis ouvrir http://localhost:8000"""
+import mimetypes
+mimetypes.add_type("image/webp", ".webp")      # sinon certains serveurs envoient les .webp en application/octet-stream
+mimetypes.add_type("image/avif", ".avif")
 import os, sys, json, uuid, threading, time, shutil, traceback, base64, io, re
 from pathlib import Path
 from flask import Flask, request, jsonify, send_file, send_from_directory, abort, redirect, Response
