@@ -20,7 +20,7 @@ IA = ("Les illustrations sont créées avec l'intelligence artificielle à parti
 
 PAGES = {
     "livre-personnalise-enfant": dict(
-        titre="Livre personnalisé enfant : il devient le héros de l'histoire",
+        titre="Livre personnalisé dont il est le héros",
         desc="Un vrai livre illustré dont votre enfant est le héros, avec son prénom, son doudou et ses animaux. Avatar sans photo, couverture rigide, livré chez vous.",
         h1="Le livre personnalisé où votre enfant est le héros",
         kicker="Livre personnalisé enfant",
@@ -44,7 +44,7 @@ PAGES = {
         liens=["livre-doudou-personnalise", "livre-personnalise-noel", "livre-anniversaire-personnalise", "livre-emotions-enfant"]),
 
     "livre-personnalise-noel": dict(
-        titre="Livre personnalisé de Noël pour enfant, à son prénom",
+        titre="Livre personnalisé de Noël pour enfant",
         desc="Un livre de Noël où votre enfant vit la magie de Noël avec son doudou et ses animaux. Illustré, relié, livré chez vous. Commandez avant le 1er décembre.",
         h1="Un livre de Noël dont votre enfant est le héros",
         kicker="Cadeau de Noël personnalisé",
@@ -66,7 +66,7 @@ PAGES = {
         liens=["cadeau-personnalise-enfant", "livre-personnalise-enfant", "calendrier-personnalise-enfant"]),
 
     "livre-anniversaire-personnalise": dict(
-        titre="Livre d'anniversaire personnalisé pour enfant",
+        titre="Livre d'anniversaire personnalisé",
         desc="Pour son anniversaire, un livre illustré dont il est le héros : son prénom, son âge, son doudou et ses animaux. Couverture rigide, livré chez vous.",
         h1="Un livre d'anniversaire où il est le héros de sa fête",
         kicker="Cadeau d'anniversaire",
@@ -87,7 +87,7 @@ PAGES = {
         liens=["livre-personnalise-enfant", "cadeau-personnalise-enfant", "livre-doudou-personnalise"]),
 
     "livre-doudou-personnalise": dict(
-        titre="Un livre personnalisé où son doudou devient un héros",
+        titre="Livre personnalisé avec son doudou",
         desc="Son doudou, son chien ou son chat deviennent les compagnons de son aventure dans un livre illustré personnalisé. Sans photo, livré chez vous.",
         h1="Son doudou et ses animaux, héros de son histoire",
         kicker="Livre avec son doudou",
@@ -108,7 +108,7 @@ PAGES = {
         liens=["livre-personnalise-enfant", "livre-emotions-enfant", "cadeau-personnalise-enfant"]),
 
     "livre-emotions-enfant": dict(
-        titre="Livre personnalisé : peur du noir, émotions, nouveau bébé",
+        titre="Livre enfant : peur du noir et émotions",
         desc="Un livre personnalisé pour accompagner votre enfant : peur du noir, colère, arrivée d'un petit frère, rentrée, propreté. Il est le héros de l'histoire.",
         h1="Un livre pour l'aider à grandir, dont il est le héros",
         kicker="Livres pour accompagner",
@@ -127,7 +127,7 @@ PAGES = {
         liens=["livre-personnalise-enfant", "livre-doudou-personnalise"]),
 
     "calendrier-personnalise-enfant": dict(
-        titre="Calendrier personnalisé enfant : 12 mois illustrés avec lui",
+        titre="Calendrier personnalisé pour enfant",
         desc="Un calendrier mural où votre enfant, son doudou et ses animaux illustrent chaque mois. Son anniversaire et vos dates de famille imprimés. Spirale, 28 × 22 cm.",
         h1="Le calendrier de son année, illustré avec lui",
         kicker="Calendrier personnalisé",
@@ -146,7 +146,7 @@ PAGES = {
         liens=["cahier-coloriage-personnalise", "cadeau-personnalise-enfant", "livre-personnalise-noel"]),
 
     "cahier-coloriage-personnalise": dict(
-        titre="Cahier de coloriage personnalisé à son prénom",
+        titre="Cahier de coloriage personnalisé",
         desc="30 pages de coloriages et de jeux où votre enfant est le héros : coloriages à son prénom, coloriages magiques, points à relier, labyrinthes.",
         h1="Le cahier de coloriage dont il est le héros",
         kicker="Coloriage personnalisé",
@@ -166,7 +166,7 @@ PAGES = {
 
 
     "livre-grand-frere-grande-soeur": dict(
-        titre="Livre personnalisé grand frère, grande sœur : un cadeau pour l'aîné",
+        titre="Livre grand frère, grande sœur",
         desc="Un bébé arrive ? Offrez à l'aîné un livre dont il est le héros, qui parle de son nouveau rôle de grand frère ou de grande sœur. Illustré, relié, sans photo.",
         h1="Un livre pour l'aîné qui devient grand frère ou grande sœur",
         kicker="Arrivée d'un bébé",
@@ -209,7 +209,7 @@ PAGES = {
         liens=["livre-personnalise-noel", "livre-anniversaire-personnalise", "cadeau-personnalise-enfant"]),
 
     "livre-personnalise-par-age": dict(
-        titre="Livre personnalisé selon l'âge : 2-4 ans, 5-7 ans, 8-10 ans",
+        titre="Livre personnalisé selon l'âge",
         desc="Un livre personnalisé écrit pour l'âge de votre enfant : phrases courtes pour les petits, plus d'histoire pour les grands. De 2 à 10 ans.",
         h1="Un livre personnalisé écrit pour son âge",
         kicker="Par âge",
@@ -229,7 +229,7 @@ PAGES = {
              ("Mon enfant ne sait pas encore lire, est-ce adapté ?", "Oui, les histoires sont écrites pour être lues à voix haute par un adulte.")],
         liens=["livre-personnalise-enfant", "idees-histoires", "livre-emotions-enfant"]),
     "cadeau-personnalise-enfant": dict(
-        titre="Cadeau personnalisé enfant : livres, calendrier, coloriage",
+        titre="Cadeau personnalisé pour enfant",
         desc="Un cadeau personnalisé où l'enfant est le héros : livre illustré, calendrier, cahier de coloriage, gourde, tasse, sac à dos. Un seul avatar, sans photo.",
         h1="Un cadeau personnalisé où l'enfant est le héros",
         kicker="Idées cadeaux",
@@ -311,27 +311,27 @@ def _idees():
 CONSTRUIRE = {"tarifs": _tarifs, "avis-clients": _avis, "idees-histoires": _idees}
 
 PAGES.update({
-    "tarifs": dict(titre="Tarifs : livres personnalisés, e-book, calendrier, coloriage",
+    "tarifs": dict(titre="Tarifs des livres personnalisés",
                    desc="Tous nos prix : livre personnalisé, packs de 3, 6 et 12 livres, e-book, calendrier, cahier de coloriage, objets et livraison. Paiement en une fois, sans abonnement.",
                    h1="Nos tarifs, sans surprise", kicker="Tarifs", intro="Vous composez son avatar gratuitement et voyez sa couverture avant de payer. Voici tous les prix, livraison comprise ou non.",
                    image=("/static/vitrine/photo_01.webp", "Quatre livres personnalisés Mon Héros du Mois"), cta=("Créer son avatar gratuitement", "/creer"), sections=[],
                    faq=[("Y a-t-il un abonnement ?", "Non. Tout se paie en une fois, à la commande."), ("Peut-on payer en plusieurs fois ?", "Pas pour l'instant : le paiement se fait en une fois, par carte, via Stripe.")],
                    liens=["livre-personnalise-enfant", "cadeau-personnalise-enfant", "avis-clients"]),
-    "avis-clients": dict(titre="Avis clients vérifiés : leurs livres personnalisés en photos",
+    "avis-clients": dict(titre="Avis clients vérifiés, avec photos",
                          desc="Les avis et les photos des familles qui ont reçu leur livre personnalisé Mon Héros du Mois. Uniquement des avis vérifiés, positifs comme négatifs.",
                          h1="Ce qu'en disent les familles", kicker="Avis vérifiés", intro="Uniquement des clients qui ont reçu leur commande, avec leurs vraies photos.",
                          image=("/static/vitrine/photo_10.webp", "Plusieurs livres personnalisés Mon Héros du Mois"), cta=("Créer son avatar gratuitement", "/creer"), sections=[],
                          faq=[("Comment laisser un avis ?", "Quelques jours après la livraison, nous vous envoyons un lien personnel par e-mail. Le lien est aussi dans « Mon compte »."),
                               ("Les avis sont-ils vérifiés ?", "Oui : seuls les clients dont la commande a été expédiée peuvent en laisser un. Tous les avis conformes sont publiés, positifs comme négatifs.")],
                          liens=["tarifs", "livre-personnalise-enfant", "aide"]),
-    "idees-histoires": dict(titre="Idées d'histoires pour un livre personnalisé enfant",
+    "idees-histoires": dict(titre="Idées d'histoires pour livre enfant",
                             desc="Thèmes (peur du noir, rentrée, émotions, arrivée d'un bébé…), mondes (espace, dinosaures, pirates, fées…) et fêtes : toutes les idées pour son livre personnalisé.",
                             h1="Des idées d'histoires pour son livre", kicker="Inspiration",
                             intro="Un thème qui lui parle, un monde qui le fait rêver : vous choisissez les deux, et ses compagnons partent avec lui.",
                             image=("/static/vitrine/photo_02.webp", "Le livre « Jade et la vallée des dinosaures » posé sur une table"), cta=("Choisir son histoire", "/creer"), sections=[],
                             faq=[("Peut-on proposer sa propre idée ?", "Oui, en partie : indiquez ses passions et un mot pour nous à la commande, l'histoire en tient compte.")],
                             liens=["livre-emotions-enfant", "livre-personnalise-par-age", "livre-personnalise-enfant"]),
-    "aide": dict(titre="Centre d'aide : commande, livraison, paiement, avatar",
+    "aide": dict(titre="Centre d'aide : commande et livraison",
                  desc="Toutes les réponses : comment créer l'avatar, délais de livraison, paiement, e-book, cadeau, défaut d'impression, données de l'enfant.",
                  h1="Centre d'aide", kicker="Questions fréquentes", intro="Les réponses aux questions les plus fréquentes. Une autre question ? Écrivez-nous, un humain vous répond.",
                  image=("/static/vitrine/photo_07.webp", "Un livre personnalisé dans sa boîte cadeau"), cta=("Nous écrire", "/#contact"), sections=[
