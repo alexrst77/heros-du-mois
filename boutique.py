@@ -1219,6 +1219,23 @@ def admin_lulu_comparer():
         return jsonify(erreur=str(e)), 400
 
 
+@bp.post("/admin/api/lulu/destination")
+def admin_lulu_destination():
+    """Devis Lulu pour livrer ailleurs (La Réunion, Antilles…) : rien n'est commandé ni payé, rien ne change sur le site."""
+    if not admin_ok():
+        abort(403)
+    if not lulu.configured():
+        return jsonify(erreur="Clés Lulu absentes"), 400
+    d = request.get_json(force=True, silent=True) or {}
+    pays = re.sub(r"[^A-Z]", "", str(d.get("pays") or "RE").upper())[:2] or "RE"
+    cp = re.sub(r"[^0-9A-Za-z -]", "", str(d.get("code_postal") or "97400"))[:10]
+    ville = str(d.get("ville") or "Saint-Denis")[:60]
+    try:
+        return jsonify(ok=True, pays=pays, ville=ville, code_postal=cp, **lulu.devis_destination(pays, cp, ville, CONTACT))
+    except Exception as e:
+        return jsonify(erreur=str(e)), 400
+
+
 @bp.post("/admin/api/lulu/calendrier")
 def admin_lulu_calendrier():
     """Test en bac à sable : quels codes de calendrier l'API Lulu accepte, et à quel prix (devis seulement)."""

@@ -732,6 +732,29 @@ async function comparer(b) {
     <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
   document.getElementById('dlg').showModal();
 }
+async function devisDestination(b) {
+  const v = id => document.getElementById(id).value, sel = document.getElementById('dPays');
+  b.disabled = true; b.textContent = '⏳ Devis en cours (≈ 20 s)…';
+  const r = await (await fetch('/admin/api/lulu/destination' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ pays: v('dPays'), code_postal: v('dCp'), ville: v('dVille') }) })).json();
+  b.disabled = false; b.textContent = 'Demander le devis';
+  if (r.erreur) { RES._reg = { cls: 'err', html: '⚠️ ' + esc(r.erreur) }; return render(); }
+  const f = x => x == null || x === '' ? '—' : parseFloat(x).toFixed(2).replace('.', ',') + ' €';
+  const L = r.lignes.filter(x => !x.ref), ref = r.lignes.find(x => x.ref && !x.erreur), ok = L.filter(x => !x.erreur), ko = L.filter(x => x.erreur);
+  const opts = Array.isArray(r.options) ? r.options : (r.options && r.options.results) || [];
+  const delai = n => { const o = opts.find(x => (x.level || x.shipping_level || x.name) === n); if (!o) return '';
+    const a = o.total_days_min ?? o.min_delivery_days ?? o.days_min ?? o.transit_time_min, z = o.total_days_max ?? o.max_delivery_days ?? o.days_max ?? o.transit_time_max;
+    return a != null || z != null ? `${a ?? '?'} à ${z ?? '?'} j` : ''; };
+  const pays = sel.options[sel.selectedIndex].text;
+  document.getElementById('dlgIn').innerHTML = `<h3>🌍 Livrer à ${esc(r.ville)} (${esc(pays)}) : devis Lulu</h3>
+    ${ok.length ? `<table><tr><th>Livraison</th><th class="r">Livres</th><th class="r">Impression</th><th class="r">Port</th><th class="r">Total TTC</th><th class="r">Délai annoncé</th></tr>
+      ${ok.map(x => `<tr><td>${esc(r.noms[x.niveau] || x.niveau)}</td><td class="r">${x.quantite}</td><td class="r">${f(x.impression_ttc)}</td><td class="r">${f(x.port_ttc)}</td><td class="r"><b>${f(x.total_ttc)}</b></td><td class="r">${delai(x.niveau) || '—'}</td></tr>`).join('')}</table>`
+      : `<p><b>Lulu ne propose aucun envoi vers cette adresse.</b></p>`}
+    ${ref ? `<p class="meta">Pour comparer, 1 livre en économique vers Melun : port <b>${f(ref.port_ttc)}</b>, total <b>${f(ref.total_ttc)}</b>.${ok.find(x => x.niveau === 'MAIL' && x.quantite === 1) ? ` Écart de port : <b>${f(parseFloat(ok.find(x => x.niveau === 'MAIL' && x.quantite === 1).port_ttc) - parseFloat(ref.port_ttc))}</b> par livre seul.` : ''}</p>` : ''}
+    ${ko.length ? `<p class="meta">Non proposé : ${ko.map(x => esc(r.noms[x.niveau] || x.niveau) + (x.quantite > 1 ? ' × ' + x.quantite : '')).join(', ')}.</p>` : ''}
+    <p class="meta">Les taxes locales (octroi de mer, TVA d'outre-mer, droits de douane) ne sont pas toujours dans le devis Lulu : elles peuvent être demandées au client à la livraison. Les livres seulement : cahiers, calendriers et objets non compris.</p>
+    <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
+  document.getElementById('dlg').showModal();
+}
 async function calendrier(b, quoi) {
   b.disabled = true; b.textContent = '⏳ Devis en cours (≈ 30 s)…';
   const r = await (await fetch('/admin/api/lulu/' + (quoi || 'calendrier') + Q, { method: 'POST', headers: H })).json(); b.disabled = false; b.textContent = 'Tester';
@@ -830,6 +853,15 @@ function vueReglages() {
   <div class="card"><h3>🏷️ Comparer les prix d'impression et les formats</h3>
     <p class="meta" style="margin:0">Devis Lulu pour plusieurs fabrications (rigide, souple, agrafé…), des formats plus grands et des livres plus épais (32, 40 pages). Aucune commande, rien n'est payé.</p>
     <div class="acts"><button class="btn" onclick="comparer(this)">Comparer</button></div></div>
+  <div class="card"><h3>🌍 Livrer ailleurs : devis Lulu</h3>
+    <p class="meta" style="margin:0">Prix réels de Lulu pour envoyer des livres dans un autre pays ou en outre-mer, comparés à la France. Aucune commande, rien n'est payé, le site ne change pas.</p>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr 1.4fr;gap:8px;margin-top:8px">
+      <select id="dPays" style="padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);font:600 14px var(--texte)" onchange="const v={RE:['97400','Saint-Denis'],GP:['97110','Pointe-à-Pitre'],MQ:['97200','Fort-de-France'],GF:['97300','Cayenne'],YT:['97600','Mamoudzou'],CA:['H2X 1Y4','Montréal'],MA:['20000','Casablanca'],DE:['10115','Berlin'],ES:['28001','Madrid'],IT:['00184','Roma']}[this.value]||['',''];document.getElementById('dCp').value=v[0];document.getElementById('dVille').value=v[1]">
+        <option value="RE">La Réunion</option><option value="GP">Guadeloupe</option><option value="MQ">Martinique</option><option value="GF">Guyane</option><option value="YT">Mayotte</option>
+        <option value="CA">Canada</option><option value="MA">Maroc</option><option value="DE">Allemagne</option><option value="ES">Espagne</option><option value="IT">Italie</option></select>
+      <input id="dCp" value="97400" placeholder="Code postal" style="padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);font:600 14px var(--texte)">
+      <input id="dVille" value="Saint-Denis" placeholder="Ville" style="padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);font:600 14px var(--texte)"></div>
+    <div class="acts"><button class="btn" onclick="devisDestination(this)">Demander le devis</button></div></div>
   <div class="card"><h3>🎒 Printful (gourdes, sacs, tasses)</h3>
     <p class="meta" style="margin:0">Vérifie la connexion et cherche dans le catalogue (mots en anglais, séparés par des virgules). Lecture seule : aucune commande.</p>
     <input id="pfq" placeholder="bottle, backpack, kid, mug, puzzle" style="width:100%;margin-top:8px;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);font:600 14px var(--texte)">

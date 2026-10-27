@@ -181,6 +181,42 @@ def comparer(pages, addr, email):
     return out
 
 
+NIVEAUX = [("MAIL", "Économique"), ("PRIORITY_MAIL", "Prioritaire"), ("GROUND", "Colis standard"), ("EXPEDITED", "Rapide"), ("EXPRESS", "Express")]
+
+
+def options_livraison(pays, pages, pod=None, quantite=1):
+    """Modes de livraison que Lulu annonce pour un pays (avec délais si l'API les donne). Lecture seule."""
+    from urllib.parse import urlencode
+    q = urlencode({"iso_country_code": pays, "country_code": pays, "quantity": quantite, "pod_package_id": pod or POD_PACKAGE, "page_count": pages})
+    r = api("GET", "/shipping-options/?" + q)
+    return r.get("results", r) if isinstance(r, dict) else r
+
+
+def devis_destination(pays, code_postal, ville, email, pages=24):
+    """Devis réels (aucune commande) pour livrer des livres dans un pays donné, comparés à la France métropolitaine.
+    Pour chaque mode de livraison : 1 livre ; en économique : aussi les colis de 3 et 6 livres."""
+    tel = {"RE": "0262000000", "GP": "0590000000", "MQ": "0596000000", "GF": "0594000000", "YT": "0269000000"}.get(pays, "0600000000")
+    addr = {"nom": "Devis test", "adresse1": "1 rue de la Mairie", "code_postal": code_postal, "ville": ville, "pays": pays, "telephone": tel}
+    lignes = []
+    def un(niveau, q, adresse=addr, ref=False):
+        try:
+            c = cost_lignes([(pages, POD_PACKAGE, q)], adresse, email, niveau)
+            lignes.append(dict(c, niveau=niveau, quantite=q, ref=ref))
+        except Exception as e:
+            lignes.append({"niveau": niveau, "quantite": q, "ref": ref, "erreur": str(e)[:200]})
+    for niveau, _ in NIVEAUX:
+        un(niveau, 1)
+    for q in (3, 6):
+        un("MAIL", q)
+    fr = {"nom": "Devis test", "adresse1": "1 rue de la Mairie", "code_postal": "77000", "ville": "Melun", "pays": "FR", "telephone": "0600000000"}
+    un("MAIL", 1, fr, True)
+    try:
+        options = options_livraison(pays, pages)
+    except Exception as e:
+        options = {"erreur": str(e)[:200]}
+    return {"lignes": lignes, "options": options, "noms": dict(NIVEAUX)}
+
+
 CALENDRIERS = [   # codes possibles (non documentés publiquement) : on demande un devis à Lulu pour savoir lesquels existent
     "1100X0850FCPRECO100CW444GXX", "1100X0850FCPREWO100CW444GXX", "1100X0850FCPRECO100CW444MXX", "1100X0850FCPRECO100CW444UXX",
     "1100X0850FCPRECO080CW444GXX", "1100X0850FCSTDCO100CW444GXX", "0850X1100FCPRECO100CW444GXX", "1100X0850FCPRECA100CW444GXX",
