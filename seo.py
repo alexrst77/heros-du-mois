@@ -268,6 +268,7 @@ def _tarifs():
     autres += [(v["nom"] + ", livraison comprise", _eur(v["prix"])) for v in g["objets"].values()]
     port = [("1 livre, un calendrier ou un cahier seul", _eur(g["port_fr"]["1"])), ("2 à 5 livres", _eur(g["port_fr"]["3"])),
             ("6 livres et plus", "offerte"), ("E-book seul", "par e-mail, sans frais"),
+            ("La Réunion", "même prix qu'en France (livres, calendrier, cahier)"),
             ("Belgique, Luxembourg, Monaco", "+ " + _eur(g["supplement_pays"]["BE"])), ("Suisse", "+ " + _eur(g["supplement_pays"]["CH"]))]
     return [("Ses livres d'aventures", [lignes(livres), "Couverture rigide, 18 pages illustrées. Les livres d'une commande partent ensemble, dans un seul colis."]),
             ("E-book", [lignes(ebook), "Le PDF à lire sur tablette ou téléphone, envoyé par e-mail. Vous pourrez commander la version imprimée plus tard, sans recréer le livre."]),
@@ -335,7 +336,7 @@ PAGES.update({
                  h1="Centre d'aide", kicker="Questions fréquentes", intro="Les réponses aux questions les plus fréquentes. Une autre question ? Écrivez-nous, un humain vous répond.",
                  image=("/static/vitrine/photo_07.webp", "Un livre personnalisé dans sa boîte cadeau"), cta=("Nous écrire", "/#contact"), sections=[
                      ("Créer son livre", ["<ul><li>L'avatar se compose sur le site, sans photo, en quelques minutes.</li><li>Vous voyez gratuitement l'aperçu de sa couverture avant de payer.</li><li>Vous choisissez le thème et le monde de chaque livre, ou nous les proposons.</li></ul>"]),
-                     ("Livraison", ["Comptez 7 à 15 jours ouvrés : création, vérification et retouches, impression, expédition avec suivi. Pour Noël, commandez avant le 1er décembre. Livraison en France, Belgique, Luxembourg, Monaco et Suisse."]),
+                     ("Livraison", ["Comptez 7 à 15 jours ouvrés : création, vérification et retouches, impression, expédition avec suivi. Pour Noël, commandez avant le 1er décembre. Livraison en France, à La Réunion, en Belgique, au Luxembourg, à Monaco et en Suisse."]),
                      ("Paiement", ["Par carte, en une seule fois, via Stripe : nous ne voyons jamais votre carte. Aucun abonnement."]),
                      ("Un souci avec votre livre ?", ["Livre abîmé ou défaut d'impression : envoyez-nous une photo dans les 30 jours, nous le réimprimons sans frais. Le livre étant personnalisé, il n'y a pas de droit de rétractation (voir les <a href=\"/cgv\">conditions de vente</a>)."]),
                      ("Les données de votre enfant", ["Elles servent uniquement à créer ses créations. Nous ne les partageons pas et nous les effaçons après la livraison (voir la <a href=\"/confidentialite\">politique de confidentialité</a>)."]),

@@ -70,7 +70,8 @@ def objets_valides(objets, formule=None):
 # Livraison (centimes), un seul colis par commande. Offerte dès 6 livres en France ; supplément pour les autres pays.
 PORT_FR = {1: int(os.getenv("PORT_1", "790")), 3: int(os.getenv("PORT_3", "990"))}
 SUPPLEMENT_PAYS = {"FR": 0, "BE": int(os.getenv("PORT_SUPPL_UE", "400")), "LU": int(os.getenv("PORT_SUPPL_UE", "400")),
-                   "MC": int(os.getenv("PORT_SUPPL_UE", "400")), "CH": int(os.getenv("PORT_SUPPL_CH", "900"))}
+                   "MC": int(os.getenv("PORT_SUPPL_UE", "400")), "CH": int(os.getenv("PORT_SUPPL_CH", "900")),
+                   "RE": 0}                      # La Réunion : même prix qu'en France (le surcoût Lulu est pris en charge)
 
 
 def frais_port(formule, pays="FR", physique=False):

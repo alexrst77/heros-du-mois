@@ -752,6 +752,7 @@ async function devisDestination(b) {
       : `<p><b>Lulu ne propose aucun envoi vers cette adresse.</b></p>`}
     ${refs.length ? `<p class="meta">Même colis en économique vers Melun : ${refs.map(x => `${x.quantite} livre${x.quantite > 1 ? 's' : ''} : port <b>${f(x.port_ttc)}</b>`).join(' · ')}.</p>` : ''}
     ${ko.length ? `<p class="meta">Non proposé : ${ko.map(x => esc(r.noms[x.niveau] || x.niveau) + (x.quantite > 1 ? ' × ' + x.quantite : '')).join(', ')}.</p>` : ''}
+    ${(r.objets || []).length ? `<h3 style="margin-top:14px">Objets (Printful)</h3>${r.objets.map(o => `<p class="meta" style="margin:4px 0"><b>${esc(o.objet)}</b> : ${o.erreur ? 'pas de livraison possible (' + esc(o.erreur) + ')' : o.options.length ? o.options.map(x => `${esc(x.nom || '')} ${esc(x.prix || '')} ${esc(x.devise || '')}${x.min ? ` (${x.min} à ${x.max} j)` : ''}`).join(' · ') : 'aucune livraison proposée'}</p>`).join('')}` : ''}
     <p class="meta">Les taxes locales (octroi de mer, TVA d'outre-mer, droits de douane) ne sont pas toujours dans le devis Lulu : elles peuvent être demandées au client à la livraison. Les livres seulement : cahiers, calendriers et objets non compris.</p>
     <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
   document.getElementById('dlg').showModal();

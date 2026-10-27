@@ -36,7 +36,8 @@ THEMES = ["La peur du noir", "La rentrée à l'école", "Apprendre à partager",
           "Essayer quelque chose de nouveau", "Aider les autres"]
 import univers as U
 UNIVERS = U.NOMS                                  # univers hors fêtes (rotation de l'abonnement)
-PAYS = {"FR", "BE", "LU", "CH", "MC"}
+PAYS = {"FR", "BE", "LU", "CH", "MC", "RE"}
+PAYS_SANS_OBJETS = {"RE"}         # La Réunion : livres, calendrier et cahier (Lulu) ; objets Printful pas encore vérifiés
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[a-z]{2,}$", re.I)
 
 
@@ -89,7 +90,7 @@ def parse_address(a):
     if miss:
         return None, "Adresse de livraison incomplète : " + ", ".join(miss).replace("_", " ")
     if a["pays"] not in PAYS:
-        return None, "Livraison possible en France, Belgique, Luxembourg, Suisse et Monaco."
+        return None, "Livraison possible en France, à La Réunion, en Belgique, au Luxembourg, en Suisse et à Monaco."
     if len(re.sub(r"\D", "", a["telephone"])) < 9:
         return None, "Numéro de téléphone invalide (demandé par le transporteur)."
     return a, None
@@ -197,6 +198,8 @@ def order_create():
             return jsonify(erreur=f"Choisissez les {coloriage.NB_PAGES} coloriages du cahier (ou complétez au hasard)."), 400
         form["coloriage"] = {"pages": coloriage.choisir(pages)}
     objs = paiement.objets_valides([x for x in (c.get("objets") or []) if isinstance(x, str)], formule)   # gourde, tasse, sac (en ajout)
+    if (objs or formule in paiement.OBJETS) and (addr or {}).get("pays") in PAYS_SANS_OBJETS:
+        return jsonify(erreur="La gourde, la tasse et le sac ne sont pas encore livrés à La Réunion. Les livres, le calendrier et le cahier de coloriage, oui : retirez l'objet pour continuer."), 400
     if objs:
         form["objets"] = objs
 
@@ -1231,7 +1234,22 @@ def admin_lulu_destination():
     cp = re.sub(r"[^0-9A-Za-z -]", "", str(d.get("code_postal") or "97400"))[:10]
     ville = str(d.get("ville") or "Saint-Denis")[:60]
     try:
-        return jsonify(ok=True, pays=pays, ville=ville, code_postal=cp, **lulu.devis_destination(pays, cp, ville, CONTACT))
+        res = lulu.devis_destination(pays, cp, ville, CONTACT)
+    except Exception as e:
+        return jsonify(erreur=str(e)), 400
+    res["objets"] = []                       # objets Printful : livraison possible vers ce pays ? (devis de port, aucune commande)
+    if printful.configured():
+        for k, o in objets.KINDS.items():
+            try:
+                v = printful.specs_ou_defaut(o["id"]).get("variante")
+                r = printful.port(v, pays, cp) if v else []
+                r = r.get("result", r) if isinstance(r, dict) else r
+                res["objets"].append({"objet": o["titre"], "options": [{"nom": x.get("name"), "prix": x.get("rate"), "devise": x.get("currency"),
+                                       "min": x.get("minDeliveryDays"), "max": x.get("maxDeliveryDays")} for x in (r or [])]})
+            except Exception as e:
+                res["objets"].append({"objet": o["titre"], "erreur": str(e)[:200]})
+    try:
+        return jsonify(ok=True, pays=pays, ville=ville, code_postal=cp, **res)
     except Exception as e:
         return jsonify(erreur=str(e)), 400
 
