@@ -3,6 +3,8 @@
 
 Chaque page a son titre, sa description, son H1, un vrai contenu (ce qu'on reçoit, comment ça marche, questions) et des liens vers
 la création et vers les autres pages. Aucun avis, aucun chiffre inventé ; aucun prix affiché (comme l'accueil)."""
+import functools
+from pathlib import Path
 import os, json, time
 from html import escape
 from flask import Blueprint, Response, request
@@ -423,6 +425,16 @@ table.t tr:last-child td{border-bottom:0}
 """
 
 
+@functools.lru_cache(maxsize=64)
+def _dims(url):
+    """Vraies dimensions d'une image du site (attributs width/height), lues une fois."""
+    try:
+        from PIL import Image
+        return Image.open(Path(__file__).parent / url.split("?")[0].lstrip("/")).size
+    except Exception:
+        return (800, 800)
+
+
 def liens_pied():
     return "".join(f'<a href="/{k}">{escape(v)}</a>' for k, v in COURT.items())
 
@@ -516,7 +528,7 @@ def rendre(slug):
   <div><span class="kick">{escape(p['kicker'])}</span><h1>{escape(p['h1'])}</h1><p class="intro">{escape(p['intro'])}</p>
     <a class="btn" href="{p['cta'][1]}">{escape(p['cta'][0])}</a>
     <p class="ia-l">Gratuit pour commencer, sans inscription. Vous voyez sa couverture avant de payer.</p></div>
-  <img src="{p['image'][0]}" alt="{escape(p['image'][1])}" width="800" height="800" fetchpriority="high">
+  <img src="{p['image'][0]}" alt="{escape(p['image'][1])}" width="{_dims(p['image'][0])[0]}" height="{_dims(p['image'][0])[1]}" fetchpriority="high">
 </section>
 <section class="corps">{sections}</section>
 <section class="faq"><h2>Vos questions</h2>{faq}</section>

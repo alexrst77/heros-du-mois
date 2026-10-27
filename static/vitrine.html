@@ -23,6 +23,7 @@ __LDJSON__
 <link rel="stylesheet" href="/static/theme.css">
 <script src="/static/mesure.js"></script>
 <style>
+  img { height:auto; }            /* les attributs width/height donnent le ratio ; la taille affichée reste celle du CSS */
   /* ------------------------------------------------ en-tête */
   .top { position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--ciel) 88%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--trait); }
   .top .in { display:flex; align-items:center; gap:28px; height:68px; }
@@ -741,14 +742,14 @@ __LDJSON__
       <div class="ombre"></div>
       <div class="livre">
         <div class="dos"></div><div class="tranche"></div><div class="pages"></div>
-        <div class="h-fin"><img decoding="async" src="/static/vitrine/noe_05_d.webp" alt=""><span class="h-txt">Une mélodie circule de cristal en cristal, puis s’éloigne vers une montagne en croissant. « Tu entends ? » souffle Noé. Luma se remet à briller. « C’est la chanson des comètes ! Elles connaissent tous les chemins du ciel. »<em>10</em></span></div>
-        <div class="h-flt" style="--z:4px;--d:3"><i class="h-r"><img decoding="async" src="/static/vitrine/noe_04_d.webp" alt=""><span class="h-txt">Luma laisse tomber quelques grains de lumière pour tracer un chemin. Mais un souffle les emporte aussitôt. Noé les regarde filer entre les rochers. « Attends… Ils vont peut-être quelque part. Suivons-les doucement. »<em>8</em></span></i><i class="h-v h-pg"><img decoding="async" src="/static/vitrine/noe_05_g.webp" alt=""><span class="h-txt">Les grains les conduisent dans une vallée de cristaux. Ting… ting… Chaque cristal chante une note légère. Noé s’accroupit pour mieux écouter. Son ours dépasse de son sac, comme s’il écoutait lui aussi. Luma cesse un instant de trembler.<em>9</em></span></i></div>
-        <div class="h-flt" style="--z:6px;--d:2"><i class="h-r"><img decoding="async" src="/static/vitrine/noe_03_d.webp" alt=""><span class="h-txt">Noé regarde le ciel, puis ses petites bottes. « Je ne sais pas voler aussi haut… » Luma baisse ses pointes. Il se rapproche d’elle. « Mais je peux chercher avec toi. Nous n’avons pas besoin de tout savoir pour commencer. »<em>6</em></span></i><i class="h-v h-pg"><img decoding="async" src="/static/vitrine/noe_04_g.webp" alt=""><span class="h-txt">Noé grimpe sur une butte et lève le bras. Encore un peu… juste un peu ! Le cerf-volant reste bien trop loin. Il redescend en faisant un petit bond. « Bon. Il nous faut une autre idée ! »<em>7</em></span></i></div>
-        <div class="h-flt" style="--z:8px;--d:1"><i class="h-r"><img decoding="async" src="/static/vitrine/noe_02_d.webp" alt=""><span class="h-txt">Un pas, puis un autre… Noé avance dans la nuit comme sur un tapis moelleux. Au bout du sentier, une petite lune argentée les attend. Tout autour flottent des nuages violets. « C’est encore plus beau que dans mes rêves ! »<em>4</em></span></i><i class="h-v h-pg"><img decoding="async" src="/static/vitrine/noe_03_g.webp" alt=""><span class="h-txt">Sur la lune, Luma montre un dessin d’étoiles très haut dans le ciel. On dirait un cerf-volant ! Mais un coin est tout sombre. « C’est ma place, murmure-t-elle. Sans moi, mes amies ne peuvent plus terminer notre dessin. »<em>5</em></span></i></div>
-        <div class="h-flt" style="--z:10px;--d:0"><i class="h-r"><img decoding="async" src="/static/vitrine/noe_01_d.webp" alt=""><span class="h-txt">C’est une petite étoile, pas plus grande qu’une pomme. « Je m’appelle Luma. J’ai glissé de mon coin de ciel et je ne retrouve plus le chemin. » Noé soulève son ours. « Alors, nous allons t’aider tous les deux ! »<em>2</em></span></i><i class="h-v h-pg"><img decoding="async" src="/static/vitrine/noe_02_g.webp" alt=""><span class="h-txt">Luma secoue une pointe. Une poussière brillante tourbillonne autour de Noé : le voilà dans une combinaison, avec un casque tout rond ! Il installe son ours sur son sac. Devant la fenêtre, un sentier de lumière se déroule.<em>3</em></span></i></div>
+        <div class="h-fin"><img width="560" height="560" decoding="async" src="/static/vitrine/noe_05_d.webp" alt=""><span class="h-txt">Une mélodie circule de cristal en cristal, puis s’éloigne vers une montagne en croissant. « Tu entends ? » souffle Noé. Luma se remet à briller. « C’est la chanson des comètes ! Elles connaissent tous les chemins du ciel. »<em>10</em></span></div>
+        <div class="h-flt" style="--z:4px;--d:3"><i class="h-r"><img width="560" height="560" decoding="async" src="/static/vitrine/noe_04_d.webp" alt=""><span class="h-txt">Luma laisse tomber quelques grains de lumière pour tracer un chemin. Mais un souffle les emporte aussitôt. Noé les regarde filer entre les rochers. « Attends… Ils vont peut-être quelque part. Suivons-les doucement. »<em>8</em></span></i><i class="h-v h-pg"><img width="560" height="560" decoding="async" src="/static/vitrine/noe_05_g.webp" alt=""><span class="h-txt">Les grains les conduisent dans une vallée de cristaux. Ting… ting… Chaque cristal chante une note légère. Noé s’accroupit pour mieux écouter. Son ours dépasse de son sac, comme s’il écoutait lui aussi. Luma cesse un instant de trembler.<em>9</em></span></i></div>
+        <div class="h-flt" style="--z:6px;--d:2"><i class="h-r"><img width="560" height="560" decoding="async" src="/static/vitrine/noe_03_d.webp" alt=""><span class="h-txt">Noé regarde le ciel, puis ses petites bottes. « Je ne sais pas voler aussi haut… » Luma baisse ses pointes. Il se rapproche d’elle. « Mais je peux chercher avec toi. Nous n’avons pas besoin de tout savoir pour commencer. »<em>6</em></span></i><i class="h-v h-pg"><img width="560" height="560" decoding="async" src="/static/vitrine/noe_04_g.webp" alt=""><span class="h-txt">Noé grimpe sur une butte et lève le bras. Encore un peu… juste un peu ! Le cerf-volant reste bien trop loin. Il redescend en faisant un petit bond. « Bon. Il nous faut une autre idée ! »<em>7</em></span></i></div>
+        <div class="h-flt" style="--z:8px;--d:1"><i class="h-r"><img width="560" height="560" decoding="async" src="/static/vitrine/noe_02_d.webp" alt=""><span class="h-txt">Un pas, puis un autre… Noé avance dans la nuit comme sur un tapis moelleux. Au bout du sentier, une petite lune argentée les attend. Tout autour flottent des nuages violets. « C’est encore plus beau que dans mes rêves ! »<em>4</em></span></i><i class="h-v h-pg"><img width="560" height="560" decoding="async" src="/static/vitrine/noe_03_g.webp" alt=""><span class="h-txt">Sur la lune, Luma montre un dessin d’étoiles très haut dans le ciel. On dirait un cerf-volant ! Mais un coin est tout sombre. « C’est ma place, murmure-t-elle. Sans moi, mes amies ne peuvent plus terminer notre dessin. »<em>5</em></span></i></div>
+        <div class="h-flt" style="--z:10px;--d:0"><i class="h-r"><img width="560" height="560" decoding="async" src="/static/vitrine/noe_01_d.webp" alt=""><span class="h-txt">C’est une petite étoile, pas plus grande qu’une pomme. « Je m’appelle Luma. J’ai glissé de mon coin de ciel et je ne retrouve plus le chemin. » Noé soulève son ours. « Alors, nous allons t’aider tous les deux ! »<em>2</em></span></i><i class="h-v h-pg"><img width="560" height="560" decoding="async" src="/static/vitrine/noe_02_g.webp" alt=""><span class="h-txt">Luma secoue une pointe. Une poussière brillante tourbillonne autour de Noé : le voilà dans une combinaison, avec un casque tout rond ! Il installe son ours sur son sac. Devant la fenêtre, un sentier de lumière se déroule.<em>3</em></span></i></div>
         <div class="h-couv">
           <div class="h-face">
-            <img decoding="async" src="/static/vitrine/noe_00.webp?v=3" alt="">
+            <img width="800" height="800" decoding="async" src="/static/vitrine/noe_00.webp?v=3" alt="">
           </div>
           <i class="h-v garde"><b>Noé</b><span>et la poussière d'étoiles</span><em>Une aventure de<br>Mon Héros du Mois</em></i>
         </div>
@@ -774,9 +775,9 @@ __LDJSON__
     <ol class="choix">
       <li><div class="cv av"><img src="/static/vitrine/jade_avatar.webp" alt="L'avatar de Jade" loading="lazy" width="480" height="480"></div>
         <b>Le héros</b><p>Coiffure, couleur de peau, yeux, lunettes, tenue : il lui ressemble. Aucune photo demandée.</p></li>
-      <li><div class="cv comp"><img src="/static/avatars/doudou-ours.webp" alt="" loading="lazy"><img src="/static/avatars/animal-chien.webp" alt="" loading="lazy"></div>
+      <li><div class="cv comp"><img width="480" height="480" src="/static/avatars/doudou-ours.webp" alt="" loading="lazy"><img width="480" height="480" src="/static/avatars/animal-chien.webp" alt="" loading="lazy"></div>
         <b>Ses compagnons</b><p>Son doudou et jusqu'à trois animaux, avec leur nom. Ils vivent l'aventure avec lui.</p></li>
-      <li><div class="cv mondes3"><img src="/static/vitrine/univ/mini/desert.webp" alt="" loading="lazy"><img src="/static/vitrine/univ/mini/espace.webp" alt="" loading="lazy"><img src="/static/vitrine/univ/mini/mer.webp" alt="" loading="lazy"></div>
+      <li><div class="cv mondes3"><img width="180" height="180" src="/static/vitrine/univ/mini/desert.webp" alt="" loading="lazy"><img width="180" height="180" src="/static/vitrine/univ/mini/espace.webp" alt="" loading="lazy"><img width="180" height="180" src="/static/vitrine/univ/mini/mer.webp" alt="" loading="lazy"></div>
         <b>L'univers</b><p><span data-n="univers">15</span> mondes : forêt enchantée, espace, océan, désert et oasis… ou une fête de famille.</p></li>
       <li><div class="cv themes"><span>La peur du noir</span><span>La rentrée</span><span>Un petit frère</span><span>La confiance en soi</span><span>Les émotions</span></div>
         <b>Le thème</b><p>Ce que l'histoire l'aide à vivre : <span data-n="themes">29</span> thèmes au choix, ou une aventure juste pour rire.</p></li>
@@ -803,9 +804,9 @@ __LDJSON__
     <h2>Feuilletez quelques-uns de nos livres</h2>
     <p class="sous">Trois exemples parmi tous ceux qu'on peut créer. Le vôtre aura son histoire à lui, avec votre enfant en héros.</p>
     <div class="etal" id="etal">
-      <button type="button" data-l="noe"><span class="cv"><img src="/static/vitrine/noe_00.webp?v=3" alt="" loading="lazy"></span><b>Noé</b><span>La poussière d'étoiles</span></button>
-      <button type="button" data-l="leo"><span class="cv"><img src="/static/vitrine/leo_00.webp?v=3" alt="" loading="lazy"></span><b>Léo</b><span>La forêt enchantée</span></button>
-      <button type="button" data-l="mila"><span class="cv"><img src="/static/vitrine/mila_00.webp?v=3" alt="" loading="lazy"></span><b>Mila</b><span>Le secret de l'océan</span></button>
+      <button type="button" data-l="noe"><span class="cv"><img width="800" height="800" src="/static/vitrine/noe_00.webp?v=3" alt="" loading="lazy"></span><b>Noé</b><span>La poussière d'étoiles</span></button>
+      <button type="button" data-l="leo"><span class="cv"><img width="800" height="800" src="/static/vitrine/leo_00.webp?v=3" alt="" loading="lazy"></span><b>Léo</b><span>La forêt enchantée</span></button>
+      <button type="button" data-l="mila"><span class="cv"><img width="800" height="800" src="/static/vitrine/mila_00.webp?v=3" alt="" loading="lazy"></span><b>Mila</b><span>Le secret de l'océan</span></button>
     </div>
     <div class="lecteur" id="lecteur" hidden>
     <p class="sous" id="sousLivre"></p>
@@ -895,16 +896,16 @@ __LDJSON__
     <div class="fleches"><button type="button" id="rG" aria-label="Créations précédentes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" id="rD" aria-label="Créations suivantes"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 5l7 7-7 7"/></svg></button></div>
   </div>
   <ul class="etal-p" id="etalP">
-    <li class="prod" id="calendrier"><a class="ph" href="/creer?produit=calendrier" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/cal_photo_1_r.webp" alt="" loading="lazy" style="object-position:50% 30%"></a>
+    <li class="prod" id="calendrier"><a class="ph" href="/creer?produit=calendrier" tabindex="-1" aria-hidden="true"><img width="640" height="585" src="/static/vitrine/cal_photo_1_r.webp" alt="" loading="lazy" style="object-position:50% 30%"></a>
       <h3>Son calendrier</h3><p>12 mois illustrés avec lui, son anniversaire et vos dates déjà marqués. <b data-px="calendrier"></b></p>
       <a class="lien" href="/creer?produit=calendrier">Créer son calendrier</a></li>
-    <li class="prod" id="objets"><a class="ph" href="/creer?produit=gourde" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_gourde_gabin_r.webp" alt="" loading="lazy"></a>
+    <li class="prod" id="objets"><a class="ph" href="/creer?produit=gourde" tabindex="-1" aria-hidden="true"><img width="640" height="640" src="/static/vitrine/obj_gourde_gabin_r.webp" alt="" loading="lazy"></a>
       <h3>Sa gourde à paille</h3><p>Son héros tout autour, son prénom dessus. <b data-px="gourde"></b></p>
       <a class="lien" href="/creer?produit=gourde">Créer sa gourde</a></li>
-    <li class="prod"><a class="ph" href="/creer?produit=tasse" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_tasse_lea_r.webp" alt="" loading="lazy" style="object-position:50% 70%"></a>
+    <li class="prod"><a class="ph" href="/creer?produit=tasse" tabindex="-1" aria-hidden="true"><img width="534" height="800" src="/static/vitrine/obj_tasse_lea_r.webp" alt="" loading="lazy" style="object-position:50% 70%"></a>
       <h3>Sa tasse émaillée</h3><p>Incassable, pour le chocolat chaud du soir. <b data-px="tasse"></b></p>
       <a class="lien" href="/creer?produit=tasse">Créer sa tasse</a></li>
-    <li class="prod"><a class="ph" href="/creer?produit=sac" tabindex="-1" aria-hidden="true"><img src="/static/vitrine/obj_sac_mael_r.webp" alt="" loading="lazy" style="object-position:40% 50%"></a>
+    <li class="prod"><a class="ph" href="/creer?produit=sac" tabindex="-1" aria-hidden="true"><img width="640" height="533" src="/static/vitrine/obj_sac_mael_r.webp" alt="" loading="lazy" style="object-position:40% 50%"></a>
       <h3>Son sac à dos</h3><p>Pour l'école et les sorties. <b data-px="sac"></b></p>
       <a class="lien" href="/creer?produit=sac">Créer son sac</a></li>
   </ul>
@@ -1041,7 +1042,7 @@ __BARRE__
   function livrePdf(id, T, sous, dos, alt, sombre) {
     const im = i => V + `${id}_${pad(i)}.webp`, demi = (i, cote, n) => `<div class="pano ${cote}" style="background-image:url(${im(i)})"></div><div class="bande">${ptxt('', [T[n - 1]], n)}</div>`;
     return { sous, dos, n: T.length / 2, img: im, mini: i => V + `${id}_${pad(i)}_s.webp`, pdf: true,
-      couv: `<div class="face recto couv"><img loading="lazy" decoding="async" src="${im(0)}" alt="${alt}"></div>`,
+      couv: `<div class="face recto couv"><img loading="lazy" decoding="async" src="${im(0)}" alt="${alt}" width="800" height="800"></div>`,
       gauche: i => demi(i, 'g', 2 * i - 1),
       droite: i => ({ cls: 'mi' + (sombre ? ' sombre' : ''), html: demi(i, 'd', 2 * i) }), sombre,
       lire: i => `<p>${esc(T[2 * i - 2])}</p><p>${esc(T[2 * i - 1])}</p>`,
@@ -1049,9 +1050,9 @@ __BARRE__
   }
   /* livre dont on montre les vraies pages du PDF (mise en page exacte, texte en haut ou en bas selon la page) */
   function livrePages(id, T, sous, alt) {
-    const pg = n => `<img src="${V}${id}_p${pad(n)}.webp" alt="" loading="lazy">`;
+    const pg = n => `<img src="${V}${id}_p${pad(n)}.webp" alt="" loading="lazy" width="900" height="900">`;
     return { sous, n: T.length / 2, img: i => V + `${id}_p${pad(2 * i - 1)}.webp`, mini: i => V + `${id}_${pad(i)}_s.webp?v=2`, pdf: true,
-      couv: `<div class="face recto couv"><img loading="lazy" decoding="async" src="${V}${id}_00.webp?v=3" alt="${alt}"></div>`,
+      couv: `<div class="face recto couv"><img loading="lazy" decoding="async" src="${V}${id}_00.webp?v=3" alt="${alt}" width="800" height="800"></div>`,
       gauche: i => pg(2 * i - 1),
       droite: i => ({ cls: 'mi', html: pg(2 * i) }),
       dos: pg(19), dosImg: true,
@@ -1092,7 +1093,7 @@ __BARRE__
     $('ouvrir').textContent = grand.matches ? 'Cliquez pour ouvrir le livre' : 'Touchez ou glissez pour tourner les pages';
     livre.setAttribute('aria-label', 'Livre : cliquez sur une page pour la tourner');
     $('sousLivre').textContent = L.sous;
-    minis.innerHTML = Array.from({ length: N }, (_, i) => `<button type="button" data-p="${i}" aria-label="Aller à la double page ${i + 1}"><img src="${L.mini(i + 1)}" alt="" loading="lazy"></button>`).join('');
+    minis.innerHTML = Array.from({ length: N }, (_, i) => `<button type="button" data-p="${i}" aria-label="Aller à la double page ${i + 1}"><img src="${L.mini(i + 1)}" alt="" loading="lazy" width="240" height="240"></button>`).join('');
     zs(); etat();
     for (let n = 1; n <= N; n++) { const im = new Image(); im.src = L.img(n); }
   }
@@ -1208,7 +1209,7 @@ __BARRE__
   /* vraies photos (admin) : rien n'est affiché tant qu'il n'y en a pas */
   fetch('/api/preuves').then(r => r.json()).then(j => {
     const l = j.preuves || []; if (!l.length) return;
-    $('pvL').innerHTML = l.map(p => `<figure>${p.type === 'video' ? `<video src="${p.url}" controls playsinline preload="metadata"></video>` : `<img src="${p.url}" alt="${esc(p.legende || 'Photo d\'un livre reçu')}" loading="lazy">`}${p.legende ? `<figcaption>${esc(p.legende)}</figcaption>` : ''}</figure>`).join('');
+    $('pvL').innerHTML = l.map(p => `<figure>${p.type === 'video' ? `<video src="${p.url}" controls playsinline preload="metadata"></video>` : `<img src="${p.url}" alt="${esc(p.legende || 'Photo d\'un livre reçu')}" loading="lazy" width="800" height="1000">`}${p.legende ? `<figcaption>${esc(p.legende)}</figcaption>` : ''}</figure>`).join('');
     $('preuves').hidden = false;
   }).catch(() => {});
 
@@ -1216,7 +1217,7 @@ __BARRE__
   fetch('/api/avis').then(r => r.json()).then(j => {
     const list = (j.avis || []).slice(0, 6); if (!list.length) return;
     const r = j.resume || {};
-    $('avis').innerHTML = list.map(a => `<figure><div class="etoiles" aria-label="${a.note} étoiles sur 5">${'★'.repeat(a.note)}${'☆'.repeat(5 - a.note)}</div>${(a.photos || []).slice(0, 1).map(p => `<img src="${p}" alt="Photo du livre reçu" loading="lazy" style="width:100%;border-radius:14px;margin-top:10px">`).join('')}<blockquote>${esc(a.texte)}</blockquote><figcaption>${esc(a.nom)}</figcaption></figure>`).join('') +
+    $('avis').innerHTML = list.map(a => `<figure><div class="etoiles" aria-label="${a.note} étoiles sur 5">${'★'.repeat(a.note)}${'☆'.repeat(5 - a.note)}</div>${(a.photos || []).slice(0, 1).map(p => `<img src="${p}" alt="Photo du livre reçu" loading="lazy" width="800" height="600" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px;margin-top:10px">`).join('')}<blockquote>${esc(a.texte)}</blockquote><figcaption>${esc(a.nom)}</figcaption></figure>`).join('') +
       `<p style="grid-column:1/-1;margin:4px 0 0;font-size:14px;color:var(--encre-2)">${r.nombre >= 3 ? `<b>${r.nombre} avis vérifiés, ${String(r.moyenne).replace('.', ',')}/5.</b> ` : ''}Avis vérifiés : seuls les clients ayant reçu leur commande peuvent en laisser un ; tous sont publiés, positifs comme négatifs. <a href="/avis-clients">Tous les avis</a></p>`;
     $('avisBloc').hidden = false;
   }).catch(() => {});
