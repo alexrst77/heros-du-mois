@@ -1636,10 +1636,20 @@ def admin_action(oid, action):
 CHEMINS_LEGAUX = {"cgv": "/cgv", "mentions": "/mentions-legales", "confidentialite": "/confidentialite"}
 
 
+DESCRIPTIONS_LEGALES = {
+    "cgv": "Conditions de vente de Mon Héros du Mois : produits, prix, commande et paiement sécurisé, fabrication et livraison, "
+           "réimpression en cas de défaut. À lire avant de commander le livre personnalisé de votre enfant.",
+    "mentions": "Mentions légales du site Mon Héros du Mois : éditeur, hébergeur, activité, usage de l'intelligence artificielle, "
+                "propriété intellectuelle et contact.",
+    "confidentialite": "Politique de confidentialité de Mon Héros du Mois : données collectées pour créer le livre de votre enfant, "
+                       "prestataires, durées de conservation et vos droits. Aucune photo de l'enfant n'est demandée."}
+
+
 def _page_legale(nom):
-    """Page légale, avec son adresse officielle (canonical absolue vers elle-même)."""
+    """Page légale, avec son adresse officielle (canonical absolue vers elle-même) et son résumé pour Google."""
     url = escape(base_url() + CHEMINS_LEGAUX[nom], {'"': "&quot;"})
-    html = legal.page(nom).replace("</head>", f'<link rel="canonical" href="{url}">\n</head>', 1)
+    desc = escape(DESCRIPTIONS_LEGALES[nom], {'"': "&quot;"})
+    html = legal.page(nom).replace("</head>", f'<meta name="description" content="{desc}">\n<link rel="canonical" href="{url}">\n</head>', 1)
     return Response(html, mimetype="text/html")
 
 
