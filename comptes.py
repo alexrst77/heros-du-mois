@@ -319,4 +319,8 @@ def noter_commande(oid, adresse):
 @bp.get("/compte")
 def page_compte():
     from pathlib import Path
-    return (Path(__file__).parent / "static" / "compte.html").read_text(encoding="utf-8"), 200, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"}
+    from html import escape
+    base = (os.getenv("PUBLIC_URL") or request.host_url).rstrip("/")     # adresse officielle, sans ?suite=… : une seule page pour Google
+    html = (Path(__file__).parent / "static" / "compte.html").read_text(encoding="utf-8")
+    html = html.replace('<meta name="robots" content="noindex">', f'<meta name="robots" content="noindex">\n<link rel="canonical" href="{escape(base)}/compte">', 1)
+    return html, 200, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex"}
