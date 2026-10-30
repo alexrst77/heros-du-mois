@@ -257,6 +257,11 @@
   .recap > div { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid var(--trait); font-size:15px; }
   .recap > div.tot { border-bottom:0; font-weight:800; font-size:18px; }
   .recap .offert { color:var(--mousse); }
+  .enfants-l { margin:0 0 14px; padding:14px; border:2px dashed var(--trait); border-radius:16px; background:#fff; }
+  .enfants-l .enf-t { display:block; font:800 16px var(--texte); margin-bottom:6px; }
+  .enfants-l .enf { display:flex; justify-content:space-between; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid var(--trait); font-size:14.5px; }
+  .enfants-l .btn { margin-top:10px; width:100%; justify-content:center; white-space:normal; text-align:center; line-height:1.25; }
+  .flash-enf { margin:0 0 14px; padding:12px 14px; border-radius:14px; background:#E3F6EF; color:#0E5A48; font-weight:700; font-size:15px; }
   .vers6 { margin:8px 0 4px; } .vers6-t { font-size:13px; color:#8A5A00; } .vers6-t b { color:var(--encre); }
   .vers6-b { height:6px; border-radius:99px; background:#F3E3B5; margin:6px 0; overflow:hidden; } .vers6-b i { display:block; height:100%; background:var(--luciole); border-radius:99px; }
   .garanties { list-style:none; padding:0; margin:14px 0 4px; display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; font-size:13px; color:var(--encre-2); }
@@ -469,6 +474,8 @@
   const ebookAjout = () => !isEbook() && !!S.commande.ebook && ((F[S.commande.formule] || {}).livres || 0) > 0;
   const avecEbook = () => isEbook() || ebookAjout();
   const n0 = () => ((F[S.commande.formule] || {}).livres || 0) > 0;
+  const isMulti = () => /^enfants\d+$/.test(S.commande.formule || '');                 // un livre par enfant, plusieurs enfants
+  const nHist = () => isMulti() ? 1 : ((F[S.commande.formule] || {}).livres || 1);      // histoires de CET enfant
   /* La Réunion : port réel de l'imprimeur pour ce colis (sans marge, pas de livraison offerte), demandé au serveur */
   const PORT_REEL = {};
   const portReel = () => {
@@ -523,6 +530,10 @@
     objets: [],
     commande: { formule: 'livre', pack: 'livre', cal_ajout: false, colo_ajout: false, email: '', nom: '', adresse1: '', adresse2: '', code_postal: '', ville: '', pays: 'FR', telephone: '', cgv: false, sans_news: false, une_fois: false, cadeau: false, cadeau_de: '', cadeau_message: '', cadeau_duree: '12' }
   };
+  /* commande pour plusieurs enfants : les livres déjà composés (un par enfant) attendent ici, le dernier se compose à l'écran */
+  let PANIER = [], FLASH = '';
+  try { PANIER = JSON.parse(sessionStorage.getItem('heros-panier') || '[]'); if (!Array.isArray(PANIER)) PANIER = []; } catch (_) { PANIER = []; }
+  const savePanier = () => { try { sessionStorage.setItem('heros-panier', JSON.stringify(PANIER)); } catch (_) {} };
   let S;
   try { S = JSON.parse(localStorage.getItem('heros-avatar')) || null; } catch (_) { S = null; }
   S = S && S.enfant ? Object.assign(structuredClone(DEF), S) : structuredClone(DEF);
@@ -580,6 +591,10 @@
     else if (P.coloriage) { c.formule = 'coloriage'; c.cal_ajout = c.colo_ajout = false; }
     else if (objetsChoisis().length) { c.formule = objetsChoisis()[0]; c.cal_ajout = c.colo_ajout = false; }   // objet(s) seul(s)
     else { c.formule = c.pack; c.cal_ajout = c.colo_ajout = false; }
+    if (PANIER.length) {                // plusieurs enfants : un livre chacun, le prix suit le nombre total de livres
+      P.livres = true; c.pack = 'livre'; c.cal_ajout = !!P.calendrier; c.colo_ajout = !!P.coloriage;
+      c.formule = 'enfants' + Math.min(12, PANIER.length + 1);
+    }
   }
   const rien = () => aucune() && !objetsChoisis().length;
   const aucune = () => !S.produits.livres && !S.produits.calendrier && !S.produits.coloriage;
@@ -888,7 +903,8 @@
 
   function panelEnfant() {
     const e = S.enfant, O = OPT.enfant;
-    return `<div class="row2">${G('Prénom *', `<input type="text" data-in="prenom" maxlength="20" placeholder="Léo" value="${esc(e.prenom)}">`)}
+    return (PANIER.length ? `<div class="flash-enf">${esc(FLASH || `Commande pour plusieurs enfants : vous composez le livre ${PANIER.length + 1}.`)} <button type="button" class="lien" data-t="commande">Voir la commande</button></div>` : '') +
+      `<div class="row2">${G('Prénom *', `<input type="text" data-in="prenom" maxlength="20" placeholder="Léo" value="${esc(e.prenom)}">`)}
       ${G('Année de naissance *', `<select data-in="naissance">${ANNEES.map(a => `<option ${e.naissance == a ? 'selected' : ''}>${a}</option>`).join('')}</select>`, e.age ? `${e.age} ans` : '')}</div>` +
       G("C'est", chips(e, 'genre', O.genre)) +
       G('Son monde', `<div class="mondes">${UNIV.filter(u => !u.fete).map(u => `<button type="button" data-monde="${esc(u.nom)}" class="${!S.histoire.occasion && S.histoire.univers === u.nom ? 'on' : ''}"><img src="/static/vitrine/univ/mini/${u.cle}.webp" alt="" loading="lazy" onerror="this.src='/vignette/${u.cle}.webp'">${esc(u.nom.replace(/^(Une|Un|La|Le|Les|L') ?/, '').replace(/^./, c => c.toUpperCase()))}</button>`).join('')}</div>`, 'le décor de son 1er livre') +
@@ -985,7 +1001,7 @@
     l.forEach((x, i) => { x.theme = t[i % t.length]; x.univers = u[i % u.length]; x.perso_t = x.perso_u = true; });
   }
   function suiteDe() {
-    const h = S.histoire, n = (F[S.commande.formule] || {}).livres || 1;
+    const h = S.histoire, n = nHist();
     if (!Array.isArray(h.suite)) h.suite = [];
     const DOUX = DOUX_T.filter(t => t !== h.theme);
     const ui = Math.max(0, UNIVERS.indexOf(h.univers));
@@ -997,7 +1013,7 @@
     return h.suite.slice(0, Math.max(0, n - 1));
   }
   function suiteHTML(ouvert) {
-    const n = (F[S.commande.formule] || {}).livres || 1, h = S.histoire;
+    const n = nHist(), h = S.histoire;
     if (n < 2 || S.commande.formule === 'fetes') return '';
     const sel = (k, key, list, v) => `<select data-suite="${k}" data-sk="${key}">${list.map(t => `<option ${v === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
     const un = h.occasion ? (FETES.find(u => u.cle === h.occasion) || {}).nom : h.univers;
@@ -1101,9 +1117,9 @@
     const P = S.produits, c = S.commande, pr = esc((S.enfant.prenom || 'votre enfant').trim()), autre = k => nbCrea() - (P[k] ? 1 : 0) > 0;
     const carte = (k, img, titre, txt, prix, corps) => `<div class="crea-c ${P[k] ? 'on' : ''}"><button type="button" class="crea-h" data-prod="${k}">
         <img src="${img}" alt=""><span class="crea-t"><b>${titre}</b><span>${txt}</span><span class="crea-px">${prix}</span></span><i class="crea-ok">${P[k] ? '✓' : '+'}</i></button>${P[k] && corps ? `<div class="crea-b">${corps}</div>` : ''}</div>`;
-    const plans = `<div class="plans">` + PLANS.map(p => `<button type="button" class="plan ${c.pack === p.id ? 'on' : ''}" data-pack="${p.id}">
+    const plans = `<div class="plans">` + PLANS.filter(p => !PANIER.length || p.id === 'livre').map(p => `<button type="button" class="plan ${c.pack === p.id ? 'on' : ''}" data-pack="${p.id}">
         <div><b>${p.nom}${p.tag ? `<i class="tag">${p.tag}</i>` : ''}</b><span>${p.txt}</span></div><div class="px">${p.px}</div></button>`).join('') + `</div>`;
-    const n = (F[c.formule] || {}).livres || 1, un = S.histoire.occasion ? (FETES.find(u => u.cle === S.histoire.occasion) || {}).nom : S.histoire.univers;
+    const n = nHist(), un = S.histoire.occasion ? (FETES.find(u => u.cle === S.histoire.occasion) || {}).nom : S.histoire.univers;
     const reg = (cle, titre, resume, corps) => `<details class="multi reg" data-ouv="${cle}" ${OUVERT[cle] ? 'open' : ''}><summary>${titre} <small>${resume}</small></summary><div class="reg-b">${corps}</div></details>`;
     if (OUVERT.hist === undefined) OUVERT.hist = true;      // le choix du thème et de l'univers est ouvert d'office : c'est le cœur du concept
     const hist = reg('hist', c.formule === 'fetes' ? 'Choisir ses 6 fêtes' : isGrand() ? `Choisir ses ${n} histoires : thème et univers` : n > 1 ? `Choisir l'histoire de chaque livre : thème et univers` : `Choisir son histoire : thème et univers`, c.formule === 'fetes' ? `${S.histoire.fetes.length}/6 fêtes choisies` : n > 1 ? `${motLivre()} 1 : ${esc(S.histoire.theme)} · ${esc(un || '')}… les ${n} sont modifiables` : `Thème : ${esc(S.histoire.theme)} · Univers : ${esc(un || '')}`, panelHistoire());
@@ -1127,7 +1143,7 @@
     return `<div class="occasion" style="margin-bottom:18px;display:block"><b>12 illustrations de saison avec ${pr}</b>${S.doudou.actif ? ', son doudou' : ''}${S.animaux.length ? ' et ses animaux' : ''} : la neige en janvier, les flaques d'avril, la plage en juillet, les feuilles d'automne… Format paysage 28 × 22 cm, à spirale, à accrocher au mur.</div>` + optionsCalendrier();
   }
   function panelHistoire() {
-    const h = S.histoire, occ = h.occasion ? FETES.find(u => u.cle === h.occasion) : null, n = (F[S.commande.formule] || {}).livres || 1;
+    const h = S.histoire, occ = h.occasion ? FETES.find(u => u.cle === h.occasion) : null, n = nHist();
     const sel = (attrs, list, v) => `<select ${attrs}>${list.map(t => `<option ${v === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
     let livres = '';
     if (S.commande.formule === 'fetes') {
@@ -1157,7 +1173,7 @@
   function panelCommande() {
     const c = S.commande, inp = (k, ph, extra) => `<input type="text" data-in="${k}" value="${esc(c[k])}" placeholder="${ph}" ${extra || ''}>`;
     const P = S.produits, ch = [];
-    if (P.livres) ch.push(`${esc((PLANS.find(p => p.id === c.pack) || {}).nom || '')}`);
+    if (P.livres) ch.push(isMulti() ? `${F[c.formule].livres} livres, un par enfant` : `${esc((PLANS.find(p => p.id === c.pack) || {}).nom || '')}`);
     if (P.calendrier) ch.push(`Calendrier ${esc(anneeCal())}`);
     if (P.coloriage) ch.push('Cahier de coloriage');
     objetsChoisis().forEach(k => ch.push(OBJ_INFO[k].court));
@@ -1177,8 +1193,17 @@
     return (ME.connecte ? `<div class="moncompte">Connecté avec <b>${esc(ME.email)}</b> : ${esc((S.enfant.prenom || 'votre héros').trim())} sera enregistré dans <a href="/compte">votre compte</a>, avec le suivi de la commande.</div>`
         : `<div class="moncompte">Vous avez un compte ? <a href="/compte?suite=/creer">Connectez-vous</a> pour retrouver vos héros et suivre vos commandes. Sinon, continuez simplement en invité.</div>`) +
       `<div class="moncolis"><div><b>Votre commande</b><span>${ch.join(' · ')}</span></div><button type="button" class="lien" data-t="creations">Modifier</button></div>` +
+      (() => { const peut = P.livres && !isEbook() && !isGrand() && c.formule !== 'fetes' && (c.pack === 'livre' || PANIER.length) && PANIER.length < 11;
+        if (!PANIER.length && !peut) return '';
+        const unC = S.histoire.occasion ? (FETES.find(u => u.cle === S.histoire.occasion) || {}).nom : S.histoire.univers;
+        return `<div class="enfants-l"><b class="enf-t">Un livre pour chaque enfant</b>` +
+          PANIER.map((x, j) => `<div class="enf"><span>Livre ${j + 1} : <b>${esc(x.prenom)}</b> · ${esc(x.univers || '')} · ${esc(x.theme || '')}</span><button type="button" class="lien petit" data-retirer-enfant="${j}">retirer</button></div>`).join('') +
+          (PANIER.length ? `<div class="enf"><span>Livre ${PANIER.length + 1} : <b>${pr}</b> · ${esc(unC || '')} · ${esc(S.histoire.theme)} <small>(composé à l'écran)</small></span></div>` : '') +
+          (peut ? `<button type="button" class="btn ghost" data-ajout-enfant="1">+ Ajouter un livre pour un autre enfant</button>` +
+            `<p class="hint" style="margin:8px 0 0">Vous composez son héros et son histoire, puis vous payez tout ensemble : un seul paiement, un seul colis. Dès 3 livres, chaque livre est au prix du pack (${eur2(F.pack3.prix_livre)} le livre).</p>` : '') +
+          `</div>`; })() +
       (() => { const f = F[c.formule], pt = port(), n = f.livres;
-        return `<div class="recap">` + (isEbook() ? `<div><span>E-book (PDF)${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : f.grand ? `<div><span>Grand livre A4, ${n} histoires${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : n ? `<div><span>${n} livre${n > 1 ? 's' : ''} × ${eur2(f.prix_livre)}${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : '') +
+        return `<div class="recap">` + (isEbook() ? `<div><span>E-book (PDF)${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : f.grand ? `<div><span>Grand livre A4, ${n} histoires${retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : n ? `<div><span>${n} livre${n > 1 ? 's' : ''} × ${eur2(f.prix_livre)}${isMulti() ? ` <small>(${esc([...PANIER.map(x => x.prenom), S.enfant.prenom.trim() || '…'].join(', '))})</small>` : retirer('livres')}</span><span>${eur2(f.prix)}</span></div>` : '') +
           (ebookAjout() ? `<div><span>Version e-book de chaque livre (${n} × ${eur2(GR.ebook.ajout)})</span><span>${eur2(GR.ebook.ajout * n)}</span></div>` : '') +
           (isCal() ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(f.prix)}</span></div>` : c.cal_ajout ? `<div><span>Calendrier ${esc(anneeCal())}${retirer('calendrier')}</span><span>${eur2(GR.calendrier.ajout)}</span></div>` : '') +
           (isColo() ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(f.prix)}</span></div>` : c.colo_ajout ? `<div><span>Cahier de coloriage${retirer('coloriage')}</span><span>${eur2(GR.coloriage.ajout)}</span></div>` : '') +
@@ -1187,7 +1212,7 @@
           (OBJ[c.formule] ? `<div><span>Livraison</span><span><b class="offert">comprise</b></span></div>` : !physique() ? `<div><span>Livraison</span><span><b class="offert">par e-mail</b></span></div>` : (c.pays === 'RE' ? (v => `<div><span>Livraison vers La Réunion <small>(prix de l'imprimeur, sans marge)</small></span><span>${typeof v === 'number' ? eur2(v) : v && v.err ? '<b>indisponible</b>' : 'calcul…'}</span></div>`)(portReel()) : `<div><span>Livraison (un seul colis${c.pays !== 'FR' ? ', hors France' : ''})</span><span>${pt ? eur2(pt) : '<b class="offert">offerte</b>'}</span></div>`)) +
           `<div class="tot"><span>Total</span><span>${eur2(totalC())}</span></div>` +
           (c.promo ? '' : `<details class="promo" ${OUVERT.promo ? 'open' : ''} data-ouv="promo"><summary>Vous avez un code promo ?</summary><div class="promo-l"><input type="text" id="promoIn" maxlength="30" placeholder="Votre code" autocapitalize="characters"><button type="button" class="btn petit" data-promo="1">Appliquer</button></div><p class="promo-err" id="promoErr"></p></details>`) +
-          (n && n < 6 && !isEbook() && !f.grand && c.pays !== 'RE' ? `<div class="vers6"><div class="vers6-t">Plus que <b>${6 - n} livre${6 - n > 1 ? 's' : ''}</b> pour la livraison offerte, et ${eur2(F.pack6.prix_livre)} le livre</div>` +
+          (n && n < 6 && !isEbook() && !f.grand && !isMulti() && c.pays !== 'RE' ? `<div class="vers6"><div class="vers6-t">Plus que <b>${6 - n} livre${6 - n > 1 ? 's' : ''}</b> pour la livraison offerte, et ${eur2(F.pack6.prix_livre)} le livre</div>` +
             `<div class="vers6-b"><i style="width:${Math.round(n / 6 * 100)}%"></i></div><button type="button" class="lien petit" data-pack-go="pack6">Passer à 6 livres (${eur2(F.pack6.prix)})</button></div>` : '') + `</div>`; })() +
       (offres.length ? `<div class="offres"><div class="offres-h">Pour compléter l'univers de ${pr} <span>créations : même colis, sans frais de port en plus · objets : livraison comprise</span></div>${offres.join('')}</div>` : '') +
       (n0() && !isEbook() && !isGrand() ? `<label class="toggle" style="margin:0 0 12px"><input type="checkbox" data-chk="ebook" ${c.ebook ? 'checked' : ''}> Ajouter la version e-book (PDF) de ${F[c.formule].livres > 1 ? 'chaque livre' : 'son livre'} : + ${eur2(GR.ebook.ajout)}${F[c.formule].livres > 1 ? ' par livre' : ''}</label>` : '') +
@@ -1249,6 +1274,8 @@
     if (b.dataset.apercu) { lancerApercu(b); return; }
     if (b.dataset.promoRetirer) { S.commande.promo = null; save(); return render(); }
     if (b.dataset.sauver) { b.disabled = true; b.textContent = 'Enregistrement…'; sauverHeros(); return; }
+    if (b.dataset.ajoutEnfant) { ajouterEnfant(b); return; }
+    if (b.dataset.retirerEnfant) { PANIER.splice(+b.dataset.retirerEnfant, 1); savePanier(); sync(); save(); return render(); }
     if (b.dataset.ajout) {               // proposition à l'étape commande : la création rejoint le colis
       S.produits[b.dataset.ajout] = true; if (b.dataset.pack) S.commande.pack = b.dataset.pack; window.mesure && mesure('ajout_produit', { item_id: b.dataset.ajout });
       const lib = { livres: 'Ses livres', calendrier: 'Le calendrier', coloriage: 'Le coloriage' }[b.dataset.ajout];
@@ -1380,6 +1407,23 @@
                         animaux: await Promise.all(S.animaux.map(p => ap('animal', p))), fratrie: await Promise.all(S.fratrie.map(f => ap('enfant', f))) };
     return payload;
   }
+  /* ---------- plusieurs enfants : le livre composé est gardé, on compose le héros suivant ---------- */
+  async function ajouterEnfant(b) {
+    if (!S.enfant.prenom.trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez d'abord le prénom de cet enfant."; return; }
+    b.disabled = true; b.textContent = 'Un instant…';
+    try {
+      const payload = await basePayload();
+      payload.apercu = S.apercu && S.apercu.statut === 'pret' ? S.apercu.id : '';
+      PANIER.push({ payload, prenom: payload.prenom, univers: payload.univers, theme: payload.theme }); savePanier();
+      const nom = payload.prenom;
+      S.enfant = structuredClone(DEF.enfant); S.doudou = structuredClone(DEF.doudou); S.animaux = []; S.fratrie = [];
+      S.histoire = structuredClone(DEF.histoire); S.apercu = null;
+      sync(); save();
+      FLASH = `Le livre de ${nom} est bien gardé dans la commande. Composez maintenant le héros du livre ${PANIER.length + 1}.`;
+      tab = 'enfant'; render(); scrollTo({ top: 0, behavior: 'smooth' });
+      window.mesure && mesure('ajout_enfant', { value: PANIER.length + 1 });
+    } catch (x) { b.disabled = false; b.textContent = '+ Ajouter un livre pour un autre enfant'; $('err').textContent = "Le livre n'a pas pu être gardé, réessayez."; }
+  }
   /* ---------- envoi ---------- */
   async function submit() {
     if (!S.enfant.prenom.trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez le prénom de l'enfant."; return; }
@@ -1410,6 +1454,7 @@
         objets: objetsChoisis(),
         cadeau: { actif: !!c.cadeau, de: c.cadeau_de, message: c.cadeau_message },
         adresse: { nom: c.nom, adresse1: c.adresse1, adresse2: c.adresse2, code_postal: c.code_postal, ville: c.ville, pays: c.pays, telephone: c.telephone } };
+      if (isMulti()) payload.commande.autres = PANIER.map(x => x.payload);
     }
     const go = $('next'), label = go.textContent; go.disabled = true; go.textContent = demo ? 'Envoi…' : 'Redirection vers le paiement…';
     if (!demo && window.mesure) mesure('paiement_commence', { value: totalC() / 100 });
@@ -1417,7 +1462,7 @@
       const r = await fetch(demo ? '/api/livres' : '/api/commandes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.erreur || 'Erreur');
-      if (!demo) { await sauverHeros(true); location.href = j.url; return; }
+      if (!demo) { await sauverHeros(true); try { sessionStorage.removeItem('heros-panier'); } catch (_) {} location.href = j.url; return; }
       $('builder').style.display = 'none'; $('suivi').style.display = 'block';
       $('nom').textContent = payload.prenom; $('suiviAv').innerHTML = Avatar.child(e, 'head');
       scrollTo({ top: 0 }); follow(j.id);

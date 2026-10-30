@@ -13,6 +13,18 @@ FORMULES = {      # tout se paie en une fois ; les livres d'une commande partent
 for _f in FORMULES.values():
     _f["prix"] = _f["livres"] * _f["prix_livre"]          # prix des livres, hors livraison
 
+# Plusieurs enfants, un livre chacun, une seule commande (un seul paiement, un seul colis) : « enfants2 » … « enfants12 ».
+# Prix du livre selon le nombre total, comme les packs : dès 3 livres le prix du pack de 3, dès 6 celui du pack de 6, à 12 celui du pack de 12.
+def _prix_multi(n):
+    k = "pack12" if n >= 12 else "pack6" if n >= 6 else "pack3" if n >= 3 else "livre"
+    return FORMULES[k]["prix_livre"]
+
+
+for _n in range(2, 13):
+    FORMULES[f"enfants{_n}"] = {"nom": f"{_n} livres personnalisés, un par enfant", "livres": _n, "prix_livre": _prix_multi(_n),
+                                "prix": _n * _prix_multi(_n), "mode": "payment", "multi": True}
+
+
 # Calendrier mural personnalisé : seul (sa propre formule) ou ajouté à une commande de livres (même colis, prix réduit)
 PRIX_CALENDRIER = int(os.getenv("PRIX_CALENDRIER", "3490"))
 PRIX_CALENDRIER_AJOUT = int(os.getenv("PRIX_CALENDRIER_AJOUT", "2990"))

@@ -263,6 +263,22 @@ def order_create():
     if objs:
         form["objets"] = objs
 
+    autres = c.get("autres") if isinstance(c.get("autres"), list) else []        # un livre pour chaque autre enfant (même commande)
+    multi = bool(paiement.FORMULES[formule].get("multi"))
+    if multi != bool(autres) or (multi and paiement.FORMULES[formule]["livres"] != len(autres) + 1) or len(autres) > 11:
+        return jsonify(erreur="Le nombre de livres ne correspond pas aux enfants de la commande. Rechargez la page et réessayez."), 400
+    enfants = []
+    for i, a in enumerate(autres):
+        if not isinstance(a, dict):
+            return jsonify(erreur="Livre d'un autre enfant illisible."), 400
+        fa, err = A.parse_book(a)
+        if err:
+            return jsonify(erreur=f"Livre {i + 2} : {err}"), 400
+        for x in ("demo", "code", "suite", "calendrier", "coloriage", "objets"):
+            fa.pop(x, None)
+        fa["fetes"] = ""
+        enfants.append((fa, a))
+
     oid = uuid.uuid4().hex[:12]
     folder = STORE / oid; folder.mkdir(parents=True)
     guides = A.save_avatar_pngs(data.get("avatar_png") or {}, folder)
@@ -285,8 +301,26 @@ def order_create():
     except PortError as e:
         shutil.rmtree(folder, ignore_errors=True)
         return jsonify(erreur=str(e)), 503
-    (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {k: p.name for k, p in guides.items()},
-                                                   "apercus": {k: p.name for k, p in previews.items()}, "lignes": lignes}, ensure_ascii=False), encoding="utf-8")
+    livre = {"form": form, "guides": {k: p.name for k, p in guides.items()}, "apercus": {k: p.name for k, p in previews.items()}, "lignes": lignes}
+    if enfants:
+        livre["enfants"] = {}
+        for k, (fa, a) in enumerate(enfants, start=2):
+            for x in ("formule", "cadeau_de", "cadeau_message", "ebook", "code_promo"):      # réglages de la commande, communs à tous les livres
+                if x in form:
+                    fa[x] = form[x]
+            sous = folder / f"enfant{k}"; sous.mkdir()
+            g = A.save_avatar_pngs(a.get("avatar_png") or {}, sous)
+            pv = A.save_previews(a.get("apercus") or {}, sous)
+            if a.get("apercu"):
+                try:
+                    pa = apercu.pour_commande(a.get("apercu"), A.generator.build_config(fa), fa.get("univers"))
+                    if pa:
+                        fa["couverture_apercu"] = pa
+                except Exception as e:
+                    log(f"aperçu {a.get('apercu')} (livre {k}) non repris : {e}")
+            livre["enfants"][str(k)] = {"form": fa, "dossier": sous.name, "guides": {x: p.name for x, p in g.items()},
+                                        "apercus": {x: p.name for x, p in pv.items()}}
+    (folder / "livre.json").write_text(json.dumps(livre, ensure_ascii=False), encoding="utf-8")
     db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement",
               montant=paiement.total(formule, addr.get("pays"), calendrier=avec_cal, coloriage=avec_colo, objets=objs, promo=promo, ebook=ebook), origine=oid,
               numero=0 if formule in NON_LIVRES else 1)
@@ -313,13 +347,37 @@ def order_create():
     return jsonify(id=oid, url=url)
 
 
-def load_book(origin):
-    """Données du livre enregistrées à la commande (formulaire + références visuelles du navigateur)."""
+def load_book(origin, numero=None):
+    """Données du livre enregistrées à la commande (formulaire + références visuelles du navigateur).
+    Commande pour plusieurs enfants : le livre n° `numero` (2, 3…) a son propre enfant, ses avatars et son histoire."""
     folder = STORE / origin
     d = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+    e = (d.get("enfants") or {}).get(str(numero)) if numero else None
+    if e:
+        sous = folder / e["dossier"]
+        guides = {k: sous / v for k, v in e["guides"].items() if (sous / v).exists()}
+        previews = {k: sous / v for k, v in e["apercus"].items() if (sous / v).exists()}
+        return e["form"], A.browser_refs(guides, previews)
     guides = {k: folder / v for k, v in d["guides"].items() if (folder / v).exists()}
     previews = {k: folder / v for k, v in d["apercus"].items() if (folder / v).exists()}
     return d["form"], A.browser_refs(guides, previews)
+
+
+def enfant_du_livre(o):
+    """(form, refs) si ce livre est celui d'un autre enfant de la commande, sinon None."""
+    if not o or o["formule"] in NON_LIVRES or not paiement.FORMULES.get(o["formule"], {}).get("multi") or (o.get("numero") or 1) < 2:
+        return None
+    try:
+        d = json.loads((STORE / o["origine"] / "livre.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return load_book(o["origine"], o["numero"]) if str(o["numero"]) in (d.get("enfants") or {}) else None
+
+
+def form_du_livre(o):
+    """Formulaire du livre de cette commande (le bon enfant si la commande en compte plusieurs)."""
+    e = enfant_du_livre(o)
+    return e[0] if e else load_book(o["origine"] or o["id"])[0]
 
 
 def confirm_paid(oid, stripe_sub=None):
@@ -405,7 +463,7 @@ def commander_imprime(oid):
         return jsonify(erreur=err), 400
     if d.get("cgv") is not True:
         return jsonify(erreur="Merci d'accepter les conditions générales de vente."), 400
-    form = dict(load_book(b["origine"] or oid)[0]); form.update(formule="imprime", source_ebook=oid)
+    form = dict(form_du_livre(b)); form.update(formule="imprime", source_ebook=oid)
     for k in ("ebook", "calendrier", "coloriage", "objets", "code_promo", "couverture_apercu"):
         form.pop(k, None)
     nid = uuid.uuid4().hex[:12]
@@ -516,6 +574,10 @@ def creer_pack(oid):
         db.create(id=cid, formule=o["formule"], email=o["email"], adresse=o["adresse"], statut="payee", montant=0,
                   origine=oid, numero=k, univers=univers)
         ids.append(cid)
+    if f.get("multi"):                                           # un livre par enfant : chacun est le n° 1 de sa collection
+        for cid in ids:
+            if not db.get(cid).get("volume_number"):
+                db.update(cid, volume_number=1)
     for cid in ids:                                              # numéros de collection 1, 2, 3… dans l'ordre du pack
         db.assign_volume(cid)
     for k in EXTRAS:                                             # calendrier / cahier ajouté aux livres : même colis
@@ -562,7 +624,11 @@ def _start_book(oid, auto=False, reprise=False):
     essai = o["formule"].split("_", 1)[1] if (o["formule"] or "").startswith("essai_") else None
     o = db.get(oid)
     form, refs = load_book(o["origine"])
-    if o["formule"] in NON_LIVRES:                # calendrier, coloriage, objets : mêmes avatars, leur propre chaîne
+    enfant = enfant_du_livre(o)
+    if enfant:                                    # livre d'un autre enfant de la même commande : son avatar, son histoire, n° 1 de sa collection
+        form, refs = enfant
+        form = dict(form, numero="01")
+    elif o["formule"] in NON_LIVRES:              # calendrier, coloriage, objets : mêmes avatars, leur propre chaîne
         form = dict(form, produit=o["formule"])
     elif o["origine"] != oid:                     # livre du mois suivant : nouveau thème, nouvel univers
         n = o["numero"]
@@ -576,8 +642,8 @@ def _start_book(oid, auto=False, reprise=False):
             form["univers"] = choix["univers"]
     else:
         form = dict(form, numero=f"{o['numero']:02d}")
-    if o["origine"] != oid or o["formule"] in NON_LIVRES or o.get("univers"):
-        form.pop("couverture_apercu", None)      # l'aperçu ne vaut que pour le livre 1, dans l'univers vu
+    if (o["origine"] != oid and not enfant) or o["formule"] in NON_LIVRES or o.get("univers"):
+        form.pop("couverture_apercu", None)      # l'aperçu ne vaut que pour le livre 1 (ou celui de son enfant), dans l'univers vu
     if o.get("univers") and o["formule"] not in NON_LIVRES:   # livre de fête : univers imposé
         form = dict(form, univers=o["univers"])
     if o["formule"] not in NON_LIVRES and U.cle_de(form.get("univers")) == "anniversaire":   # il a un an de plus le jour J
@@ -815,7 +881,7 @@ def build_cover(oid):
     if (folder / "livre.json").exists() and not (folder / "histoire.json").exists():
         # livre du procédé actuel : couverture à plat recomposée par code à partir des fichiers enregistrés (aucun appel IA)
         book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
-        form, _ = load_book(o["origine"])
+        form = form_du_livre(o)
         dims = fabrication.dimensions_couverture()
         info = fabrication.couverture_a_plat(book, folder / "impression_couverture.pdf", folder, book.get("volumeNumber") or o.get("volume_number") or 1,
                                              form.get("prenom") or "", dims)
