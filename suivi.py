@@ -104,6 +104,62 @@ def evenement():
     return ("", 204)
 
 
+# ------------------------------------------------------------------ en ligne maintenant (mémoire du serveur, rien n'est gardé)
+EN_LIGNE = {}            # vid -> {arrivee, vu, page, etape, mobile}
+ACTIF = 120              # vu dans les 2 dernières minutes = en ligne
+PAGES_NOMS = {"/": "Accueil", "/creer": "Créateur", "/compte": "Mon compte", "/tarifs": "Tarifs", "/livraison": "Livraison", "/aide": "Centre d'aide",
+              "/avis-clients": "Avis clients", "/cgv": "CGV"}
+ETAPES_NOMS = {"enfant": "le héros", "compagnons": "sa famille, ses animaux", "creations": "ses créations", "commande": "la commande"}
+
+
+@bp.post("/api/la")
+def en_ligne_ping():
+    """Signe de vie d'une page ouverte (toutes les 45 s, onglet visible) : identifiant aléatoire du visiteur, page, étape du créateur."""
+    d = request.get_json(force=True, silent=True) or {}
+    v = str(d.get("v") or "")
+    if not re.fullmatch(r"[a-f0-9]{24}", v):
+        return ("", 204)
+    now = time.time()
+    x = EN_LIGNE.get(v)
+    if not x or now - x["vu"] > 30 * 60:
+        x = {"arrivee": now}
+    x.update(vu=now, page=str(d.get("p") or "/")[:80], etape=str(d.get("t") or "")[:20],
+             mobile=bool(re.search(r"Mobi|Android|iPhone", request.headers.get("User-Agent", ""))))
+    EN_LIGNE[v] = x
+    if len(EN_LIGNE) > 5000:                       # ménage : on oublie les visiteurs partis
+        for k in [k for k, y in EN_LIGNE.items() if now - y["vu"] > 3600]:
+            EN_LIGNE.pop(k, None)
+    return ("", 204)
+
+
+def en_ligne():
+    now = time.time()
+    act = {v: x for v, x in EN_LIGNE.items() if now - x["vu"] <= ACTIF}
+    infos = {}
+    if act:
+        with db._db() as c:
+            q = ",".join("?" * len(act))
+            for r in c.execute(f"select p.vid, p.ville, p.pays, p.source, p.visites, p.etape, c.email from parcours p left join clients c on c.id=p.client_id where p.vid in ({q})", list(act)):
+                infos[r["vid"]] = dict(r)
+    out = []
+    for v, x in sorted(act.items(), key=lambda kv: kv[1]["arrivee"]):
+        i = infos.get(v, {})
+        page = PAGES_NOMS.get(x["page"].split("?")[0], x["page"].split("?")[0].strip("/").replace("-", " ").capitalize() or "Accueil")
+        if x["page"].startswith("/creer") and x.get("etape") in ETAPES_NOMS:
+            page = f"Créateur : {ETAPES_NOMS[x['etape']]}"
+        out.append({"page": page, "depuis": round(now - x["arrivee"]), "mobile": x["mobile"], "ville": i.get("ville"), "pays": i.get("pays"),
+                    "source": i.get("source"), "visites": i.get("visites") or 1, "email": i.get("email")})
+    return out
+
+
+@bp.get("/admin/api/en-ligne")
+def admin_en_ligne():
+    import boutique
+    if not boutique.admin_ok():
+        abort(403)
+    return jsonify(personnes=en_ligne(), fenetre=ACTIF)
+
+
 def origine_commande(oid):
     """« facebook (pub) · noel_oct26 » : d'où venait la personne qui a commandé (None si inconnu)."""
     with db._db() as c:

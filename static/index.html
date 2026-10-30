@@ -1242,6 +1242,7 @@
 
   function render() {
     sync();
+    if (window.mhmTab !== tab) { window.mhmTab = tab; }
     if (!TABS().includes(tab)) tab = 'creations';
     if (tab !== DERN_ETAPE && !new URLSearchParams(location.search).get('commande')) { DERN_ETAPE = tab; window.parcours && parcours(tab); }   // où les gens s'arrêtent
     $('tabs').innerHTML = TABS().map((t, i) => `<button data-t="${t}" class="${t === tab ? 'on' : ''}"><b>${i + 1}</b>${ETAPES[t]}</button>`).join('');

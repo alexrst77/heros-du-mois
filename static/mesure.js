@@ -58,6 +58,10 @@
       if (!(navigator.sendBeacon && navigator.sendBeacon('/api/p', new Blob([body], { type: 'application/json' })))) fetch('/api/p', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }); } catch (_) {}
   };
   if (!/^\/creer/.test(location.pathname)) parcours('visite');      // le configurateur envoie ses propres étapes
+  /* « en ligne maintenant » (admin) : un signe de vie toutes les 45 s tant que l'onglet est visible */
+  const vivant = () => { try { if (document.hidden) return; const v = parcoursId(); if (!v) return;
+    fetch('/api/la', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ v, p: location.pathname + location.search.slice(0, 30), t: window.mhmTab || '' }), keepalive: true }).catch(() => {}); } catch (_) {} };
+  if (!/^\/admin/.test(location.pathname)) { vivant(); setInterval(vivant, 45000); document.addEventListener('visibilitychange', vivant); }
 
   fetch('/api/mesure').then(r => r.json()).then(c => {
     pret = true;

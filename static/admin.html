@@ -273,7 +273,7 @@ function vueTableau() {
   if (D.vendeur_manquants && D.vendeur_manquants.length) alertes.push(`<div class="bandeau">🏢 <span>Infos de l'entreprise à compléter pour les factures et les pages légales : ${esc(D.vendeur_manquants.slice(0, 4).join(', '))}${D.vendeur_manquants.length > 4 ? '…' : ''}</span><button class="btn gold" onclick="go('reglages')">Compléter</button></div>`);
   if (c.budget_jour <= 15) alertes.push(`<div class="bandeau">🤖 <span>Plafond IA : ${c.budget_jour} $ par jour, soit environ ${Math.floor(c.budget_jour / 2)} livres. À relever dans Railway (BUDGET_OPENAI_JOUR) avant la publicité.</span></div>`);
   if (c.lulu !== 'production') alertes.push(`<div class="bandeau">🖨️ <span>${c.lulu === 'non configuré' ? 'Lulu n\'est pas branché' : 'Lulu est en bac à sable'} : aucune vraie impression.</span></div>`);
-  return alertes.join('') + `<div class="kpis">
+  return alertes.join('') + vueLive() + `<div class="kpis">
       <div class="kpi sombre" onclick="go('rentabilite')"><div class="l">Ventes du mois <span>💶</span></div><div class="n">${eur(ca)}</div><div class="s">${mois.length} commande${mois.length > 1 ? 's' : ''}${mois.length ? ' · panier ' + eur(Math.round(ca / mois.length)) : ''}</div></div>
       <div class="kpi ${n('relire') ? 'alerte' : ''}" onclick="go('commandes','relire')"><div class="l">À relire <span>👀</span></div><div class="n">${n('relire')}</div><div class="s">à valider avant impression</div></div>
       <div class="kpi ${n('pret') ? 'alerte' : ''}" onclick="go('commandes','pret')"><div class="l">Prêts à imprimer <span>✅</span></div><div class="n">${n('pret')}</div><div class="s">colis à envoyer</div></div>
@@ -319,6 +319,19 @@ async function relance(genre, id, b) {
   const r = await fetch('/admin/api/relance' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ genre, id }) });
   const j = await r.json().catch(() => ({})); alert(j.message || (r.ok ? 'Envoyé' : 'Erreur')); cliCharger();
 }
+/* en ligne maintenant : rafraîchi toutes les 20 s quand l'onglet Clients ou le tableau de bord est ouvert */
+let LIVE = null;
+function liveCharger() { fetch('/admin/api/en-ligne' + Q, { headers: H }).then(r => r.json()).then(x => { LIVE = x; if (['clients', 'tableau'].includes(TAB)) { const e = document.getElementById('live'); if (e) e.outerHTML = vueLive(); } }).catch(() => {}); }
+setInterval(() => { if (!document.hidden && ['clients', 'tableau'].includes(TAB)) liveCharger(); }, 20000);
+function vueLive() {
+  if (!LIVE) { liveCharger(); return '<div id="live" class="card"><h3>🟢 En ligne maintenant</h3><p class="meta">Chargement…</p></div>'; }
+  const P = LIVE.personnes, duree = s => s < 60 ? 'à l\'instant' : s < 3600 ? Math.round(s / 60) + ' min' : Math.floor(s / 3600) + ' h ' + Math.round(s % 3600 / 60) + ' min';
+  return `<div id="live" class="card"><h3>${P.length ? '🟢' : '⚪️'} En ligne maintenant : ${P.length} personne${P.length > 1 ? 's' : ''}</h3>
+    ${P.length ? `<table><tr><th>Où</th><th>Depuis</th><th>Lieu</th><th>Arrivé par</th><th></th></tr>${P.map(p => `<tr><td><b>${esc(p.page)}</b>${p.email ? `<div class="meta">${esc(p.email)}</div>` : ''}</td><td>${duree(p.depuis)}</td>
+      <td>${esc([p.ville, p.pays].filter(Boolean).join(', ') || '—')}</td><td>${esc(p.source || '—')}${p.visites > 1 ? `<div class="meta">${p.visites}e visite</div>` : ''}</td><td>${p.mobile ? '📱' : '💻'}</td></tr>`).join('')}</table>`
+      : '<p class="meta" style="margin:0">Personne sur le site en ce moment.</p>'}
+    <p class="meta" style="margin:8px 0 0">Visiteurs actifs dans les 2 dernières minutes (page ouverte et visible). Mis à jour toutes les 20 s. Toi compris si le site est ouvert sur ton téléphone.</p></div>`;
+}
 function vueClients() {
   if (!CLI) { cliCharger(); return 'Chargement…'; }
   const C = CLI, E = C.entonnoir, max = Math.max(1, E[0].n);
@@ -332,7 +345,7 @@ function vueClients() {
       ${i && perte > 0 ? `<span style="position:absolute;right:8px;top:2px;font-size:12px;font-weight:800;color:${perte >= 50 ? '#C0392B' : 'var(--soft)'}">−${perte} %</span>` : ''}</div>
       <b style="text-align:right">${e.n}</b></div>`; }).join('');
   const pire = E.slice(1, -1).map((e, i) => [e, E[i].n ? (E[i].n - e.n) / E[i].n : 0, E[i]]).filter(x => x[2].n >= 3).sort((a, b) => b[1] - a[1])[0];
-  return `<div class="chips">${[7, 30, 90].map(j => `<button class="${j === CLI_J ? 'on' : ''}" onclick="CLI_J=${j};CLI=null;render()">${j} jours</button>`).join('')}</div>
+  return vueLive() + `<div class="chips">${[7, 30, 90].map(j => `<button class="${j === CLI_J ? 'on' : ''}" onclick="CLI_J=${j};CLI=null;render()">${j} jours</button>`).join('')}</div>
     <div class="kpis">
       <div class="kpi sombre"><div class="l">Visiteurs <span>👀</span></div><div class="n">${C.visiteurs}</div><div class="s">${C.jours} derniers jours · ${C.visites} visites · ${C.visiteurs ? Math.round(100 * C.mobile / C.visiteurs) : 0} % sur mobile</div></div>
       <div class="kpi"><div class="l">Aujourd'hui <span>📅</span></div><div class="n">${C.aujourdhui}</div><div class="s">visiteurs · ${C.pub_meta} venus de Facebook/Instagram (${C.jours} j)</div></div>
