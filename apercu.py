@@ -44,11 +44,20 @@ def visiteur(req):
     return hashlib.sha256(("mhm-apercu:" + ip).encode()).hexdigest()[:24]
 
 
-def restants(vis, produit="livre"):
-    """Aperçus encore possibles pour ce compte et ce produit (un essai qui a échoué ne compte pas)."""
+MAX_ENFANTS = int(os.getenv("APERCUS_ENFANTS", "4"))           # commande pour plusieurs enfants : une couverture par enfant, au plus 4 par compte
+
+
+def restants(vis, produit="livre", prenom=None):
+    """Aperçus encore possibles pour ce compte, ce produit et CET enfant (un par prénom, au plus MAX_ENFANTS enfants ;
+    un essai qui a échoué ne compte pas)."""
+    p = (prenom or "").strip().lower()
     with db._db() as c:
-        n = c.execute("select count(*) from apercus where visiteur=? and coalesce(produit,'livre')=? and statut!='refuse'", (vis, produit)).fetchone()[0]
-    return max(0, MAX_VISITEUR - n)
+        tous = c.execute("select count(*) from apercus where visiteur=? and coalesce(produit,'livre')=? and statut!='refuse'", (vis, produit)).fetchone()[0]
+        lui = c.execute("select count(*) from apercus where visiteur=? and coalesce(produit,'livre')=? and statut!='refuse' and lower(trim(coalesce(prenom,'')))=?",
+                        (vis, produit, p)).fetchone()[0]
+    if prenom is None:                     # sans prénom : comme avant, un aperçu par compte
+        lui = tous
+    return max(0, min(MAX_VISITEUR - lui, MAX_ENFANTS - tous))
 
 
 def signature(cfg, univers):
@@ -66,7 +75,7 @@ def lancer(A, data, vis):
     import generator as G, comptes
     cl = comptes.client_courant()
     vis = ("c:" + cl["id"]) if cl else ("v:" + vis)       # sans compte : un aperçu par connexion internet (lancé à la fin de l'avatar)
-    if restants(vis) <= 0:
+    if restants(vis, prenom=data.get("prenom")) <= 0:
         return {"erreur": "Vous avez déjà vu l'aperçu de sa couverture : la couverture finale sera créée à la commande, avec les mêmes personnages."}, 429
     with db._db() as c:
         if c.execute("select count(*) from apercus where cree>?", (time.time() - 86400,)).fetchone()[0] >= MAX_JOUR:
@@ -90,7 +99,7 @@ def lancer(A, data, vis):
         c.execute("insert into apercus (id, visiteur, cree, statut, etape, erreur, signature, univers, prenom, cout) values (?,?,?,?,?,?,?,?,?,?)", (pid, vis, time.time(), "en_cours", "Préparation", None,
                                                                       signature(cfg, form.get("univers")), form.get("univers"), form["prenom"], 0))
     threading.Thread(target=_run, args=(pid, form, cfg, refs, folder), daemon=True).start()
-    return {"id": pid, "restants": restants(vis)}, 200
+    return {"id": pid, "restants": restants(vis, prenom=form.get("prenom"))}, 200
 
 
 PORTRAITS_JOUR = int(os.getenv("PORTRAITS_JOUR", "80"))
@@ -107,8 +116,8 @@ def prechauffer(A, data, vis):
     if not os.getenv("OPENAI_API_KEY"):
         return {"ok": False}, 200
     with db._db() as c:
-        if c.execute("select count(*) from prechauffes where vis=? and cree>?", (vis, time.time() - 86400)).fetchone()[0] >= 3 or \
-           c.execute("select count(*) from prechauffes where cree>?", (time.time() - 86400,)).fetchone()[0] >= PORTRAITS_JOUR or restants(vis) <= 0:
+        if c.execute("select count(*) from prechauffes where vis=? and cree>?", (vis, time.time() - 86400)).fetchone()[0] >= 2 + MAX_ENFANTS or \
+           c.execute("select count(*) from prechauffes where cree>?", (time.time() - 86400,)).fetchone()[0] >= PORTRAITS_JOUR or restants(vis, prenom=data.get("prenom")) <= 0:
             return {"ok": False}, 200
     form, err = A.parse_book(data)
     if err or not form.get("avatar"):

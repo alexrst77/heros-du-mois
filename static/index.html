@@ -1054,14 +1054,16 @@
     return `<div class="occasion" style="margin-bottom:16px;display:block"><b>30 pages avec ${pr} : ${COLO.nombre} coloriages choisis par vous + 12 pages de jeux</b>${S.doudou.actif ? ', son doudou' : ''}${S.animaux.length ? ' et ses animaux' : ''}, en grand format 21,6 × 27,9 cm à spirale, imprimés au recto seulement : les feutres ne traversent pas. Nous avons préparé une sélection : changez ce que vous voulez.</div>` + pickerColoriage();
   }
   let APR = { restants: null };
-  fetch('/api/apercu/restants').then(r => r.json()).then(j => { APR.restants = j.restants; APR.max = j.max; if (tab === 'creations') render(); }).catch(() => {});
+  const majRestants = () => fetch('/api/apercu/restants?prenom=' + encodeURIComponent((S.enfant.prenom || '').trim())).then(r => r.json()).then(j => { APR.restants = j.restants; APR.max = j.max; APR.prenom = (S.enfant.prenom || '').trim(); if (tab === 'creations') render(); }).catch(() => {});
+  majRestants();
   function apercuHTML() {
+    if ((S.enfant.prenom || '').trim() !== (APR.prenom ?? '')) { APR.prenom = (S.enfant.prenom || '').trim(); APR.restants = null; majRestants(); }   // une couverture par enfant
     const a = S.apercu, pr = esc((S.enfant.prenom || 'votre enfant').trim()), reste = APR.restants;
     const bouton = (txt) => reste === 0 ? (a && a.statut === 'pret' ? '' : `<p class="hint" style="margin:8px 0 0">L'aperçu de sa couverture a déjà été fait : la couverture finale sera créée à la commande.</p>`)
       : `<button type="button" class="btn petit" data-apercu="1">${txt}</button><span class="ap-n">${reste == null ? '' : reste > 1 ? reste + ' aperçus possibles' : 'un seul aperçu : vérifiez ses personnages avant'}</span>`;
     if (a && a.statut === 'en_cours') return `<div class="ap-c"><div class="ap-wait"><span class="ap-rond"><i></i><b id="apPct">${apPct()} %</b></span><div><b>Nous peignons la couverture de ${pr}…</b><span>${esc(a.etape || 'Préparation')} · environ 1 à 2 minutes, vous pouvez continuer.</span></div></div></div>`;
-    if (a && a.statut === 'pret') return `<div class="ap-c ok"><img src="${a.image}" alt="Aperçu de la couverture de ${pr}"><div><b>La couverture de ${pr}</b><span>C'est cette illustration qui sera sur son livre 1, si vous gardez ces personnages et cet univers.</span>${APR.restants ? `<div class="ap-a">${bouton('Une autre version')}</div>` : ''}</div></div>`;
-    return `<div class="ap-c"><div class="ap-ico"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div><b>Voir sa vraie couverture avant de commander</b><span>Nous peignons ${pr} et ses compagnons dans l'univers du livre 1. C'est gratuit.</span>` +
+    if (a && a.statut === 'pret' && apercuValide()) return `<div class="ap-c ok"><img src="${a.image}" alt="Aperçu de la couverture de ${pr}"><div><b>La couverture de ${pr}</b><span>C'est cette illustration qui sera sur son livre 1, si vous gardez ces personnages et cet univers.</span>${APR.restants ? `<div class="ap-a">${bouton('Une autre version')}</div>` : ''}</div></div>`;
+    return `<div class="ap-c"><div class="ap-ico"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div><b>Voir sa vraie couverture avant de commander</b><span>Nous peignons ${pr} et ses compagnons dans l'univers de son livre. C'est gratuit.</span>` +
       (a && a.erreur ? `<span class="ap-err">${esc(a.erreur)}</span>` : '') + `<div class="ap-a">${bouton('Voir sa couverture')}</div></div></div>`;
   }
   const apKey = () => JSON.stringify([keyOf('enfant', S.enfant), (S.enfant.prenom || '').trim(), S.doudou.actif ? [keyOf('doudou', S.doudou), (S.doudou.nom || '').trim()] : 0,
@@ -1070,7 +1072,7 @@
   const apercuValide = () => !!(S.apercu && S.apercu.statut === 'pret' && S.apercu.image && S.apercu.cle === apKey());
   const apercuEnCours = () => !!(S.apercu && S.apercu.statut === 'en_cours' && S.apercu.cle === apKey());
   async function lancerApercuAuto() {      // fin de l'avatar : sa couverture est peinte par l'IA avec SES personnages, dans SON monde
-    if (apercuValide() || apercuEnCours() || APR.restants === 0 || !(S.enfant.prenom || '').trim()) return;
+    if (apercuValide() || apercuEnCours() || (APR.restants === 0 && APR.prenom === (S.enfant.prenom || '').trim()) || !(S.enfant.prenom || '').trim()) return;
     try {
       const r = await fetch('/api/apercu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(await basePayload()) });
       const j = await r.json();
@@ -1106,7 +1108,7 @@
         const avant = S.apercu.statut; S.apercu = Object.assign({}, S.apercu, j); save();
         if (avant !== 'pret' && j.statut === 'pret' && $('fete').open) dessinerCarte().catch(() => {});
         else if ($('fete').open) majAttenteCarte();
-        if (j.statut === 'refuse') fetch('/api/apercu/restants').then(r => r.json()).then(x => { APR.restants = x.restants; render(); });
+        if (j.statut === 'refuse') majRestants();
         if (tab === 'creations') render(); else renderStage();
       } catch (_) {}
       suivreApercu();
@@ -1417,7 +1419,7 @@
       PANIER.push({ payload, prenom: payload.prenom, univers: payload.univers, theme: payload.theme }); savePanier();
       const nom = payload.prenom;
       S.enfant = structuredClone(DEF.enfant); S.doudou = structuredClone(DEF.doudou); S.animaux = []; S.fratrie = [];
-      S.histoire = structuredClone(DEF.histoire); S.apercu = null;
+      S.histoire = structuredClone(DEF.histoire); S.apercu = null; APR.restants = null; APR.prenom = undefined;   // nouvel enfant : sa propre couverture
       sync(); save();
       FLASH = `Le livre de ${nom} est bien gardé dans la commande. Composez maintenant le héros du livre ${PANIER.length + 1}.`;
       tab = 'enfant'; render(); scrollTo({ top: 0, behavior: 'smooth' });
