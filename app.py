@@ -276,12 +276,11 @@ def run(job_id, form, refs):
 def vitrine():
     if request.args.get("commande"):                 # anciens liens de retour de paiement
         return redirect("/creer?" + request.query_string.decode())
+    import seo
     base = (os.getenv("PUBLIC_URL") or request.host_url).rstrip("/")      # adresses absolues (partage, référencement)
     html = (ROOT / "static" / "vitrine.html").read_text(encoding="utf-8").replace("__BASE__", base)
-    verif = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()          # Search Console : balise de vérification
-    html = html.replace("__VERIF__", f'<meta name="google-site-verification" content="{verif}">' if re.fullmatch(r"[\w\-]{10,80}", verif) else "")
+    html = html.replace("__VERIF__", seo.balises_verification())       # Search Console (Google) et Bing Webmaster Tools
     html = html.replace("__LDJSON__", _ld_accueil(html, base))
-    import seo
     html = html.replace("__PIED__", seo.pied()).replace("__BARRE__", seo.barre())
     return Response(html, mimetype="text/html")
 
@@ -296,6 +295,8 @@ def _ld_accueil(html, base):
     ld = [{"@context": "https://schema.org", "@type": "WebSite", "name": "Mon Héros du Mois", "url": base + "/", "inLanguage": "fr-FR"}]
     if faq:
         ld.append({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": faq})
+    import seo
+    ld.append(seo.ld_produit("livre", base))                      # le livre : prix réel, livraison, pas de retour (personnalisé)
     return '<script type="application/ld+json">' + json.dumps(ld, ensure_ascii=False).replace("</", "<\\/") + "</script>"
 
 

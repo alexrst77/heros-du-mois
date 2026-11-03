@@ -1704,12 +1704,12 @@ CHEMINS_LEGAUX = {"cgv": "/cgv", "mentions": "/mentions-legales", "confidentiali
 
 
 DESCRIPTIONS_LEGALES = {
-    "cgv": "Conditions de vente de Mon Héros du Mois : produits, prix, commande et paiement sécurisé, fabrication et livraison, "
-           "réimpression en cas de défaut. À lire avant de commander le livre personnalisé de votre enfant.",
+    "cgv": "Conditions de vente de Mon Héros du Mois : produits, prix, commande et paiement sécurisé, fabrication, livraison "
+           "et réimpression en cas de défaut.",
     "mentions": "Mentions légales du site Mon Héros du Mois : éditeur, hébergeur, activité, usage de l'intelligence artificielle, "
                 "propriété intellectuelle et contact.",
-    "confidentialite": "Politique de confidentialité de Mon Héros du Mois : données collectées pour créer le livre de votre enfant, "
-                       "prestataires, durées de conservation et vos droits. Aucune photo de l'enfant n'est demandée."}
+    "confidentialite": "Confidentialité : les données utilisées pour créer le livre de votre enfant, nos prestataires, leur durée "
+                       "de conservation et vos droits. Aucune photo demandée."}
 
 
 def _page_legale(nom):
@@ -1746,6 +1746,60 @@ def api_mesure():
 def robots():
     return Response(f"User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /impression/\nDisallow: /impression-grand/\nDisallow: /objet/\nDisallow: /telecharger/\nDisallow: /reprendre/\nDisallow: /rl\nDisallow: /stop-rappels\n"
                     f"Sitemap: {base_url()}/sitemap.xml\n", mimetype="text/plain")
+
+
+# ------------------------------------------------------------------ IndexNow (Bing, Yandex…) : signaler les pages nouvelles ou modifiées
+def cle_indexnow():
+    import hashlib, suivi
+    return os.getenv("INDEXNOW_KEY", "").strip() or hashlib.sha256(b"indexnow:" + suivi._secret()).hexdigest()[:32]
+
+
+@bp.get("/<cle>.txt")
+def fichier_indexnow(cle):
+    if not re.fullmatch(r"[a-zA-Z0-9\-]{8,128}", cle) or cle != cle_indexnow():
+        abort(404)
+    return Response(cle, mimetype="text/plain")
+
+
+def urls_du_site():
+    import seo
+    b = base_url()
+    return [b + u for u in ["/", "/creer"] + [f"/{k}" for k in seo.PAGES] + ["/cgv", "/mentions-legales", "/confidentialite"]]
+
+
+@bp.post("/admin/api/indexnow")
+def admin_indexnow():
+    """Envoie toutes les adresses du site à IndexNow (Bing et les moteurs partenaires) : elles sont explorées plus vite."""
+    if not admin_ok():
+        abort(403)
+    from urllib.parse import urlparse
+    import urllib.request
+    b = base_url(); host = urlparse(b).hostname or ""
+    if not host or host in ("localhost", "127.0.0.1") or host.endswith(".up.railway.app"):
+        return jsonify(erreur="IndexNow ne sert que pour l'adresse publique du site (PUBLIC_URL)."), 400
+    k = cle_indexnow(); urls = urls_du_site()
+    corps = json.dumps({"host": host, "key": k, "keyLocation": f"{b}/{k}.txt", "urlList": urls}).encode()
+    try:
+        req = urllib.request.Request("https://api.indexnow.org/indexnow", data=corps, method="POST",
+                                     headers={"Content-Type": "application/json; charset=utf-8", "User-Agent": "MonHerosDuMois/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            code = r.status
+    except urllib.error.HTTPError as e:
+        code = e.code
+    except Exception as e:
+        return jsonify(erreur=f"IndexNow injoignable : {e}"), 502
+    ok = code in (200, 202)
+    log(f"IndexNow : {len(urls)} adresses envoyées, réponse {code}")
+    return jsonify(ok=ok, code=code, n=len(urls), cle=f"{b}/{k}.txt"), (200 if ok else 400)
+
+
+@bp.get("/admin/api/referencement")
+def admin_referencement():
+    if not admin_ok():
+        abort(403)
+    b = base_url()
+    return jsonify(google=bool(os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()), bing=bool(os.getenv("BING_SITE_VERIFICATION", "").strip()),
+                   sitemap=f"{b}/sitemap.xml", site=b, pages=len(urls_du_site()))
 
 
 @bp.get("/sitemap.xml")

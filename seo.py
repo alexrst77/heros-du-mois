@@ -5,7 +5,7 @@ Chaque page a son titre, sa description, son H1, un vrai contenu (ce qu'on reço
 la création et vers les autres pages. Aucun avis, aucun chiffre inventé ; aucun prix affiché (comme l'accueil)."""
 import functools
 from pathlib import Path
-import os, json, time
+import os, re, json, time
 from html import escape
 from flask import Blueprint, Response, request
 
@@ -339,7 +339,7 @@ CONSTRUIRE = {"livraison": _livraison, "tarifs": _tarifs, "avis-clients": _avis,
 
 PAGES.update({
     "tarifs": dict(titre="Tarifs des livres personnalisés",
-                   desc="Tous nos prix : livre personnalisé, packs de 3, 6 et 12 livres, e-book, calendrier, cahier de coloriage, objets et livraison. Paiement en une fois, sans abonnement.",
+                   desc="Tous les prix du livre personnalisé : 1 livre, packs de 3, 6 et 12, e-book, calendrier, coloriage, objets et livraison. Paiement en une fois, sans abonnement.",
                    h1="Nos tarifs, sans surprise", kicker="Tarifs", intro="Vous composez son avatar gratuitement et voyez sa couverture avant de payer. Voici tous les prix, livraison comprise ou non.",
                    image=("/static/vitrine/photo_01.webp", "Quatre livres personnalisés Mon Héros du Mois"), cta=("Créer son avatar gratuitement", "/creer"), sections=[],
                    faq=[("Y a-t-il un abonnement ?", "Non. Tout se paie en une fois, à la commande."), ("Peut-on payer en plusieurs fois ?", "Pas pour l'instant : le paiement se fait en une fois, par carte, via Stripe.")],
@@ -352,14 +352,14 @@ PAGES.update({
                               ("Les avis sont-ils vérifiés ?", "Oui : seuls les clients dont la commande a été expédiée peuvent en laisser un. Tous les avis conformes sont publiés, positifs comme négatifs.")],
                          liens=["tarifs", "livre-personnalise-enfant", "aide"]),
     "idees-histoires": dict(titre="Idées d'histoires pour livre enfant",
-                            desc="Thèmes (peur du noir, rentrée, émotions, arrivée d'un bébé…), mondes (espace, dinosaures, pirates, fées…) et fêtes : toutes les idées pour son livre personnalisé.",
+                            desc="Peur du noir, rentrée, arrivée d'un bébé… et des mondes à explorer (espace, dinosaures, pirates) : toutes les idées d'histoires pour son livre personnalisé.",
                             h1="Des idées d'histoires pour son livre", kicker="Inspiration",
                             intro="Un thème qui lui parle, un monde qui le fait rêver : vous choisissez les deux, et ses compagnons partent avec lui.",
                             image=("/static/vitrine/photo_02.webp", "Le livre « Jade et la vallée des dinosaures » posé sur une table"), cta=("Choisir son histoire", "/creer"), sections=[],
                             faq=[("Peut-on proposer sa propre idée ?", "Oui, en partie : indiquez ses passions et un mot pour nous à la commande, l'histoire en tient compte.")],
                             liens=["livre-emotions-enfant", "livre-personnalise-par-age", "livre-personnalise-enfant"]),
     "livraison": dict(titre="Livraison : délais, frais et suivi",
-                      desc="Délais de livraison (7 à 15 jours ouvrés), frais selon le pays et le nombre de livres, livraison offerte dès 6 livres en France, suivi du colis et réimpression en cas de défaut.",
+                      desc="Livraison en 7 à 15 jours ouvrés, offerte dès 6 livres en France. Frais par pays, suivi du colis et réimpression sans frais en cas de défaut.",
                       h1="Livraison et retours", kicker="Livraison",
                       intro="Les délais, les frais et ce qui se passe si le colis arrive abîmé.",
                       image=("/static/vitrine/photo_07.webp", "Un livre personnalisé dans sa boîte cadeau"), cta=("Créer son avatar gratuitement", "/creer"), sections=[],
@@ -409,7 +409,7 @@ h1{font:400 clamp(32px,4.6vw,52px)/1.08 var(--titre);margin:0 0 16px;letter-spac
 .faq details{background:var(--papier);border:1px solid var(--trait);border-radius:16px;padding:14px 18px;margin:0 0 10px}
 .faq summary{font-weight:800;cursor:pointer}.faq p{margin:10px 0 0;color:var(--encre-2)}
 .fin{background:var(--nuit);color:#fff;border-radius:26px;padding:34px 26px;text-align:center;margin:20px 0 40px}
-.fin h2{font:400 clamp(26px,3vw,34px)/1.15 var(--titre);margin:0 0 10px;max-width:none}.fin p{color:#E9E3FF;margin:0 0 20px}
+.fin .fin-t{font:800 clamp(26px,3vw,34px)/1.15 var(--titre);margin:0 0 10px;max-width:none;color:#fff}.fin p{color:#E9E3FF;margin:0 0 20px}
 .voir{margin:0 0 50px}.voir h2{font:400 24px/1.2 var(--titre);margin:0 0 12px}
 .voir ul{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:10px}
 .voir a{display:inline-block;padding:10px 16px;border-radius:999px;background:var(--papier);border:1.5px solid var(--encre);font-weight:800;text-decoration:none}
@@ -435,6 +435,51 @@ def _dims(url):
         return (800, 800)
 
 
+PRODUIT_DE = {"livre-personnalise-enfant": "livre", "livre-personnalise-noel": "livre", "livre-anniversaire-personnalise": "livre",
+              "livre-doudou-personnalise": "livre", "livre-emotions-enfant": "livre", "livre-grand-frere-grande-soeur": "livre",
+              "livre-paques-personnalise": "livre", "livre-personnalise-par-age": "livre", "cadeau-personnalise-enfant": "livre",
+              "calendrier-personnalise-enfant": "calendrier", "cahier-coloriage-personnalise": "coloriage"}
+
+
+def ld_produit(quoi, b):
+    """Produit + offre réelle (prix de la grille, livraison France, pas de retour : produit personnalisé) ; note seulement s'il y a de vrais avis."""
+    import paiement as P
+    g = P.grille()
+    info = {"livre": ("Livre personnalisé pour enfant", "Un livre illustré, relié, couverture rigide, dont votre enfant est le héros avec son doudou et ses animaux. Avatar sans photo.",
+                      g["formules"]["livre"]["prix"], g["port_fr"]["1"], "/static/vitrine/photo_01.webp"),
+            "calendrier": ("Calendrier personnalisé pour enfant", "Un calendrier mural de 12 mois illustrés avec votre enfant, son doudou et ses animaux, ses dates déjà marquées.",
+                           g["calendrier"]["seul"], g["calendrier"]["port"], "/static/vitrine/cal_photo_1.webp"),
+            "coloriage": ("Cahier de coloriage personnalisé", "30 pages de coloriages et de jeux où votre enfant, son doudou et ses animaux sont dessinés à chaque page.",
+                          g["coloriage"]["seul"], g["coloriage"]["port"], "/static/vitrine/colo_photo_1.webp")}[quoi]
+    nom, desc, prix, port, img = info
+    offre = {"@type": "Offer", "price": f"{prix / 100:.2f}", "priceCurrency": "EUR", "availability": "https://schema.org/InStock",
+             "itemCondition": "https://schema.org/NewCondition", "url": f"{b}/creer",
+             "shippingDetails": {"@type": "OfferShippingDetails", "shippingRate": {"@type": "MonetaryAmount", "value": f"{port / 100:.2f}", "currency": "EUR"},
+                                 "shippingDestination": {"@type": "DefinedRegion", "addressCountry": "FR"}},
+             "hasMerchantReturnPolicy": {"@type": "MerchantReturnPolicy", "applicableCountry": "FR",
+                                         "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted"}}
+    d = {"@context": "https://schema.org", "@type": "Product", "name": nom, "description": desc, "image": b + img,
+         "brand": {"@type": "Brand", "name": "Mon Héros du Mois"}, "offers": offre}
+    try:
+        import avis
+        r = avis.resume()
+        if (r.get("nombre") or 0) >= 1:
+            d["aggregateRating"] = {"@type": "AggregateRating", "ratingValue": r["moyenne"], "reviewCount": r["nombre"], "bestRating": 5, "worstRating": 1}
+    except Exception:
+        pass
+    return d
+
+
+def balises_verification():
+    """Balises de vérification de Google Search Console et de Bing Webmaster Tools (variables Railway)."""
+    out = []
+    for env, nom in (("GOOGLE_SITE_VERIFICATION", "google-site-verification"), ("BING_SITE_VERIFICATION", "msvalidate.01")):
+        v = os.getenv(env, "").strip()
+        if re.fullmatch(r"[\w\-]{6,100}", v):
+            out.append(f'<meta name="{nom}" content="{v}">')
+    return "".join(out)
+
+
 def liens_pied():
     return "".join(f'<a href="/{k}">{escape(v)}</a>' for k, v in COURT.items())
 
@@ -445,7 +490,7 @@ CB = ('<span class="pm" aria-label="Carte bancaire">CB</span><span class="pm vis
 PIED_CSS = """
 .pied{padding:44px 0 120px;color:var(--encre-2);font-size:15px;border-top:1px solid var(--trait);margin-top:20px}
 .pied .cols{display:grid;grid-template-columns:repeat(4,1fr);gap:26px}
-.pied h3{font:900 15px/1.2 var(--texte);color:var(--encre);margin:0 0 10px}
+.pied .pt{font:900 15px/1.2 var(--texte);color:var(--encre);margin:0 0 10px}
 .pied ul{list-style:none;margin:0;padding:0}.pied li{margin:0 0 8px}.pied a{color:var(--encre-2);text-decoration:none}.pied a:hover{text-decoration:underline}
 .pied .bas{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between;margin-top:30px;padding-top:20px;border-top:1px solid var(--trait)}
 .pied .paie{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.pied .paie b{color:var(--encre);margin-right:4px}
@@ -462,7 +507,7 @@ PIED_CSS = """
 
 def pied():
     """Pied de page commun (accueil et pages) : découvrir, occasions, inspiration, service, moyens de paiement."""
-    col = lambda t, l: f"<div><h3>{t}</h3><ul>" + "".join(f'<li><a href="{u}">{escape(x)}</a></li>' for x, u in l) + "</ul></div>"
+    col = lambda t, l: f"<div><p class='pt'>{t}</p><ul>" + "".join(f'<li><a href="{u}">{escape(x)}</a></li>' for x, u in l) + "</ul></div>"
     return ("<footer class='pied'><div class='wrap'><div class='cols'>"
             + col("Découvrir", [("Créer son avatar", "/creer"), ("Feuilleter nos livres", "/#feuilleter"), ("Avis clients", "/avis-clients"), ("Tarifs", "/tarifs"),
                                 ("Comment c'est fait", "/#ia")])
@@ -494,12 +539,13 @@ def rendre(slug):
               {"@type": "ListItem", "position": 2, "name": COURT[slug], "item": url}]},
           {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
               {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in p["faq"]]}]
+    if slug in PRODUIT_DE:
+        ld.append(ld_produit(PRODUIT_DE[slug], b))
     if slug in CONSTRUIRE:
         p = dict(p, sections=CONSTRUIRE[slug]() + p["sections"])
     sections = "".join(f"<h2>{escape(h)}</h2>" + "".join(x if x.startswith("<") else f"<p>{x}</p>" for x in paras) for h, paras in p["sections"])
     faq = "".join(f"<details><summary>{escape(q)}</summary><p>{escape(a)}</p></details>" for q, a in p["faq"])
     voir = "".join(f'<li><a href="/{k}">{escape(COURT[k])}</a></li>' for k in p["liens"])
-    verif = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()
     html = f"""<!doctype html>
 <html lang="fr">
 <head>
@@ -507,7 +553,7 @@ def rendre(slug):
 <title>{escape(p['titre'])} – Mon Héros du Mois</title>
 <meta name="description" content="{escape(p['desc'])}">
 <link rel="canonical" href="{url}">
-{f'<meta name="google-site-verification" content="{escape(verif)}">' if verif else ''}
+{balises_verification()}
 <link rel="icon" type="image/png" href="/static/marque/favicon-64.png"><link rel="apple-touch-icon" href="/static/marque/apple-touch-icon.png">
 <meta property="og:type" content="website"><meta property="og:site_name" content="Mon Héros du Mois"><meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="{escape(p['titre'])}"><meta property="og:description" content="{escape(p['desc'])}">
@@ -532,7 +578,7 @@ def rendre(slug):
 </section>
 <section class="corps">{sections}</section>
 <section class="faq"><h2>Vos questions</h2>{faq}</section>
-<section class="fin"><h2>Ce soir, votre enfant est le héros</h2><p>Composez son avatar en quelques minutes, puis choisissez ses créations. Vous ne payez qu'à la fin.</p>
+<section class="fin"><p class="fin-t">Ce soir, votre enfant est le héros</p><p>Composez son avatar en quelques minutes, puis choisissez ses créations. Vous ne payez qu'à la fin.</p>
   <a class="btn" href="{p['cta'][1]}">{escape(p['cta'][0])}</a></section>
 <nav class="voir" aria-label="À voir aussi"><h2>À voir aussi</h2><ul>{voir}</ul></nav>
 </main>

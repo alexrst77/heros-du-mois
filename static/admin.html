@@ -745,6 +745,19 @@ async function comparer(b) {
     <div class="acts"><button class="btn main" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
   document.getElementById('dlg').showModal();
 }
+function refEtat() {
+  const e = document.getElementById('refEtat'); if (!e || e.dataset.ok) return; e.dataset.ok = 1;
+  fetch('/admin/api/referencement' + Q, { headers: H }).then(r => r.json()).then(j => {
+    e.innerHTML = `Google : ${j.google ? '🟢 balise en place' : '⚪️ balise à ajouter'} · Bing : ${j.bing ? '🟢 balise en place' : '⚪️ balise à ajouter'} · Plan du site : <a href="${esc(j.sitemap)}" target="_blank">${esc(j.sitemap)}</a> (${j.pages} pages)`; }).catch(() => {});
+}
+setInterval(refEtat, 1500);
+async function indexnow(b) {
+  b.disabled = true; const t = b.textContent; b.textContent = '⏳ Envoi…';
+  const r = await fetch('/admin/api/indexnow' + Q, { method: 'POST', headers: H }); const j = await r.json().catch(() => ({}));
+  b.disabled = false; b.textContent = t;
+  RES._reg = r.ok ? { cls: 'ok', html: `✅ ${j.n} pages signalées à Bing (IndexNow, réponse ${j.code}). Elles seront explorées dans les prochains jours.` } : { cls: 'err', html: '⚠️ ' + esc(j.erreur || ('Réponse ' + (j.code || '?'))) };
+  render();
+}
 async function devisDestination(b) {
   const v = id => document.getElementById(id).value, sel = document.getElementById('dPays');
   b.disabled = true; b.textContent = '⏳ Devis en cours (≈ 20 s)…';
@@ -868,6 +881,11 @@ function vueReglages() {
   <div class="card"><h3>🏷️ Comparer les prix d'impression et les formats</h3>
     <p class="meta" style="margin:0">Devis Lulu pour plusieurs fabrications (rigide, souple, agrafé…), des formats plus grands et des livres plus épais (32, 40 pages). Aucune commande, rien n'est payé.</p>
     <div class="acts"><button class="btn" onclick="comparer(this)">Comparer</button></div></div>
+  <div class="card" id="refCard"><h3>🔎 Référencement : Google et Bing</h3>
+    <p class="meta" style="margin:0">Déclare le site dans Google Search Console et Bing Webmaster Tools (méthode « balise HTML »), puis colle le code de chaque balise dans Railway : <b>GOOGLE_SITE_VERIFICATION</b> et <b>BING_SITE_VERIFICATION</b>. Plan du site à leur donner : <code>/sitemap.xml</code>.</p>
+    <div class="meta" id="refEtat" style="margin-top:6px"></div>
+    <div class="acts"><a class="btn" href="https://search.google.com/search-console" target="_blank" rel="noopener">Google Search Console</a><a class="btn" href="https://www.bing.com/webmasters" target="_blank" rel="noopener">Bing Webmaster Tools</a>
+      <button class="btn" onclick="indexnow(this)">📣 Signaler toutes les pages à Bing</button></div></div>
   <div class="card"><h3>🌍 Livrer ailleurs : devis Lulu</h3>
     <p class="meta" style="margin:0">Prix réels de Lulu pour envoyer des livres dans un autre pays ou en outre-mer, comparés à la France. Aucune commande, rien n'est payé, le site ne change pas.</p>
     <div style="display:grid;grid-template-columns:1.4fr 1fr 1.4fr;gap:8px;margin-top:8px">
