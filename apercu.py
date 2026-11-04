@@ -85,6 +85,26 @@ def lancer(A, data, vis):
     form, err = A.parse_book(data)
     if err:
         return {"erreur": err}, 400
+    return _lancer(A, form, data, vis)
+
+
+def lancer_form(A, form, vis):
+    """Parcours « Créer son livre » : même aperçu (mêmes limites), à partir du formulaire déjà construit côté serveur."""
+    import comptes
+    cl = comptes.client_courant()
+    vis = ("c:" + cl["id"]) if cl else ("v:" + vis)
+    if restants(vis, prenom=form.get("prenom")) <= 0:
+        return {"erreur": "Vous avez déjà vu l'aperçu de sa couverture : la couverture finale sera créée à la commande, avec les mêmes personnages."}, 429
+    with db._db() as c:
+        if c.execute("select count(*) from apercus where cree>?", (time.time() - 86400,)).fetchone()[0] >= MAX_JOUR:
+            return {"erreur": "Les aperçus sont très demandés aujourd'hui : réessayez demain, ou commandez directement."}, 429
+    if not os.getenv("OPENAI_API_KEY"):
+        return {"erreur": "Aperçu indisponible pour le moment."}, 503
+    return _lancer(A, form, {}, vis)
+
+
+def _lancer(A, form, data, vis):
+    import generator as G
     if not form.get("avatar"):
         return {"erreur": "Composez d'abord l'avatar."}, 400
     cfg = G.build_config(form)
@@ -177,7 +197,7 @@ def _run(pid, form, cfg, refs, folder):
              "coverBrief": f"{prenom.upper()} and companions at the heart of this world, at the very start of a wonderful adventure: a joyful, "
                            "wonder-filled moment full of warm magical light; every character clearly visible, recognisable and facing the viewer."}
         _maj(pid, etape="Illustration de la couverture", pct=62)
-        crefs = P.refs_for(ids, portraits, None, folder, "couverture")
+        crefs = P.refs_for(ids, portraits, None, folder, "couverture", snap)
         prompt = P.cover_prompt(b, snap, crefs)
         (folder / "prompt.txt").write_text(prompt, encoding="utf-8")
         P.image(prompt, crefs, fichier(pid), P.COVER_SIZE, G._m("q_main", G.IMAGE_QUALITY), "prompt.txt", etape="couverture (aperçu)")

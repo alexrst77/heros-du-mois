@@ -354,17 +354,65 @@ def build_config(form):
         probs.append("aucun avatar configuré : description textuelle minimale utilisée")
         chars.append({"id": "heros", "type": "enfant", "role": "héros", "nom": form["prenom"], "age": form["age"],
                       "config": {}, "desc": hero_description(form)})
+    pc = form.get("parcours") if isinstance(form.get("parcours"), dict) else None
+    if pc:                                            # parcours « Créer son livre » : photo du héros, proches, style
+        _parcours_personnages(chars, pc, probs)
     for c in chars:
         c["cle"] = portrait_key(c)
-    return {"version": art.STYLE_VERSION, "personnages": chars, "problemes": probs,
-            "histoire": {k: form.get(k) for k in ("theme", "univers", "passions", "precision", "numero")}}
+    h = {k: form.get(k) for k in ("theme", "univers", "passions", "precision", "numero")}
+    if pc:
+        h["parcours"] = {k: pc.get(k) for k in ("age_lecteur", "theme_cle", "sujet", "decor_en", "message", "cherche", "cherche_en", "langue",
+                                                 "evenements", "plat", "details", "pronoms", "police", "style", "consigne_age", "consigne_message",
+                                                 "mots") if pc.get(k) not in (None, "", [])}
+    return {"version": art.STYLE_VERSION, "personnages": chars, "problemes": probs, "histoire": h}
+
+
+def _texte_sur(v, n=160):
+    """Texte libre du parent : une ligne, sans balises ni accolades, borné (il est transmis comme DONNÉE, jamais comme consigne)."""
+    import re as _re
+    return _re.sub(r"[\s<>{}\[\]`]+", " ", str(v or "")).strip()[:n]
+
+
+def _parcours_personnages(chars, pc, probs):
+    style = pc.get("style") or "gouache"
+    heros = chars[0]
+    ph = pc.get("photo_heros")
+    if ph and Path(ph).is_file():
+        heros["photo"] = str(ph)
+        heros["desc"] += "; face shape, hairstyle and distinctive features follow the reference PHOTO of the real child (painted, never photographic)"
+    if pc.get("details"):
+        heros["desc"] += "; distinctive detail: " + _texte_sur(pc["details"], 120)
+    for i, x in enumerate((pc.get("proches") or [])[:4]):
+        if not isinstance(x, dict) or not _name(x.get("nom")):
+            probs.append(f"personnage {i + 2} : nom manquant"); continue
+        objet = x.get("type") == "objet"
+        rel = _texte_sur(x.get("relation"), 40) or ("objet" if objet else "proche")
+        desc = _texte_sur(x.get("desc"), 200)
+        if objet:
+            d = f"{_name(x['nom'])}, {heros['nom']}'s special object ({rel}): {desc or 'a small cherished object'} (an inanimate object, never alive)"
+        else:
+            age = str(x.get("age") or "").strip()[:3]
+            d = (f"{_name(x['nom'])}, {heros['nom']}'s {rel} (a real person from the family or friends, part of the story)"
+                 + (f", about {age} years old" if age.isdigit() else "") + (f": {desc}" if desc else ""))
+        c = {"id": f"proche_{i + 1}", "type": "objet" if objet else "proche", "role": f"{rel} de {heros['nom']} (configuré par le parent)",
+             "nom": _name(x["nom"]), "config": {}, "desc": d, "relation": rel}
+        if x.get("photo") and Path(x["photo"]).is_file():
+            c["photo"] = str(x["photo"]); c["desc"] += "; appearance follows the reference PHOTO (painted, never photographic)"
+        chars.append(c)
+    if style != "gouache":
+        for c in chars:
+            c["style"] = style
 
 
 def portrait_key(c):
     """Clé de cache d'un portrait : configuration complète + version du style + modèle. Tout changement l'invalide."""
     import hashlib
-    blob = json.dumps({"t": c["type"], "cfg": c.get("config"), "age": c.get("age"), "desc": c.get("desc"),
-                       "v": art.STYLE_VERSION, "m": IMAGE_MODEL}, sort_keys=True, ensure_ascii=False)
+    d = {"t": c["type"], "cfg": c.get("config"), "age": c.get("age"), "desc": c.get("desc"), "v": art.STYLE_VERSION, "m": IMAGE_MODEL}
+    if c.get("style"):                                # style choisi dans le configurateur (gouache : clés historiques inchangées)
+        d["s"] = c["style"]
+    if c.get("photo"):                                # photo de référence : son contenu entre dans la clé
+        d["p"] = hashlib.sha1(Path(c["photo"]).read_bytes()).hexdigest()[:16] if Path(c["photo"]).is_file() else c["photo"]
+    blob = json.dumps(d, sort_keys=True, ensure_ascii=False)
     return hashlib.sha1(blob.encode()).hexdigest()[:20]
 
 
@@ -372,17 +420,40 @@ def portrait_key(c):
 REF_DIR = Path(os.getenv("DATA_DIR") or Path(__file__).parent) / "cache_references"; REF_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def portrait_prompt(c, has_model, has_guide, diffs=None):
+def style_bible(c):
+    """Bible de style du personnage : la maison (gouache) ou le style choisi dans le configurateur."""
+    if not c.get("style"):
+        return art.STYLE_BIBLE
+    import catalogue
+    st = catalogue.par_cle(catalogue.styles(), c["style"]) or {}
+    return ("ART STYLE (apply to every image): " + (st.get("style_en") or "") + ". Characters are expressive and appealing, "
+            "with readable emotions and appealing proportions; environments are rich, with several depth planes and careful lighting.")
+
+
+def style_board(c):
+    """Image de référence de STYLE : la planche maison, ou l'aperçu validé du style choisi."""
+    if not c.get("style"):
+        return art.STYLE_BOARD
+    import catalogue
+    return catalogue.apercu_style(c["style"]) or art.STYLE_BOARD
+
+
+def portrait_prompt(c, has_model, has_guide, diffs=None, has_photo=False):
     refs = []
-    if has_model: refs.append("image 1 is a painted base model from this book's collection: keep its painting style, rendering quality and general anatomy")
+    if has_model: refs.append("image 1 is a painted base model from this book's collection: " + ("keep its general anatomy only (not its painting style)" if c.get("style")
+                                                                                                     else "keep its painting style, rendering quality and general anatomy"))
     if has_guide: refs.append(f"image {2 if has_model else 1} is the parent's colour guide (flat drawing): follow its colours, glasses, freckles, outfit, markings and accessories, never its flat style")
+    if has_photo: refs.append(f"image {1 + has_model + has_guide} is a PHOTO of the real person, sent as IDENTITY reference only: keep face shape, "
+                              "hairstyle, hair colour, skin tone, eye colour and distinctive features, but paint them in the book's art style "
+                              "(never photographic, never copy the photo's background, clothes only if no outfit is listed)")
     refs.append("the LAST image is the style swatch board: technique, texture and light only, never its content")
-    kind = {"enfant": "the hero child", "doudou": "the plush toy", "animal": "the pet"}.get(c["type"], "the character")
-    return "\n".join([art.STYLE_BIBLE, "REFERENCE IMAGES: " + "; ".join(refs) + ".",
+    kind = {"enfant": "the hero child", "doudou": "the plush toy", "animal": "the pet", "proche": "the family member or friend",
+            "objet": "the special object"}.get(c["type"], "the character")
+    return "\n".join([style_bible(c), "REFERENCE IMAGES: " + "; ".join(refs) + ".",
         f"Create the official REFERENCE PORTRAIT of {kind} {c['nom'].upper()} for this picture book: {c['desc']}.",
         "Full body, three-quarter view, relaxed natural pose, gentle expression, centred, on a plain soft cream paper background, "
         "even soft daylight with true neutral colours (no yellow or orange colour cast). Every attribute listed above must be clearly visible "
-        + ("(hair, skin, eyes, glasses if listed, clothing). " if c["type"] == "enfant" else
+        + ("(hair, skin, eyes, glasses if listed, clothing). " if c["type"] in ("enfant", "proche") else "(shape, colours, material). " if c["type"] == "objet" else
            "(species, fur colours, markings, ears, collar if listed). It wears NO glasses and NO clothes. ")
         + "One single character only. No scenery, no text."]
         + ([f"IMPORTANT, the base model differs from this character: " + "; ".join(diffs) + "."] if diffs else [])
@@ -428,19 +499,20 @@ def draw_portrait(c, guide=None, variant=0, base=None, etape=None):
             except Exception:
                 model = None
         diffs = base_differences(c["type"], c["config"])
-    refs = [r for r in (model, guide) if r and Path(r).exists()] + [art.STYLE_BOARD]
-    return _edit(portrait_prompt(c, bool(model and Path(model).exists()), bool(guide and Path(guide).exists()), diffs), refs, out,
+    photo = c.get("photo") if c.get("photo") and Path(c["photo"]).is_file() else None
+    refs = [r for r in (model, guide, photo) if r and Path(r).exists()] + [style_board(c)]
+    return _edit(portrait_prompt(c, bool(model and Path(model).exists()), bool(guide and Path(guide).exists()), diffs, has_photo=bool(photo)), refs, out,
                  quality=PORTRAIT_QUALITY, etape=etape)
 
 
 def draw_invented(c, variant=0, etape=None):
     """Personnage inventé par l'histoire (ex. une dinosaure) : portrait à partir de sa description, pour rester identique."""
     import hashlib
-    key = hashlib.sha1((c["nom"] + c["desc"] + art.STYLE_VERSION).encode()).hexdigest()[:20]
+    key = hashlib.sha1((c["nom"] + c["desc"] + art.STYLE_VERSION + (c.get("style") or "")).encode()).hexdigest()[:20]
     out = REF_DIR / f"{key}_{variant}{_m('suffix', '')}.png"
     if out.exists():
         return out
-    return _edit(portrait_prompt(c, False, False), [art.STYLE_BOARD], out, quality=PORTRAIT_QUALITY, etape=etape)
+    return _edit(portrait_prompt(c, False, False), [style_board(c)], out, quality=PORTRAIT_QUALITY, etape=etape)
 
 
 # ====================================================================== 2. histoire (18 pages illustrées) + relecture

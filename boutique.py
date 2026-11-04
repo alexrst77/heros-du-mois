@@ -388,7 +388,10 @@ def confirm_paid(oid, stripe_sub=None):
         return False
     o = db.get(oid)
     log(f"commande {oid} payée ({o['formule']})")
-    if o["formule"] == "imprime":                 # version imprimée d'un e-book : le livre existe déjà, validé, rien n'est recréé
+    if o["formule"] == "relie":                   # livre relié du parcours : fichier déjà figé à la commande, déduction consommée
+        import parcours
+        parcours.apres_paiement_relie(oid)
+    elif o["formule"] == "imprime":                 # version imprimée d'un e-book : le livre existe déjà, validé, rien n'est recréé
         try:
             src = db.get(load_book(oid)[0].get("source_ebook") or "")
             db.update(oid, job_id=src["job_id"], pdf=src["pdf"], titre=src["titre"], volume_number=src.get("volume_number"), statut="a_verifier")
@@ -396,6 +399,9 @@ def confirm_paid(oid, stripe_sub=None):
         except Exception as e:
             db.update(oid, statut="erreur", erreur=f"Version imprimée : livre d'origine introuvable ({e})")
     else:
+        if o.get("projet_id"):                    # livre numérique du parcours « Créer son livre » : crédit pour le livre relié
+            import parcours
+            parcours.apres_paiement_numerique(oid)
         for b in creer_pack(oid):
             start_book(b, auto=True)
     threading.Thread(target=mail_confirmation, args=(oid,), daemon=True).start()
@@ -425,8 +431,15 @@ def liens_ebook(origine, site=None):
     out = []
     for b in livres_du_pack(origine):
         if b.get("job_id") and b.get("pdf") and fabrication.est_finalise(A.OUT / b["job_id"]) and (A.OUT / b["job_id"] / b["pdf"]).exists():
+            tete = db.get(origine) or {}
+            imprimer = f"{site}/imprimer/{b['id']}?j={jeton_ebook(b['id'])}" if paiement.numerique(tete.get("formule")) else None
+            if tete.get("projet_id"):                  # parcours « Créer son livre » : Mon livre (relecture, corrections, relié avec déduction)
+                import parcours
+                pj = parcours.get(tete["projet_id"])
+                if pj:
+                    imprimer = f"{site}/mon-livre/{pj['id']}?j={pj['jeton']}"
             out.append({"id": b["id"], "titre": b.get("titre") or "son livre", "url": f"{site}/telecharger/{b['id']}.pdf?j={jeton_ebook(b['id'])}",
-                        "imprimer": f"{site}/imprimer/{b['id']}?j={jeton_ebook(b['id'])}" if paiement.numerique((db.get(origine) or {}).get("formule")) else None})
+                        "imprimer": imprimer})
     return out
 
 
@@ -740,6 +753,11 @@ def stripe_webhook():
             oid = (o.get("metadata") or {}).get("commande") or o.get("client_reference_id")
             if oid and db.get(oid) and o.get("payment_status") in ("paid", "no_payment_required"):
                 confirm_paid(oid, o.get("subscription"))
+        elif t in ("checkout.session.expired", "checkout.session.async_payment_failed"):
+            oid = (o.get("metadata") or {}).get("commande") or o.get("client_reference_id")
+            if oid and (db.get(oid) or {}).get("formule") == "relie":       # paiement relié abandonné : la déduction redevient disponible
+                import parcours
+                parcours.liberer_credit(oid)
         elif t == "invoice.paid" and o.get("billing_reason") == "subscription_cycle":
             s = db.sub_find(stripe_sub=paiement.invoice_subscription(o))
             if s and s["formule"] == "fetes":                     # mensualité du pack : pas de livre, on compte
@@ -794,6 +812,11 @@ def _scheduler():
                 if s["formule"] == "fetes":
                     check_fetes(s)
             purge_old()
+            try:
+                import parcours
+                parcours.purger_photos()           # photos privées : effacées après le délai annoncé
+            except Exception:
+                traceback.print_exc()
             try:
                 import avis
                 avis.demander_auto()               # une demande d'avis, 10 jours après l'expédition
@@ -1063,8 +1086,10 @@ def _envoyer_lulu(origine, tete, tout, pub):
               "interieur": f"{pub}/impression/{b['id']}/{jeton}/interieur.pdf", "couverture": f"{pub}/impression/{b['id']}/{jeton}/couverture.pdf"}
         if b["formule"] in EXTRAS:
             it["pod"] = EXTRAS[b["formule"]].POD
+        if (b.get("quantite") or 1) > 1:              # livre relié en plusieurs exemplaires : même fichier, quantité Lulu
+            it["quantite"] = int(b["quantite"])
         items.append(it)
-    cost = lulu.cost_lignes(([(info["pages"], recueil.POD, 1)] if grand else [(24, lulu.POD_PACKAGE, len(livres))]) + [(pages_extra(b["formule"], A.OUT / b["job_id"]), EXTRAS[b["formule"]].POD, 1) for b in cals],
+    cost = lulu.cost_lignes(([(info["pages"], recueil.POD, 1)] if grand else [(24, lulu.POD_PACKAGE, sum(int(b.get("quantite") or 1) for b in livres))]) + [(pages_extra(b["formule"], A.OUT / b["job_id"]), EXTRAS[b["formule"]].POD, 1) for b in cals],
                             tete["adresse"], tete["email"])
     job = lulu.create_print_job(origine, items, tete["adresse"], tete["email"])
     st = (job.get("status") or {}).get("name")
@@ -2191,6 +2216,24 @@ def mail_confirmation(oid):
                  f"3. Vous recevez un mail dès que tout part à l'impression.\n\nLivraison estimée entre le {_date_fr(d1)} et le {_date_fr(d2)}.\n\n"
                  + (EBOOK_ACCORD + "\n\n" if form.get("ebook") else "") +
                  f"Une question ? Répondez simplement à ce mail.\n\nÀ très vite,\nL'équipe Mon Héros du Mois\n{site}")
+        pj = None
+        if o.get("projet_id"):
+            import parcours
+            pj = parcours.get(o["projet_id"])
+        if pj and o["formule"] == "relie":            # livre relié d'un livre numérique : le fichier est déjà prêt et figé
+            texte = texte.replace(f"1. Nous créons les illustrations de {prenom} (quelques minutes).\n2. Notre équipe relit chaque page avant l'impression.",
+                                  "1. Votre version validée est enregistrée telle quelle pour l'impression.\n2. Notre équipe vérifie le fichier avant de l'envoyer à l'imprimeur.")
+            html = None
+        elif pj and paiement.numerique(o["formule"]):  # livre numérique du parcours : suivi réel sur « Mon livre », aucun délai promis
+            lien_ml = f"{site}/mon-livre/{pj['id']}?j={pj['jeton']}"
+            texte = (f"Bonjour,\n\nMerci ! Le paiement de votre livre numérique pour {prenom} est bien reçu ({eu(o['montant'] or 0)}).\n\n"
+                     f"Commande n° {ref}.\n\nLa création commence maintenant. Suivez-la, puis lisez, corrigez et téléchargez le livre ici "
+                     f"(lien personnel, à garder) :\n{lien_ml}\n\nNous vous écrivons dès qu'il est disponible. Vous pourrez ensuite, si vous le souhaitez, "
+                     f"commander sa version reliée : le montant du livre numérique sera déduit.\n\n{EBOOK_ACCORD}\n\n"
+                     f"Une question ? Répondez simplement à ce mail.\n\nÀ très vite,\nL'équipe Mon Héros du Mois\n{site}")
+            ok = send_mail(f"✨ C'est parti : le livre de {prenom} est en création", texte, reply_to=CONTACT, to=o["email"])
+            log(f"commande {oid} : mail de confirmation (parcours) {'envoyé' if ok else 'non envoyé'} à {o['email']}")
+            return ok
         if paiement.numerique(o["formule"]) and not (form.get("calendrier") or form.get("coloriage") or form.get("objets")):
             texte = texte.replace(f"Livraison : {adr}\n\n", "").replace("2. Notre équipe relit chaque page avant l'impression.\n3. Vous recevez un mail dès que tout part à l'impression.",
                                   "2. Notre équipe relit chaque page.\n3. Vous recevez l'e-book par mail, sous 48 h, avec son lien de téléchargement.").replace(
@@ -2217,7 +2260,8 @@ def mail_confirmation(oid):
  </div>
  <p style="font:14px system-ui,sans-serif;color:#6B6F8E;text-align:center;margin:22px 0 0">Une question&nbsp;? Répondez simplement à ce mail.<br><a href="{site}" style="color:#3D6BD8">{site.replace('https://', '')}</a></p>
 </div></body></html>"""
-        ok = send_mail(f"✨ Commande confirmée : l'univers de {prenom} est en préparation", texte, reply_to=CONTACT, to=o["email"], html=html)
+        ok = send_mail(f"✨ Commande confirmée : l'univers de {prenom} est en préparation" if o["formule"] != "relie" else f"✨ Commande confirmée : le livre relié de {prenom}",
+                       texte, reply_to=CONTACT, to=o["email"], html=html)
         log(f"commande {oid} : mail de confirmation {'envoyé' if ok else 'non envoyé'} à {o['email']}")
         return ok
     except Exception as e:

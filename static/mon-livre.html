@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
+<title>Mon livre – Mon Héros du Mois</title>
+<style>
+@font-face { font-family: "Grandstander"; src: url("/static/fonts/grandstander-latin-800-normal.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Nunito"; src: url("/static/fonts/Nunito.woff") format("woff"); font-weight: 200 1000; font-display: swap; }
+@font-face { font-family: "P-conte"; src: url("/static/fonts/livre/Lora-Regular.woff") format("woff"); }
+@font-face { font-family: "P-douce"; src: url("/static/fonts/livre/Nunito-Regular.woff") format("woff"); }
+@font-face { font-family: "P-bulles"; src: url("/static/fonts/livre/Fredoka-Regular.woff") format("woff"); }
+@font-face { font-family: "P-poetique"; src: url("/static/fonts/livre/Quicksand-Regular.woff") format("woff"); }
+@font-face { font-family: "P-geometrique"; src: url("/static/fonts/livre/Lexend-Regular.woff") format("woff"); }
+@font-face { font-family: "P-manuscrite"; src: url("/static/fonts/livre/PatrickHand-Regular.woff") format("woff"); }
+@font-face { font-family: "P-ecole"; src: url("/static/fonts/livre/Andika-Regular.woff") format("woff"); }
+@font-face { font-family: "P-aventure"; src: url("/static/fonts/livre/ZillaSlab-Regular.woff") format("woff"); }
+:root { --fond: #FFF8F0; --carte: #fff; --encre: #2B2340; --doux: #6E6683; --trait: #EFE3D6; --action: #F0703C; --action-f: #D45A28; --ok: #2F8F6B; --erreur: #B3261E;
+        --titre: "Grandstander", "Nunito", system-ui, sans-serif; --texte: "Nunito", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--encre); font: 400 17px/1.55 var(--texte); }
+img { max-width: 100%; display: block; }
+:focus-visible { outline: 3px solid var(--action); outline-offset: 3px; border-radius: 10px; }
+.tete { text-align: center; padding: 10px 16px; border-bottom: 1px solid var(--trait); background: #FFFBF6; }
+.tete img { height: 40px; width: auto; display: inline-block; }
+main { max-width: 760px; margin: 0 auto; padding: 18px 16px 60px; }
+h1 { font: 800 clamp(26px, 6vw, 34px)/1.12 var(--titre); margin: 6px 0 8px; }
+h2 { font: 800 21px/1.2 var(--titre); margin: 0 0 10px; }
+.sous { color: var(--doux); margin: 0 0 16px; }
+.boite { background: var(--carte); border: 1.5px solid var(--trait); border-radius: 22px; padding: 16px; margin: 0 0 16px; }
+.etapes { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.etapes li { display: flex; align-items: center; gap: 12px; color: var(--doux); }
+.etapes li .p { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--trait); display: grid; place-items: center; font-weight: 800; flex: none; background: #fff; }
+.etapes li.fait { color: var(--encre); } .etapes li.fait .p { background: var(--ok); border-color: var(--ok); color: #fff; }
+.etapes li.encours { color: var(--encre); font-weight: 800; } .etapes li.encours .p { border-color: var(--action); color: var(--action); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(240,112,60,.18); } } .etapes li.encours .p { animation: pulse 1.6s infinite; }
+@media (prefers-reduced-motion: reduce) { .etapes li.encours .p { animation: none; } }
+.btn { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 99px; padding: 15px 22px; min-height: 52px; font: 800 17px/1 var(--texte);
+       cursor: pointer; background: var(--action); color: #fff; text-decoration: none; box-shadow: 0 10px 20px -10px rgba(212,90,40,.8); }
+.btn:hover { background: var(--action-f); } .btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.second { background: #fff; color: var(--encre); border: 1.5px solid var(--trait); box-shadow: none; }
+.plein { width: 100%; }
+.rangee { display: flex; gap: 10px; flex-wrap: wrap; } .rangee .btn { flex: 1; min-width: 200px; }
+/* liseuse */
+.liseuse { position: relative; background: #2A2347; border-radius: 18px; overflow: hidden; }
+.liseuse .page { position: relative; aspect-ratio: 1; background: #2A2347 center/cover no-repeat; }
+.liseuse .page.gauche { background-position: left center; background-size: 200% 100%; } .liseuse .page.droite { background-position: right center; background-size: 200% 100%; }
+.liseuse .page p { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 44px 18px 18px; color: #FFF7E8; font-size: clamp(15px, 3.6vw, 19px); line-height: 1.45;
+                    background: linear-gradient(180deg, rgba(23,27,58,0), rgba(23,27,58,.9) 38%); }
+.liseuse .ded { aspect-ratio: 1; background: #FBF5EA; color: #1F2557; display: grid; place-items: center; text-align: center; padding: 30px; white-space: pre-line; font-size: 19px; }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0 0; }
+.nav button { width: 52px; height: 52px; border-radius: 50%; border: 1.5px solid var(--trait); background: #fff; font-size: 22px; cursor: pointer; }
+.nav span { color: var(--doux); font-size: 15px; }
+textarea, input[type=text], input[type=email], input[type=tel], select { width: 100%; border: 1.5px solid var(--trait); border-radius: 14px; padding: 12px 14px; font: 400 16px var(--texte); background: #fff; color: var(--encre); }
+textarea { min-height: 110px; }
+label { display: block; font-weight: 700; font-size: 15px; margin: 10px 0 6px; }
+.aide { color: var(--doux); font-size: 14px; margin: 6px 0 0; }
+.erreur { color: var(--erreur); font-weight: 700; font-size: 15px; } .ok { color: var(--ok); font-weight: 700; }
+.prix { display: grid; gap: 6px; font-size: 16px; margin: 10px 0; } .prix div { display: flex; justify-content: space-between; gap: 12px; } .prix div span:last-child { white-space: nowrap; } .prix .tot { font: 800 20px var(--titre); border-top: 1px solid var(--trait); padding-top: 8px; }
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } @media (max-width: 520px) { .duo { grid-template-columns: 1fr; } }
+.cases label { display: flex; gap: 10px; font-weight: 400; } .cases input { width: 22px; height: 22px; flex: none; accent-color: var(--action); }
+details summary { cursor: pointer; font-weight: 800; }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; } .pill { appearance: none; border: 1.5px solid var(--trait); background: #fff; border-radius: 99px; padding: 9px 14px; cursor: pointer; font: 700 15px var(--texte); }
+.pill[aria-pressed="true"] { border-color: var(--action); background: #FFF1E8; }
+</style>
+</head>
+<body>
+<header class="tete"><a href="/" aria-label="Accueil"><img src="/static/marque/logo-h.webp" alt="Mon Héros du Mois" width="180" height="40"></a></header>
+<main id="m"><p>Chargement…</p></main>
+<script>
+(async function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const eu = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
+  const pid = location.pathname.split('/').pop(), q = new URLSearchParams(location.search), J = q.get('j') || '';
+  const H = { 'Content-Type': 'application/json', 'X-Projet-Jeton': J };
+  async function api(u, o) { const r = await fetch(u + (u.includes('?') ? '&' : '?') + 'j=' + encodeURIComponent(J), Object.assign({ headers: H }, o || {})); let j = {}; try { j = await r.json(); } catch (_) {} if (!r.ok) throw new Error(j.erreur || 'Erreur ' + r.status); return j; }
+  let D = null, page = 0, timer = null;
+
+  async function charger() {
+    const extra = ['session_id', 'annule'].filter(k => q.get(k)).map(k => k + '=' + encodeURIComponent(q.get(k))).join('&');
+    try { D = await api('/api/mon-livre/' + pid + (extra ? '?' + extra : '')); } catch (e) { $('m').innerHTML = `<h1>Livre introuvable</h1><p>Ce lien n'est pas valide. Retrouvez vos livres dans <a href="/compte">Mon compte</a>.</p>`; return; }
+    if (extra) history.replaceState(null, '', location.pathname + '?j=' + encodeURIComponent(J));
+    rendre();
+    clearTimeout(timer);
+    if (D.etat.etat !== 'pret' && D.etat.etat !== 'attente_paiement') timer = setTimeout(charger, 15000);   // état réel, relu toutes les 15 s
+  }
+  function rendre() {
+    const e = D.etat;
+    const oidT = q.get('relie') || D.commande;
+    let dejaT = false; try { dejaT = !!sessionStorage.getItem('t' + oidT); } catch (_) {}
+    if (q.get('test') && !q.get('annule') && oidT && !dejaT && (e.etat === 'attente_paiement' || q.get('relie'))) {   // essais en local, sans Stripe
+      try { sessionStorage.setItem('t' + oidT, '1'); } catch (_) {}
+      fetch('/api/commandes/' + oidT + '/paiement-test', { method: 'POST' }).then(() => charger()); return;
+    }
+    if (e.etat === 'attente_paiement') {
+      $('m').innerHTML = `<h1>Paiement non finalisé</h1><p class="sous">${q.get('annule') ? 'Le paiement a été annulé : rien n\'a été débité.' : 'Nous n\'avons pas encore reçu la confirmation du paiement.'}</p>
+        ${D.lien_brouillon ? `<a class="btn plein" href="${esc(D.lien_brouillon)}">Revenir à mon livre</a>` : '<button class="btn plein" onclick="location.reload()">Actualiser</button>'}`;
+      return;
+    }
+    if (e.etat !== 'pret') {
+      const ordre = e.etapes.map(x => x[0]), at = ordre.indexOf(e.atteint);
+      $('m').innerHTML = `<h1>Le livre est en création</h1><p class="sous">Vous pouvez fermer cette page : la création continue et nous vous écrivons dès que le livre est disponible.</p>
+        <div class="boite"><ol class="etapes">${e.etapes.map(([k, l], n) => `<li class="${n < at || (n === at && k === 'paye') ? 'fait' : n === at ? 'encours' : ''}"><span class="p">${n < at || (n === at && k === 'paye') ? '✓' : n + 1}</span>${esc(l)}</li>`).join('')}</ol>
+        ${e.message ? `<p class="aide" style="margin-top:12px">${esc(e.message)}</p>` : ''}</div>
+        <p class="aide">Cette page se met à jour toute seule.</p>`;
+      return;
+    }
+    const pol = D.police ? `font-family:'P-${D.police}'` : 'font-family:Georgia,serif';
+    $('m').innerHTML = `<h1>${esc(D.titre)}</h1><p class="sous">Lisez-le, corrigez-le si besoin, téléchargez-le${D.version > 1 ? ` · version ${D.version}` : ''}.</p>
+      <div class="liseuse" aria-roledescription="liseuse"><div id="pg"></div></div>
+      <div class="nav"><button type="button" id="prec" aria-label="Page précédente">‹</button><span id="num" aria-live="polite"></span><button type="button" id="suiv" aria-label="Page suivante">›</button></div>
+      <div class="rangee" style="margin:16px 0"><a class="btn" href="${esc(D.pdf)}">📥 Télécharger le PDF</a><a class="btn second" href="#relie">📕 Commander mon livre relié${restant()}</a></div>
+      ${D.cherche ? `<details class="boite"><summary>🔍 Solutions du « Cherche et trouve » (${esc(D.cherche.element || '')})</summary><ul>${D.cherche.solutions.map(s => `<li>Double page ${s.double_page} : ${esc(s.ou || 'cachée dans l\'image')}</li>`).join('')}</ul></details>` : ''}
+      <details class="boite" id="corr"><summary>✏️ Corriger les textes ou la dédicace</summary>
+        <p class="aide">Les illustrations ne changent pas. Une nouvelle version du PDF est créée ; les précédentes sont gardées. Corrections restantes : <b>${D.corrections_texte_restantes}</b>.</p>
+        <label for="ded">Dédicace</label><textarea id="ded" maxlength="400">${esc((D.dedicace || {}).texte || '')}</textarea>
+        <label for="dedde">De la part de</label><input type="text" id="dedde" maxlength="50" value="${esc((D.dedicace || {}).de || '')}">
+        ${D.pages.map((t, n) => `<label for="t${n}">Page ${n + 1}</label><textarea id="t${n}" style="${pol}">${esc(t)}</textarea>`).join('')}
+        <p class="erreur" id="cerr" role="alert"></p><button type="button" class="btn plein" id="csave" ${D.corrections_texte_restantes ? '' : 'disabled'}>Enregistrer une nouvelle version</button></details>
+      <details class="boite"><summary>🎨 Demander une retouche d'illustration</summary>
+        <p class="aide">${D.corrections_image.restantes} demande${D.corrections_image.restantes > 1 ? 's' : ''} incluse${D.corrections_image.restantes > 1 ? 's' : ''} restante${D.corrections_image.restantes > 1 ? 's' : ''}. Notre équipe regarde chaque demande et vous répond par e-mail ; seule l'illustration concernée est refaite, le reste du livre ne change pas.</p>
+        ${D.corrections_image.demandes.map(c => `<p class="aide">• ${c.page ? 'Double page ' + c.page : 'Couverture'} : ${esc(c.demande)} — <b>${{ demandee: 'reçue', en_cours: 'en cours', a_valider: 'en cours', faite: 'faite', refusee: 'non retenue' }[c.statut] || c.statut}</b>${c.reponse ? ' · ' + esc(c.reponse) : ''}</p>`).join('')}
+        ${D.corrections_image.restantes ? `<label for="ci">Illustration</label><select id="ci"><option value="0">Couverture</option>${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<option value="${n}">Double page ${n} (pages ${n * 2 - 1} et ${n * 2})</option>`).join('')}</select>
+        <label for="cd">Ce qu'il faut corriger</label><textarea id="cd" maxlength="400" placeholder="Ex. : ses cheveux devraient être bouclés ; le chien a deux queues"></textarea>
+        <p class="erreur" id="ierr" role="alert"></p><button type="button" class="btn second plein" id="isend">Envoyer la demande</button>` : ''}</details>
+      <section class="boite" id="relie" tabindex="-1"><h2>📕 Commander mon livre relié</h2>${vueRelie()}</section>`;
+    afficherPage(); brancher();
+  }
+  function restant() { const c = D.credit; return c && c.statut === 'disponible' ? ' · ' + eu(Math.max(0, D.prix.relie - c.montant)) + ' + livraison' : ''; }
+  function pagesLiseuse() {
+    const l = [{ t: 'couv' }];
+    if (D.dedicace && D.dedicace.texte) l.push({ t: 'ded' });
+    D.pages.forEach((x, n) => l.push({ t: 'p', n }));
+    return l;
+  }
+  function afficherPage() {
+    const L = pagesLiseuse(), p = L[page], pol = D.police ? `font-family:'P-${D.police}'` : 'font-family:Georgia,serif';
+    let h = '';
+    if (p.t === 'couv') h = `<img src="${esc(D.couverture)}" alt="Couverture : ${esc(D.titre)}" style="width:100%;aspect-ratio:1;object-fit:cover">`;
+    else if (p.t === 'ded') h = `<div class="ded" style="${pol}">${esc(D.dedicace.texte)}${D.dedicace.de ? `\n\n— ${esc(D.dedicace.de)}` : ''}</div>`;
+    else h = `<div class="page ${p.n % 2 ? 'droite' : 'gauche'}" style="background-image:url('${esc(D.doubles[Math.floor(p.n / 2)])}')" role="img" aria-label="Illustration, page ${p.n + 1}"><p style="${pol}">${esc(D.pages[p.n])}</p></div>`;
+    $('pg').innerHTML = h;
+    $('num').textContent = p.t === 'couv' ? 'Couverture' : p.t === 'ded' ? 'Dédicace' : `Page ${p.n + 1} sur ${D.pages.length}`;
+    $('prec').disabled = page === 0; $('suiv').disabled = page === L.length - 1;
+  }
+  function vueRelie() {
+    const c = D.credit, pr = D.prix;
+    const deja = (D.commandes_papier || []).length ? `<p class="ok">Commande reliée en cours : ${D.commandes_papier.map(x => `${x.quantite || 1} exemplaire(s), ${esc({ a_verifier: 'vérification du fichier', envoyee_impression: 'en impression', expediee: 'expédiée', payee: 'payée' }[x.statut] || x.statut)}`).join(' ; ')}</p>` : '';
+    return deja + `<p class="aide" style="margin:0 0 10px">Couverture rigide, ${pr.pages.impression} pages, 21,6 × 21,6 cm, imprimé à la demande par notre imprimeur. C'est la version que vous lisez ci-dessus qui part à l'impression.</p>
+      <div class="duo"><div><label for="qte">Exemplaires</label><select id="qte">${pr.quantites.map(n => `<option>${n}</option>`).join('')}</select></div>
+      <div><label for="pays">Pays de livraison</label><select id="pays"><option value="FR">France</option><option value="BE">Belgique</option><option value="LU">Luxembourg</option><option value="CH">Suisse</option><option value="MC">Monaco</option><option value="RE">La Réunion</option></select></div></div>
+      <div class="prix" id="devis"><div><span>Calcul…</span></div></div>
+      ${c && c.statut === 'utilise' ? '<p class="aide">La déduction du livre numérique a déjà servi pour une commande reliée de ce livre.</p>' : ''}
+      <details><summary>Adresse de livraison</summary>
+        <label for="a_nom">Nom et prénom</label><input type="text" id="a_nom" autocomplete="name">
+        <label for="a_l1">Adresse</label><input type="text" id="a_l1" autocomplete="address-line1">
+        <label for="a_l2">Complément <span class="aide" style="display:inline">(facultatif)</span></label><input type="text" id="a_l2" autocomplete="address-line2">
+        <div class="duo"><div><label for="a_cp">Code postal</label><input type="text" id="a_cp" autocomplete="postal-code" inputmode="numeric"></div><div><label for="a_v">Ville</label><input type="text" id="a_v" autocomplete="address-level2"></div></div>
+        <label for="a_t">Téléphone <span class="aide" style="display:inline">(demandé par le transporteur)</span></label><input type="tel" id="a_t" autocomplete="tel"></details>
+      <label for="promo">Code promo <span class="aide" style="display:inline">(facultatif)</span></label><input type="text" id="promo" maxlength="30">
+      <div class="cases" style="margin-top:12px"><label><input type="checkbox" id="val"> J'ai relu le livre : cette version peut partir à l'impression telle quelle.</label>
+      <label><input type="checkbox" id="cgv2"> J'accepte les <a href="/cgv" target="_blank">conditions générales de vente</a>.</label></div>
+      <p class="erreur" id="rerr" role="alert"></p><button type="button" class="btn plein" id="rpay">Payer le complément</button>`;
+  }
+  async function devis() {
+    try {
+      const d = await api('/api/mon-livre/' + pid + '/devis-relie', { method: 'POST', body: JSON.stringify({ quantite: +$('qte').value, pays: $('pays').value, code_promo: $('promo').value.trim() }) });
+      $('devis').innerHTML = `<div><span>Livre relié × ${d.quantite}</span><span>${eu(d.livres)}</span></div>
+        ${d.deduction ? `<div><span>Déduction du livre numérique déjà payé</span><span>− ${eu(d.deduction)}</span></div>` : ''}
+        ${d.remise ? `<div><span>Code ${esc(d.code_promo)}</span><span>− ${eu(d.remise)}</span></div>` : ''}
+        <div><span>Livraison</span><span>${d.port ? eu(d.port) : 'offerte'}</span></div><div class="tot"><span>À payer</span><span>${eu(d.total)}</span></div>`;
+      $('rpay').textContent = 'Payer ' + eu(d.total);
+    } catch (e) { $('devis').innerHTML = `<p class="erreur">${esc(e.message)}</p>`; }
+  }
+  function brancher() {
+    $('prec').onclick = () => { page = Math.max(0, page - 1); afficherPage(); };
+    $('suiv').onclick = () => { page = Math.min(pagesLiseuse().length - 1, page + 1); afficherPage(); };
+    let x0 = null; $('pg').addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+    $('pg').addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) (dx < 0 ? $('suiv') : $('prec')).click(); x0 = null; });
+    document.onkeydown = e => { if (e.target.closest('input,textarea,select')) return; if (e.key === 'ArrowRight') $('suiv').click(); if (e.key === 'ArrowLeft') $('prec').click(); };
+    $('csave').onclick = async () => {
+      $('cerr').textContent = ''; $('csave').disabled = true;
+      try { await api('/api/mon-livre/' + pid + '/textes', { method: 'POST', body: JSON.stringify({ pages: D.pages.map((_, n) => $('t' + n).value), dedicace: { texte: $('ded').value, de: $('dedde').value } }) }); await charger(); }
+      catch (e) { $('cerr').textContent = e.message; $('csave').disabled = false; }
+    };
+    if ($('isend')) $('isend').onclick = async () => {
+      $('ierr').textContent = '';
+      try { await api('/api/mon-livre/' + pid + '/correction-image', { method: 'POST', body: JSON.stringify({ double_page: +$('ci').value, demande: $('cd').value }) }); await charger(); }
+      catch (e) { $('ierr').textContent = e.message; }
+    };
+    ['qte', 'pays'].forEach(k => $(k).onchange = devis); $('promo').onchange = devis; devis();
+    $('rpay').onclick = async () => {
+      const err = $('rerr'); err.textContent = '';
+      if (!$('val').checked || !$('cgv2').checked) { err.textContent = 'Cochez les deux cases pour continuer.'; return; }
+      const adresse = { nom: $('a_nom').value, adresse1: $('a_l1').value, adresse2: $('a_l2').value, code_postal: $('a_cp').value, ville: $('a_v').value, pays: $('pays').value, telephone: $('a_t').value };
+      $('rpay').disabled = true;
+      try { const j = await api('/api/mon-livre/' + pid + '/commander-relie', { method: 'POST', body: JSON.stringify({ quantite: +$('qte').value, adresse, code_promo: $('promo').value.trim(), valide: true, cgv: true }) }); location.href = j.url; }
+      catch (e) { err.textContent = e.message; $('rpay').disabled = false; const d = document.querySelector('#relie details'); if (/adresse|téléphone|postal|ville/i.test(e.message) && d) d.open = true; }
+    };
+  }
+  charger();
+})();
+</script>
+</body>
+</html>

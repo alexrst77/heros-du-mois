@@ -300,8 +300,21 @@ def _ld_accueil(html, base):
     return '<script type="application/ld+json">' + json.dumps(ld, ensure_ascii=False).replace("</", "<\\/") + "</script>"
 
 
+ANCIEN_CREATEUR = {"commande", "formule", "produit", "etape", "fete", "heros", "test", "session_id", "annule"}
+
+
 @app.get("/creer")
 def index():
+    """Nouveau configurateur pas à pas. Les anciens liens (retour de paiement, packs, calendrier, coloriage, objets, liens de
+    « Mon compte ») ouvrent toujours l'ancien créateur, qui reste disponible pour ces produits."""
+    if ANCIEN_CREATEUR & set(request.args):
+        return send_from_directory(app.static_folder, "index.html")
+    return send_from_directory(app.static_folder, "creer.html")
+
+
+@app.get("/creer/autres-creations")
+def ancien_createur():
+    """Packs, livres de fête, calendrier, cahier de coloriage, objets : le créateur d'origine, inchangé."""
     return send_from_directory(app.static_folder, "index.html")
 
 
@@ -463,6 +476,8 @@ import avis  # noqa: E402  avis clients vérifiés, avec photos
 app.register_blueprint(avis.bp)
 import campagnes  # noqa: E402
 app.register_blueprint(campagnes.bp)
+import parcours  # noqa: E402  parcours « Créer son livre » : numérique d'abord, relié ensuite
+app.register_blueprint(parcours.bp)
 
 if __name__ == "__main__":
     print("Ouvre http://localhost:8000 dans ton navigateur" + ("" if os.getenv("OPENAI_API_KEY") else "  (pas de clé OpenAI : mode démo)"))

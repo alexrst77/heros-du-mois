@@ -12,7 +12,7 @@ Ajouts du site (n'altèrent pas les pages du kit) :
 - aperçu partiel (pages=…) pour les livres d'essai ;
 - rendu de contrôle avec PyMuPDF, ou poppler s'il est absent."""
 from pathlib import Path
-import json, shutil, subprocess, tempfile
+import json, shutil, subprocess, tempfile, contextvars
 from xml.sax.saxutils import escape
 from PIL import Image, ImageDraw
 from reportlab.pdfgen import canvas
@@ -29,6 +29,9 @@ TEXT_MAX = 147
 VERSION = "kit-2026-10-02"          # entre dans l'empreinte des livres : ne pas changer (tout serait refait)
 
 _fonts = []
+_METRIQUES = {}
+POLICE = contextvars.ContextVar('police', default=None)    # clé de catalogue.POLICES, ou None
+CORPS = contextvars.ContextVar('corps', default=1.0)       # agrandissement du texte (livres des tout-petits)
 
 
 def _register():
@@ -36,10 +39,30 @@ def _register():
         pdfmetrics.registerFont(TTFont('Story', str(KIT / 'fonts/DejaVuSerif.ttf')))
         pdfmetrics.registerFont(TTFont('StoryBold', str(KIT / 'fonts/DejaVuSerif-Bold.ttf')))
         _fonts.append(1)
+    cle = POLICE.get()
+    if cle and cle not in _fonts:                  # police choisie dans le configurateur (OFL, incorporée au PDF)
+        import catalogue
+        f = catalogue.police_fichiers(cle)
+        if f:
+            pdfmetrics.registerFont(TTFont(f'Story_{cle}', str(f[0])))
+            pdfmetrics.registerFont(TTFont(f'Story_{cle}B', str(f[1])))
+            _METRIQUES[cle] = (f[2], f[3])
+        _fonts.append(cle)
+
+
+def FN(bold=False):
+    """Nom de la police du livre en cours (contexte POLICE), sinon la police historique du kit (anciens livres inchangés)."""
+    cle = POLICE.get()
+    if cle and cle in _METRIQUES:
+        return f'Story_{cle}' + ('B' if bold else '')
+    return 'StoryBold' if bold else 'Story'
 
 
 def body_style(ink='#FFF7E8'):
-    return ParagraphStyle('body', fontName='Story', fontSize=14.8, leading=21, textColor=HexColor(ink))
+    _register()
+    taille, interligne = _METRIQUES.get(POLICE.get() or '', (14.8, 21))
+    k = CORPS.get() or 1.0
+    return ParagraphStyle('body', fontName=FN(), fontSize=taille * k, leading=interligne * k, textColor=HexColor(ink))
 
 
 def text_height(txt):
@@ -79,14 +102,14 @@ def _cover_title(c, t):
         for col in range(2): top.putpixel((col, row), (11, 21, 48, round(a * 255)))
     c.drawImage(ImageReader(top), 0, S - 260, S, 260, mask='auto')
     color = t.get("color") or '#FFF1CF'
-    c.setFillColor(HexColor('#EAD49D')); c.setFont('Story', 11)
+    c.setFillColor(HexColor('#EAD49D')); c.setFont(FN(), 11)
     kick = "   ".join((t.get("kicker") or "MON HÉROS DU MOIS").upper().split(" "))
     c.drawCentredString(S / 2, S - 40, kick)
     lines = [str(x) for x in t["lines"] if str(x).strip()]
     y = S - 58
     for i, line in enumerate(lines):
         size = 56 if i == 0 and len(lines) > 1 else 34
-        st = ParagraphStyle('ct', fontName='StoryBold', fontSize=size, leading=size * 1.08, textColor=HexColor(color), alignment=1)
+        st = ParagraphStyle('ct', fontName=FN(True), fontSize=size, leading=size * 1.08, textColor=HexColor(color), alignment=1)
         sh = ParagraphStyle('cts', parent=st, textColor=HexColor('#0B1530'))
         p = Paragraph(escape(line), st); _, h = p.wrap(S - 80, 300)
         q = Paragraph(escape(line), sh); q.wrap(S - 80, 300)
@@ -103,7 +126,7 @@ def _serie(c, t):
         return
     c.drawImage(ImageReader(_veil('#0B1530')), 0, 0, S, 150, mask='auto')
     pill = f"LIVRE {n} SUR {total}" if total else f"AVENTURE N° {n}"
-    c.setFont('StoryBold', 11); w = pdfmetrics.stringWidth(pill, 'StoryBold', 11) + 28
+    c.setFont(FN(True), 11); w = pdfmetrics.stringWidth(pill, FN(True), 11) + 28
     c.setFillColor(HexColor('#F2C14E')); c.roundRect(S / 2 - w / 2, 70, w, 22, 11, fill=1, stroke=0)
     c.setFillColor(HexColor('#1A1F4A')); c.drawCentredString(S / 2, 77, pill)
     if total:
@@ -117,7 +140,7 @@ def _serie(c, t):
                 f"Encore {reste} aventure{'s' if reste > 1 else ''} à recevoir, " + ("une avant chaque fête" if f == "fetes" else "une chaque mois"))
     else:
         line = "Une nouvelle aventure arrive chaque mois"
-    c.setFillColor(HexColor('#FFF4DC')); c.setFont('Story', 11.5); c.drawCentredString(S / 2, 32, line)
+    c.setFillColor(HexColor('#FFF4DC')); c.setFont(FN(), 11.5); c.drawCentredString(S / 2, 32, line)
 
 
 def page_couverture(c, cover, book):
@@ -139,7 +162,7 @@ def _pastille(c, t):
     c.setStrokeColor(HexColor('#9C7A2B')); c.setLineWidth(.8); c.circle(cx, cy, r, fill=0, stroke=1)
     c.setStrokeColor(HexColor('#FFF1CF')); c.setLineWidth(.6); c.circle(cx, cy, r - 3, fill=0, stroke=1)
     fs = 15 if n < 10 else 12
-    c.setFillColor(HexColor('#1A1F4A')); c.setFont('StoryBold', fs); c.drawCentredString(cx, cy - fs * .36, str(n))
+    c.setFillColor(HexColor('#1A1F4A')); c.setFont(FN(True), fs); c.drawCentredString(cx, cy - fs * .36, str(n))
 
 
 def page_histoire(c, idx, txt, p, book, folio_y=19):
@@ -155,7 +178,7 @@ def page_histoire(c, idx, txt, p, book, folio_y=19):
     c.setFillAlpha(1)
     if ph > TEXT_MAX: raise ValueError(f'Text overflow on page {idx + 2}; shorten text, do not shrink type')
     para.drawOn(c, 45, 43)
-    c.setFillColor(HexColor(ink)); c.setFont('Story', 8); c.drawCentredString(S / 2, folio_y, str(idx + 2))
+    c.setFillColor(HexColor(ink)); c.setFont(FN(), 8); c.drawCentredString(S / 2, folio_y, str(idx + 2))
     return ph
 
 
@@ -164,24 +187,43 @@ def page_quatrieme(c, p, book):
     im = Image.open(p); w, h = im.size; scale = S / h
     c.drawImage(p, S - w * scale, 0, w * scale, S)
     c.setFillColor(HexColor(book['backColor'])); c.setFillAlpha(.84); c.rect(0, 0, S, S, fill=1, stroke=0); c.setFillAlpha(1)
-    c.setFillColor(HexColor('#EAD49D')); c.setFont('Story', 12); c.drawCentredString(S / 2, 520, book['collection'].upper())
-    style = ParagraphStyle('backtitle', fontName='StoryBold', fontSize=29, leading=38, textColor=HexColor('#FFF4DC'), alignment=1)
+    c.setFillColor(HexColor('#EAD49D')); c.setFont(FN(), 12); c.drawCentredString(S / 2, 520, book['collection'].upper())
+    style = ParagraphStyle('backtitle', fontName=FN(True), fontSize=29, leading=38, textColor=HexColor('#FFF4DC'), alignment=1)
     up = 36 if book.get('cadeau') else 0       # livre offert : le texte remonte pour laisser la place au petit mot
     q = Paragraph('<br/>'.join(escape(t) for t in book['backTitle']), style); _, h = q.wrap(S - 100, 140); q.drawOn(c, 50, 370 + up)
-    style = ParagraphStyle('back', fontName='Story', fontSize=16, leading=25, textColor=HexColor('#FFF4DC'), alignment=1)
+    style = ParagraphStyle('back', fontName=FN(), fontSize=16, leading=25, textColor=HexColor('#FFF4DC'), alignment=1)
     q = Paragraph('<br/><br/>'.join(escape(t) for t in book['backText']), style); _, h = q.wrap(S - 130, 240); q.drawOn(c, 65, 325 + up - h)
     if book.get('cadeau'):                     # livre offert : de la part de qui, et son petit mot
         k = book['cadeau']
-        st = ParagraphStyle('kdo', fontName='Story', fontSize=11.5, leading=16, textColor=HexColor('#EAD49D'), alignment=1)
-        body = f"<font name='StoryBold'>Offert par {escape(k['de'])}</font>" + (f"<br/>« {escape(k['message'])} »" if k.get('message') else '')
+        st = ParagraphStyle('kdo', fontName=FN(), fontSize=11.5, leading=16, textColor=HexColor('#EAD49D'), alignment=1)
+        body = f"<font name='{FN(True)}'>Offert par {escape(k['de'])}</font>" + (f"<br/>« {escape(k['message'])} »" if k.get('message') else '')
         q = Paragraph(body, st); _, hk = q.wrap(S - 150, 90); q.drawOn(c, 75, 126)
     c.setStrokeColor(HexColor('#DCC38C')); c.setLineWidth(.7); c.line(245, 112, 350, 112)
-    c.setFont('Story', 11); c.drawCentredString(S / 2, 85, 'Une aventure à lire ensemble')
+    c.setFont(FN(), 11); c.drawCentredString(S / 2, 85, 'Une aventure à lire ensemble')
     num = (book.get('coverTitle') or {}).get('numero')
-    c.setFont('Story', 9); c.drawCentredString(S / 2, 62, book['title'] + (f"  •  livre n° {int(num)} de la collection" if num else ''))
+    c.setFont(FN(), 9); c.drawCentredString(S / 2, 62, book['title'] + (f"  •  livre n° {int(num)} de la collection" if num else ''))
+
+
+def page_dedicace(c, book):
+    """Page de dédicace (livre numérique), juste après la couverture : fond crème, texte centré, police du livre."""
+    d = book.get('dedicace') or {}
+    c.setFillColor(HexColor('#FBF5EA')); c.rect(0, 0, S, S, fill=1, stroke=0)
+    st = ParagraphStyle('ded', fontName=FN(), fontSize=17, leading=26, textColor=HexColor('#1F2557'), alignment=1)
+    q = Paragraph(escape(d.get('texte') or '').replace('\n', '<br/>'), st); _, h = q.wrap(S - 150, 360); q.drawOn(c, 75, S / 2 - h / 2 + 20)
+    if d.get('de'):
+        c.setFillColor(HexColor('#B5562E')); c.setFont(FN(True), 13); c.drawCentredString(S / 2, S / 2 - h / 2 - 22, d['de'])
 
 
 def render(book, out, base=None, work=None, pages=None, check=True):
+    """Police du livre (book['police'], configurateur) appliquée à tout le rendu ; absente : police historique du kit."""
+    jeton, j2 = POLICE.set(book.get('police')), CORPS.set(float(book.get('corps') or 1.0))
+    try:
+        return _render(book, out, base, work, pages, check)
+    finally:
+        POLICE.reset(jeton); CORPS.reset(j2)
+
+
+def _render(book, out, base=None, work=None, pages=None, check=True):
     """book : manifeste au format du kit (title, collection, ageLabel, cover, spreads[9], pages[18] {text, veil, ink},
     backTitle, backText, backColor ; + coverTitle facultatif). Chemins relatifs à `base`.
     pages=None : livre complet (20 pages). pages=[0, 1] : aperçu (couverture + ces pages d'histoire)."""
@@ -220,6 +262,9 @@ def render(book, out, base=None, work=None, pages=None, check=True):
     # Cover and final back cover are included in the 20-page count.
     page_couverture(c, cover, book)
     c.showPage()
+    ded = bool(full and (book.get('dedicace') or {}).get('texte'))
+    if ded:                                      # dédicace : une page de plus dans le PDF de lecture (pas dans l'intérieur d'impression)
+        page_dedicace(c, book); c.showPage()
     heights = {}
     for idx, txt in enumerate(texts):
         if not full and idx not in pages: continue
@@ -231,7 +276,7 @@ def render(book, out, base=None, work=None, pages=None, check=True):
     c.save()
     report = {"pdf": str(out), "bytes": out.stat().st_size, "hauteurs_texte": heights}
     if check:
-        report.update(verify(out, 20 if full else 1 + len(pages), work, story_pages=full))
+        report.update(verify(out, (21 if ded else 20) if full else 1 + len(pages), work, story_pages=full, decalage=1 if ded else 0))
     return report
 
 
@@ -256,14 +301,14 @@ def _pages_png(pdf, work, zoom=.7):
         return n, texts
 
 
-def verify(pdf, expected, work, story_pages=True):
+def verify(pdf, expected, work, story_pages=True, decalage=0):
     work = Path(work); work.mkdir(parents=True, exist_ok=True)
     n, texts = _pages_png(pdf, work)
     probs = []
     if n != expected:
         probs.append(f"{n} pages au lieu de {expected}")
     if story_pages:
-        for i in range(1, min(n, 19)):
+        for i in range(1 + decalage, min(n, 19 + decalage)):
             if len(texts[i]) <= 70:
                 probs.append(f"page {i + 1} : texte absent ou trop court dans le PDF")
     for start in range(0, n, 10):
