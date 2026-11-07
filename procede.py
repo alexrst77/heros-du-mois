@@ -943,7 +943,38 @@ def review(path, s, snap, b):
     return _vision(SYSTEM_PANO, fiche_json, path)
 
 
+def teinte_image(path, side):
+    """Couleur du voile de lecture prise DANS l'illustration (bas de la page), pour qu'il se fonde dans l'image au lieu de faire
+    une bande crème ou bleu nuit plaquée. Image sombre : voile = sa couleur assombrie, texte crème ; image claire : voile = sa couleur
+    éclaircie, texte encre. Contraste texte / voile toujours ≥ 4,5 (WCAG AA)."""
+    im = Image.open(path).convert("RGB"); w, h = im.size
+    box = (0, int(h * .6), w // 2, h) if side == "left" else (w // 2, int(h * .6), w, h)
+    px = list(im.crop(box).resize((48, 24)).getdata())
+    moy = tuple(sorted(c[i] for c in px)[len(px) // 2] for i in range(3))          # médiane : un reflet ne fausse pas la teinte
+    import colorsys
+    hh, ll, ss = colorsys.rgb_to_hls(*(v / 255 for v in moy))                      # teinte ravivée : un voile coloré, pas grisâtre
+    moy = tuple(v * 255 for v in colorsys.hls_to_rgb(hh, ll, min(1.0, ss * 1.6 + .08)))
+    hx = lambda c: "#%02X%02X%02X" % tuple(max(0, min(255, round(v))) for v in c)
+    mix = lambda c, d, k: tuple(a * (1 - k) + b * k for a, b in zip(c, d))
+    sombre = luminance(hx(moy)) < 0.28
+    ink = "#FFF7E8" if sombre else "#1F2A44"
+    for k in ([.35, .45, .55, .65, .75, .85] if sombre else [.55, .65, .75, .82, .9]):
+        veil = hx(mix(moy, (8, 10, 24) if sombre else (255, 250, 240), k))
+        if contrast(veil, ink) >= 4.5:
+            return {"veil": veil, "ink": ink}
+    return dict(THEMES["nuit"] if sombre else THEMES["clair"])
+
+
 def reading_theme(path, s, snap, side):
+    """Thème de lecture : la couleur du voile vient de l'illustration elle-même (teinte_image), le contraste est vérifié."""
+    t = teinte_image(path, side)
+    im = Image.open(path).convert("L"); w, h = im.size
+    box = (0, int(h * .62), w // 2, h) if side == "left" else (w // 2, int(h * .62), w, h)
+    lum = round(sum(im.crop(box).resize((64, 32)).getdata()) / (64 * 32 * 255), 2)
+    return dict(t, source="couleur de l'image", luminosite=lum)
+
+
+def reading_theme_ancien(path, s, snap, side):
     """Thème de lecture de la page : celui que le storyboard a choisi pour la scène (couleurs valides, contraste ≥ 4,5),
     sinon d'après la lumière de la scène. La luminosité du bas de l'image est notée pour la relecture : elle ne départage pas
     une scène nocturne violette (Noé) d'une scène claire (Mila), donc elle ne décide pas."""
