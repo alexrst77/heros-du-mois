@@ -427,7 +427,23 @@ lumières qui brillent, « tout le monde rit ») ; dialogues vivants, un peu d'h
 avec justesse, sans morale énoncée ; le doudou est une PELUCHE (il ne bouge et ne parle pas seul : l'enfant le serre, lui parle) ;
 prénoms exacts ; présent de narration ; vocabulaire de l'âge indiqué ; {mots} mots par page, 7 lignes au plus ;
 typographie française (espaces avant ! ? : ;, guillemets « »).
-Réponds UNIQUEMENT en JSON : {{"plan": {{"envie": "…", "obstacle": "…", "solution": "…", "refrain": "…"}}, "pages": ["page 1", …, "page 18"]}}"""
+Réponds UNIQUEMENT en JSON, avec EXACTEMENT 9 doubles pages (ni titre, ni page en plus) :
+{{"plan": {{"envie": "…", "obstacle": "…", "solution": "…", "refrain": "…"}},
+ "doubles_pages": [{{"id": 1, "gauche": "texte de la page de gauche", "droite": "texte de la page de droite"}}, … jusqu'à {{"id": 9, …}}]}}"""
+
+
+def _pages_reecrites(r, lo):
+    """18 textes à partir de la réponse : 9 doubles pages (gauche, droite) ; ancien format « pages » toléré. Un titre ou une page
+    vide glissé en trop est écarté ; s'il reste autre chose que 18 textes, la réponse est refusée."""
+    dp = r.get("doubles_pages")
+    if isinstance(dp, list) and dp:
+        dp = sorted([x for x in dp if isinstance(x, dict)], key=lambda x: int(x.get("id") or 0) if str(x.get("id") or "").isdigit() else 0)
+        pages = [t for x in dp[:9] for t in (x.get("gauche") or x.get("left") or "", x.get("droite") or x.get("right") or "")]
+    else:
+        pages = [str(x) for x in (r.get("pages") or [])]
+        if len(pages) > 18:
+            pages = [t for t in pages if len(str(t).split()) >= max(6, lo // 2)]
+    return [re.sub(r"\s+", " ", str(t)).strip() for t in pages]
 
 
 def reecrire(folder):
@@ -451,8 +467,9 @@ def reecrire(folder):
         raise ProcedeError("Livre trop long pour la borne de coût de la réécriture")
 
     def verif(r):
-        probs, pages = [], r.get("pages") or []
-        if len(pages) != 18: probs.append(f"Il faut exactement 18 pages (reçu {len(pages)}).")
+        probs, pages = [], _pages_reecrites(r, lo)
+        if len(pages) != 18: probs.append(f"Il faut exactement 9 doubles pages avec chacune un texte gauche et un texte droite (reçu {len(pages)} textes).")
+        probs += [f"Page {i + 1} vide." for i, t in enumerate(pages[:18]) if not t]
         for i, t in enumerate(pages[:18]):
             n = len(str(t).split())
             if n < lo - 4: probs.append(f"Page {i + 1} : {n} mots, trop court (attendu {lo}–{hi}) : ajoute une action ou une réplique.")
@@ -465,11 +482,11 @@ def reecrire(folder):
         r2 = G._chat_json(system, user2, etape="réécriture du texte (révision)", max_tokens=RALLONGE_TOKENS)
         if len(verif(r2)) <= len(probs):
             r, probs = r2, verif(r2)
-    bloquants = [p for p in probs if "trop long" in p or "exactement 18" in p]
+    bloquants = [p for p in probs if "trop long" in p or "exactement 9" in p or "vide" in p]
     if bloquants:
         raise ProcedeError("Réécriture non conforme, texte inchangé : " + " ; ".join(bloquants[:3]))
     names = [p["nom"] for p in snap["personnages"]]
-    return [G.fix_names(re.sub(r"\s+", " ", str(t)).strip(), names) for t in r["pages"][:18]], r.get("plan")
+    return [G.fix_names(t, names) for t in _pages_reecrites(r, lo)], r.get("plan")
 
 
 RALLONGE_SYSTEM = """Tu es l'auteur d'un album jeunesse lu à voix haute à un enfant de {age} ans. Les illustrations sont DÉJÀ peintes.
