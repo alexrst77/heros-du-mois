@@ -508,11 +508,11 @@
   const totalC = () => brutC() - remiseC() + port();
   const THEMES = ["Accepter la différence", "Aller chez le dentiste", "Aller chez le médecin", "Apprendre à attendre", "Apprendre à partager", "Devenir propre", "Dire au revoir à la tétine", "Dire la vérité", "Dormir dans son grand lit", "Gérer la colère", "Goûter de nouveaux aliments", "La confiance en soi", "La peur du noir", "La politesse", "La rentrée à l'école", "L'arrivée d'un petit frère ou d'une petite sœur", "Le premier jour à la crèche", "Les cauchemars", "Les écrans : savoir s'arrêter", "Les émotions", "Oser se faire des amis", "Partir en vacances", "Prendre soin de la nature", "Quand papa et maman se séparent", "Ranger sa chambre", "Se brosser les dents", "S'habiller tout seul", "Un déménagement", "Une aventure pour rire"].sort((a, b) => a.localeCompare(b, 'fr'));
   const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-  const AN = new Date().getFullYear(), ANNEES = Array.from({ length: 9 }, (_, i) => AN - 2 - i);      // de 2 à 10 ans
+  const AN = new Date().getFullYear(), ANNEES = Array.from({ length: 13 }, (_, i) => AN - i);      // de 0 à 12 ans (tout-petits compris)
   function majAge() {                 // âge d'aujourd'hui d'après l'année de naissance (et la date d'anniversaire si elle est connue)
     const e = S.enfant; if (!e.naissance) return;
     const d = new Date(), passe = !e.anniv_m || (d.getMonth() + 1 > +e.anniv_m) || (d.getMonth() + 1 == +e.anniv_m && d.getDate() >= +(e.anniv_j || 1));
-    e.age = String(Math.max(2, Math.min(10, AN - +e.naissance - (passe ? 0 : 1))));
+    e.age = String(Math.max(0, Math.min(12, AN - +e.naissance - (passe ? 0 : 1))));
   }
   const anniv = () => S.enfant.anniv_j && S.enfant.anniv_m ? `${String(S.enfant.anniv_m).padStart(2, '0')}-${String(S.enfant.anniv_j).padStart(2, '0')}` : '';
   const UNIV = await (await fetch('/api/univers')).json();          // univers et fêtes (univers.py)
@@ -905,7 +905,7 @@
     const e = S.enfant, O = OPT.enfant;
     return (PANIER.length ? `<div class="flash-enf">${esc(FLASH || `Commande pour plusieurs enfants : vous composez le livre ${PANIER.length + 1}.`)} <button type="button" class="lien" data-t="commande">Voir la commande</button></div>` : '') +
       `<div class="row2">${G('Prénom *', `<input type="text" data-in="prenom" maxlength="20" placeholder="Léo" value="${esc(e.prenom)}">`)}
-      ${G('Année de naissance *', `<select data-in="naissance">${ANNEES.map(a => `<option ${e.naissance == a ? 'selected' : ''}>${a}</option>`).join('')}</select>`, e.age ? `${e.age} ans` : '')}</div>` +
+      ${G('Année de naissance *', `<select data-in="naissance">${ANNEES.map(a => `<option ${e.naissance == a ? 'selected' : ''}>${a}</option>`).join('')}</select>`, e.age !== '' ? (+e.age < 1 ? 'moins d\'un an' : `${e.age} an${+e.age > 1 ? 's' : ''}`) : '')}</div>` +
       G("C'est", chips(e, 'genre', O.genre)) +
       G('Son monde', `<div class="mondes">${UNIV.filter(u => !u.fete).map(u => `<button type="button" data-monde="${esc(u.nom)}" class="${!S.histoire.occasion && S.histoire.univers === u.nom ? 'on' : ''}"><img src="/static/vitrine/univ/mini/${u.cle}.webp" alt="" loading="lazy" onerror="this.src='/vignette/${u.cle}.webp'">${esc(u.nom.replace(/^(Une|Un|La|Le|Les|L') ?/, '').replace(/^./, c => c.toUpperCase()))}</button>`).join('')}</div>`, 'le décor de son 1er livre') +
       `<div class="surp"><button type="button" data-surprise="tenue">Tenue surprise</button><button type="button" data-surprise="monde">Monde surprise</button></div>` +

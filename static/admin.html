@@ -192,13 +192,15 @@ function boutons(o, e) {
   if (e.k === 'paiement' && D.config.stripe === 'simulé') main = b('valider-paiement-test', '💳 Simuler le paiement', 'main');
   if (e.k === 'relire') main = lire + b('finaliser', "✅ C'est bon, je valide", 'ok') + (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées') : '')
     + (!o.extra ? (o.reecriture && o.reecriture.etat === 'en_cours' ? '<span class="btn" style="opacity:.7">⏳ Texte en cours de réécriture…</span>'
-      : b('reecrire', '✍️ Réécrire le texte (IA)')) + `<button class="btn" onclick="textesDlg('${o.id}',this)">✏️ Modifier les textes</button>`
+      : `<button class="btn" onclick="reecrireDlg('${o.id}',this)">✍️ Réécrire le texte (IA)</button>`) + `<button class="btn" onclick="textesDlg('${o.id}',this)">✏️ Modifier les textes</button>`
+      + `<button class="btn" onclick="renommerDlg('${o.id}',this)">🏷️ Corriger un nom</button>`
       + (o.reecriture && o.reecriture.etat === 'fait' ? `<span class="meta">✅ Texte réécrit (${o.reecriture.cout} $) : relis le livre.</span>` : '')
       + (o.reecriture && o.reecriture.etat === 'erreur' ? `<span class="meta" style="color:#B3261E">⚠️ ${esc(o.reecriture.erreur)}</span>` : '') : '');
   if (e.k === 'pret') main = lire + b('imprimer', NB(o) > 1 ? `🖨️ Envoyer le colis (${colis(o)})` : "🖨️ Envoyer à l'impression", 'gold');
   if (e.k === 'valide') main = lire;
   if (e.k === 'essai') main = lire;
   if (e.k === 'bloque' && o.budget && (o.budget.incertain > 0 || o.budget.reserve > 0) && !o.en_cours) main = b('budget', '💰 Régler l\'appel incertain', 'main');
+  else if (e.k === 'bloque' && !(o.noms_manquants || []).length && !o.extra) main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main') + `<button class="btn" onclick="renommerDlg('${o.id}',this)">🏷️ Corriger un nom</button>`;
   else if (e.k === 'bloque' && (o.noms_manquants || []).length) main = `<button class="btn main" onclick="completerNoms('${o.id}',this)">✏️ Donner les noms manquants et relancer</button>`;
   else if (e.k === 'bloque') main = (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées', 'main') : '') + b('relancer', '▶️ Relancer', o.refusees ? '' : 'main');
   if (e.k === 'imprimeur') main = (o.printful_statut === 'draft' ? b('printful-confirmer', '✅ Confirmer chez Printful (payant)', 'gold') : '') + b('suivi', '🔄 Actualiser le suivi', o.printful_statut === 'draft' ? '' : 'main');
@@ -618,6 +620,23 @@ async function purgeRgpd(b) {
   b.disabled = false; toast(r.erreur ? '⚠️ ' + r.erreur : `🧹 Données effacées pour ${r.effacees} commande(s)`); load();
 }
 
+async function reecrireDlg(id, btn) {
+  const c = prompt("Réécrire tout le texte avec l'IA (mêmes illustrations, ≈ 0,05 $, 1 à 2 min ; l'ancien texte est gardé).\n\n"
+    + "Une demande en plus ? (facultatif) Ex. : « Malo va avoir 2 ans le 25 décembre, le jour de Noël : en parler dans l'histoire »", '');
+  if (c === null) return;
+  const age = prompt("Âge réel de l'enfant, en années (facultatif : règle la longueur des phrases ; 1 pour un enfant d'un an et demi) :", '');
+  if (age === null) return;
+  btn.disabled = true;
+  const r = await (await fetch(`/admin/api/${id}/reecrire${Q}`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ consigne: c, age: age.trim() }) })).json();
+  toast(r.erreur ? '⚠️ ' + r.erreur : '✍️ Réécriture lancée (1 à 2 min)'); load();
+}
+async function renommerDlg(id, btn) {
+  const ancien = prompt('Nom actuel (tel qu\'il est écrit dans le livre) :', ''); if (!ancien) return;
+  const nouveau = prompt(`Nouveau nom à la place de « ${ancien} » :`, ''); if (!nouveau) return;
+  btn.disabled = true;
+  const r = await (await fetch(`/admin/api/${id}/renommer${Q}`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ ancien, nouveau }) })).json();
+  btn.disabled = false; toast(r.erreur ? '⚠️ ' + r.erreur : `✅ Corrigé : ${r.info.pages} page(s) du livre${r.info.donnees ? ' et la fiche du compagnon' : ''}`); load();
+}
 async function textesDlg(id, btn) {
   btn.disabled = true;
   const j = await (await fetch(`/admin/api/${id}/textes-lire${Q}`, { method: 'POST', headers: H })).json(); btn.disabled = false;
