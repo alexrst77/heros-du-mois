@@ -482,6 +482,27 @@ def _chat_images(system, texte, images, etape, max_tokens):
     return json.loads(r.choices[0].message.content)
 
 
+SYSTEM_EDITEUR = """Tu es l'éditeur·rice exigeant·e d'une maison d'albums jeunesse. Voici ce que montrent les 9 illustrations (champ « vu »)
+et le texte proposé par l'auteur. Réécris-le pour qu'il soit DIGNE D'ÊTRE PUBLIÉ, en gardant l'histoire et les images.
+Coupe sans pitié : toute phrase qui décrit ce qu'on voit déjà, toute phrase vague (« tout brille », « son cœur est chaud », « c'est une
+aventure qui commence »), tout personnage absent de l'image (pas de maman ou d'autres enfants s'ils ne sont pas dessinés), tout ce qui
+fait bouger ou parler le doudou tout seul. Garde et renforce : l'envie du héros, ce qui le bloque, ce qu'il tente, la réplique qui
+revient, l'humour, la chute. Chaque page doit donner envie de tourner la page.
+{age}
+Réponds UNIQUEMENT en JSON : {{"doubles_pages": [{{"id": 1, "gauche": "…", "droite": "…"}}, … 9 doubles pages]}}"""
+CONSIGNES_AGE = {
+    "bebe": "Lecteur de 0 à 2 ans : 2 ou 3 phrases très courtes par page (3 à 8 mots), des mots qu'un tout-petit connaît, des sons à "
+            "dire à voix haute (Boum ! Pfiou ! Hop !), des répétitions, parfois une question au lecteur (« Et toi ? »). Pas de pensées compliquées.",
+    "petit": "Lecteur de 3 à 5 ans : 3 ou 4 phrases courtes, dialogues vivants, une émotion simple montrée par un geste, de l'humour.",
+    "grand": "Lecteur de 6 ans et plus : phrases plus riches, vraie tension, dialogues qui révèlent les personnages, humour.",
+}
+
+
+def consigne_age(age):
+    a = int(age or 5)
+    return CONSIGNES_AGE["bebe" if a <= 2 else "petit" if a <= 5 else "grand"]
+
+
 def reecrire(folder, consigne="", age=None):
     """Nouveau texte pour un livre DÉJÀ illustré (bouton de l'admin) : l'IA REGARDE les 9 illustrations et la couverture, puis écrit
     une vraie histoire qui les relie. Renvoie (18 textes vérifiés, plan et ce qu'elle a vu)."""
@@ -501,7 +522,7 @@ def reecrire(folder, consigne="", age=None):
             brief["personnage_invente_de_l_histoire"] = inv
     if consigne:
         brief["demande_de_l_editeur (à respecter, dans le cadre des images)"] = consigne
-    system = SYSTEM_REECRITURE.replace("{mots}", f"{lo} à {hi}")
+    system = SYSTEM_REECRITURE.replace("{mots}", f"{lo} à {hi}") + "\n" + consigne_age(age)
     texte = json.dumps(brief, ensure_ascii=False)
     if len((system + texte).encode()) > RALLONGE_MAX:
         raise ProcedeError("Livre trop long pour la borne de coût de la réécriture")
@@ -525,6 +546,21 @@ def reecrire(folder, consigne="", age=None):
         if len(verif(r2)) <= len(probs):
             r2.setdefault("vu", r.get("vu"))
             r, probs = r2, verif(r2)
+    if not [p for p in probs if "exactement 9" in p or "vide" in p]:      # 2e passe : l'éditeur coupe le flou et renforce l'histoire
+        ed_sys = SYSTEM_EDITEUR.replace("{age}", consigne_age(age) + f" Longueur : {lo} à {hi} mots par page, 7 lignes au plus.")
+        ed_user = json.dumps({"vu": r.get("vu"), "plan": r.get("plan"), "heros": snap["prenom"], "theme": snap["histoire"].get("theme"),
+                              "demande_de_l_editeur": consigne or None,
+                              "texte_propose": [{"id": i + 1, "gauche": a_, "droite": b_} for i, (a_, b_) in
+                                                enumerate(zip(_pages_reecrites(r, lo)[0::2], _pages_reecrites(r, lo)[1::2]))]}, ensure_ascii=False)
+        try:
+            r3 = G._chat_json(ed_sys, ed_user, etape="réécriture du texte (passe éditoriale)", max_tokens=RALLONGE_TOKENS)
+            if len(verif(r3)) <= len(probs):
+                r3["vu"], r3["plan"] = r.get("vu"), r.get("plan")
+                r, probs = r3, verif(r3)
+        except (G.BudgetError, BU.BudgetLivreError, BU.AppelIncertain):
+            raise
+        except Exception as e:
+            print("passe éditoriale impossible :", e)
     bloquants = [p for p in probs if "trop long" in p or "exactement 9" in p or "vide" in p]
     if bloquants:
         raise ProcedeError("Réécriture non conforme, texte inchangé : " + " ; ".join(bloquants[:3]))
