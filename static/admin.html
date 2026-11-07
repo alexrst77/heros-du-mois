@@ -637,6 +637,14 @@ async function renommerDlg(id, btn) {
   const r = await (await fetch(`/admin/api/${id}/renommer${Q}`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ ancien, nouveau }) })).json();
   btn.disabled = false; toast(r.erreur ? '⚠️ ' + r.erreur : `✅ Corrigé : ${r.info.pages} page(s) du livre${r.info.donnees ? ' et la fiche du compagnon' : ''}`); load();
 }
+function repartirTextes(n) {         // une page par paragraphe (ligne vide entre deux pages) ou, à défaut, une page par ligne
+  const v = document.getElementById('txAll').value.replace(/\r/g, '');
+  let l = v.split(/\n\s*\n/).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  if (l.length !== n) l = v.split('\n').map(x => x.trim()).filter(Boolean);
+  if (l.length !== n) return toast(`⚠️ J'ai trouvé ${l.length} pages, il en faut ${n} : une page par ligne ou par paragraphe`);
+  l.forEach((t, i) => { document.getElementById('tx' + i).value = t; });
+  toast('✅ Textes répartis : vérifie, puis « Enregistrer et refaire le PDF »');
+}
 async function textesDlg(id, btn) {
   btn.disabled = true;
   const j = await (await fetch(`/admin/api/${id}/textes-lire${Q}`, { method: 'POST', headers: H })).json(); btn.disabled = false;
@@ -644,7 +652,7 @@ async function textesDlg(id, btn) {
   const d = document.getElementById('dlg');
   document.getElementById('dlgIn').innerHTML = `<h3>✏️ Textes de « ${esc(j.titre || '')} »</h3><p class="meta">Les illustrations ne changent pas. Le PDF et les fichiers d'impression sont refaits (aucun coût IA). 7 lignes au plus par page.</p>
     <p class="meta">Tout coller d'un coup : une page par paragraphe (ligne vide entre deux pages).</p><textarea id="txAll" style="width:100%;min-height:70px" placeholder="Coller ici les 18 pages…"></textarea>
-    <button class="btn" onclick="(()=>{const l=document.getElementById('txAll').value.split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean);if(l.length!==${j.pages.length})return toast('⚠️ '+l.length+' paragraphes, il en faut ${j.pages.length}');l.forEach((t,i)=>document.getElementById('tx'+i).value=t);})()">Répartir dans les pages</button>
+    <button class="btn" onclick="repartirTextes(${j.pages.length})">Répartir dans les pages</button>
     ${j.pages.map((t, i) => `<label class="meta" style="display:block;margin-top:8px">Page ${i + 1} (double page ${Math.floor(i / 2) + 1})</label><textarea id="tx${i}" style="width:100%;min-height:80px">${esc(t)}</textarea>`).join('')}
     <div class="acts" style="position:sticky;bottom:0;background:#fff;padding:8px 0"><button class="btn" onclick="document.getElementById('dlg').close()">Annuler</button>
     <button class="btn main" id="txOk">💾 Enregistrer et refaire le PDF</button></div>`;

@@ -422,7 +422,7 @@ def _reecrire(oid, consigne="", age=None):
     o = db.get(oid)
     folder = A.OUT / o["job_id"]
     livre = f"reecriture-{oid}-{int(time.time())}"
-    budget.PLAFONDS[livre] = float(os.getenv("PLAFOND_REECRITURE_USD", "0.3"))
+    budget.PLAFONDS[livre] = float(os.getenv("PLAFOND_REECRITURE_USD", "0.6"))
     jeton = budget.LIVRE.set(livre)
     try:
         f = form_du_livre(o)

@@ -506,6 +506,65 @@ def _images_livre(folder, book):
     return out
 
 
+def modele_reecriture():
+    """Modèle d'écriture de la réécriture : Claude (Anthropic) si ANTHROPIC_API_KEY et REECRITURE_MODELE=claude-… sont réglés dans
+    Railway, avec ses prix (CLAUDE_PRIX_ENTREE et CLAUDE_PRIX_SORTIE, en $ par million de jetons, lus sur la page des tarifs
+    d'Anthropic : aucun prix n'est supposé ici) ; sinon le modèle OpenAI du site."""
+    m = os.getenv("REECRITURE_MODELE", "").strip()
+    if m.startswith("claude") and os.getenv("ANTHROPIC_API_KEY"):
+        try:
+            pe, ps = float(os.getenv("CLAUDE_PRIX_ENTREE", "")), float(os.getenv("CLAUDE_PRIX_SORTIE", ""))
+        except ValueError:
+            raise ProcedeError("Claude choisi pour la réécriture, mais CLAUDE_PRIX_ENTREE et CLAUDE_PRIX_SORTIE ne sont pas réglés dans Railway "
+                               "($ par million de jetons, page des tarifs d'Anthropic) : réécriture refusée, rien n'est dépensé.")
+        return {"fournisseur": "anthropic", "modele": m, "prix": (pe, ps)}
+    return {"fournisseur": "openai", "modele": G.REVIEW_MODEL}
+
+
+def _claude(system, texte, images, etape, max_tokens):
+    """Appel Claude (API Messages, sans dépendance) : borne de coût calculée AVANT l'appel avec les prix réglés, puis coût réel compté."""
+    import urllib.request, urllib.error
+    cfg = modele_reecriture()
+    pe, ps = cfg["prix"]
+    G.check_budget()
+    jetons_max = (len((system + texte).encode()) // 2) + sum(int(w * h / 750) + 50 for (w, h), _ in images)     # borne haute prudente
+    borne = (jetons_max * pe + max_tokens * ps) / 1e6
+    livre = BU.LIVRE.get()
+    if not livre:
+        raise ProcedeError("Réécriture hors d'un budget identifié : refusée")
+    aid = BU.reserver(livre, etape, cfg["modele"], borne, {"fournisseur": "anthropic"})      # refus si le plafond serait dépassé
+    contenu = [{"type": "text", "text": texte}] + [{"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b}} for _, b in images]
+    corps = {"model": cfg["modele"], "max_tokens": max_tokens, "system": system, "messages": [{"role": "user", "content": contenu}]}
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps(corps).encode(), method="POST",
+                                 headers={"x-api-key": os.getenv("ANTHROPIC_API_KEY"), "anthropic-version": "2023-06-01", "content-type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=170) as r:
+            rep = json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:                  # refusé par Anthropic : rien n'est facturé
+        BU._fin(aid, "annule", 0, {"erreur": e.code})
+        raise ProcedeError(f"Claude {e.code} : {e.read().decode(errors='replace')[:300]}")
+    except Exception as e:                               # coupure : on ne sait pas, la réserve reste comptée
+        BU._fin(aid, "incertain", None, {"erreur": str(e)[:200]})
+        raise ProcedeError(f"Claude injoignable : {e}")
+    u = rep.get("usage") or {}
+    cout = (u.get("input_tokens", 0) * pe + u.get("output_tokens", 0) * ps) / 1e6
+    BU._fin(aid, "regle", round(cout, 5), {"usage": u})
+    G._spend(cout)
+    txt = "".join(x.get("text", "") for x in rep.get("content") or [] if x.get("type") == "text").strip()
+    txt = re.sub(r"^```(?:json)?\s*|\s*```$", "", txt)
+    debut, fin = txt.find("{"), txt.rfind("}")
+    return json.loads(txt[debut:fin + 1])
+
+
+def _chat_ecriture(system, texte, images, etape, max_tokens):
+    """Écriture (avec ou sans images) par le modèle choisi pour la réécriture."""
+    if modele_reecriture()["fournisseur"] == "anthropic":
+        return _claude(system + "\nRéponds par un objet JSON seul, sans texte autour.", texte, images, etape, max_tokens)
+    if images:
+        return _chat_images(system, texte, images, etape, max_tokens)
+    return G._chat_json(system, texte, etape=etape, max_tokens=max_tokens)
+
+
 def _chat_images(system, texte, images, etape, max_tokens):
     """Appel texte + images (modèle de relecture visuelle), coût maximal réservé avant l'appel."""
     contenu = [{"type": "text", "text": texte}] + [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b}", "detail": "high"}} for _, b in images]
@@ -575,12 +634,13 @@ def reecrire(folder, consigne="", age=None):
             if n < lo - 4: probs.append(f"Page {i + 1} : {n} mots, trop court (attendu {lo}–{hi}) : ajoute une réplique ou une pensée du héros.")
             if M.text_height(str(t)) > M.TEXT_MAX: probs.append(f"Page {i + 1} : trop long pour la page (7 lignes au plus), raccourcis.")
         return probs
-    r = _chat_images(system, texte, images, "réécriture du texte (avec les images)", RALLONGE_TOKENS)
+    modele_reecriture()                                   # Claude mal réglé : arrêt AVANT tout appel
+    r = _chat_ecriture(system, texte, images, "réécriture du texte (avec les images)", RALLONGE_TOKENS)
     probs = verif(r)
     if probs:
         texte2 = texte + "\n\nTa version :\n" + json.dumps({k: r.get(k) for k in ("plan", "doubles_pages")}, ensure_ascii=False) + \
                  "\n\nCorrige ces problèmes et renvoie l'objet complet :\n- " + "\n- ".join(probs[:20])
-        r2 = G._chat_json(system, texte2, etape="réécriture du texte (révision)", max_tokens=RALLONGE_TOKENS)
+        r2 = _chat_ecriture(system, texte2, [], "réécriture du texte (révision)", RALLONGE_TOKENS)
         if len(verif(r2)) <= len(probs):
             r2.setdefault("vu", r.get("vu"))
             r, probs = r2, verif(r2)
@@ -591,11 +651,11 @@ def reecrire(folder, consigne="", age=None):
                               "texte_propose": [{"id": i + 1, "gauche": a_, "droite": b_} for i, (a_, b_) in
                                                 enumerate(zip(_pages_reecrites(r, lo)[0::2], _pages_reecrites(r, lo)[1::2]))]}, ensure_ascii=False)
         try:
-            r3 = G._chat_json(ed_sys, ed_user, etape="réécriture du texte (passe éditoriale)", max_tokens=RALLONGE_TOKENS)
+            r3 = _chat_ecriture(ed_sys, ed_user, images, "réécriture du texte (passe éditoriale)", RALLONGE_TOKENS)
             if len(verif(r3)) <= len(probs):
                 r3["vu"], r3["plan"] = r.get("vu"), r.get("plan")
                 r, probs = r3, verif(r3)
-        except (G.BudgetError, BU.BudgetLivreError, BU.AppelIncertain):
+        except (G.BudgetError, BU.BudgetLivreError, BU.AppelIncertain, ProcedeError):
             raise
         except Exception as e:
             print("passe éditoriale impossible :", e)
