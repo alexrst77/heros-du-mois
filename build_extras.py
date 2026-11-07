@@ -131,7 +131,7 @@ if __name__ == "__main__":
     for n in [k for k in list(st) if k.startswith("enfant-") and "eyes" in st[k] and not k.endswith("-lisse")]:
         lisse(n, st)
         for ext in (".mask.png", ".eyes.png", ".shirt.png"):
-            if Path(AV + n + ext).exists() if False else __import__("os").path.exists(AV + n + ext):
+            if __import__("os").path.exists(AV + n + ext):
                 shutil.copy(AV + n + ext, AV + n + "-lisse" + ext)
         st[n + "-lisse"] = dict(st[n])
     json.dump(st, open(AV + "masks.json", "w"), indent=1)
