@@ -298,7 +298,7 @@ def group_sheet(ids, portraits, folder):
 # ====================================================================== 3. récit et storyboard
 def word_range(age):
     a = int(age or 5)
-    return (20, 32) if a <= 4 else (26, 38) if a <= 7 else (32, 46)
+    return (14, 24) if a <= 1 else (20, 32) if a <= 4 else (26, 38) if a <= 7 else (32, 46)
 
 
 STORY_RULES = """
@@ -446,21 +446,25 @@ def _pages_reecrites(r, lo):
     return [re.sub(r"\s+", " ", str(t)).strip() for t in pages]
 
 
-def reecrire(folder):
-    """Nouveau texte pour un livre DÉJÀ illustré (bouton de l'admin) : mêmes images, vraie histoire. Renvoie les 18 textes vérifiés."""
+def reecrire(folder, consigne="", age=None):
+    """Nouveau texte pour un livre DÉJÀ illustré (bouton de l'admin) : mêmes images, vraie histoire. Renvoie les 18 textes vérifiés.
+    consigne : demande d'Alex (ex. « il fête ses 2 ans le 25 décembre ») ; age : âge réel de l'enfant s'il a été corrigé."""
     folder = Path(folder)
     snap = json.loads((folder / "instantane.json").read_text(encoding="utf-8"))
     b = json.loads((folder / "storyboard.json").read_text(encoding="utf-8"))
     book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
-    lo, hi = word_range(snap["age"])
+    age = str(age or snap["age"])
+    lo, hi = word_range(age)
     noms = {p["id"]: f"{p['nom']} ({p['type']})" for p in snap["personnages"]}
     noms.update({x.get("id"): f"{x.get('name')} (personnage inventé)" for x in b.get("characterBible") or []})
-    brief = {"heros": snap["prenom"], "age": snap["age"], "theme_du_parent": snap["histoire"].get("theme"), "univers": snap["histoire"].get("univers"),
+    brief = {"heros": snap["prenom"], "age": age, "theme_du_parent": snap["histoire"].get("theme"), "univers": snap["histoire"].get("univers"),
              "passions (donnée)": snap["histoire"].get("passions"), "titre": book.get("title"),
              "personnages": [{"nom": p["nom"], "type": p["type"], "role": p["role"]} for p in snap["personnages"]],
              "doubles_pages": [{"id": sp["id"], "scene": sp.get("scene"), "presents": [noms.get(x, x) for x in sp.get("presentCharacterIds") or []],
                                 "details_visibles": sp.get("requiredVisibleDetails"),
                                 "texte_actuel": [book["pages"][2 * i]["text"], book["pages"][2 * i + 1]["text"]]} for i, sp in enumerate(b["spreads"][:9])]}
+    if consigne:
+        brief["demande_de_l_editeur (à respecter, en restant fidèle aux images)"] = consigne
     system = SYSTEM_REECRITURE.replace("{mots}", f"{lo} à {hi}")
     user = json.dumps(brief, ensure_ascii=False)
     if len((system + user).encode()) > RALLONGE_MAX:

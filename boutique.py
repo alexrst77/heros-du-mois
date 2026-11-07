@@ -418,14 +418,15 @@ def appliquer_textes(o, folder, book, pages):
     return rep
 
 
-def _reecrire(oid):
+def _reecrire(oid, consigne="", age=None):
     o = db.get(oid)
     folder = A.OUT / o["job_id"]
     livre = f"reecriture-{oid}-{int(time.time())}"
     budget.PLAFONDS[livre] = float(os.getenv("PLAFOND_REECRITURE_USD", "0.3"))
     jeton = budget.LIVRE.set(livre)
     try:
-        pages, plan = procede.reecrire(folder)
+        f = form_du_livre(o)
+        pages, plan = procede.reecrire(folder, consigne, age or f.get("age_reel") or None)
         book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
         appliquer_textes(o, folder, book, pages)
         cout = budget.depense(livre)["total"]
@@ -436,6 +437,42 @@ def _reecrire(oid):
         log(f"commande {oid} : réécriture impossible : {e}")
     finally:
         budget.LIVRE.reset(jeton)
+
+
+def renommer_compagnon(o, ancien, nouveau):
+    """Remplace un nom (mot entier, majuscule exacte) dans l'avatar du livre et, si le livre est écrit, dans ses textes."""
+    import generator as G
+    pat = re.compile(r"(?<![\w])" + re.escape(ancien) + r"(?![\w])", re.I)
+    path = STORE / (o["origine"] or o["id"]) / "livre.json"
+    dd = json.loads(path.read_text(encoding="utf-8"))
+    e = (dd.get("enfants") or {}).get(str(o.get("numero") or 1)) if enfant_du_livre(o) else None
+    av = (e["form"] if e else dd["form"]).get("avatar") or {}
+    nd = 0
+    for x in ([av.get("doudou")] if isinstance(av.get("doudou"), dict) else []) + list(av.get("animaux") or []) + list(av.get("fratrie") or []):
+        if isinstance(x, dict) and G._fold(x.get("nom")) == G._fold(ancien):
+            x["nom"] = nouveau; nd += 1
+    if nd:
+        tmp = path.with_suffix(".tmp"); tmp.write_text(json.dumps(dd, ensure_ascii=False), encoding="utf-8"); os.replace(tmp, path)
+    np_ = 0
+    folder = A.OUT / (o["job_id"] or "_")
+    if o["job_id"] and (folder / "livre.json").exists():
+        book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+        pages = [x["text"] for x in book["pages"]]
+        new = [pat.sub(nouveau, t) for t in pages]
+        np_ = sum(1 for a_, b_ in zip(pages, new) if a_ != b_)
+        book["title"] = pat.sub(nouveau, book.get("title") or "")
+        for k in ("backTitle", "backText"):
+            book[k] = [pat.sub(nouveau, t) for t in book.get(k) or []]
+        if isinstance(book.get("coverTitle"), dict):
+            book["coverTitle"]["lines"] = [pat.sub(nouveau, t) for t in book["coverTitle"].get("lines") or []]
+        if np_ or nd:
+            appliquer_textes(o, folder, book, new)        # garde l'ancien texte, enregistre titre et pages, refait PDF et impression
+        for f in ("instantane.json", "storyboard.json"):          # pour une réécriture ou une retouche ultérieure
+            if (folder / f).exists():
+                t = (folder / f).read_text(encoding="utf-8"); t2 = pat.sub(nouveau, t)
+                if t2 != t:
+                    (folder / f).write_text(t2, encoding="utf-8")
+    return {"donnees": nd, "pages": np_}
 
 
 def _avatar_noms(av):
@@ -761,7 +798,7 @@ def _start_book(oid, auto=False, reprise=False):
             form = dict(form, age=str(int(form["age"]) + 1 + depuis))
             if str(form.get("naissance") or "").isdigit():      # année de naissance connue : l'âge exact du jour J
                 import datetime
-                form = dict(form, age=str(max(2, min(10, datetime.date.today().year + (1 if datetime.date.today().strftime("%m-%d") > (form.get("anniversaire") or "12-31") else 0) - int(form["naissance"])))))
+                form = dict(form, age=str(max(0, min(12, datetime.date.today().year + (1 if datetime.date.today().strftime("%m-%d") > (form.get("anniversaire") or "12-31") else 0) - int(form["naissance"])))))
         except (ValueError, TypeError, KeyError):
             pass
     if o["formule"] not in NON_LIVRES:
@@ -1706,8 +1743,41 @@ def admin_action(oid, action):
                 raise RuntimeError("ce livre n'a pas de storyboard enregistré : réécriture impossible")
             if REECRITURES.get(oid, {}).get("etat") == "en_cours":
                 raise RuntimeError("réécriture déjà en cours")
+            d = request.get_json(force=True, silent=True) or {}
+            consigne = re.sub(r"\s+", " ", str(d.get("consigne") or "")).strip()[:500]
+            age = str(d.get("age") or "").strip()
             REECRITURES[oid] = {"etat": "en_cours", "debut": time.time()}
-            threading.Thread(target=_reecrire, args=(oid,), daemon=True).start()
+            threading.Thread(target=_reecrire, args=(oid, consigne, age if age.isdigit() and int(age) <= 12 else None), daemon=True).start()
+            return jsonify(ok=True)
+        if action == "renommer":                  # nom d'un compagnon corrigé : données du livre + textes déjà écrits (aucun appel IA)
+            d = request.get_json(force=True, silent=True) or {}
+            import generator as G
+            ancien, nouveau = G._name(str(d.get("ancien") or "")), G._name(str(d.get("nouveau") or ""))
+            if not ancien or not nouveau:
+                raise RuntimeError("ancien et nouveau nom obligatoires")
+            if A.JOBS.get(o["job_id"] or "", {}).get("etat") in ("en_cours", "validation"):
+                raise RuntimeError("fabrication en cours : attends qu'elle soit finie, puis corrige le nom")
+            folder = A.OUT / (o["job_id"] or "_")
+            if o["job_id"] and fabrication.est_finalise(folder):
+                raise RuntimeError("livre déjà validé (figé) : le nom ne se modifie plus")
+            n = renommer_compagnon(o, ancien, nouveau)
+            if not n["donnees"] and not n["pages"]:
+                raise RuntimeError(f"« {ancien} » introuvable dans ce livre")
+            log(f"commande {oid} : « {ancien} » renommé « {nouveau} » ({n})")
+            return jsonify(ok=True, info=n)
+        if action == "age":                       # âge / anniversaire réels de l'enfant (donnés par le client après la commande)
+            d = request.get_json(force=True, silent=True) or {}
+            path = STORE / (o["origine"] or o["id"]) / "livre.json"
+            dd = json.loads(path.read_text(encoding="utf-8"))
+            e = (dd.get("enfants") or {}).get(str(o.get("numero") or 1)) if enfant_du_livre(o) else None
+            form = e["form"] if e else dd["form"]
+            if str(d.get("age") or "").isdigit():
+                form["age_reel"] = str(int(d["age"]))
+            if re.fullmatch(r"(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])", str(d.get("anniversaire") or "")):
+                form["anniversaire"] = d["anniversaire"]
+            if d.get("note"):
+                form["note_age"] = re.sub(r"\s+", " ", str(d["note"])).strip()[:120]
+            tmp = path.with_suffix(".tmp"); tmp.write_text(json.dumps(dd, ensure_ascii=False), encoding="utf-8"); os.replace(tmp, path)
             return jsonify(ok=True)
         if action == "noms":                      # compagnons sans nom : Alex donne le nom (demandé au client), puis relance
             manque = completer_noms(o, (request.get_json(force=True, silent=True) or {}).get("noms") or {})

@@ -317,8 +317,8 @@ def parse_book(data):
             return None, f"Champ obligatoire manquant : {k}"
     if form.get("naissance") and not (form["naissance"].isdigit() and 2000 <= int(form["naissance"]) <= 2100):
         form.pop("naissance")
-    if not form["age"].isdigit() or not 2 <= int(form["age"]) <= 10:
-        return None, "L'âge doit être compris entre 2 et 10 ans."
+    if not form["age"].isdigit() or not 0 <= int(form["age"]) <= 12:
+        return None, "L'âge doit être compris entre 0 et 12 ans."
     if data.get("avatar"):
         form["avatar"] = generator.sanitize_avatar(data["avatar"], generator._name(form["prenom"]) or form["prenom"][:20], form["age"])
         form["genre"] = form["avatar"]["enfant"]["genre"]
