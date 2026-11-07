@@ -406,6 +406,72 @@ def pages_courtes(b, snap):
     return out
 
 
+SYSTEM_REECRITURE = """Tu es un·e auteur·rice d'albums jeunesse publié·e, réputé·e pour des histoires qui ont du FOND. Un album personnalisé
+est déjà illustré (9 doubles pages, 18 pages de texte) mais son texte est plat : pas de vraie envie, pas d'enjeu, du remplissage.
+RÉÉCRIS les 18 textes pour en faire une vraie histoire, en gardant ce que montre chaque illustration.
+
+CONTRAINTE DES IMAGES (absolue) : pour chaque double page, « scene », « presents » et « details_visibles » décrivent l'illustration
+déjà peinte. Le texte des deux pages raconte CE moment-là, avec ces personnages-là. N'ajoute aucun personnage, animal, objet important
+ou lieu qu'on ne voit pas ; ne fais rien faire à un personnage qui contredit l'image.
+
+CONSTRUIS d'abord l'histoire (champ "plan"), dans ce cadre :
+- une ENVIE concrète du héros, posée dès les pages 1-2 ;
+- un OBSTACLE lié au thème du parent, et un enjeu qu'un enfant comprend ;
+- des tentatives qui montent (règle de trois quand c'est possible), un MOMENT DE CREUX, puis la SOLUTION trouvée par le héros lui-même
+  (pas un adulte, pas la magie à sa place) ;
+- une FIN qui rappelle le début, une dernière phrase apaisée ;
+- une petite RÉPLIQUE qui revient 2 ou 3 fois (refrain).
+
+ÉCRITURE : chaque phrase fait avancer l'histoire (action, réplique, décision, conséquence) ; aucun remplissage (odeurs, bruits,
+lumières qui brillent, « tout le monde rit ») ; dialogues vivants, un peu d'humour ; émotions montrées par des actes ; le thème traité
+avec justesse, sans morale énoncée ; le doudou est une PELUCHE (il ne bouge et ne parle pas seul : l'enfant le serre, lui parle) ;
+prénoms exacts ; présent de narration ; vocabulaire de l'âge indiqué ; {mots} mots par page, 7 lignes au plus ;
+typographie française (espaces avant ! ? : ;, guillemets « »).
+Réponds UNIQUEMENT en JSON : {{"plan": {{"envie": "…", "obstacle": "…", "solution": "…", "refrain": "…"}}, "pages": ["page 1", …, "page 18"]}}"""
+
+
+def reecrire(folder):
+    """Nouveau texte pour un livre DÉJÀ illustré (bouton de l'admin) : mêmes images, vraie histoire. Renvoie les 18 textes vérifiés."""
+    folder = Path(folder)
+    snap = json.loads((folder / "instantane.json").read_text(encoding="utf-8"))
+    b = json.loads((folder / "storyboard.json").read_text(encoding="utf-8"))
+    book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+    lo, hi = word_range(snap["age"])
+    noms = {p["id"]: f"{p['nom']} ({p['type']})" for p in snap["personnages"]}
+    noms.update({x.get("id"): f"{x.get('name')} (personnage inventé)" for x in b.get("characterBible") or []})
+    brief = {"heros": snap["prenom"], "age": snap["age"], "theme_du_parent": snap["histoire"].get("theme"), "univers": snap["histoire"].get("univers"),
+             "passions (donnée)": snap["histoire"].get("passions"), "titre": book.get("title"),
+             "personnages": [{"nom": p["nom"], "type": p["type"], "role": p["role"]} for p in snap["personnages"]],
+             "doubles_pages": [{"id": sp["id"], "scene": sp.get("scene"), "presents": [noms.get(x, x) for x in sp.get("presentCharacterIds") or []],
+                                "details_visibles": sp.get("requiredVisibleDetails"),
+                                "texte_actuel": [book["pages"][2 * i]["text"], book["pages"][2 * i + 1]["text"]]} for i, sp in enumerate(b["spreads"][:9])]}
+    system = SYSTEM_REECRITURE.replace("{mots}", f"{lo} à {hi}")
+    user = json.dumps(brief, ensure_ascii=False)
+    if len((system + user).encode()) > RALLONGE_MAX:
+        raise ProcedeError("Livre trop long pour la borne de coût de la réécriture")
+
+    def verif(r):
+        probs, pages = [], r.get("pages") or []
+        if len(pages) != 18: probs.append(f"Il faut exactement 18 pages (reçu {len(pages)}).")
+        for i, t in enumerate(pages[:18]):
+            n = len(str(t).split())
+            if n < lo - 4: probs.append(f"Page {i + 1} : {n} mots, trop court (attendu {lo}–{hi}) : ajoute une action ou une réplique.")
+            if M.text_height(str(t)) > M.TEXT_MAX: probs.append(f"Page {i + 1} : trop long pour la page (7 lignes au plus), raccourcis.")
+        return probs
+    r = G._chat_json(system, user, etape="réécriture du texte", max_tokens=RALLONGE_TOKENS)
+    probs = verif(r)
+    if probs:
+        user2 = user + "\n\nTa version :\n" + json.dumps(r, ensure_ascii=False) + "\n\nCorrige ces problèmes et renvoie l'objet complet :\n- " + "\n- ".join(probs[:20])
+        r2 = G._chat_json(system, user2, etape="réécriture du texte (révision)", max_tokens=RALLONGE_TOKENS)
+        if len(verif(r2)) <= len(probs):
+            r, probs = r2, verif(r2)
+    bloquants = [p for p in probs if "trop long" in p or "exactement 18" in p]
+    if bloquants:
+        raise ProcedeError("Réécriture non conforme, texte inchangé : " + " ; ".join(bloquants[:3]))
+    names = [p["nom"] for p in snap["personnages"]]
+    return [G.fix_names(re.sub(r"\s+", " ", str(t)).strip(), names) for t in r["pages"][:18]], r.get("plan")
+
+
 RALLONGE_SYSTEM = """Tu es l'auteur d'un album jeunesse lu à voix haute à un enfant de {age} ans. Les illustrations sont DÉJÀ peintes.
 Réécris le texte de chaque page pour qu'il fasse {lo} à {hi} mots : 3 ou 4 phrases courtes (6 à 12 mots), au présent, avec des mots
 de tous les jours. Garde EXACTEMENT les mêmes événements, le même ordre, les mêmes répliques importantes et les mêmes personnages
