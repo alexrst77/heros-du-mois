@@ -2192,6 +2192,23 @@ def mail_configure():
 
 
 def send_mail(subject, body, reply_to=None, to=None, html=None, images=None, image_urls=None):
+    """Envoi + journal (destinataire, sujet, statut ; jamais le contenu), visible dans l'admin avec le suivi de réception."""
+    import courriels
+    four = "brevo" if os.getenv("BREVO_API_KEY") else "smtp" if os.getenv("SMTP_PASSWORD") else None
+    try:
+        r = _send_mail(subject, body, reply_to, to, html, images, image_urls)
+    except Exception as e:
+        if four:
+            courriels.noter(to or CONTACT, subject, four, ok=False, erreur=str(e), contact=CONTACT)
+        raise
+    if four:
+        ok, mid = (r if isinstance(r, tuple) else (bool(r), None))
+        courriels.noter(to or CONTACT, subject, four, message_id=mid, ok=ok, contact=CONTACT)
+        return ok
+    return r if not isinstance(r, tuple) else r[0]
+
+
+def _send_mail(subject, body, reply_to=None, to=None, html=None, images=None, image_urls=None):
     """Envoi d'un mail. Railway bloque le SMTP (ports 465/587) : on passe par l'API HTTPS de Brevo si BREVO_API_KEY est
     renseigné, sinon par SMTP (Gmail) si SMTP_PASSWORD l'est ; sinon rien. to : destinataire (par défaut toi).
     html + images {cid: chemin} (SMTP, images intégrées) ou image_urls {cid: url} (Brevo, images hébergées par le site)."""
@@ -2209,7 +2226,11 @@ def send_mail(subject, body, reply_to=None, to=None, html=None, images=None, ima
                                      headers={"api-key": os.getenv("BREVO_API_KEY"), "Content-Type": "application/json", "Accept": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=20) as r:
-                return 200 <= r.status < 300
+                try:
+                    mid = json.loads(r.read().decode() or "{}").get("messageId")
+                except ValueError:
+                    mid = None
+                return 200 <= r.status < 300, mid
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"Brevo {e.code} : {e.read().decode(errors='replace')[:300]}")
     pw = os.getenv("SMTP_PASSWORD")

@@ -254,7 +254,7 @@ function carte(o) {
     ${err}${issues}
     <div class="acts">${bt.main}${fac}</div>
     ${RES[o.id] ? `<div class="result ${RES[o.id].cls || ''}"><button class="x" title="Fermer" onclick="delete RES['${o.id}'];render()">×</button>${RES[o.id].html}</div>` : ''}
-    <details class="plus" ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">
+    <details class="plus" ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">${o.email ? `<div class="acts" style="margin:0 0 8px"><button class="btn" onclick="historique('${esc(o.email)}',this)">📜 Historique et e-mails du client</button></div>` : ''}
       <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
       ${o.pack_mail ? `<div>📧 Mail « prêt » envoyé le ${new Date(o.pack_mail * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
       ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(LULU_FR[o.lulu_statut] || o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
@@ -393,7 +393,7 @@ function vueClients() {
       ${L.map(c => `<tr><td><b>${esc(c.nom || c.email.split('@')[0])}</b><div class="meta">${esc(c.email)}${c.lieu ? ' · 📍 ' + esc(c.lieu) : ''}</div></td><td>${new Date(c.cree * 1000).toLocaleDateString('fr-FR')}</td><td>${ilya(c.derniere)}</td>
         <td class="r">${c.visites || '—'}</td><td>${c.heros.length ? esc(c.heros.slice(0, 3).join(', ')) : '—'}</td><td>${esc(c.etape)}${c.apercu ? ' · aperçu vu' : ''}</td>
         <td class="r">${c.commandes ? `<b>${c.commandes}</b> · ${eur(c.total)}` : c.non_payees ? '<span class="meta">paiement non fini</span>' : '—'}</td>
-        <td class="r" style="white-space:nowrap">${btnRel('cli', c.id, c.relance, c.relancable)}${C.mail ? ` <button class="btn" onclick="composer({email:'${esc(c.email)}'})">✍️ Écrire</button>` : ''}</td></tr>`).join('')}</table></div>`
+        <td class="r" style="white-space:nowrap">${btnRel('cli', c.id, c.relance, c.relancable)}${C.mail ? ` <button class="btn" onclick="composer({email:'${esc(c.email)}'})">✍️ Écrire</button>` : ''} <button class="btn" onclick="historique('${esc(c.email)}',this)">📜 Historique</button></td></tr>`).join('')}</table></div>`
       : '<div class="empty"><div class="big">👤</div>Aucun compte client' + (q ? ' pour cette recherche' : ' pour l\'instant') + '.</div>'}
     <p class="meta">Les visites des comptes sont comptées quand la personne est connectée. Relance : un seul e-mail par création ou par compte, envoyé seulement quand tu cliques. Les visiteurs sans compte ni commande restent anonymes.</p>`;
 }
@@ -656,6 +656,28 @@ async function textesDlg(id, btn) {
     if (r.erreur) { ev.target.disabled = false; ev.target.textContent = '💾 Enregistrer et refaire le PDF'; return toast('⚠️ ' + r.erreur); }
     d.close(); toast('✅ Textes enregistrés : relis le livre puis valide-le'); load();
   };
+}
+
+const ETAT_MAIL = { remis: '✅', ouvert: '👀', clique: '🖱️', envoye: '📤', sans_suivi: '📤', differe: '⏳', echec: '❌', rebond: '❌', bloque: '⛔', rejete: '❌', spam: '⚠️', desinscrit: '🚫' };
+const quand = d => { const t = typeof d === 'number' ? new Date(d * 1000) : new Date(d); return isNaN(t) ? '' : t.toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+function ligneMail(m) {
+  const ev = (m.evenements || []).filter(e => e.evenement && e.evenement !== 'envoye').map(e => `${ETAT_MAIL[e.evenement] || '•'} ${esc(e.evenement)} ${quand(e.date)}${e.raison ? ' (' + esc(e.raison) + ')' : ''}`).join(' · ');
+  return `<tr><td style="white-space:nowrap">${quand(m.cree || m.date)}</td><td><b>${esc(m.sujet)}</b><div class="meta">${esc(m.type || '')}${m.erreur ? ' · ' + esc(m.erreur) : ''}${ev ? '<br>' + ev : ''}</div></td>
+    <td style="white-space:nowrap">${ETAT_MAIL[m.statut] || ''} ${esc(m.libelle || m.statut)}</td></tr>`;
+}
+async function historique(email, btn) {
+  if (btn) btn.disabled = true;
+  const j = await (await fetch('/admin/api/historique' + Q + (Q ? '&' : '?') + 'email=' + encodeURIComponent(email), { headers: H })).json();
+  if (btn) btn.disabled = false;
+  if (j.erreur) return toast('⚠️ ' + j.erreur);
+  const tous = (j.mails || []).concat((j.anciens || []).filter(m => !m.erreur));
+  document.getElementById('dlgIn').innerHTML = `<h3>📜 ${esc(j.client && j.client.nom || email)}</h3><p class="meta">${esc(email)}${j.client ? ' · compte créé le ' + new Date(j.client.cree * 1000).toLocaleDateString('fr-FR') + (j.client.vu ? ' · vu ' + quand(j.client.vu) : '') : ' · pas de compte'}</p>
+    <h4 style="margin:14px 0 6px">Commandes</h4>${(j.commandes || []).length ? `<table>${j.commandes.map(o => `<tr><td>${quand(o.cree)}</td><td>${esc(o.titre || o.quoi)}${o.numero > 1 ? ' (livre ' + o.numero + ')' : ''}</td><td>${esc(o.statut)}</td><td class="r">${o.montant ? eur(o.montant) : ''}</td></tr>`).join('')}</table>` : '<p class="meta">Aucune commande.</p>'}
+    <h4 style="margin:14px 0 6px">E-mails reçus</h4>${tous.length ? `<table>${tous.map(ligneMail).join('')}</table>` : '<p class="meta">Aucun e-mail enregistré pour cette adresse.</p>'}
+    <p class="meta">${j.suivi_actif ? '✅ Remis = accepté par sa boîte mail · 👀 Ouvert = affiché (certaines messageries, comme Apple Mail, l\'indiquent même sans lecture) · ❌ = non reçu. Suivi lu chez Brevo.' : 'Envoi sans Brevo : seul « envoyé » est connu.'} Le contenu des e-mails n'est pas gardé.</p>
+    ${(j.anciens || []).some(m => m.erreur) ? `<p class="meta" style="color:#B3261E">${esc(j.anciens.find(m => m.erreur).erreur)}</p>` : ''}
+    <div class="acts"><button class="btn" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
+  document.getElementById('dlg').showModal();
 }
 
 async function completerNoms(id, btn) {
