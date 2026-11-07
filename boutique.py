@@ -9,6 +9,7 @@ from xml.sax.saxutils import escape
 from flask import Blueprint, request, jsonify, send_file, abort, redirect, Response
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
+import moteur_livre as M
 import calendrier, coloriage
 import printful, objets, legal, factures, comptes, apercu, recueil
 EXTRAS = {"calendrier": calendrier, "coloriage": coloriage}      # produits Lulu qui ne sont pas des livres (même colis que les livres)
@@ -1635,6 +1636,35 @@ def admin_action(oid, action):
                 db.update(x["id"], statut="expediee", livree_le=time.time() if action == "livre" else None)
             log(f"commande {ori} : colis " + ("livré" if action == "livre" else "remis « expédié »") + f" ({len(colis_)} produit(s))")
             return jsonify(ok=True, info={"n": len(colis_)})
+        if action in ("textes", "textes-lire"):    # livre « à relire » : textes corrigés à la main, illustrations inchangées, aucun appel IA
+            folder = A.OUT / (o["job_id"] or "_")
+            if not (folder / "livre.json").exists():
+                raise RuntimeError("livre introuvable")
+            book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+            if action == "textes-lire":
+                return jsonify(ok=True, titre=book.get("title"), pages=[x["text"] if x else "" for x in book["pages"]])
+            if fabrication.est_finalise(folder):
+                raise RuntimeError("livre déjà validé (figé) : les textes ne se modifient plus")
+            pages = (request.get_json(force=True, silent=True) or {}).get("pages")
+            if not isinstance(pages, list) or len(pages) != len(book["pages"]):
+                raise RuntimeError("pages illisibles")
+            for i, t in enumerate(pages):
+                t = re.sub(r"\s+", " ", str(t or "")).strip()
+                if not t:
+                    raise RuntimeError(f"page {i + 1} vide")
+                if M.text_height(t) > M.TEXT_MAX:
+                    raise RuntimeError(f"page {i + 1} : trop long pour la page (7 lignes au plus), raccourcis-la")
+                book["pages"][i]["text"] = t
+            if not (folder / "livre_avant_textes.json").exists():
+                shutil.copy(folder / "livre.json", folder / "livre_avant_textes.json")
+            (folder / "livre.json").write_text(json.dumps(book, ensure_ascii=False, indent=1), encoding="utf-8")
+            pdf = folder / (o["pdf"] or "livre.pdf")
+            rep = M.render(book, pdf, base=folder, work=folder / "rendu")
+            shutil.rmtree(folder / "rendu", ignore_errors=True)
+            if (folder / "impression_interieur.pdf").exists():
+                procede.fabrication_files(book, folder, pdf, book.get("volumeNumber") or 1, form_du_livre(o).get("prenom") or "")
+            log(f"commande {oid} : textes modifiés à la main ({len(pages)} pages), PDF et fichiers d'impression refaits")
+            return jsonify(ok=True, info={"pages": rep.get("pages"), "problemes": rep.get("problemes_rendu")})
         if action == "noms":                      # compagnons sans nom : Alex donne le nom (demandé au client), puis relance
             manque = completer_noms(o, (request.get_json(force=True, silent=True) or {}).get("noms") or {})
             if not manque and o["statut"] == "erreur":

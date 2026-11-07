@@ -190,7 +190,8 @@ function boutons(o, e) {
   const b = (a, t, cls = '') => `<button class="btn ${cls}" onclick="act('${o.id}','${a}',this)">${t}</button>`;
   let main = '';
   if (e.k === 'paiement' && D.config.stripe === 'simulé') main = b('valider-paiement-test', '💳 Simuler le paiement', 'main');
-  if (e.k === 'relire') main = lire + b('finaliser', "✅ C'est bon, je valide", 'ok') + (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées') : '');
+  if (e.k === 'relire') main = lire + b('finaliser', "✅ C'est bon, je valide", 'ok') + (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées') : '')
+    + (!o.extra ? `<button class="btn" onclick="textesDlg('${o.id}',this)">✏️ Modifier les textes</button>` : '');
   if (e.k === 'pret') main = lire + b('imprimer', NB(o) > 1 ? `🖨️ Envoyer le colis (${colis(o)})` : "🖨️ Envoyer à l'impression", 'gold');
   if (e.k === 'valide') main = lire;
   if (e.k === 'essai') main = lire;
@@ -612,6 +613,27 @@ async function purgeRgpd(b) {
   if (!confirm("Effacer les données des enfants et les fichiers de fabrication des commandes expédiées depuis plus de 30 jours ?\n\nLes factures restent (obligation légale). C'est définitif.")) return;
   b.disabled = true; const r = await (await fetch('/admin/api/rgpd/purge' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: '{"jours":30}' })).json();
   b.disabled = false; toast(r.erreur ? '⚠️ ' + r.erreur : `🧹 Données effacées pour ${r.effacees} commande(s)`); load();
+}
+
+async function textesDlg(id, btn) {
+  btn.disabled = true;
+  const j = await (await fetch(`/admin/api/${id}/textes-lire${Q}`, { method: 'POST', headers: H })).json(); btn.disabled = false;
+  if (j.erreur) return toast('⚠️ ' + j.erreur);
+  const d = document.getElementById('dlg');
+  document.getElementById('dlgIn').innerHTML = `<h3>✏️ Textes de « ${esc(j.titre || '')} »</h3><p class="meta">Les illustrations ne changent pas. Le PDF et les fichiers d'impression sont refaits (aucun coût IA). 7 lignes au plus par page.</p>
+    <p class="meta">Tout coller d'un coup : une page par paragraphe (ligne vide entre deux pages).</p><textarea id="txAll" style="width:100%;min-height:70px" placeholder="Coller ici les 18 pages…"></textarea>
+    <button class="btn" onclick="(()=>{const l=document.getElementById('txAll').value.split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean);if(l.length!==${j.pages.length})return toast('⚠️ '+l.length+' paragraphes, il en faut ${j.pages.length}');l.forEach((t,i)=>document.getElementById('tx'+i).value=t);})()">Répartir dans les pages</button>
+    ${j.pages.map((t, i) => `<label class="meta" style="display:block;margin-top:8px">Page ${i + 1} (double page ${Math.floor(i / 2) + 1})</label><textarea id="tx${i}" style="width:100%;min-height:80px">${esc(t)}</textarea>`).join('')}
+    <div class="acts" style="position:sticky;bottom:0;background:#fff;padding:8px 0"><button class="btn" onclick="document.getElementById('dlg').close()">Annuler</button>
+    <button class="btn main" id="txOk">💾 Enregistrer et refaire le PDF</button></div>`;
+  d.showModal();
+  document.getElementById('txOk').onclick = async (ev) => {
+    ev.target.disabled = true; ev.target.textContent = '⏳ Mise en page…';
+    const pages = j.pages.map((_, i) => document.getElementById('tx' + i).value);
+    const r = await (await fetch(`/admin/api/${id}/textes${Q}`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ pages }) })).json();
+    if (r.erreur) { ev.target.disabled = false; ev.target.textContent = '💾 Enregistrer et refaire le PDF'; return toast('⚠️ ' + r.erreur); }
+    d.close(); toast('✅ Textes enregistrés : relis le livre puis valide-le'); load();
+  };
 }
 
 async function completerNoms(id, btn) {
