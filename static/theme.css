@@ -64,3 +64,6 @@ h2 { font: 800 clamp(30px, 3.8vw, 44px)/1.1 var(--titre); margin: 0 0 12px; lett
 @media (prefers-reduced-motion: reduce) { .btn, .btn:hover, .btn:active { transition: none; transform: none; } }
 
 @media (max-width: 420px) { .logo-img { height: 42px; } .logo { font-size: 17px; } .logo-mark { width: 34px; height: 34px; } .btn.petit { padding: 10px 14px; font-size: 14px; } }
+
+/* petits écrans : un bouton au libellé long passe à la ligne au lieu de déborder de l'écran */
+@media (max-width: 480px) { .btn { white-space: normal; text-align: center; line-height: 1.2; max-width: 100%; } }

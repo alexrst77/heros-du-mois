@@ -272,6 +272,21 @@ def run(job_id, form, refs):
         job.update(etat="erreur", erreur=str(e)[:600], cout=round(meter["dollars"], 2), phase="failed" if not job.get("phase") == "needs_review" else "needs_review")
 
 
+@app.errorhandler(404)
+def page_introuvable(e):
+    """Page inexistante (lien ancien, faute de frappe, pub mal réglée) : une vraie page du site qui ramène vers la création."""
+    if request.path.startswith(("/api/", "/admin")) or request.accept_mimetypes.best == "application/json":
+        return jsonify(erreur="introuvable"), 404
+    html = """<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>Page introuvable – Mon Héros du Mois</title><link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
+<link rel="stylesheet" href="/static/theme.css"><style>main{max-width:560px;margin:0 auto;padding:60px 20px;text-align:center}main img{width:220px;margin:0 auto 18px}
+h1{font:800 30px/1.15 var(--titre);margin:0 0 10px}p{color:var(--encre-2)}.acts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}</style></head>
+<body><main><a href="/"><img src="/static/marque/logo-480.webp" alt="Mon Héros du Mois"></a><h1>Oups, cette page s'est perdue dans la forêt</h1>
+<p>Le lien est peut-être ancien ou incomplet. L'histoire de votre enfant, elle, vous attend toujours.</p>
+<div class="acts"><a class="btn" href="/creer">Créer son livre</a><a class="btn clair" href="/">Retour à l'accueil</a></div></main></body></html>"""
+    return Response(html, status=404, mimetype="text/html")
+
+
 @app.get("/")
 def vitrine():
     if request.args.get("commande"):                 # anciens liens de retour de paiement
