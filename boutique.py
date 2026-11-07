@@ -399,7 +399,7 @@ def appliquer_textes(o, folder, book, pages):
     if not isinstance(pages, list) or len(pages) != len(book["pages"]):
         raise RuntimeError("pages illisibles")
     for i, t in enumerate(pages):
-        t = re.sub(r"\s+", " ", str(t or "")).strip()
+        t = procede.typo_fr(re.sub(r"\s+", " ", str(t or "")).strip())
         if not t:
             raise RuntimeError(f"page {i + 1} vide")
         if M.text_height(t) > M.TEXT_MAX:
@@ -1743,8 +1743,8 @@ def admin_action(oid, action):
             folder = A.OUT / (o["job_id"] or "_")
             if fabrication.est_finalise(folder):
                 raise RuntimeError("livre déjà validé (figé) : les textes ne se modifient plus")
-            if not (folder / "storyboard.json").exists() or not (folder / "livre.json").exists():
-                raise RuntimeError("ce livre n'a pas de storyboard enregistré : réécriture impossible")
+            if not (folder / "instantane.json").exists() or not (folder / "livre.json").exists():
+                raise RuntimeError("ce livre n'a pas ses fichiers de fabrication : réécriture impossible")
             if REECRITURES.get(oid, {}).get("etat") == "en_cours":
                 raise RuntimeError("réécriture déjà en cours")
             d = request.get_json(force=True, silent=True) or {}
