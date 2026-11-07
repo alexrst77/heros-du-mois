@@ -1411,8 +1411,17 @@
     return payload;
   }
   /* ---------- plusieurs enfants : le livre composé est gardé, on compose le héros suivant ---------- */
+  function compagnonsSansNom() {       // un compagnon sans nom bloque la fabrication : on le demande avant de garder le livre ou de payer
+    if (S.doudou.actif && !(S.doudou.nom || '').trim()) S.doudou.nom = 'Doudou';
+    let i = S.animaux.findIndex(a => !(a.nom || '').trim());
+    if (i >= 0) { pet = i; foc = 'animaux'; tab = 'compagnons'; render(); $('err').textContent = "Indiquez le nom de chaque animal de " + (S.enfant.prenom.trim() || "l'enfant") + '.'; return true; }
+    i = S.fratrie.findIndex(f => !(f.prenom || '').trim());
+    if (i >= 0) { sib = i; foc = 'fratrie'; tab = 'compagnons'; render(); $('err').textContent = "Indiquez le prénom de chaque frère et sœur."; return true; }
+    return false;
+  }
   async function ajouterEnfant(b) {
     if (!S.enfant.prenom.trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez d'abord le prénom de cet enfant."; return; }
+    if (compagnonsSansNom()) return;
     b.disabled = true; b.textContent = 'Un instant…';
     try {
       const payload = await basePayload();
@@ -1430,6 +1439,7 @@
   /* ---------- envoi ---------- */
   async function submit() {
     if (!S.enfant.prenom.trim()) { tab = 'enfant'; render(); $('err').textContent = "Indiquez le prénom de l'enfant."; return; }
+    if (compagnonsSansNom()) return;
     if (S.produits.livres && S.commande.formule === 'fetes' && S.histoire.fetes.length !== 6) { tab = 'creations'; OUVERT.hist = true; render(); $('err').textContent = `Choisissez 6 fêtes pour la formule « 6 livres de fête » (${S.histoire.fetes.length} pour l'instant).`; return; }
     if (S.histoire.fetes.includes('anniversaire') && !anniv()) {       // date facultative : sans elle, pas de livre d'anniversaire
       if (S.commande.formule === 'fetes') { tab = 'enfant'; render(); $('err').textContent = "Pour le livre d'anniversaire, indiquez sa date (jour et mois), ou choisissez une autre fête."; return; }
