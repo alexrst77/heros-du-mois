@@ -32,6 +32,7 @@ REVIEW_MAX_TOKENS = 1000          # écarts en anglais (consignes) + leur traduc
 TEXTE_MAX = 16000                             # octets du brief de l'histoire (borne de coût)
 RALLONGE_MAX = 24000                          # octets de la demande « rallonger les textes » (borne de coût)
 RALLONGE_TOKENS = 4000
+RECIT_MAX = 26000                             # octets : révision du récit, ou storyboard avec le texte déjà écrit
 REVISION_MAX = 56000                          # octets de la demande de révision (brief + version précédente + problèmes)
 FICHE_MAX = 6000                              # octets de la fiche envoyée avec une image à contrôler
 MAX_INVENTES = 1                              # personnages inventés récurrents prévus au budget (portrait de référence)
@@ -327,8 +328,8 @@ LANGUE TRÈS SIMPLE (priorité absolue : l'histoire est lue à voix haute à un 
 - une seule action importante par page, un seul problème dans l'histoire, des rebondissements faciles à suivre ;
 - répétitions et onomatopées bienvenues (Plouf ! Zou !), émotions nommées simplement (content, un peu peur, fier) ;
 - pas plus de 3 personnages qui parlent sur une même double page.
-Longueur OBLIGATOIRE : {mots} mots par page, soit 3 ou 4 phrases courtes (jamais une ou deux phrases seulement) : on ajoute un détail
-que l'enfant voit sur l'image, un bruit, ce que ressent un personnage ou une petite réplique. Phrases courtes ne veut pas dire page courte.
+Longueur OBLIGATOIRE : {mots} mots par page, soit 3 ou 4 phrases courtes : chaque phrase fait avancer l'histoire (action, réplique,
+décision, conséquence), jamais de remplissage. Phrases courtes ne veut pas dire page courte.
 Jamais plus de 7 lignes. Typographie française (espaces avant ! ? : ;, guillemets « »).
 """
 
@@ -394,7 +395,7 @@ def check_board(b, snap):
 
 def pages_courtes(b, snap):
     """Pages dont le texte (final) est trop court pour l'âge, tant qu'on ne les a pas déjà rallongées une fois."""
-    if not b or not snap or b.get("_rallonge"):
+    if not b or not snap or b.get("_rallonge") or b.get("recit_plan"):      # récit écrit et vérifié à part : jamais « rallongé »
         return []
     lo, _ = word_range(snap["age"])
     out = []
@@ -409,8 +410,8 @@ def pages_courtes(b, snap):
 RALLONGE_SYSTEM = """Tu es l'auteur d'un album jeunesse lu à voix haute à un enfant de {age} ans. Les illustrations sont DÉJÀ peintes.
 Réécris le texte de chaque page pour qu'il fasse {lo} à {hi} mots : 3 ou 4 phrases courtes (6 à 12 mots), au présent, avec des mots
 de tous les jours. Garde EXACTEMENT les mêmes événements, le même ordre, les mêmes répliques importantes et les mêmes personnages
-(n'ajoute aucun personnage, aucun objet important, aucun lieu nouveau). Pour rallonger, ajoute ce qui se voit déjà dans la scène
-(décrite en anglais dans « scene »), un bruit, une émotion simple ou une petite réplique. Typographie française (espaces avant ! ? : ;,
+(n'ajoute aucun personnage, aucun objet important, aucun lieu nouveau). Pour rallonger, ajoute une réplique, une réaction ou une
+petite action qui fait avancer ou éclaire l'histoire ; jamais de phrase de remplissage (odeurs, bruits, lumières décoratives). Typographie française (espaces avant ! ? : ;,
 guillemets « »). Réponds UNIQUEMENT en JSON : {{"pages": [{{"id": 1, "left": "…", "right": "…"}}, …]}} pour les 9 doubles pages."""
 
 
@@ -474,6 +475,75 @@ def fix_board(b, snap):
     return b
 
 
+SYSTEM_RECIT = """Tu es un·e auteur·rice d'albums jeunesse publié·e, réputé·e pour des histoires qui ont du FOND : des enfants les
+redemandent chaque soir. Tu écris le TEXTE d'un album personnalisé de 18 pages (9 doubles pages), en français, lu à voix haute.
+Les illustrations seront faites APRÈS, à partir de ton texte : écris une histoire, pas une description d'images.
+
+AVANT d'écrire, construis l'histoire (champ "plan") :
+- une ENVIE concrète et forte du héros, posée dès la page 1 ou 2 (ce qu'il veut, pas ce qu'il ressent vaguement) ;
+- un OBSTACLE précis, lié au thème choisi par le parent, qui rend cette envie difficile ; un enjeu que l'enfant comprend ;
+- TROIS tentatives qui montent en intensité (la règle de trois), chacune échoue d'une façon différente et apprend quelque chose ;
+- un MOMENT DE CREUX où tout semble raté (page 11 à 13) ;
+- la SOLUTION trouvée par le héros lui-même, grâce à une qualité ou un détail posé plus tôt (une passion, un compagnon, un objet) :
+  jamais un adulte ni la magie qui règle tout à sa place ;
+- une SURPRISE ou un retournement qui fait sourire ;
+- une FIN qui rappelle le début (écho, objet ou phrase qui revient) et une dernière image apaisée, pour s'endormir ;
+- une petite RÉPLIQUE qui revient 3 fois (refrain), que l'enfant aura envie de dire avec le parent.
+
+ÉCRITURE :
+- chaque page fait avancer l'histoire : une action, une décision, une réplique ou une conséquence. Aucune phrase de remplissage :
+  pas d'odeur de pop-corn, de ventre qui gargouille, de lumières qui brillent partout ni de « tout le monde rit » pour faire du volume ;
+- des dialogues vivants qui révèlent les personnages ; de l'humour (un personnage drôle, une situation cocasse) ;
+- les émotions se montrent par des actes (il cache sa tête dans Doudou, il recule d'un pas) plutôt que par des adjectifs ;
+- le thème du parent est au cœur de l'histoire, traité avec justesse, sans leçon ni morale énoncée ;
+- le doudou est une peluche : il ne bouge pas seul, sauf si la configuration dit qu'il est le héros vivant de l'histoire ; c'est
+  l'enfant qui le serre, lui parle, l'imagine répondre ;
+- les personnages imposés gardent exactement leur prénom ; tous les compagnons ont un rôle utile ;
+- les seuls humains sont ceux de la configuration et UN personnage inventé au plus (créature, ami imaginaire…), nommé, qui revient ;
+- vocabulaire et longueur adaptés à l'âge indiqué ; présent de narration ; phrases courtes, mais des pages pleines de sens ;
+- typographie française (espaces avant ! ? : ;, guillemets « »).
+
+Réponds UNIQUEMENT en JSON :
+{"plan": {"envie": "…", "obstacle": "…", "tentatives": ["…", "…", "…"], "creux": "…", "solution": "…", "surprise": "…", "fin": "…", "refrain": "…"},
+ "titre": "titre court et intrigant", "personnage_invente": {"nom": "…", "description": "…"} ou null,
+ "pages": ["texte page 1", …, "texte page 18"]}"""
+
+
+def _verifier_recit(r, snap):
+    lo, hi = word_range(snap["age"])
+    probs = []
+    pages = r.get("pages") or []
+    if len(pages) != 18:
+        probs.append(f"Il faut exactement 18 pages (reçu {len(pages)}).")
+    for i, t in enumerate(pages[:18]):
+        n = len(str(t).split())
+        if n < lo - 3: probs.append(f"Page {i + 1} : {n} mots, trop court (attendu {lo}–{hi}) : ajoute de l'action ou une réplique, jamais du remplissage.")
+        elif n > hi + 6: probs.append(f"Page {i + 1} : {n} mots, trop long (attendu {lo}–{hi}).")
+        if M.text_height(str(t)) > M.TEXT_MAX: probs.append(f"Page {i + 1} : trop long pour la page (7 lignes au plus).")
+    for k in ("envie", "obstacle", "solution", "refrain"):
+        if not str((r.get("plan") or {}).get(k) or "").strip(): probs.append(f"Plan : « {k} » manquant.")
+    return probs
+
+
+def recit(snap, brief):
+    """Étape 1 : l'histoire seule (plan dramatique puis 18 textes). Une révision au plus, avant toute illustration."""
+    user = json.dumps(brief, ensure_ascii=False)
+    if len((SYSTEM_RECIT + user).encode()) > TEXTE_MAX:
+        raise ProcedeError("Brief de l'histoire trop long pour la borne de coût prévue")
+    r = G._chat_json(SYSTEM_RECIT, user, etape="récit")
+    probs = _verifier_recit(r, snap)
+    if probs:
+        user2 = user + "\n\nVersion précédente :\n" + json.dumps(r, ensure_ascii=False) + "\n\nCorrige ces problèmes et renvoie l'objet complet :\n- " + "\n- ".join(probs[:25])
+        if len((SYSTEM_RECIT + user2).encode()) <= RECIT_MAX:
+            r2 = G._chat_json(SYSTEM_RECIT, user2, etape="récit (révision)")
+            if len(_verifier_recit(r2, snap)) <= len(probs):
+                r = r2
+    if len(r.get("pages") or []) < 18:
+        raise ProcedeError("Récit incomplet (18 pages attendues) : relance la fabrication.")
+    r["pages"] = [str(x).strip() for x in r["pages"][:18]]
+    return r
+
+
 def storyboard(snap):
     lo, hi = word_range(snap["age"])
     k = U.cle_de(snap["histoire"].get("univers"))
@@ -490,11 +560,22 @@ def storyboard(snap):
                                    f"le titre porte son nom et il est sur toutes les doubles pages. {snap['prenom']} (l'enfant) l'accompagne "
                                    "et reste présent dans l'histoire."
                                    + (" Le doudou prend vie le temps de l'aventure (il parle, marche) mais garde son apparence de peluche." if pr["type"] == "doudou" else ""))
-    system = PROMPT_STORY + STORY_RULES.replace("{mots}", f"{lo} à {hi}")
+    r = recit(snap, brief)                              # 1. l'histoire, écrite pour elle-même
+    textes = r["pages"]
+    brief = dict(brief, histoire_ecrite={"titre": r.get("titre"), "plan": r.get("plan"), "personnage_invente": r.get("personnage_invente"),
+                                         "doubles_pages": [{"id": i + 1, "leftText": textes[2 * i], "rightText": textes[2 * i + 1]} for i in range(9)]})
+    system = PROMPT_STORY + STORY_RULES.replace("{mots}", f"{lo} à {hi}") + (
+        "\nLE TEXTE EST DÉJÀ ÉCRIT (histoire_ecrite) : recopie leftText et rightText MOT POUR MOT, garde le titre proposé, et fais seulement "
+        "le travail d'illustration (scènes, compositions, personnages présents, détails visibles, lumières, couverture, quatrième).")
     user = json.dumps(brief, ensure_ascii=False)
-    if len((system + user).encode()) > TEXTE_MAX:
-        raise ProcedeError("Brief de l'histoire trop long pour la borne de coût prévue")
-    b = G._chat_json(system, user, etape="histoire")
+    if len((system + user).encode()) > RECIT_MAX:
+        raise ProcedeError("Brief du storyboard trop long pour la borne de coût prévue")
+    def imposer(bb):                                    # 2. le storyboard ne réécrit jamais l'histoire
+        for i, sp in enumerate((bb.get("spreads") or [])[:9]):
+            sp["leftText"], sp["rightText"] = textes[2 * i], textes[2 * i + 1]
+        bb["recit_plan"] = r.get("plan")
+        return bb
+    b = imposer(G._chat_json(system, user, etape="histoire"))
     for _ in range(1):                                  # UNE révision prévue au budget, avant toute illustration
         probs = check_board(b, snap)
         if not probs:
@@ -503,7 +584,7 @@ def storyboard(snap):
                  "\n\nCorrige ces problèmes et renvoie l'objet complet :\n- " + "\n- ".join(probs[:30]))
         if len((system + user2).encode()) > REVISION_MAX:          # hors de la borne prévue : pas de révision (écarts signalés plus bas)
             break
-        b2 = G._chat_json(system, user2, etape="histoire (révision)")
+        b2 = imposer(G._chat_json(system, user2, etape="histoire (révision)"))
         if len(check_board(b2, snap)) <= len(probs):
             b = b2
     if len(b.get("spreads") or []) != 9:
@@ -814,10 +895,12 @@ def plan_livre(cfg, folder, essai=None, b=None, snap=None, quality=None, quality
             plan.append(_p_image(f"portrait {c['id']}", 3, "1024x1024", q_portrait))
         if not G.portrait_en_cache(c) or not Path(str(G.portrait_path(c)) + ".controle.json").exists():
             plan.append(_p_controle(f"contrôle portrait {c['id']}", SYSTEM_REF, "1024x1024"))
-    if b is None or pages_courtes(b, snap):
+    if b is not None and pages_courtes(b, snap):
         plan.append({"type": "chat", "etape": "textes rallongés", "modele": G.TEXT_MODEL, "textes": ["x" * RALLONGE_MAX], "max_tokens": RALLONGE_TOKENS})
     if b is None:
-        plan.append({"type": "chat", "etape": "histoire", "modele": G.TEXT_MODEL, "textes": ["x" * TEXTE_MAX], "max_tokens": G.TEXT_MAX_TOKENS})
+        plan.append({"type": "chat", "etape": "récit", "modele": G.TEXT_MODEL, "textes": ["x" * TEXTE_MAX], "max_tokens": G.TEXT_MAX_TOKENS})
+        plan.append({"type": "chat", "etape": "récit (révision)", "modele": G.TEXT_MODEL, "textes": ["x" * RECIT_MAX], "max_tokens": G.TEXT_MAX_TOKENS})
+        plan.append({"type": "chat", "etape": "histoire", "modele": G.TEXT_MODEL, "textes": ["x" * RECIT_MAX], "max_tokens": G.TEXT_MAX_TOKENS})
         plan.append({"type": "chat", "etape": "histoire (révision)", "modele": G.TEXT_MODEL, "textes": ["x" * REVISION_MAX], "max_tokens": G.TEXT_MAX_TOKENS})
         plan += [_p_image(f"personnage inventé {i + 1}", 1, "1024x1024", q_portrait) for i in range(MAX_INVENTES)]
     else:
