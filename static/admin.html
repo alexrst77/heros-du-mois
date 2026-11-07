@@ -193,7 +193,7 @@ function boutons(o, e) {
   if (e.k === 'relire') main = lire + b('finaliser', "✅ C'est bon, je valide", 'ok') + (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées') : '')
     + (!o.extra ? (o.reecriture && o.reecriture.etat === 'en_cours' ? '<span class="btn" style="opacity:.7">⏳ Texte en cours de réécriture…</span>'
       : `<button class="btn" onclick="reecrireDlg('${o.id}',this)">✍️ Réécrire le texte (IA)</button>`) + `<button class="btn" onclick="textesDlg('${o.id}',this)">✏️ Modifier les textes</button>`
-      + `<button class="btn" onclick="renommerDlg('${o.id}',this)">🏷️ Corriger un nom</button>`
+      + `<button class="btn" onclick="renommerDlg('${o.id}',this)">🏷️ Corriger un nom</button>` + b('fonds', '🎨 Harmoniser le fond du texte')
       + (o.reecriture && o.reecriture.etat === 'fait' ? `<span class="meta">✅ Texte réécrit (${o.reecriture.cout} $) : relis le livre.</span>` : '')
       + (o.reecriture && o.reecriture.etat === 'erreur' ? `<span class="meta" style="color:#B3261E">⚠️ ${esc(o.reecriture.erreur)}</span>` : '') : '');
   if (e.k === 'pret') main = lire + b('imprimer', NB(o) > 1 ? `🖨️ Envoyer le colis (${colis(o)})` : "🖨️ Envoyer à l'impression", 'gold');
@@ -702,6 +702,7 @@ const CONFIRM = {
   finaliser: "Tu as relu le livre et il te plaît ? Il sera figé et sauvegardé (plus aucun coût IA).",
   'refaire-refusees': "Refaire seulement les images refusées ? (≈ 0,10 $ par page, toujours dans les 3 $ du livre)",
   relancer: "Relancer ? Ce qui est déjà fait est réutilisé, rien n'est payé deux fois (dans les 3 $ du livre).",
+  fonds: "Recalculer la couleur du fond derrière le texte d'après chaque illustration ? (textes inchangés, PDF et impression refaits, gratuit)",
   reecrire: "Réécrire tout le texte avec l'IA (vraie histoire : envie, obstacle, essais, refrain), en gardant les illustrations ? ≈ 0,05 $, 1 à 2 minutes. L'ancien texte est gardé.",
   imprimer: "Envoyer chez l'imprimeur (tous les livres de la commande, un seul colis) ? En mode réel, c'est une vraie commande payée.",
   effacer: "Effacer définitivement les données et fichiers de cette commande ?",

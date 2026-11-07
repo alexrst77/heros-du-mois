@@ -405,6 +405,11 @@ def appliquer_textes(o, folder, book, pages):
         if M.text_height(t) > M.TEXT_MAX:
             raise RuntimeError(f"page {i + 1} : trop long pour la page (7 lignes au plus), raccourcis-la")
         book["pages"][i]["text"] = t
+    for i, pg in enumerate(book["pages"]):                       # voile de lecture harmonisé avec l'illustration
+        sp = book["spreads"][i // 2]
+        if pg and sp and (folder / sp).exists():
+            pg.update(procede.teinte_image(folder / sp, "left" if i % 2 == 0 else "right"))
+            pg.setdefault("theme", {}).update(source="couleur de l'image")
     n = 1
     while (folder / f"livre_avant_textes_{n}.json").exists():
         n += 1
@@ -1764,6 +1769,13 @@ def admin_action(oid, action):
             rep = appliquer_textes(o, folder, book, pages)
             log(f"commande {oid} : textes modifiés à la main ({len(pages)} pages), PDF et fichiers d'impression refaits")
             return jsonify(ok=True, info={"pages": rep.get("pages"), "problemes": rep.get("problemes_rendu")})
+        if action == "fonds":                     # fond du texte harmonisé avec chaque illustration (textes inchangés, aucun appel IA)
+            folder = A.OUT / (o["job_id"] or "_")
+            if fabrication.est_finalise(folder):
+                raise RuntimeError("livre déjà validé (figé) : il ne se modifie plus")
+            book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+            appliquer_textes(o, folder, book, [x["text"] for x in book["pages"]])
+            return jsonify(ok=True)
         if action == "reecrire":                  # le texte est réécrit par l'IA (mêmes illustrations), puis le PDF refait
             folder = A.OUT / (o["job_id"] or "_")
             if fabrication.est_finalise(folder):
