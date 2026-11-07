@@ -280,6 +280,15 @@ def order_create():
         fa["fetes"] = ""
         enfants.append((fa, a))
 
+    for n_livre, (fx, _x) in enumerate([(form, data)] + enfants, start=1):      # chaque compagnon doit avoir un nom (sinon le livre bloque)
+        av = fx.get("avatar") or {}
+        if isinstance(av.get("doudou"), dict) and not (av["doudou"].get("nom") or "").strip():
+            av["doudou"]["nom"] = "Doudou"
+            av["problemes"] = [x for x in av.get("problemes") or [] if not x.startswith("doudou : nom")]
+        manque = _avatar_noms(av)
+        if manque:
+            qui = f"Livre {n_livre} ({fx.get('prenom')}) : " if enfants else ""
+            return jsonify(erreur=f"{qui}indiquez le nom de chaque compagnon ({', '.join(l for _, l in manque)}), dans l'étape « Ses compagnons »."), 400
     oid = uuid.uuid4().hex[:12]
     folder = STORE / oid; folder.mkdir(parents=True)
     guides = A.save_avatar_pngs(data.get("avatar_png") or {}, folder)
@@ -379,6 +388,57 @@ def form_du_livre(o):
     """Formulaire du livre de cette commande (le bon enfant si la commande en compte plusieurs)."""
     e = enfant_du_livre(o)
     return e[0] if e else load_book(o["origine"] or o["id"])[0]
+
+
+def _avatar_noms(av):
+    """Compagnons sans nom dans l'avatar enregistré : [(clé, libellé)]."""
+    import generator as G
+    out = []
+    if not isinstance(av, dict):
+        return out
+    d = av.get("doudou")
+    if isinstance(d, dict) and not (d.get("nom") or "").strip():
+        out.append(("doudou", f"le doudou ({G._opt('doudou', 'type', d.get('type'))['fr'].lower()})"))
+    for i, a in enumerate(av.get("animaux") or []):
+        if isinstance(a, dict) and not (a.get("nom") or "").strip():
+            out.append((f"animaux.{i}", f"animal {i + 1} ({G._opt('animal', 'type', a.get('type'))['fr'].lower()}, {G._opt('animal', 'couleur', a.get('couleur'))['fr'].lower()})"))
+    for i, f in enumerate(av.get("fratrie") or []):
+        if isinstance(f, dict) and not (f.get("nom") or f.get("prenom") or "").strip():
+            out.append((f"fratrie.{i}", f"frère ou sœur {i + 1}"))
+    return out
+
+
+def noms_manquants(o):
+    """Compagnons sans nom dans le livre de cette commande (le bon enfant pour une commande à plusieurs enfants)."""
+    try:
+        return [{"cle": k, "libelle": l} for k, l in _avatar_noms(form_du_livre(o).get("avatar"))]
+    except Exception:
+        return []
+
+
+def completer_noms(o, noms):
+    """Admin : donne leur nom aux compagnons qui n'en ont pas (nom demandé au client), dans les données du livre. Rien d'autre ne change."""
+    import generator as G
+    path = STORE / (o["origine"] or o["id"]) / "livre.json"
+    d = json.loads(path.read_text(encoding="utf-8"))
+    e = (d.get("enfants") or {}).get(str(o.get("numero") or 1)) if enfant_du_livre(o) else None
+    form = e["form"] if e else d["form"]
+    av = form.get("avatar") or {}
+    for k, v in (noms or {}).items():
+        v = G._name(str(v or ""))
+        if not v:
+            continue
+        if k == "doudou" and isinstance(av.get("doudou"), dict):
+            av["doudou"]["nom"] = v
+        elif k.startswith(("animaux.", "fratrie.")):
+            grp, i = k.split("."); i = int(i)
+            if 0 <= i < len(av.get(grp) or []):
+                av[grp][i]["nom"] = v
+    if isinstance(av.get("problemes"), list):          # les signalements « nom non renseigné » corrigés disparaissent
+        av["problemes"] = [x for x in av["problemes"] if "nom non renseigné" not in x and "prénom non renseigné" not in x
+                           or any(x.startswith(l.split(" (")[0]) for _, l in _avatar_noms(av))]
+    tmp = path.with_suffix(".tmp"); tmp.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8"); os.replace(tmp, path)
+    return noms_manquants(o)
 
 
 def confirm_paid(oid, stripe_sub=None):
@@ -1231,7 +1291,9 @@ def admin_list():
         r["facture"] = fa["numero"] if fa else None
         r["plafond"] = NON_LIVRES[r["formule"]].PLAFOND if r["formule"] in NON_LIVRES else budget.PLAFOND
         try:
-            r["prenom"] = json.loads((STORE / r["origine"] / "livre.json").read_text(encoding="utf-8"))["form"].get("prenom")
+            r["prenom"] = form_du_livre(r).get("prenom")
+            if r["statut"] == "erreur" and "non renseigné" in (r.get("erreur") or ""):
+                r["noms_manquants"] = noms_manquants(r)
         except Exception:
             r["prenom"] = None
     packs = {}
@@ -1573,6 +1635,11 @@ def admin_action(oid, action):
                 db.update(x["id"], statut="expediee", livree_le=time.time() if action == "livre" else None)
             log(f"commande {ori} : colis " + ("livré" if action == "livre" else "remis « expédié »") + f" ({len(colis_)} produit(s))")
             return jsonify(ok=True, info={"n": len(colis_)})
+        if action == "noms":                      # compagnons sans nom : Alex donne le nom (demandé au client), puis relance
+            manque = completer_noms(o, (request.get_json(force=True, silent=True) or {}).get("noms") or {})
+            if not manque and o["statut"] == "erreur":
+                db.update(oid, erreur=None)
+            return jsonify(ok=True, manquants=manque)
         if action == "relancer":
             if o["statut"] not in ("erreur", "generation", "payee", "a_verifier"):
                 raise RuntimeError("seulement avant l'envoi à l'impression")
