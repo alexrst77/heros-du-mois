@@ -479,6 +479,34 @@ def admin_clients():
     return jsonify(donnees(int(request.args.get("jours") or 30)))
 
 
+@bp.get("/admin/api/historique")
+def admin_historique():
+    """Historique d'un client : son compte, ses commandes, et les e-mails reçus avec leur suivi (remis, ouvert, rebond…)."""
+    import boutique as B, courriels, paiement
+    if not B.admin_ok():
+        abort(403)
+    email = str(request.args.get("email") or "").strip().lower()[:190]
+    if not email:
+        return jsonify(erreur="e-mail manquant"), 400
+    with db._db() as c:
+        cl = c.execute("select id, email, nom, cree, vu from clients where email=?", (email,)).fetchone()
+        cmd = [dict(r) for r in c.execute("select id, cree, formule, statut, montant, titre, numero, origine from commandes where lower(email)=? "
+                                           "and statut!='attente_paiement' order by cree", (email,))]
+    for o in cmd:
+        o["quoi"] = (paiement.FORMULES.get(o["formule"]) or {}).get("nom") or o["formule"]
+    mails = courriels.lister(email)
+    anciens = courriels.passe_brevo(email, {m["message_id"] for m in mails if m.get("message_id")})
+    return jsonify(client=dict(cl) if cl else None, commandes=cmd, mails=mails, anciens=anciens, suivi_actif=bool(os.getenv("BREVO_API_KEY")))
+
+
+@bp.get("/admin/api/mails")
+def admin_mails():
+    import boutique as B, courriels
+    if not B.admin_ok():
+        abort(403)
+    return jsonify(mails=courriels.lister(None, 100), suivi_actif=bool(os.getenv("BREVO_API_KEY")))
+
+
 @bp.post("/admin/api/relance")
 def admin_relance():
     import boutique as B
