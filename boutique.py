@@ -543,6 +543,10 @@ def confirm_paid(oid, stripe_sub=None):
     else:
         for b in creer_pack(oid):
             start_book(b, auto=True)
+    try:
+        comptes.compte_depuis_commande(oid)      # espace client créé automatiquement avec l'e-mail de la commande
+    except Exception as e:
+        log(f"commande {oid} : espace client non créé : {e}")
     threading.Thread(target=mail_confirmation, args=(oid,), daemon=True).start()
     threading.Thread(target=mail_alerte_commande, args=(oid,), daemon=True).start()
     return True

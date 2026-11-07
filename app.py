@@ -453,6 +453,10 @@ boutique.setup(sys.modules[__name__])
 app.register_blueprint(boutique.bp)
 import comptes  # noqa: E402
 app.register_blueprint(comptes.bp)
+try:                                       # commandes déjà payées sans espace client (avant la création automatique) : rattrapage
+    print("espaces clients créés au démarrage :", comptes.comptes_manquants())
+except Exception as _e:
+    print("rattrapage des espaces clients impossible :", _e)
 import suivi  # noqa: E402
 app.register_blueprint(suivi.bp)
 import preuves  # noqa: E402  vraies photos des livres reçus (admin -> accueil)

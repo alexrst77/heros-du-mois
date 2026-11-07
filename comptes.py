@@ -316,6 +316,38 @@ def noter_commande(oid, adresse):
         c.execute("update clients set adresse=? where id=?", (json.dumps(adresse, ensure_ascii=False), cl["id"]))
 
 
+def compte_depuis_commande(oid):
+    """Commande payée : l'espace client est créé (ou retrouvé) avec l'e-mail de la commande, et la commande y est rattachée.
+    Pas de mot de passe : le client se connecte avec le lien envoyé par e-mail. Aucun e-mail n'est envoyé ici."""
+    o = db.get(oid)
+    if not o or not EMAIL.match((o.get("email") or "").strip()) or (o.get("formule") or "").startswith("essai"):
+        return None
+    a = o.get("adresse") or {}
+    cl = client_par_email(o["email"], creer=True, nom=a.get("nom"))
+    with db._lock, db._db() as c:
+        if not cl.get("nom") and a.get("nom"):
+            c.execute("update clients set nom=? where id=?", (a["nom"][:80], cl["id"]))
+        if a.get("adresse1"):                              # dernière adresse de livraison : pré-remplit la prochaine commande
+            c.execute("update clients set adresse=? where id=?", (json.dumps(a, ensure_ascii=False), cl["id"]))
+        c.execute("update commandes set client_id=? where (id=? or origine=?) and (client_id is null or client_id='')", (cl["id"], oid, oid))
+    return cl
+
+
+def comptes_manquants():
+    """Rattrapage (au démarrage, sans effet s'il n'y a rien à faire) : un espace client pour chaque commande déjà payée."""
+    n = 0
+    with db._db() as c:
+        rows = c.execute("select id from commandes where (origine=id or origine is null) and statut not in ('attente_paiement','annulee') "
+                         "and (client_id is null or client_id='') and email is not null and email!='' and formule not like 'essai%'").fetchall()
+    for r in rows:
+        try:
+            if compte_depuis_commande(r["id"]):
+                n += 1
+        except Exception as e:
+            print("compte client non créé pour", r["id"], e)
+    return n
+
+
 @bp.get("/compte")
 def page_compte():
     from pathlib import Path
