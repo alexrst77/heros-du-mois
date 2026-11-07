@@ -190,7 +190,11 @@ function boutons(o, e) {
   const b = (a, t, cls = '') => `<button class="btn ${cls}" onclick="act('${o.id}','${a}',this)">${t}</button>`;
   let main = '';
   if (e.k === 'paiement' && D.config.stripe === 'simulé') main = b('valider-paiement-test', '💳 Simuler le paiement', 'main');
-  if (e.k === 'relire') main = lire + b('finaliser', "✅ C'est bon, je valide", 'ok') + (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées') : '');
+  if (e.k === 'relire') main = lire + b('finaliser', "✅ C'est bon, je valide", 'ok') + (o.refusees ? b('refaire-refusees', '🔁 Refaire les images refusées') : '')
+    + (!o.extra ? (o.reecriture && o.reecriture.etat === 'en_cours' ? '<span class="btn" style="opacity:.7">⏳ Texte en cours de réécriture…</span>'
+      : b('reecrire', '✍️ Réécrire le texte (IA)')) + `<button class="btn" onclick="textesDlg('${o.id}',this)">✏️ Modifier les textes</button>`
+      + (o.reecriture && o.reecriture.etat === 'fait' ? `<span class="meta">✅ Texte réécrit (${o.reecriture.cout} $) : relis le livre.</span>` : '')
+      + (o.reecriture && o.reecriture.etat === 'erreur' ? `<span class="meta" style="color:#B3261E">⚠️ ${esc(o.reecriture.erreur)}</span>` : '') : '');
   if (e.k === 'pret') main = lire + b('imprimer', NB(o) > 1 ? `🖨️ Envoyer le colis (${colis(o)})` : "🖨️ Envoyer à l'impression", 'gold');
   if (e.k === 'valide') main = lire;
   if (e.k === 'essai') main = lire;
@@ -614,6 +618,27 @@ async function purgeRgpd(b) {
   b.disabled = false; toast(r.erreur ? '⚠️ ' + r.erreur : `🧹 Données effacées pour ${r.effacees} commande(s)`); load();
 }
 
+async function textesDlg(id, btn) {
+  btn.disabled = true;
+  const j = await (await fetch(`/admin/api/${id}/textes-lire${Q}`, { method: 'POST', headers: H })).json(); btn.disabled = false;
+  if (j.erreur) return toast('⚠️ ' + j.erreur);
+  const d = document.getElementById('dlg');
+  document.getElementById('dlgIn').innerHTML = `<h3>✏️ Textes de « ${esc(j.titre || '')} »</h3><p class="meta">Les illustrations ne changent pas. Le PDF et les fichiers d'impression sont refaits (aucun coût IA). 7 lignes au plus par page.</p>
+    <p class="meta">Tout coller d'un coup : une page par paragraphe (ligne vide entre deux pages).</p><textarea id="txAll" style="width:100%;min-height:70px" placeholder="Coller ici les 18 pages…"></textarea>
+    <button class="btn" onclick="(()=>{const l=document.getElementById('txAll').value.split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean);if(l.length!==${j.pages.length})return toast('⚠️ '+l.length+' paragraphes, il en faut ${j.pages.length}');l.forEach((t,i)=>document.getElementById('tx'+i).value=t);})()">Répartir dans les pages</button>
+    ${j.pages.map((t, i) => `<label class="meta" style="display:block;margin-top:8px">Page ${i + 1} (double page ${Math.floor(i / 2) + 1})</label><textarea id="tx${i}" style="width:100%;min-height:80px">${esc(t)}</textarea>`).join('')}
+    <div class="acts" style="position:sticky;bottom:0;background:#fff;padding:8px 0"><button class="btn" onclick="document.getElementById('dlg').close()">Annuler</button>
+    <button class="btn main" id="txOk">💾 Enregistrer et refaire le PDF</button></div>`;
+  d.showModal();
+  document.getElementById('txOk').onclick = async (ev) => {
+    ev.target.disabled = true; ev.target.textContent = '⏳ Mise en page…';
+    const pages = j.pages.map((_, i) => document.getElementById('tx' + i).value);
+    const r = await (await fetch(`/admin/api/${id}/textes${Q}`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ pages }) })).json();
+    if (r.erreur) { ev.target.disabled = false; ev.target.textContent = '💾 Enregistrer et refaire le PDF'; return toast('⚠️ ' + r.erreur); }
+    d.close(); toast('✅ Textes enregistrés : relis le livre puis valide-le'); load();
+  };
+}
+
 async function completerNoms(id, btn) {
   const o = D.commandes.find(x => x.id === id), noms = {};
   for (const m of o.noms_manquants) { const v = prompt(`Nom de ${m.libelle} (livre de ${o.prenom || '…'}) :\n(demande-le au client si tu ne le connais pas)`, ''); if (v === null) return; if (v.trim()) noms[m.cle] = v.trim(); }
@@ -628,6 +653,7 @@ const CONFIRM = {
   finaliser: "Tu as relu le livre et il te plaît ? Il sera figé et sauvegardé (plus aucun coût IA).",
   'refaire-refusees': "Refaire seulement les images refusées ? (≈ 0,10 $ par page, toujours dans les 3 $ du livre)",
   relancer: "Relancer ? Ce qui est déjà fait est réutilisé, rien n'est payé deux fois (dans les 3 $ du livre).",
+  reecrire: "Réécrire tout le texte avec l'IA (vraie histoire : envie, obstacle, essais, refrain), en gardant les illustrations ? ≈ 0,05 $, 1 à 2 minutes. L'ancien texte est gardé.",
   imprimer: "Envoyer chez l'imprimeur (tous les livres de la commande, un seul colis) ? En mode réel, c'est une vraie commande payée.",
   effacer: "Effacer définitivement les données et fichiers de cette commande ?",
   'arreter-abonnement': "Arrêter cet abonnement ?",
@@ -1013,7 +1039,7 @@ async function load() {
 TAB = VUES[location.hash.slice(1)] ? location.hash.slice(1) : 'tableau';
 load();
 setInterval(() => { if (!document.hidden && D && !['rentabilite', 'reglages'].includes(TAB)) load(); }, 15000);
-setInterval(() => { if (!document.hidden && D && (D.commandes || []).some(o => o.en_cours)) load(); }, 4000);
+setInterval(() => { if (!document.hidden && D && (D.commandes || []).some(o => o.en_cours || (o.reecriture && o.reecriture.etat === 'en_cours'))) load(); }, 4000);
 
 </script>
 </body>

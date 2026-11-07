@@ -9,6 +9,7 @@ from xml.sax.saxutils import escape
 from flask import Blueprint, request, jsonify, send_file, abort, redirect, Response
 import commandes as db, paiement, lulu
 import budget, procede, fabrication
+import moteur_livre as M
 import calendrier, coloriage
 import printful, objets, legal, factures, comptes, apercu, recueil
 EXTRAS = {"calendrier": calendrier, "coloriage": coloriage}      # produits Lulu qui ne sont pas des livres (même colis que les livres)
@@ -388,6 +389,53 @@ def form_du_livre(o):
     """Formulaire du livre de cette commande (le bon enfant si la commande en compte plusieurs)."""
     e = enfant_du_livre(o)
     return e[0] if e else load_book(o["origine"] or o["id"])[0]
+
+
+REECRITURES = {}          # réécritures de texte en cours / terminées (par commande), affichées dans l'admin
+
+
+def appliquer_textes(o, folder, book, pages):
+    """Nouveaux textes d'un livre à relire : vérifiés (non vides, 7 lignes au plus), ancien texte gardé, PDF et impression refaits."""
+    if not isinstance(pages, list) or len(pages) != len(book["pages"]):
+        raise RuntimeError("pages illisibles")
+    for i, t in enumerate(pages):
+        t = re.sub(r"\s+", " ", str(t or "")).strip()
+        if not t:
+            raise RuntimeError(f"page {i + 1} vide")
+        if M.text_height(t) > M.TEXT_MAX:
+            raise RuntimeError(f"page {i + 1} : trop long pour la page (7 lignes au plus), raccourcis-la")
+        book["pages"][i]["text"] = t
+    n = 1
+    while (folder / f"livre_avant_textes_{n}.json").exists():
+        n += 1
+    shutil.copy(folder / "livre.json", folder / f"livre_avant_textes_{n}.json")       # chaque version précédente est gardée
+    (folder / "livre.json").write_text(json.dumps(book, ensure_ascii=False, indent=1), encoding="utf-8")
+    pdf = folder / (o["pdf"] or "livre.pdf")
+    rep = M.render(book, pdf, base=folder, work=folder / "rendu")
+    shutil.rmtree(folder / "rendu", ignore_errors=True)
+    if (folder / "impression_interieur.pdf").exists():
+        procede.fabrication_files(book, folder, pdf, book.get("volumeNumber") or 1, form_du_livre(o).get("prenom") or "")
+    return rep
+
+
+def _reecrire(oid):
+    o = db.get(oid)
+    folder = A.OUT / o["job_id"]
+    livre = f"reecriture-{oid}-{int(time.time())}"
+    budget.PLAFONDS[livre] = float(os.getenv("PLAFOND_REECRITURE_USD", "0.3"))
+    jeton = budget.LIVRE.set(livre)
+    try:
+        pages, plan = procede.reecrire(folder)
+        book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+        appliquer_textes(o, folder, book, pages)
+        cout = budget.depense(livre)["total"]
+        REECRITURES[oid] = {"etat": "fait", "fin": time.time(), "plan": plan, "cout": round(cout, 3)}
+        log(f"commande {oid} : texte réécrit par l'IA ({cout:.2f} $), PDF et fichiers d'impression refaits")
+    except Exception as e:
+        REECRITURES[oid] = {"etat": "erreur", "fin": time.time(), "erreur": str(e)[:300]}
+        log(f"commande {oid} : réécriture impossible : {e}")
+    finally:
+        budget.LIVRE.reset(jeton)
 
 
 def _avatar_noms(av):
@@ -1317,6 +1365,8 @@ def admin_list():
         r["plafond"] = NON_LIVRES[r["formule"]].PLAFOND if r["formule"] in NON_LIVRES else budget.PLAFOND
         try:
             r["prenom"] = form_du_livre(r).get("prenom")
+            if r["id"] in REECRITURES:
+                r["reecriture"] = {k: v for k, v in REECRITURES[r["id"]].items() if k != "plan"}
             if r["statut"] == "erreur" and "non renseigné" in (r.get("erreur") or ""):
                 r["noms_manquants"] = noms_manquants(r)
         except Exception:
@@ -1660,6 +1710,30 @@ def admin_action(oid, action):
                 db.update(x["id"], statut="expediee", livree_le=time.time() if action == "livre" else None)
             log(f"commande {ori} : colis " + ("livré" if action == "livre" else "remis « expédié »") + f" ({len(colis_)} produit(s))")
             return jsonify(ok=True, info={"n": len(colis_)})
+        if action in ("textes", "textes-lire"):    # livre « à relire » : textes corrigés à la main, illustrations inchangées, aucun appel IA
+            folder = A.OUT / (o["job_id"] or "_")
+            if not (folder / "livre.json").exists():
+                raise RuntimeError("livre introuvable")
+            book = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+            if action == "textes-lire":
+                return jsonify(ok=True, titre=book.get("title"), pages=[x["text"] if x else "" for x in book["pages"]])
+            if fabrication.est_finalise(folder):
+                raise RuntimeError("livre déjà validé (figé) : les textes ne se modifient plus")
+            pages = (request.get_json(force=True, silent=True) or {}).get("pages")
+            rep = appliquer_textes(o, folder, book, pages)
+            log(f"commande {oid} : textes modifiés à la main ({len(pages)} pages), PDF et fichiers d'impression refaits")
+            return jsonify(ok=True, info={"pages": rep.get("pages"), "problemes": rep.get("problemes_rendu")})
+        if action == "reecrire":                  # le texte est réécrit par l'IA (mêmes illustrations), puis le PDF refait
+            folder = A.OUT / (o["job_id"] or "_")
+            if fabrication.est_finalise(folder):
+                raise RuntimeError("livre déjà validé (figé) : les textes ne se modifient plus")
+            if not (folder / "storyboard.json").exists() or not (folder / "livre.json").exists():
+                raise RuntimeError("ce livre n'a pas de storyboard enregistré : réécriture impossible")
+            if REECRITURES.get(oid, {}).get("etat") == "en_cours":
+                raise RuntimeError("réécriture déjà en cours")
+            REECRITURES[oid] = {"etat": "en_cours", "debut": time.time()}
+            threading.Thread(target=_reecrire, args=(oid,), daemon=True).start()
+            return jsonify(ok=True)
         if action == "noms":                      # compagnons sans nom : Alex donne le nom (demandé au client), puis relance
             manque = completer_noms(o, (request.get_json(force=True, silent=True) or {}).get("noms") or {})
             if not manque and o["statut"] == "erreur":
