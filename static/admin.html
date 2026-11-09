@@ -389,6 +389,7 @@ function vueClients() {
     ${vueCampagnes()}
     <h2>👤 Comptes clients</h2>
     <input value="${esc(CLI_Q)}" id="cliq" placeholder="🔎 Chercher : e-mail, nom, héros…" style="width:100%;font:600 14px var(--texte);padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:10px" oninput="CLI_Q=this.value;clearTimeout(window._cq);window._cq=setTimeout(()=>{render();const i=document.getElementById('cliq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
+    ${/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(CLI_Q.trim()) ? `<div class="acts" style="margin:0 0 10px"><button class="btn" onclick="historique('${esc(CLI_Q.trim().toLowerCase())}',this)">📜 E-mails envoyés à ${esc(CLI_Q.trim())}</button></div>` : ''}
     ${L.length ? `<div class="card" style="overflow-x:auto"><table><tr><th>Client</th><th>Inscrit</th><th>Dernière visite</th><th class="r">Visites</th><th>Héros</th><th>Plus loin atteint</th><th class="r">Commandes</th><th></th></tr>
       ${L.map(c => `<tr><td><b>${esc(c.nom || c.email.split('@')[0])}</b><div class="meta">${esc(c.email)}${c.lieu ? ' · 📍 ' + esc(c.lieu) : ''}</div></td><td>${new Date(c.cree * 1000).toLocaleDateString('fr-FR')}</td><td>${ilya(c.derniere)}</td>
         <td class="r">${c.visites || '—'}</td><td>${c.heros.length ? esc(c.heros.slice(0, 3).join(', ')) : '—'}</td><td>${esc(c.etape)}${c.apercu ? ' · aperçu vu' : ''}</td>
@@ -684,8 +685,16 @@ async function historique(email, btn) {
     <h4 style="margin:14px 0 6px">E-mails reçus</h4>${tous.length ? `<table>${tous.map(ligneMail).join('')}</table>` : '<p class="meta">Aucun e-mail enregistré pour cette adresse.</p>'}
     <p class="meta">${j.suivi_actif ? '✅ Remis = accepté par sa boîte mail · 👀 Ouvert = affiché (certaines messageries, comme Apple Mail, l\'indiquent même sans lecture) · ❌ = non reçu. Suivi lu chez Brevo.' : 'Envoi sans Brevo : seul « envoyé » est connu.'} Le contenu des e-mails n'est pas gardé.</p>
     ${(j.anciens || []).some(m => m.erreur) ? `<p class="meta" style="color:#B3261E">${esc(j.anciens.find(m => m.erreur).erreur)}</p>` : ''}
-    <div class="acts"><button class="btn" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
+    <div class="acts"><button class="btn" onclick="lienConnexion('${esc(email)}',this)">🔑 Lien de connexion à copier</button> <button class="btn" onclick="document.getElementById('dlg').close()">Fermer</button></div><div id="lienCx"></div>`;
   document.getElementById('dlg').showModal();
+}
+async function lienConnexion(email, btn) {
+  btn.disabled = true;
+  const j = await (await fetch('/admin/api/lien-connexion' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })).json().catch(() => ({ erreur: 'Erreur' }));
+  btn.disabled = false;
+  if (j.erreur) return toast('⚠️ ' + j.erreur);
+  try { await navigator.clipboard.writeText(j.url); toast('🔑 Lien copié'); } catch (e) {}
+  document.getElementById('lienCx').innerHTML = `<p class="meta">Valable 24 h, une seule utilisation. À envoyer au client (SMS, WhatsApp…) :</p><input readonly style="width:100%" value="${esc(j.url)}" onclick="this.select()">`;
 }
 
 async function completerNoms(id, btn) {

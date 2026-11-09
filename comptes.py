@@ -76,6 +76,29 @@ def _suite_ok(s):
     return s if isinstance(s, str) and re.match(r"^/(creer|compte)(\?[\w=&%-]*)?$", s or "") else "/compte"
 
 
+def creer_lien(email, suite=None, minutes=LIEN_MIN):
+    """Lien de connexion à usage unique ; renvoie (site, url)."""
+    t = secrets.token_urlsafe(32)
+    with db._lock, db._db() as c:
+        c.execute("insert into liens values (?,?,?,?,?)", (_h(t), email, time.time() + minutes * 60, None, _suite_ok(suite)))
+        c.execute("delete from liens where expire < ?", (time.time() - 86400,))
+    site = (os.getenv("PUBLIC_URL") or request.host_url).rstrip("/")
+    return site, f"{site}/compte/connexion?t={urllib.parse.quote(t)}"
+
+
+@bp.post("/admin/api/lien-connexion")
+def admin_lien_connexion():
+    """Admin : lien de connexion à copier et transmettre soi-même (e-mail non reçu). Valable 24 h, usage unique."""
+    import boutique as B
+    if not B.admin_ok():
+        abort(403)
+    email = str((request.get_json(force=True, silent=True) or {}).get("email", "")).strip().lower()[:190]
+    if not EMAIL.match(email):
+        return jsonify(erreur="Adresse e-mail invalide."), 400
+    _, url = creer_lien(email, None, minutes=24 * 60)
+    return jsonify(url=url)
+
+
 @bp.post("/api/compte/lien")
 def envoyer_lien():
     import boutique as B
@@ -89,12 +112,7 @@ def envoyer_lien():
         n = c.execute("select count(*) from liens where email=? and expire > ?", (email, time.time() + LIEN_MIN * 60 - 3600)).fetchone()[0]
     if n >= 4:
         return jsonify(erreur="Plusieurs liens ont déjà été envoyés : regardez vos e-mails (et les indésirables), ou réessayez dans une heure."), 429
-    t = secrets.token_urlsafe(32)
-    with db._lock, db._db() as c:
-        c.execute("insert into liens values (?,?,?,?,?)", (_h(t), email, time.time() + LIEN_MIN * 60, None, _suite_ok(d.get("suite"))))
-        c.execute("delete from liens where expire < ?", (time.time() - 86400,))
-    site = (os.getenv("PUBLIC_URL") or request.host_url).rstrip("/")
-    url = f"{site}/compte/connexion?t={urllib.parse.quote(t)}"
+    site, url = creer_lien(email, d.get("suite"))
     texte = (f"Bonjour,\n\nPour vous connecter à votre compte Mon Héros du Mois, ouvrez ce lien (valable {LIEN_MIN} minutes) :\n{url}\n\n"
              "Vous n'avez rien demandé ? Ignorez simplement ce message.\n\nL'équipe Mon Héros du Mois")
     html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
