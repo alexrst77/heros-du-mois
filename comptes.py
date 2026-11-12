@@ -185,6 +185,40 @@ def deconnexion():
     return resp
 
 
+VUE_ADMIN = "mhm_vue_admin"
+
+
+@bp.get("/admin/voir-compte")
+def admin_voir_compte():
+    """Admin : ouvre l'espace du client dans ce navigateur (2 h, sans compter comme une visite du client)."""
+    import boutique as B
+    if not B.admin_ok():
+        abort(403)
+    email = str(request.args.get("email") or "").strip().lower()[:190]
+    if not EMAIL.match(email):
+        abort(400)
+    cl = client_par_email(email)
+    t = secrets.token_urlsafe(32)
+    with db._lock, db._db() as c:
+        c.execute("insert into sessions values (?,?,?)", (_h(t), cl["id"], time.time() + 7200))
+    sec = request.is_secure or request.headers.get("X-Forwarded-Proto") == "https"
+    resp = redirect("/compte")
+    resp.set_cookie(COOKIE, t, max_age=7200, httponly=True, samesite="Lax", secure=sec)
+    resp.set_cookie(VUE_ADMIN, "1", max_age=7200, samesite="Lax", secure=sec)
+    return resp
+
+
+@bp.get("/compte/quitter-vue-admin")
+def quitter_vue_admin():
+    t = request.cookies.get(COOKIE)
+    if t and request.cookies.get(VUE_ADMIN):
+        with db._lock, db._db() as c:
+            c.execute("delete from sessions where empreinte=?", (_h(t),))
+    resp = redirect("/")
+    resp.delete_cookie(COOKIE); resp.delete_cookie(VUE_ADMIN)
+    return resp
+
+
 # ------------------------------------------------------------------ mon compte
 STATUTS = {"payee": "En création", "generation": "En création", "a_verifier": "Relecture par notre équipe", "erreur": "Relecture par notre équipe",
            "attente_fete": "Programmé pour sa fête", "envoyee_impression": "En impression", "expediee": "Expédié", "annulee": "Annulée"}
@@ -241,6 +275,8 @@ def mon_compte():
     resp = jsonify(connecte=True, email=cl["email"], nom=cl.get("nom") or "", adresse=json.loads(cl["adresse"]) if cl.get("adresse") else None,
                    heros=hs, commandes=commandes_de(cl), nouveautes=_nouveautes(cl["email"]), **base)
     t = request.cookies.get(COOKIE)                       # session prolongée à chaque visite : on reste connecté tant qu'on revient
+    if request.cookies.get(VUE_ADMIN):                    # vue admin : ni prolongée, ni comptée comme visite du client
+        return resp
     with db._lock, db._db() as c:
         c.execute("update sessions set expire=? where empreinte=?", (time.time() + DUREE, _h(t)))
         c.execute("update clients set vu=? where id=?", (time.time(), cl["id"]))
