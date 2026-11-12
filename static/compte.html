@@ -115,7 +115,7 @@
       b.disabled = true;
       const j = await (await fetch('/api/compte/heros/' + b.dataset.ouvrir)).json();
       try { const cur = JSON.parse(localStorage.getItem('heros-avatar') || '{}'); localStorage.setItem('heros-avatar', JSON.stringify(Object.assign(cur, j.etat))); } catch (_) {}
-      location.href = '/creer';
+      location.href = '/creer/autres-creations';
     });
     document.querySelectorAll('[data-suppr]').forEach(b => b.onclick = async () => {
       if (!confirm(`Supprimer ${b.dataset.nom} de vos héros enregistrés ?`)) return;

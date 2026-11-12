@@ -121,7 +121,7 @@ def prix_public():
     """Prix affichés AVANT le premier paiement (aucun prix inventé : ceux de paiement.py)."""
     num = paiement.FORMULES["ebook"]["prix"]
     relie = paiement.FORMULES["relie"]["prix_livre"]
-    return {"numerique": num, "relie": relie, "complement": max(0, relie - num), "port_fr_1": paiement.port_relie(1, "FR"),
+    return {"numerique": num, "relie": relie, "ebook_ajout": paiement.PRIX_EBOOK_AJOUT, "port_fr": paiement.frais_port("livre", "FR"), "complement": max(0, relie - num), "port_fr_1": paiement.port_relie(1, "FR"),
             "port_fr_3": paiement.port_relie(3, "FR"), "supplement_pays": paiement.SUPPLEMENT_PAYS, "quantites": list(paiement.QUANTITES_RELIE),
             "pages": {"histoire": 18, "lecture": 20, "impression": 24}}
 
@@ -468,11 +468,29 @@ def apercu_projet(pid):
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[a-z]{2,}$", re.I)
 
 
+@bp.post("/api/projets/<pid>/devis")
+def devis_commande(pid):
+    """Montant exact avant paiement (calculé ici, aux tarifs actuels) : livre imprimé, option numérique, livraison, code promo."""
+    charger(pid)
+    d = request.get_json(force=True, silent=True) or {}
+    pays = str(d.get("pays") or "FR").upper()
+    promo = paiement.promo_valide(d.get("code_promo"))
+    promo = promo[0] if promo else None
+    ebook = paiement.ebook_ajoute("livre", d.get("ebook"))
+    try:
+        lignes = paiement.lignes("livre", pays, promo=promo, ebook=ebook)
+        total = paiement.total("livre", pays, promo=promo, ebook=ebook)
+    except Exception as e:
+        return jsonify(erreur=str(e)), 503
+    return jsonify(lignes=[{"nom": l[0], "quantite": int(l[1]), "montant": int(l[1]) * int(l[2])} for l in lignes], total=total,
+                   remise=paiement.remise("livre", pays, promo=promo, ebook=ebook), code_promo=promo)
+
+
 @bp.post("/api/projets/<pid>/acheter")
 def acheter(pid):
-    """Crée la commande du livre numérique (formule « ebook », prix PRIX_EBOOK) et ouvre le paiement. Rien n'est payé ici sans
-    l'action du parent sur Stripe ; aucune version papier n'est ajoutée."""
-    import boutique as B, app as A, apercu
+    """Commande et paiement, AU TARIF ACTUEL du site : livre imprimé (formule « livre », prix et livraison de paiement.py), avec la
+    version e-book en option (même prix d'ajout que l'ancien créateur). Rien n'est payé ici sans l'action du parent sur Stripe."""
+    import boutique as B, apercu, comptes
     p = charger(pid)
     d = request.get_json(force=True, silent=True) or {}
     if p["statut"] != "brouillon":
@@ -486,18 +504,28 @@ def acheter(pid):
                 pass
         if o and o["statut"] != "attente_paiement":
             return jsonify(erreur="Ce livre est déjà payé.", suivi=lien(p, "/mon-livre")), 409
+    formule = "ebook" if d.get("formule") == "ebook" else "livre"
     email = _txt(d.get("email"), 190)
     if not EMAIL.match(email):
         return jsonify(erreur="Adresse e-mail invalide."), 400
+    if formule == "livre":
+        addr, err = B.parse_address(d.get("adresse"))
+        if err:
+            return jsonify(erreur=err), 400
+    else:
+        addr = {"nom": _txt((d.get("adresse") or {}).get("nom") if isinstance(d.get("adresse"), dict) else "", 80), "pays": "FR"}
     if d.get("cgv") is not True:
         return jsonify(erreur="Merci d'accepter les conditions générales de vente."), 400
-    if d.get("renonce_retractation") is not True:
-        return jsonify(erreur="Cochez la case : vous demandez la création immédiate du livre numérique et renoncez au droit de rétractation."), 400
+    ebook = formule == "ebook" or paiement.ebook_ajoute(formule, d.get("ebook"))
+    if ebook and d.get("renonce_retractation") is not True:
+        return jsonify(erreur="Pour la version numérique, cochez la case : vous demandez sa création immédiate et renoncez au droit de rétractation."), 400
     if any(x for x in photos_de(pid)) and not (p["donnees"] or {}).get("photo_ok"):
         return jsonify(erreur="Confirmez que vous êtes autorisé·e à utiliser les photos transmises."), 400
     form, errs = formulaire(p)
     if errs:
         return jsonify(erreur=" ; ".join(errs)), 400
+    form["formule"] = formule
+    form["ebook"] = bool(ebook)
     promo = paiement.promo_valide(d.get("code_promo"))
     if d.get("code_promo") and not promo:
         return jsonify(erreur="Ce code promo n'existe pas."), 400
@@ -512,22 +540,32 @@ def acheter(pid):
                 form["couverture_apercu"] = pa
         except Exception as e:
             log(f"projet {pid} : aperçu non repris ({e})")
+    pays = addr.get("pays") or "FR"
     oid = uuid.uuid4().hex[:12]
     folder = B.STORE / oid; folder.mkdir(parents=True)
-    lignes = paiement.lignes("ebook", "FR", promo=promo)
+    try:
+        lignes = paiement.lignes(formule, pays, promo=promo, ebook=ebook)
+    except Exception as e:
+        return jsonify(erreur=str(e)), 503
     (folder / "livre.json").write_text(json.dumps({"form": form, "guides": {}, "apercus": {}, "lignes": lignes, "projet": pid},
                                                   ensure_ascii=False), encoding="utf-8")
-    montant = paiement.total("ebook", "FR", promo=promo)
+    montant = paiement.total(formule, pays, promo=promo, ebook=ebook)
     cl = _client()
-    db.create(id=oid, formule="ebook", email=email, adresse={"nom": "", "pays": "FR"}, statut="attente_paiement", montant=montant, origine=oid,
+    db.create(id=oid, formule=formule, email=email, adresse=addr, statut="attente_paiement", montant=montant, origine=oid,
               numero=1, projet_id=pid, client_id=cl["id"] if cl else p.get("client_id"))
+    if formule == "livre":
+        try:
+            comptes.noter_commande(oid, addr)              # connecté : adresse gardée pour la prochaine fois
+        except Exception as e:
+            log(f"commande {oid} : rattachement au compte impossible : {e}")
     maj(pid, statut="attente_paiement", commande_numerique=oid, email=email, etape="paiement")
     noter_etape("paiement")
     if not paiement.configured():
         return jsonify(id=oid, url=f"/mon-livre/{pid}?j={p['jeton']}&test=1")
     try:
-        sid, url = paiement.checkout(oid, "ebook", email, B.base_url(), promo=promo, remise_cents=paiement.remise("ebook", "FR", promo=promo),
-                                     ebook=True, retour=f"{B.base_url()}/mon-livre/{pid}?j={p['jeton']}")
+        sid, url = paiement.checkout(oid, formule, email, B.base_url(), pays=pays, promo=promo,
+                                     remise_cents=paiement.remise(formule, pays, promo=promo, ebook=ebook),
+                                     ebook=ebook, retour=f"{B.base_url()}/mon-livre/{pid}?j={p['jeton']}")
     except paiement.StripeError as e:
         db.update(oid, statut="erreur", erreur=str(e)); maj(pid, statut="brouillon")
         return jsonify(erreur=str(e)), 502
@@ -535,11 +573,35 @@ def acheter(pid):
     return jsonify(id=oid, url=url)
 
 
+STATUT_PAPIER = {"payee": "en création", "generation": "en création", "a_verifier": "relecture par notre équipe avant l'impression",
+                 "erreur": "relecture par notre équipe avant l'impression", "envoyee_impression": "en impression", "expediee": "expédié"}
+
+
+def pdf_ouvert(p):
+    """PDF téléchargeable : livre numérique acheté (seul, ou en option du livre imprimé)."""
+    o = db.get((p or {}).get("commande_numerique") or "")
+    if not o:
+        return False
+    if paiement.numerique(o.get("formule")):
+        return True
+    import boutique as B
+    return B.ebook_de(o["id"])
+
+
+def papier_inclus(p):
+    """Le livre imprimé fait partie de la commande d'origine (tarif actuel) : pas de « relié avec déduction » ensuite."""
+    o = db.get((p or {}).get("commande_numerique") or "")
+    return bool(o) and not paiement.numerique(o.get("formule"))
+
+
 def apres_paiement_numerique(oid):
     """Appelé par boutique.confirm_paid (paiement confirmé côté serveur, une seule fois) : crédit créé, projet passé en génération."""
     o = db.get(oid)
     pid = o.get("projet_id")
     if not pid:
+        return
+    if not paiement.numerique(o.get("formule")):           # livre imprimé payé directement : aucune déduction à créer
+        maj(pid, statut="generation")
         return
     with db._lock, db._db() as c:                           # unique (commande_numerique) : jamais deux crédits pour un paiement
         c.execute("insert or ignore into credits (id, projet_id, commande_numerique, montant, cree, statut, commande_papier, maj) values (?,?,?,?,?,?,?,?)",
@@ -621,6 +683,7 @@ def api_mon_livre(pid):
         p = get(pid)
     e = etat_livre(p)
     out = {"id": pid, "etat": e, "titre": p.get("titre"), "statut_projet": p["statut"], "prix": prix_public(), "commande": p.get("commande_numerique"),
+           "papier_inclus": papier_inclus(p), "pdf_ouvert": pdf_ouvert(p), "statut_papier": STATUT_PAPIER.get((o or {}).get("statut"), "") if papier_inclus(p) else "",
            "limites": {k: C.LIMITES[k] for k in ("corrections_texte", "corrections_image")}, "lien_brouillon": lien(p) if p["statut"] == "brouillon" else None}
     if e["etat"] == "pret":
         folder, book, v = livre_courant(p)
@@ -664,7 +727,7 @@ def image_livre(pid, name):
 def pdf_livre(pid):
     p = charger(pid)
     folder, book, v = livre_courant(p)
-    if not book or etat_livre(p)["etat"] != "pret":
+    if not book or etat_livre(p)["etat"] != "pret" or not pdf_ouvert(p):
         abort(404)
     if v > 1:
         with db._db() as c:
@@ -684,6 +747,8 @@ def corriger_textes(pid):
     """Nouvelle version du texte (pages, dédicace) : aucune image refaite, PDF recomposé, versions précédentes gardées."""
     import moteur_livre as M
     p = charger(pid)
+    if papier_inclus(p):                                   # livre imprimé déjà commandé : les corrections passent par notre équipe
+        return jsonify(erreur="Votre livre imprimé est déjà commandé : pour une correction, répondez simplement à l'e-mail de confirmation."), 409
     folder, book, v = livre_courant(p)
     if not book or etat_livre(p)["etat"] != "pret":
         return jsonify(erreur="Le livre n'est pas encore disponible."), 400
@@ -735,6 +800,8 @@ def corrections_de(pid):
 def demander_correction(pid):
     """Demande de retouche d'UNE illustration : enregistrée et traitée par l'équipe (aucune génération automatique)."""
     p = charger(pid)
+    if papier_inclus(p):                                   # livre imprimé déjà commandé : les corrections passent par notre équipe
+        return jsonify(erreur="Votre livre imprimé est déjà commandé : pour une correction, répondez simplement à l'e-mail de confirmation."), 409
     if etat_livre(p)["etat"] != "pret":
         return jsonify(erreur="Le livre n'est pas encore disponible."), 400
     if corrections_de(pid)["restantes"] <= 0:
@@ -793,6 +860,8 @@ def liberer_credit(oid):
 @bp.post("/api/mon-livre/<pid>/devis-relie")
 def devis(pid):
     p = charger(pid)
+    if papier_inclus(p):                                   # livre imprimé déjà commandé : les corrections passent par notre équipe
+        return jsonify(erreur="Votre livre imprimé est déjà commandé : pour une correction, répondez simplement à l'e-mail de confirmation."), 409
     d = request.get_json(force=True, silent=True) or {}
     _liberer_reservations(pid)
     cr = credit_de(pid)
@@ -812,6 +881,8 @@ def commander_relie(pid):
     """Commande reliée : version validée FIGÉE (copie du livre), déduction réservée de façon atomique, paiement du complément."""
     import boutique as B, app as A, fabrication, procede as P
     p = charger(pid)
+    if papier_inclus(p):                                   # livre imprimé déjà commandé : les corrections passent par notre équipe
+        return jsonify(erreur="Votre livre imprimé est déjà commandé : pour une correction, répondez simplement à l'e-mail de confirmation."), 409
     if etat_livre(p)["etat"] != "pret":
         return jsonify(erreur="Le livre n'est pas encore disponible."), 400
     d = request.get_json(force=True, silent=True) or {}

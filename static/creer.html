@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
 <link rel="apple-touch-icon" href="/static/marque/apple-touch-icon.png">
 <title>Créer son livre personnalisé – Mon Héros du Mois</title>
-<meta name="description" content="Composez le livre de votre enfant pas à pas : âge, histoire, valeur, avatar ou photo, style et police. Livre numérique d'abord, version reliée ensuite.">
+<meta name="description" content="Composez le livre de votre enfant pas à pas : âge, histoire, valeur, avatar ou photo, style et police. Vous voyez sa couverture avant de commander le livre imprimé.">
 <link rel="canonical" href="https://www.monherosdumois.fr/creer">
 <style>
 @font-face { font-family: "Grandstander"; src: url("/static/fonts/grandstander-latin-800-normal.woff2") format("woff2"); font-weight: 800; font-display: swap; }
@@ -193,7 +193,8 @@ dialog .fermer { position: absolute; top: 10px; right: 10px; }
   /* ---------------- état du projet ---------------- */
   const P = { id: null, jeton: null, d: { heros: {}, personnages: [], evenements: { types: [], texte: '' }, dedicace: { de: '', texte: '' }, langue: 'fr' }, statut: 'brouillon' };
   const q = new URLSearchParams(location.search);
-  let depuisRecap = false, sens = 1, apercuId = null, ded_i = 0;
+  let depuisRecap = false, sens = 1, apercuId = null, ded_i = 0, AD = {};
+  let PROMO = ''; try { PROMO = new URLSearchParams(location.search).get('promo') || sessionStorage.getItem('promo') || ''; if (PROMO) sessionStorage.setItem('promo', PROMO); } catch (_) {}   // lien de pub : /creer?promo=CODE
   async function api(url, opt) {
     opt = opt || {};
     const h = Object.assign({ 'Content-Type': 'application/json' }, P.jeton ? { 'X-Projet-Jeton': P.jeton } : {}, opt.headers || {});
@@ -594,29 +595,55 @@ dialog .fermer { position: absolute; top: 10px; right: 10px; }
       ${L('dedicace', 'Dédicace', d.dedicace.texte ? (d.dedicace.texte.slice(0, 60) + (d.dedicace.texte.length > 60 ? '…' : '')) : '', true)}</div>
     <div class="boite" id="apercuBox"><h2>Voir sa couverture avant de payer</h2><p class="aide" style="margin:0 0 10px">Une vraie illustration de couverture, avec ${esc(lui())} et ses personnages. Un aperçu offert par enfant ; la couverture du livre sera celle-ci si rien ne change.</p>
       <div id="apercuZone"><button type="button" class="btn second plein" data-act="apercu">Créer l'aperçu de la couverture</button></div></div>
-    <div class="boite"><h2>Ce que vous achetez maintenant</h2>
-      <p style="margin:0 0 10px"><b>Le livre numérique</b> de ${esc(lui())} : une histoire unique, illustrée, en PDF à lire sur écran et à télécharger, avec un espace « Mon livre » pour le lire, corriger les textes et demander ${CAT.limites.corrections_image} retouche${CAT.limites.corrections_image > 1 ? 's' : ''} d'illustration.</p>
-      <ul style="margin:0 0 10px;padding-left:20px;font-size:15px"><li>${pr.pages.lecture}${d.dedicace.texte ? ' + 1' : ''} pages : couverture, ${d.dedicace.texte ? 'dédicace, ' : ''}${pr.pages.histoire} pages d'histoire illustrées sur 9 doubles pages, quatrième de couverture</li>
-        <li>Création lancée seulement après la confirmation du paiement ; un e-mail vous prévient quand il est prêt</li></ul>
-      <div class="prix"><div><span>Livre numérique</span><span class="gros">${eu(pr.numerique)}</span></div></div></div>
-    <div class="boite" style="background:#FFFBF5"><h2>Et le livre relié ? (facultatif, plus tard)</h2>
-      <p style="margin:0 0 8px;font-size:15px">Rien n'est imprimé ni payé à cette étape. Après avoir découvert et relu le livre numérique, vous pourrez commander sa version reliée : couverture rigide, ${pr.pages.impression} pages, 21,6 × 21,6 cm.</p>
-      <div class="prix"><div><span>Livre relié</span><span>${eu(pr.relie)}</span></div><div><span>Déduction du livre numérique payé (une fois par livre)</span><span>− ${eu(pr.numerique)}</span></div>
-        <div><b>Reste à payer pour le livre relié</b><b>${eu(pr.complement)}</b></div><div><span>Livraison en France (1 livre)</span><span>${eu(pr.port_fr_1)}</span></div></div>
-      <p class="aide">Autres pays : frais selon la destination, affichés avant le paiement. La déduction ne s'applique pas à la livraison.</p></div>
-    <div class="boite"><div class="champ"><label for="mail">Votre e-mail <span class="aide" style="display:inline">(pour recevoir le livre)</span></label><input type="email" id="mail" autocomplete="email" value="${esc(P.email || '')}" placeholder="vous@exemple.fr"></div>
+    <div class="boite"><h2>Son livre imprimé</h2>
+      <p style="margin:0 0 10px">Le livre de ${esc(lui())} : une histoire unique, illustrée, imprimée avec une couverture rigide (${pr.pages.impression} pages, 21,6 × 21,6 cm) et livrée chez vous.</p>
+      <ul style="margin:0 0 10px;padding-left:20px;font-size:15px"><li>Création lancée seulement après la confirmation du paiement</li>
+        <li>Notre équipe relit chaque page avant l'impression</li><li>Suivi de la création, puis du colis, dans votre espace « Mon livre »</li></ul>
+      <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;margin:6px 0 4px"><input type="checkbox" id="ebk" ${P.ebook ? 'checked' : ''} style="margin-top:3px">
+        <span>Ajouter la version numérique (PDF à lire sur écran et à télécharger) : <b>+ ${eu(pr.ebook_ajout)}</b></span></label>
+      <div class="prix" id="devis" style="margin-top:10px"><div><span>Livre imprimé</span><span class="gros">${eu(pr.relie)}</span></div><div><span>Livraison en France</span><span>${eu(pr.port_fr)}</span></div></div></div>
+    <div class="boite"><h2>Livraison</h2>
+      <div class="champ"><label for="mail">Votre e-mail</label><input type="email" id="mail" autocomplete="email" value="${esc(P.email || '')}" placeholder="vous@exemple.fr"></div>
+      <div class="champ"><label for="a_nom">Nom et prénom</label><input type="text" id="a_nom" autocomplete="name" maxlength="80" value="${esc(AD.nom || '')}"></div>
+      <div class="champ"><label for="a_l1">Adresse</label><input type="text" id="a_l1" autocomplete="address-line1" maxlength="120" value="${esc(AD.adresse1 || '')}"></div>
+      <div class="champ"><label for="a_l2">Complément <span class="fac">facultatif</span></label><input type="text" id="a_l2" autocomplete="address-line2" maxlength="120" value="${esc(AD.adresse2 || '')}"></div>
+      <div class="champ"><label for="a_cp">Code postal</label><input type="text" id="a_cp" autocomplete="postal-code" inputmode="numeric" maxlength="12" value="${esc(AD.code_postal || '')}"></div>
+      <div class="champ"><label for="a_v">Ville</label><input type="text" id="a_v" autocomplete="address-level2" maxlength="80" value="${esc(AD.ville || '')}"></div>
+      <div class="champ"><label for="a_p">Pays</label><select id="a_p">${[['FR', 'France'], ['RE', 'La Réunion'], ['BE', 'Belgique'], ['LU', 'Luxembourg'], ['CH', 'Suisse'], ['MC', 'Monaco']].map(([k, n]) => `<option value="${k}" ${(AD.pays || 'FR') === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="champ"><label for="a_t">Téléphone <span class="aide" style="display:inline">(demandé par le transporteur)</span></label><input type="tel" id="a_t" autocomplete="tel" maxlength="20" value="${esc(AD.telephone || '')}"></div>
       <div class="cases"><label><input type="checkbox" id="cgv"> J'accepte les <a href="/cgv" target="_blank">conditions générales de vente</a>.</label>
-      <label><input type="checkbox" id="retr"> Je demande la création immédiate du livre numérique et je renonce à mon droit de rétractation pour ce contenu personnalisé.</label>
+      <label id="retrL" style="${P.ebook ? '' : 'display:none'}"><input type="checkbox" id="retr"> Je demande la création immédiate de la version numérique et je renonce à mon droit de rétractation pour ce contenu personnalisé.</label>
       ${(h.voie === 'photo' || d.personnages.some(x => x.voie === 'photo')) ? `<label><input type="checkbox" id="phok" ${d.photo_ok ? 'checked' : ''}> Je confirme être autorisé·e à utiliser les photos transmises (voir la <a href="/confidentialite" target="_blank">confidentialité</a>).</label>` : ''}</div>
-      <div class="champ"><label for="promo">Code promo <span class="fac">facultatif</span></label><input type="text" id="promo" maxlength="30" autocomplete="off"></div>
+      <div class="champ"><label for="promo">Code promo <span class="fac">facultatif</span></label><input type="text" id="promo" maxlength="30" autocomplete="off" value="${esc(PROMO)}"></div>
       <p class="erreur" id="perr" role="alert"></p></div>
     <p class="reprendre">Pas maintenant ? <button type="button" class="lien" data-act="plus-tard">Reprendre plus tard</button></p>`;
   }
   function apresRecap() {
     const manque = aRevoir();
     actions(manque ? `<button class="btn" type="button" data-edit="${manque}">Compléter : ${esc((ETAPES.find(e => e.k === manque) || {}).k === 'heros' ? 'le héros' : typeof ETAPES[idx(manque)].titre === 'string' ? ETAPES[idx(manque)].titre.replace(/ \?$/, '').toLowerCase() : 'une étape')}</button>`
-      : `<button class="btn" type="button" data-act="payer">Payer le livre numérique · ${eu(CAT.prix.numerique)}</button>`);
+      : `<button class="btn" type="button" data-act="payer" id="bpay">Payer · ${eu(CAT.prix.relie + CAT.prix.port_fr)}</button>`);
     if ($('phok')) $('phok').onchange = e => { P.d.photo_ok = e.target.checked; sauver(); };
+    if (!$('ebk')) return;
+    $('ebk').onchange = e => { P.ebook = e.target.checked; $('retrL').style.display = P.ebook ? '' : 'none'; devisCommande(); };
+    $('a_p').onchange = () => { AD.pays = $('a_p').value; devisCommande(); }; $('promo').onchange = () => { PROMO = $('promo').value.trim(); devisCommande(); };
+    [['a_nom', 'nom'], ['a_l1', 'adresse1'], ['a_l2', 'adresse2'], ['a_cp', 'code_postal'], ['a_v', 'ville'], ['a_t', 'telephone']].forEach(([i, k]) => { $(i).oninput = () => { AD[k] = $(i).value; }; });
+    $('mail').oninput = () => { P.email = $('mail').value.trim(); };
+    if (!AD.nom) fetch('/api/compte', { cache: 'no-store' }).then(r => r.json()).then(c => {        // connecté : dernière adresse pré-remplie
+      const a = (c && c.adresse) || {}; if (!c || !c.connecte) return;
+      if (!$('mail').value) $('mail').value = c.email || '';
+      [['a_nom', 'nom'], ['a_l1', 'adresse1'], ['a_l2', 'adresse2'], ['a_cp', 'code_postal'], ['a_v', 'ville'], ['a_t', 'telephone']].forEach(([i, k]) => { if ($(i) && !$(i).value && a[k]) $(i).value = a[k]; });
+      if (a.pays && $('a_p')) { $('a_p').value = a.pays; devisCommande(); }
+    }).catch(() => {});
+    devisCommande();
+  }
+  async function devisCommande() {
+    const z = $('devis'); if (!z || !P.id) return;
+    try {
+      const q = await api('/api/projets/' + P.id + '/devis', { method: 'POST', body: JSON.stringify({ pays: $('a_p').value, ebook: !!P.ebook, code_promo: $('promo').value.trim() }) });
+      z.innerHTML = q.lignes.map(l => `<div><span>${esc(l.nom)}${l.quantite > 1 ? ' × ' + l.quantite : ''}</span><span>${l.montant < 0 ? '− ' + eu(-l.montant) : eu(l.montant)}</span></div>`).join('')
+        + `<div><b>Total</b><b class="gros">${eu(q.total)}</b></div>`;
+      if ($('bpay')) $('bpay').textContent = 'Payer · ' + eu(q.total);
+    } catch (e) { z.insertAdjacentHTML('beforeend', `<p class="erreur">${esc(e.message)}</p>`); }
   }
   async function lancerApercu() {
     const z = $('apercuZone');
@@ -641,14 +668,17 @@ dialog .fermer { position: absolute; top: 10px; right: 10px; }
     const err = $('perr'); err.textContent = '';
     const mail = $('mail').value.trim();
     if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(mail)) { err.textContent = 'Indiquez une adresse e-mail valide.'; $('mail').focus(); return; }
-    if (!$('cgv').checked || !$('retr').checked) { err.textContent = 'Cochez les deux cases pour continuer.'; return; }
+    if (!$('cgv').checked) { err.textContent = 'Acceptez les conditions générales de vente pour continuer.'; return; }
+    if (P.ebook && !$('retr').checked) { err.textContent = 'Pour la version numérique, cochez la case de création immédiate.'; return; }
+    const adresse = { nom: $('a_nom').value, adresse1: $('a_l1').value, adresse2: $('a_l2').value, code_postal: $('a_cp').value, ville: $('a_v').value, pays: $('a_p').value, telephone: $('a_t').value };
+    AD = adresse;
     if ($('phok') && !$('phok').checked) { err.textContent = 'Confirmez l\'autorisation d\'utiliser les photos.'; return; }
     P.email = mail; b.disabled = true; b.textContent = 'Ouverture du paiement sécurisé…';
     try {
       await sauverMaintenant();
-      const j = await api('/api/projets/' + P.id + '/acheter', { method: 'POST', body: JSON.stringify({ email: mail, cgv: true, renonce_retractation: true, code_promo: $('promo').value.trim(), apercu: apercuId }) });
+      const j = await api('/api/projets/' + P.id + '/acheter', { method: 'POST', body: JSON.stringify({ formule: 'livre', email: mail, adresse, ebook: !!P.ebook, cgv: true, renonce_retractation: !!(P.ebook && $('retr').checked), code_promo: $('promo').value.trim(), apercu: apercuId }) });
       location.href = j.url;
-    } catch (e) { err.textContent = e.message; b.disabled = false; b.textContent = `Payer le livre numérique · ${eu(CAT.prix.numerique)}`; if (e.j && e.j.suivi) location.href = e.j.suivi; }
+    } catch (e) { err.textContent = e.message; b.disabled = false; b.textContent = 'Payer'; devisCommande(); if (e.j && e.j.suivi) location.href = e.j.suivi; }
   }
   function plusTard() {
     const l = P.id ? `${location.origin}/creer?projet=${P.id}&j=${encodeURIComponent(P.jeton)}` : location.href;

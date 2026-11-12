@@ -83,9 +83,9 @@ snap_old = P.snapshot(old_form, G.build_config(old_form))
 ok("parcours" not in snap_old["histoire"] and P.prompt_image(snap_old) == P.PROMPT_IMAGE, "ancienne commande : instantané et prompt identiques")
 
 # achat numérique (sans Stripe : mode test)
-r = c.post(f"/api/projets/{pid}/acheter", json={"email": "test@exemple.fr", "cgv": True}, headers=H)
+r = c.post(f"/api/projets/{pid}/acheter", json={"formule": "ebook", "email": "test@exemple.fr", "cgv": True}, headers=H)
 ok(r.status_code == 400, "achat sans renonciation : refusé")
-r = c.post(f"/api/projets/{pid}/acheter", json={"email": "test@exemple.fr", "cgv": True, "renonce_retractation": True}, headers=H).get_json()
+r = c.post(f"/api/projets/{pid}/acheter", json={"formule": "ebook", "email": "test@exemple.fr", "cgv": True, "renonce_retractation": True}, headers=H).get_json()
 oid = r["id"]; o = db.get(oid)
 ok(o["formule"] == "ebook" and o["montant"] == 990 and o["statut"] == "attente_paiement", "commande numérique 9,90 €, en attente de paiement (rien de lancé)")
 ok(c.put(f"/api/projets/{pid}", json={"donnees": d}, headers=H).status_code == 409, "projet figé après le passage au paiement")
@@ -93,7 +93,7 @@ st = c.get(f"/api/mon-livre/{pid}", headers=H).get_json()
 ok(st["etat"]["etat"] == "attente_paiement", "suivi : attente de paiement")
 st = c.get(f"/api/mon-livre/{pid}?annule=1", headers=H).get_json()
 ok(PC.get(pid)["statut"] == "brouillon", "paiement annulé : brouillon de nouveau modifiable")
-r = c.post(f"/api/projets/{pid}/acheter", json={"email": "test@exemple.fr", "cgv": True, "renonce_retractation": True}, headers=H).get_json()
+r = c.post(f"/api/projets/{pid}/acheter", json={"formule": "ebook", "email": "test@exemple.fr", "cgv": True, "renonce_retractation": True}, headers=H).get_json()
 oid = r["id"]
 
 # paiement confirmé deux fois (webhook + retour) : un seul crédit, une seule fabrication
@@ -189,4 +189,30 @@ r = c.post(f"/admin/api/corrections/{corr['id']}/publier").get_json()
 st3 = c.get(f"/api/mon-livre/{pid}", headers=H).get_json()
 ok(r["version"] == vv + 1 and "retouche" in st3["doubles"][2] and st3["doubles"][1] == st["doubles"][1], "retouche publiée : seule la double page 3 change, nouvelle version")
 ok("retouche" not in json.dumps(json.loads((gel / "livre.json").read_text())), "retouche : la commande reliée déjà passée garde son fichier")
+# ---------------- tarif actuel : livre imprimé payé directement (ce que propose le configurateur), e-book en option
+r = c.post("/api/projets", json={"donnees": d, "etape": "recap"}).get_json()
+pid2, J2 = r["id"], r["jeton"]; H2 = {"X-Projet-Jeton": J2}
+c.put(f"/api/projets/{pid2}", json={"donnees": d, "etape": "recap"}, headers=H2)
+q = c.post(f"/api/projets/{pid2}/devis", json={"pays": "FR"}, headers=H2).get_json()
+ok(q["total"] == paiement.total("livre", "FR") == 2790 + 790, f"devis livre imprimé : {q['total']} = 27,90 + 7,90 (tarif actuel)")
+q = c.post(f"/api/projets/{pid2}/devis", json={"pays": "FR", "ebook": True}, headers=H2).get_json()
+ok(q["total"] == paiement.total("livre", "FR", ebook=True), "devis avec e-book en option : même calcul que l'ancien créateur")
+ok(c.post(f"/api/projets/{pid2}/acheter", json={"email": "t@exemple.fr", "cgv": True}, headers=H2).status_code == 400, "livre imprimé sans adresse : refusé")
+ok(c.post(f"/api/projets/{pid2}/acheter", json={"email": "t@exemple.fr", "cgv": True, "adresse": adr, "ebook": True}, headers=H2).status_code == 400, "e-book en option sans renonciation : refusé")
+r = c.post(f"/api/projets/{pid2}/acheter", json={"email": "t@exemple.fr", "cgv": True, "adresse": adr}, headers=H2).get_json()
+o2 = db.get(r["id"])
+ok(o2["formule"] == "livre" and o2["montant"] == paiement.total("livre", "FR") and o2["adresse"]["ville"] == adr["ville"], "commande livre imprimé : formule livre, montant et adresse")
+started = []
+orig = B.start_book
+B.start_book = lambda b, auto=False, reprise=False: started.append(b)
+B.confirm_paid(o2["id"])
+B.start_book = orig
+with db._db() as cx:
+    n2 = cx.execute("select count(*) from credits where projet_id=?", (pid2,)).fetchone()[0]
+ok(started == [o2["id"]] and n2 == 0 and PC.get(pid2)["statut"] == "generation", "paiement : fabrication lancée, aucune déduction créée")
+st = c.get(f"/api/mon-livre/{pid2}", headers=H2).get_json()
+ok(st["papier_inclus"] and not st["pdf_ouvert"], "Mon livre : livre imprimé inclus, pas de PDF sans l'option")
+ok(c.post(f"/api/mon-livre/{pid2}/commander-relie", json={}, headers=H2).status_code == 409 and c.post(f"/api/mon-livre/{pid2}/textes", json={}, headers=H2).status_code == 409,
+   "livre imprimé déjà commandé : pas de relié avec déduction ni de correction en libre-service")
+
 print("\nÉCHECS :", FAILS if FAILS else "aucun"); sys.exit(1 if FAILS else 0)

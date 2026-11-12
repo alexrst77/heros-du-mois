@@ -113,9 +113,10 @@ details summary { cursor: pointer; font-weight: 800; }
     $('m').innerHTML = `<h1>${esc(D.titre)}</h1><p class="sous">Lisez-le, corrigez-le si besoin, téléchargez-le${D.version > 1 ? ` · version ${D.version}` : ''}.</p>
       <div class="liseuse" aria-roledescription="liseuse"><div id="pg"></div></div>
       <div class="nav"><button type="button" id="prec" aria-label="Page précédente">‹</button><span id="num" aria-live="polite"></span><button type="button" id="suiv" aria-label="Page suivante">›</button></div>
-      <div class="rangee" style="margin:16px 0"><a class="btn" href="${esc(D.pdf)}">📥 Télécharger le PDF</a><a class="btn second" href="#relie">📕 Commander mon livre relié${restant()}</a></div>
+      <div class="rangee" style="margin:16px 0">${D.papier_inclus ? (D.pdf_ouvert ? `<a class="btn" href="${esc(D.pdf)}">📥 Télécharger le PDF</a>` : '') : `<a class="btn" href="${esc(D.pdf)}">📥 Télécharger le PDF</a><a class="btn second" href="#relie">📕 Commander mon livre relié${restant()}</a>`}</div>
+      ${D.papier_inclus ? `<div class="boite"><h2>📕 Votre livre imprimé</h2><p style="margin:0">Statut : <b>${esc(D.statut_papier || 'en cours')}</b>.</p><p class="aide">Une correction à faire avant l'impression ? Répondez simplement à l'e-mail de confirmation de commande : notre équipe s'en occupe.</p></div>` : ''}
       ${D.cherche ? `<details class="boite"><summary>🔍 Solutions du « Cherche et trouve » (${esc(D.cherche.element || '')})</summary><ul>${D.cherche.solutions.map(s => `<li>Double page ${s.double_page} : ${esc(s.ou || 'cachée dans l\'image')}</li>`).join('')}</ul></details>` : ''}
-      <details class="boite" id="corr"><summary>✏️ Corriger les textes ou la dédicace</summary>
+      ${D.papier_inclus ? '' : `<details class="boite" id="corr"><summary>✏️ Corriger les textes ou la dédicace</summary>
         <p class="aide">Les illustrations ne changent pas. Une nouvelle version du PDF est créée ; les précédentes sont gardées. Corrections restantes : <b>${D.corrections_texte_restantes}</b>.</p>
         <label for="ded">Dédicace</label><textarea id="ded" maxlength="400">${esc((D.dedicace || {}).texte || '')}</textarea>
         <label for="dedde">De la part de</label><input type="text" id="dedde" maxlength="50" value="${esc((D.dedicace || {}).de || '')}">
@@ -127,7 +128,7 @@ details summary { cursor: pointer; font-weight: 800; }
         ${D.corrections_image.restantes ? `<label for="ci">Illustration</label><select id="ci"><option value="0">Couverture</option>${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<option value="${n}">Double page ${n} (pages ${n * 2 - 1} et ${n * 2})</option>`).join('')}</select>
         <label for="cd">Ce qu'il faut corriger</label><textarea id="cd" maxlength="400" placeholder="Ex. : ses cheveux devraient être bouclés ; le chien a deux queues"></textarea>
         <p class="erreur" id="ierr" role="alert"></p><button type="button" class="btn second plein" id="isend">Envoyer la demande</button>` : ''}</details>
-      <section class="boite" id="relie" tabindex="-1"><h2>📕 Commander mon livre relié</h2>${vueRelie()}</section>`;
+      <section class="boite" id="relie" tabindex="-1"><h2>📕 Commander mon livre relié</h2>${vueRelie()}</section>`}`;
     afficherPage(); brancher();
   }
   function restant() { const c = D.credit; return c && c.statut === 'disponible' ? ' · ' + eu(Math.max(0, D.prix.relie - c.montant)) + ' + livraison' : ''; }
@@ -177,6 +178,7 @@ details summary { cursor: pointer; font-weight: 800; }
     } catch (e) { $('devis').innerHTML = `<p class="erreur">${esc(e.message)}</p>`; }
   }
   function brancher() {
+    if (D.papier_inclus) { $('prec').onclick = () => { page = Math.max(0, page - 1); afficherPage(); }; $('suiv').onclick = () => { page = Math.min(pagesLiseuse().length - 1, page + 1); afficherPage(); }; return; }
     $('prec').onclick = () => { page = Math.max(0, page - 1); afficherPage(); };
     $('suiv').onclick = () => { page = Math.min(pagesLiseuse().length - 1, page + 1); afficherPage(); };
     let x0 = null; $('pg').addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
