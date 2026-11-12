@@ -394,7 +394,7 @@ function vueClients() {
       ${L.map(c => `<tr><td><b>${esc(c.nom || c.email.split('@')[0])}</b><div class="meta">${esc(c.email)}${c.lieu ? ' · 📍 ' + esc(c.lieu) : ''}</div></td><td>${new Date(c.cree * 1000).toLocaleDateString('fr-FR')}</td><td>${ilya(c.derniere)}</td>
         <td class="r">${c.visites || '—'}</td><td>${c.heros.length ? esc(c.heros.slice(0, 3).join(', ')) : '—'}</td><td>${esc(c.etape)}${c.apercu ? ' · aperçu vu' : ''}</td>
         <td class="r">${c.commandes ? `<b>${c.commandes}</b> · ${eur(c.total)}` : c.non_payees ? '<span class="meta">paiement non fini</span>' : '—'}</td>
-        <td class="r" style="white-space:nowrap">${btnRel('cli', c.id, c.relance, c.relancable)}${C.mail ? ` <button class="btn" onclick="composer({email:'${esc(c.email)}'})">✍️ Écrire</button>` : ''} <button class="btn" onclick="historique('${esc(c.email)}',this)">📜 Historique</button></td></tr>`).join('')}</table></div>`
+        <td class="r" style="white-space:nowrap">${btnRel('cli', c.id, c.relance, c.relancable)}${C.mail ? ` <button class="btn" onclick="composer({email:'${esc(c.email)}'})">✍️ Écrire</button>` : ''} <button class="btn" onclick="historique('${esc(c.email)}',this)">📜 Historique</button> <button class="btn" onclick="voirCompte('${esc(c.email)}')">👁️ Compte</button></td></tr>`).join('')}</table></div>`
       : '<div class="empty"><div class="big">👤</div>Aucun compte client' + (q ? ' pour cette recherche' : ' pour l\'instant') + '.</div>'}
     <p class="meta">Les visites des comptes sont comptées quand la personne est connectée. Relance : un seul e-mail par création ou par compte, envoyé seulement quand tu cliques. Les visiteurs sans compte ni commande restent anonymes.</p>`;
 }
@@ -681,7 +681,7 @@ async function historique(email, btn) {
   if (j.erreur) return toast('⚠️ ' + j.erreur);
   const tous = (j.mails || []).concat((j.anciens || []).filter(m => !m.erreur));
   document.getElementById('dlgIn').innerHTML = `<h3>📜 ${esc(j.client && j.client.nom || email)}</h3><p class="meta">${esc(email)}${j.client ? ' · compte créé le ' + new Date(j.client.cree * 1000).toLocaleDateString('fr-FR') + (j.client.vu ? ' · vu ' + quand(j.client.vu) : '') : ' · pas de compte'}</p>
-    <div class="acts" style="margin:8px 0"><button class="btn" onclick="lienConnexion('${esc(email)}',this)">🔑 Créer son lien de connexion</button></div><div id="lienCx"></div>
+    <div class="acts" style="margin:8px 0"><button class="btn" onclick="voirCompte('${esc(email)}')">👁️ Voir son compte</button> <button class="btn" onclick="lienConnexion('${esc(email)}',this)">🔑 Créer son lien de connexion</button></div><div id="lienCx"></div>
     <h4 style="margin:14px 0 6px">Commandes</h4>${(j.commandes || []).length ? `<table>${j.commandes.map(o => `<tr><td>${quand(o.cree)}</td><td>${esc(o.titre || o.quoi)}${o.numero > 1 ? ' (livre ' + o.numero + ')' : ''}</td><td>${esc(o.statut)}</td><td class="r">${o.montant ? eur(o.montant) : ''}</td></tr>`).join('')}</table>` : '<p class="meta">Aucune commande.</p>'}
     <h4 style="margin:14px 0 6px">E-mails reçus</h4>${tous.length ? `<table>${tous.map(ligneMail).join('')}</table>` : '<p class="meta">Aucun e-mail enregistré pour cette adresse.</p>'}
     <p class="meta">${j.suivi_actif ? '✅ Remis = accepté par sa boîte mail · 👀 Ouvert = affiché (certaines messageries, comme Apple Mail, l\'indiquent même sans lecture) · ❌ = non reçu. Suivi lu chez Brevo.' : 'Envoi sans Brevo : seul « envoyé » est connu.'} Le contenu des e-mails n'est pas gardé.</p>
@@ -689,6 +689,7 @@ async function historique(email, btn) {
     <div class="acts"><button class="btn" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
   document.getElementById('dlg').showModal();
 }
+function voirCompte(email) { window.open('/admin/voir-compte' + Q + '&email=' + encodeURIComponent(email), '_blank'); }
 async function lienConnexion(email, btn) {
   btn.disabled = true;
   const j = await (await fetch('/admin/api/lien-connexion' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })).json().catch(() => ({ erreur: 'Erreur' }));

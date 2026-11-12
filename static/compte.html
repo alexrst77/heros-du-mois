@@ -129,6 +129,12 @@
     };
   }
   C.connecte ? vueCompte() : vueConnexion();
+  if (C.connecte && /(^|; )mhm_vue_admin=1/.test(document.cookie)) {
+    const b = document.createElement('div');
+    b.style.cssText = 'position:sticky;top:0;z-index:50;background:#1F2557;color:#fff;font:700 14px system-ui,sans-serif;padding:10px 14px;text-align:center';
+    b.innerHTML = `👁️ Vue admin : compte de ${esc(C.email)} · <a href="/compte/quitter-vue-admin" style="color:#FFC94A">Quitter</a>`;
+    document.body.prepend(b);
+  }
 })();
 </script>
 </body>
