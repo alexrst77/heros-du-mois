@@ -681,11 +681,12 @@ async function historique(email, btn) {
   if (j.erreur) return toast('⚠️ ' + j.erreur);
   const tous = (j.mails || []).concat((j.anciens || []).filter(m => !m.erreur));
   document.getElementById('dlgIn').innerHTML = `<h3>📜 ${esc(j.client && j.client.nom || email)}</h3><p class="meta">${esc(email)}${j.client ? ' · compte créé le ' + new Date(j.client.cree * 1000).toLocaleDateString('fr-FR') + (j.client.vu ? ' · vu ' + quand(j.client.vu) : '') : ' · pas de compte'}</p>
+    <div class="acts" style="margin:8px 0"><button class="btn" onclick="lienConnexion('${esc(email)}',this)">🔑 Créer son lien de connexion</button></div><div id="lienCx"></div>
     <h4 style="margin:14px 0 6px">Commandes</h4>${(j.commandes || []).length ? `<table>${j.commandes.map(o => `<tr><td>${quand(o.cree)}</td><td>${esc(o.titre || o.quoi)}${o.numero > 1 ? ' (livre ' + o.numero + ')' : ''}</td><td>${esc(o.statut)}</td><td class="r">${o.montant ? eur(o.montant) : ''}</td></tr>`).join('')}</table>` : '<p class="meta">Aucune commande.</p>'}
     <h4 style="margin:14px 0 6px">E-mails reçus</h4>${tous.length ? `<table>${tous.map(ligneMail).join('')}</table>` : '<p class="meta">Aucun e-mail enregistré pour cette adresse.</p>'}
     <p class="meta">${j.suivi_actif ? '✅ Remis = accepté par sa boîte mail · 👀 Ouvert = affiché (certaines messageries, comme Apple Mail, l\'indiquent même sans lecture) · ❌ = non reçu. Suivi lu chez Brevo.' : 'Envoi sans Brevo : seul « envoyé » est connu.'} Le contenu des e-mails n'est pas gardé.</p>
     ${(j.anciens || []).some(m => m.erreur) ? `<p class="meta" style="color:#B3261E">${esc(j.anciens.find(m => m.erreur).erreur)}</p>` : ''}
-    <div class="acts"><button class="btn" onclick="lienConnexion('${esc(email)}',this)">🔑 Lien de connexion à copier</button> <button class="btn" onclick="document.getElementById('dlg').close()">Fermer</button></div><div id="lienCx"></div>`;
+    <div class="acts"><button class="btn" onclick="document.getElementById('dlg').close()">Fermer</button></div>`;
   document.getElementById('dlg').showModal();
 }
 async function lienConnexion(email, btn) {
