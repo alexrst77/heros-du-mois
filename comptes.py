@@ -22,6 +22,7 @@ create table if not exists clients (id text primary key, email text unique, nom 
 create table if not exists sessions (empreinte text primary key, client_id text, expire real);
 create table if not exists liens (empreinte text primary key, email text, expire real, utilise real, suite text);
 create table if not exists heros (id text primary key, client_id text, nom text, etat text, apercu text, cree real, maj real);
+create table if not exists heros_importes (origine text primary key, quand real);
 """
 with db._db() as _c:
     _c.executescript(SCHEMA)
@@ -408,7 +409,85 @@ def compte_depuis_commande(oid):
         if a.get("adresse1"):                              # dernière adresse de livraison : pré-remplit la prochaine commande
             c.execute("update clients set adresse=? where id=?", (json.dumps(a, ensure_ascii=False), cl["id"]))
         c.execute("update commandes set client_id=? where (id=? or origine=?) and (client_id is null or client_id='')", (cl["id"], oid, oid))
+    try:
+        heros_depuis_commande(cl["id"], o.get("origine") or oid)
+    except Exception as e:
+        print("héros non importés pour", oid, e)
     return cl
+
+
+def _apercu_png(path):
+    """Petite vignette (data:image) de l'avatar peint à la commande, comme celles enregistrées depuis l'éditeur."""
+    import base64, io
+    from PIL import Image
+    try:
+        im = Image.open(path); im.thumbnail((180, 180))
+        b = io.BytesIO(); im.save(b, "PNG", optimize=True)
+        u = "data:image/png;base64," + base64.b64encode(b.getvalue()).decode()
+        return u if len(u) <= 120_000 else ""
+    except Exception:
+        return ""
+
+
+def _etat_depuis_form(form):
+    """Formulaire de commande -> configuration de l'éditeur (mêmes clés que « Enregistrer ce héros »)."""
+    av = form.get("avatar") or {}
+    enfant = {k: v for k, v in (av.get("enfant") or {}).items() if isinstance(v, str)}
+    enfant.update({k: form[k] for k in ("prenom", "age", "naissance") if form.get(k)})
+    d = av.get("doudou")
+    doudou = dict({k: v for k, v in d.items() if k != "problemes"}, actif=True) if d else {"actif": False}
+    animaux = [{k: v for k, v in a.items() if isinstance(v, str)} for a in (av.get("animaux") or [])]
+    fratrie = [dict({k: v for k, v in f.items() if isinstance(v, str)}, prenom=f.get("nom") or "") for f in (av.get("fratrie") or [])]
+    histoire = {k: form[k] for k in ("theme", "univers", "heros_livre", "passions", "precision") if form.get(k)}
+    etat = {"enfant": enfant, "doudou": doudou, "animaux": animaux, "fratrie": fratrie}
+    if histoire:
+        etat["histoire"] = histoire
+    return etat
+
+
+def heros_depuis_commande(client_id, origine):
+    """Les enfants d'une commande deviennent des héros du compte (une seule fois par commande : un héros supprimé ne revient pas)."""
+    import boutique as B
+    with db._db() as c:
+        if c.execute("select 1 from heros_importes where origine=?", (origine,)).fetchone():
+            return 0
+    folder = B.STORE / origine
+    try:
+        d = json.loads((folder / "livre.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0
+    livres = [(d.get("form") or {}, folder, d.get("apercus") or {})]
+    for e in (d.get("enfants") or {}).values():
+        livres.append((e.get("form") or {}, folder / e.get("dossier", ""), e.get("apercus") or {}))
+    n = 0
+    with db._lock, db._db() as c:
+        for form, dossier, apercus in livres:
+            nom = re.sub(r"\s+", " ", str(form.get("prenom") or "")).strip()[:30]
+            if not nom or c.execute("select 1 from heros where client_id=? and lower(nom)=lower(?)", (client_id, nom)).fetchone():
+                continue
+            if c.execute("select count(*) from heros where client_id=?", (client_id,)).fetchone()[0] >= MAX_HEROS:
+                break
+            ap = _apercu_png(dossier / apercus["enfant"]) if apercus.get("enfant") else ""
+            c.execute("insert into heros values (?,?,?,?,?,?,?)", (secrets.token_hex(6), client_id, nom,
+                      json.dumps(_etat_depuis_form(form), ensure_ascii=False), ap, time.time(), time.time()))
+            n += 1
+        c.execute("insert or ignore into heros_importes values (?,?)", (origine, time.time()))
+    return n
+
+
+def heros_manquants():
+    """Rattrapage au démarrage : héros des commandes déjà rattachées à un compte."""
+    with db._db() as c:
+        rows = c.execute("select id, client_id from commandes where (origine=id or origine is null) and client_id is not null and client_id!='' "
+                         "and statut not in ('attente_paiement','annulee') and formule not like 'essai%' "
+                         "and id not in (select origine from heros_importes)").fetchall()
+    n = 0
+    for r in rows:
+        try:
+            n += heros_depuis_commande(r["client_id"], r["id"])
+        except Exception as e:
+            print("héros non importés pour", r["id"], e)
+    return n
 
 
 def comptes_manquants():

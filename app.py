@@ -483,6 +483,7 @@ import comptes  # noqa: E402
 app.register_blueprint(comptes.bp)
 try:                                       # commandes déjà payées sans espace client (avant la création automatique) : rattrapage
     print("espaces clients créés au démarrage :", comptes.comptes_manquants())
+    print("héros ajoutés aux comptes au démarrage :", comptes.heros_manquants())
 except Exception as _e:
     print("rattrapage des espaces clients impossible :", _e)
 import suivi  # noqa: E402
