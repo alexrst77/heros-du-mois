@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" href="/static/marque/favicon-64.png">
+<link rel="apple-touch-icon" href="/static/marque/apple-touch-icon.png">
+<title>Créer son livre personnalisé – Mon Héros du Mois</title>
+<meta name="description" content="Composez le livre de votre enfant pas à pas : âge, histoire, valeur, avatar ou photo, style et police. Vous voyez sa couverture avant de commander le livre imprimé.">
+<link rel="canonical" href="https://www.monherosdumois.fr/creer">
+<style>
+@font-face { font-family: "Grandstander"; src: url("/static/fonts/grandstander-latin-800-normal.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Grandstander"; src: url("/static/fonts/grandstander-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Nunito"; src: url("/static/fonts/Nunito.woff") format("woff"); font-weight: 200 1000; font-display: swap; }
+@font-face { font-family: "P-conte"; src: url("/static/fonts/livre/Lora-Regular.woff") format("woff"); font-display: swap; }
+@font-face { font-family: "P-douce"; src: url("/static/fonts/livre/Nunito-Regular.woff") format("woff"); font-display: swap; }
+@font-face { font-family: "P-bulles"; src: url("/static/fonts/livre/Fredoka-Regular.woff") format("woff"); font-display: swap; }
+@font-face { font-family: "P-poetique"; src: url("/static/fonts/livre/Quicksand-Regular.woff") format("woff"); font-display: swap; }
+@font-face { font-family: "P-geometrique"; src: url("/static/fonts/livre/Lexend-Regular.woff") format("woff"); font-display: swap; }
+@font-face { font-family: "P-manuscrite"; src: url("/static/fonts/livre/PatrickHand-Regular.woff") format("woff"); font-display: swap; }
+@font-face { font-family: "P-ecole"; src: url("/static/fonts/livre/Andika-Regular.woff") format("woff"); font-display: swap; }
+@font-face { font-family: "P-aventure"; src: url("/static/fonts/livre/ZillaSlab-Regular.woff") format("woff"); font-display: swap; }
+:root {
+  --fond: #FFF8F0; --carte: #FFFFFF; --encre: #2B2340; --doux: #6E6683; --trait: #EFE3D6;
+  --peche: #FFE1CC; --menthe: #DDEFE6; --rose: #FBE0E6; --lilas: #ECE4FA; --ciel: #E0EEFA; --miel: #FFF0C7;
+  --action: #F0703C; --action-f: #D45A28; --ok: #2F8F6B; --erreur: #B3261E;
+  --rayon: 22px; --titre: "Grandstander", "Nunito", system-ui, sans-serif; --texte: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--fond); color: var(--encre); font: 400 17px/1.55 var(--texte); -webkit-font-smoothing: antialiased; }
+img { max-width: 100%; display: block; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--action); outline-offset: 3px; border-radius: 10px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* en-tête : logo, retour, progression */
+.tete { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--fond) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--trait); }
+.tete .in { max-width: 760px; margin: 0 auto; padding: 8px 16px; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
+.tete a.logo { justify-self: center; } .tete a.logo img { height: 40px; width: auto; }
+.rond { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--trait); background: var(--carte); display: grid; place-items: center; cursor: pointer; }
+.rond[hidden] { visibility: hidden; display: grid; }
+.prog { max-width: 760px; margin: 0 auto; padding: 0 16px 8px; }
+.barre { height: 8px; background: var(--trait); border-radius: 99px; overflow: hidden; }
+.barre i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #F6A06A, var(--action)); border-radius: 99px; transition: width .35s ease; }
+.prog p { margin: 4px 0 0; font-size: 13px; color: var(--doux); display: flex; justify-content: space-between; }
+
+main { max-width: 760px; margin: 0 auto; padding: 18px 16px 120px; }
+.ecran { animation: entree .32s ease both; }
+.ecran.retour { animation-name: entreeR; }
+@keyframes entree { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@keyframes entreeR { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ecran, .ecran.retour { animation: none; } .barre i { transition: none; } }
+h1 { font: 800 clamp(26px, 6vw, 34px)/1.12 var(--titre); margin: 6px 0 6px; letter-spacing: -.2px; outline: none; }
+h1:focus, h1:focus-visible { outline: none; }
+.sous { color: var(--doux); margin: 0 0 18px; }
+.fac { font: 600 13px var(--texte); color: var(--doux); background: var(--miel); border-radius: 99px; padding: 2px 9px; margin-left: 6px; vertical-align: 2px; }
+
+/* cartes de choix */
+.grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 620px) { .grille.trois { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.carte { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; min-height: 128px;
+         padding: 16px 10px; border-radius: var(--rayon); border: 2px solid transparent; cursor: pointer; background: var(--peche);
+         box-shadow: 0 6px 16px -10px rgba(80, 50, 30, .35); transition: transform .12s, border-color .12s, box-shadow .12s; }
+.carte:nth-child(6n+2) { background: var(--menthe); } .carte:nth-child(6n+3) { background: var(--rose); } .carte:nth-child(6n+4) { background: var(--lilas); }
+.carte:nth-child(6n+5) { background: var(--ciel); } .carte:nth-child(6n+6) { background: var(--miel); }
+.carte:hover { transform: translateY(-2px); }
+.carte[aria-pressed="true"] { border-color: var(--action); box-shadow: 0 0 0 3px rgba(240, 112, 60, .18), 0 8px 18px -10px rgba(80, 50, 30, .45); }
+.carte[aria-pressed="true"]::after { content: "✓"; position: absolute; top: 8px; right: 10px; width: 24px; height: 24px; border-radius: 50%; background: var(--action); color: #fff;
+         font: 800 14px/24px var(--texte); }
+.carte .emo { font-size: 40px; line-height: 1; }
+.carte .nom { font: 700 16px/1.25 var(--texte); }
+.carte .vig { width: 100%; aspect-ratio: 1; border-radius: 16px; object-fit: cover; background: #fff; }
+.carte.img { padding: 8px 8px 12px; }
+.carte .voir { appearance: none; border: 0; background: rgba(255,255,255,.85); border-radius: 99px; padding: 6px 12px; font: 700 13px var(--texte); cursor: pointer; text-decoration: underline; }
+.carte.police .echantillon { font-size: 26px; line-height: 1.15; }
+.liste-cartes { display: grid; gap: 10px; }
+
+/* champs */
+.champ { margin: 0 0 14px; }
+.champ label, .champ .lab { display: block; font: 700 15px var(--texte); margin: 0 0 6px; }
+input[type=text], input[type=email], input[type=number], select, textarea { width: 100%; border: 1.5px solid var(--trait); background: var(--carte); border-radius: 14px;
+       padding: 12px 14px; font: 400 17px var(--texte); color: var(--encre); }
+textarea { min-height: 110px; resize: vertical; }
+input:focus, select:focus, textarea:focus { border-color: var(--action); outline: none; }
+.aide { font-size: 14px; color: var(--doux); margin: 4px 0 0; }
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.boite { background: var(--carte); border: 1.5px solid var(--trait); border-radius: var(--rayon); padding: 16px; margin: 0 0 14px; }
+.boite h2 { font: 800 19px/1.2 var(--titre); margin: 0 0 10px; }
+.info { background: var(--miel); border-radius: 16px; padding: 12px 14px; font-size: 15px; margin: 0 0 14px; }
+.erreur { color: var(--erreur); font-weight: 700; font-size: 15px; margin: 8px 0 0; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { appearance: none; border: 1.5px solid var(--trait); background: var(--carte); border-radius: 99px; padding: 9px 14px; cursor: pointer; font: 600 15px var(--texte); }
+.pill[aria-pressed="true"] { border-color: var(--action); background: #FFF1E8; color: var(--action-f); }
+.voies { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 16px; }
+.voie { appearance: none; text-align: left; border: 2px solid var(--trait); background: var(--carte); border-radius: var(--rayon); padding: 14px; cursor: pointer; }
+.voie[aria-pressed="true"] { border-color: var(--action); background: #FFF4EC; }
+.voie b { display: block; font: 800 17px var(--titre); margin: 6px 0 2px; } .voie span { font-size: 14px; color: var(--doux); }
+.voie .emo { font-size: 30px; }
+
+/* éditeur d'avatar */
+.avatar { display: grid; grid-template-columns: 140px 1fr; gap: 14px; align-items: start; }
+@media (max-width: 520px) { .avatar { grid-template-columns: 1fr; } .avatar .vue { max-width: 150px; margin: 0 auto; } }
+.avatar .vue { background: radial-gradient(circle at 50% 40%, #FFF, #FFE9D9); border-radius: 22px; padding: 6px; border: 1.5px solid var(--trait); }
+.avatar .vue svg { width: 100%; height: auto; display: block; }
+.opt { margin: 0 0 12px; } .opt .lab { font: 700 14px var(--texte); margin: 0 0 6px; color: var(--doux); }
+.puces { display: flex; flex-wrap: wrap; gap: 7px; }
+.puce { appearance: none; border: 2px solid var(--trait); background: var(--carte); border-radius: 12px; padding: 6px 10px; cursor: pointer; font: 600 14px var(--texte); min-height: 40px; }
+.puce[aria-pressed="true"] { border-color: var(--action); background: #FFF1E8; }
+.puce.couleur { width: 38px; height: 38px; padding: 0; border-radius: 50%; }
+.puce.vignette { padding: 2px; width: 62px; height: 62px; border-radius: 14px; overflow: hidden; background: #FFF6EE; }
+.puce.vignette img { width: 100%; height: 100%; object-fit: contain; }
+
+/* photo */
+.depot { border: 2px dashed #E3C9B4; border-radius: var(--rayon); padding: 18px; text-align: center; background: #FFFBF7; cursor: pointer; }
+.cadre { position: relative; width: min(100%, 320px); aspect-ratio: 1; margin: 0 auto 10px; overflow: hidden; border-radius: 20px; background: #EEE; touch-action: none; cursor: grab; }
+.cadre img { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; user-select: none; -webkit-user-drag: none; }
+.cadre::after { content: ""; position: absolute; inset: 0; border: 3px solid rgba(255,255,255,.9); border-radius: 20px; pointer-events: none; box-shadow: inset 0 0 0 999px rgba(0,0,0,0); }
+.miniature { width: 120px; height: 120px; border-radius: 18px; object-fit: cover; margin: 0 auto 8px; }
+.conseils { text-align: left; font-size: 14px; color: var(--doux); margin: 8px 0 0; padding-left: 18px; }
+
+/* personnages */
+.perso { display: flex; align-items: center; gap: 12px; background: var(--carte); border: 1.5px solid var(--trait); border-radius: 18px; padding: 10px 12px; margin: 0 0 10px; }
+.perso .emo { font-size: 28px; width: 48px; height: 48px; display: grid; place-items: center; background: var(--peche); border-radius: 14px; flex: none; }
+.perso .t { flex: 1; min-width: 0; } .perso .t b { display: block; } .perso .t span { color: var(--doux); font-size: 14px; }
+.lien { appearance: none; border: 0; background: none; color: var(--action-f); font: 700 15px var(--texte); cursor: pointer; text-decoration: underline; padding: 6px; }
+
+/* boutons d'action */
+.actions { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: linear-gradient(180deg, rgba(255,248,240,0), var(--fond) 30%); padding: 18px 16px calc(14px + env(safe-area-inset-bottom)); }
+.actions .in { max-width: 760px; margin: 0 auto; display: flex; gap: 10px; }
+.btn { appearance: none; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 99px; padding: 16px 22px; min-height: 54px;
+       font: 800 17px/1 var(--texte); cursor: pointer; background: var(--action); color: #fff; box-shadow: 0 10px 20px -10px rgba(212, 90, 40, .8); text-decoration: none; }
+.btn:hover { background: var(--action-f); } .btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.second { background: var(--carte); color: var(--encre); border: 1.5px solid var(--trait); box-shadow: none; flex: 0 0 auto; }
+.btn.plein { width: 100%; }
+
+/* récapitulatif */
+.recap { display: grid; gap: 8px; margin: 0 0 16px; }
+.ligne { display: flex; align-items: center; gap: 10px; background: var(--carte); border: 1.5px solid var(--trait); border-radius: 16px; padding: 10px 12px; }
+.ligne .k { font-size: 13px; color: var(--doux); display: block; } .ligne .v { font-weight: 700; display: block; }
+.ligne .t { flex: 1; min-width: 0; } .ligne.manque { border-color: #F2B8A8; background: #FFF4F1; }
+.prix { display: grid; gap: 6px; font-size: 15px; } .prix div { display: flex; justify-content: space-between; gap: 10px; } .prix div > :last-child { white-space: nowrap; }
+.prix .gros { font: 800 22px var(--titre); }
+.cases label { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; margin: 0 0 10px; cursor: pointer; } .cases input { width: 22px; height: 22px; flex: none; margin-top: 1px; accent-color: var(--action); }
+.couv-apercu { width: min(100%, 300px); margin: 8px auto; border-radius: 12px; box-shadow: 0 14px 30px -18px rgba(0,0,0,.6); }
+
+/* fenêtres d'exemple */
+dialog { border: 0; border-radius: 24px; padding: 0; width: min(94vw, 560px); max-height: 90vh; background: var(--carte); color: var(--encre); }
+dialog::backdrop { background: rgba(43, 35, 64, .55); }
+dialog .fd { padding: 16px; } dialog h2 { font: 800 22px var(--titre); margin: 0 0 8px; }
+dialog .fermer { position: absolute; top: 10px; right: 10px; }
+.page-ex { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: #2A2347 center/cover; }
+.page-ex p { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 40px 18px 18px; color: #FFF7E8; font-size: 18px; line-height: 1.45;
+             background: linear-gradient(180deg, rgba(23,27,58,0), rgba(23,27,58,.92) 40%); }
+.reprendre { text-align: center; font-size: 14px; margin: 18px 0 0; color: var(--doux); }
+.toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--encre); color: #fff; padding: 10px 16px; border-radius: 99px; font-size: 14px; z-index: 40; }
+</style>
+</head>
+<body>
+<header class="tete">
+  <div class="in">
+    <button class="rond" id="retour" type="button" aria-label="Étape précédente" hidden>
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <a class="logo" href="/" aria-label="Mon Héros du Mois, accueil"><img src="/static/marque/logo-h.webp" alt="Mon Héros du Mois" width="180" height="40"></a>
+    <a class="rond" href="/compte" aria-label="Mon compte"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></a>
+  </div>
+  <div class="prog" aria-hidden="true"><div class="barre"><i id="barre"></i></div><p><span id="progTxt"></span><span id="sauve"></span></p></div>
+</header>
+<main id="main"><div id="ecran" class="ecran" aria-live="polite"></div></main>
+<div class="actions" id="actions" hidden><div class="in" id="actionsIn"></div></div>
+<dialog id="dlg"><button class="rond fermer" type="button" id="dlgX" aria-label="Fermer">✕</button><div class="fd" id="dlgC"></div></dialog>
+<script src="/static/mesure.js"></script>
+<script src="/static/avatar.js?v=10"></script>
+<script>
+(async function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const eu = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
+  const store = { get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (_) { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} } };
+  let CAT, OPT;
+  try { [CAT, OPT] = await Promise.all([fetch('/api/catalogue').then(r => r.json()), fetch('/static/options.json').then(r => r.json())]); }
+  catch (e) { $('ecran').innerHTML = '<h1>Oups</h1><p>Le configurateur n\'a pas pu se charger. Vérifiez votre connexion et rechargez la page.</p>'; return; }
+  Avatar.init(OPT);
+  const COIF = { garcon: ['court', 'bataille', 'boucle', 'milong', 'longgarcon', 'afro', 'rase'],
+                 fille: ['long', 'longboucle', 'carre', 'couettes', 'queue', 'tresses', 'chignon', 'afro', 'boucle'] };
+  const DEF_ENFANT = g => ({ genre: g || 'fille', peau: 'p2', coiffure: (g === 'garcon' ? 'court' : 'long'), couleur_cheveux: 'chatain', yeux: 'marron', lunettes: 'aucune',
+                            couleur_lunettes: 'rouge', taches: 'non', tenue: 'tshirt', couleur_tenue: 'jaune' });
+  const DEF_ANIMAL = () => Object.assign({ type: 'chat', taille: 'moyen', oreilles: 'dressees' }, OPT.modeles.animal.chat);
+  const DEF_DOUDOU = () => ({ type: 'lapin', couleur: 'bleu', accessoire: 'noeud', couleur_accessoire: 'rouge' });
+
+  /* ---------------- état du projet ---------------- */
+  const P = { id: null, jeton: null, d: { heros: {}, personnages: [], evenements: { types: [], texte: '' }, dedicace: { de: '', texte: '' }, langue: 'fr' }, statut: 'brouillon' };
+  const q = new URLSearchParams(location.search);
+  let depuisRecap = false, sens = 1, apercuId = null, ded_i = 0, AD = {};
+  let PROMO = ''; try { PROMO = new URLSearchParams(location.search).get('promo') || sessionStorage.getItem('promo') || ''; if (PROMO) sessionStorage.setItem('promo', PROMO); } catch (_) {}   // lien de pub : /creer?promo=CODE
+  async function api(url, opt) {
+    opt = opt || {};
+    const h = Object.assign({ 'Content-Type': 'application/json' }, P.jeton ? { 'X-Projet-Jeton': P.jeton } : {}, opt.headers || {});
+    const r = await fetch(url, Object.assign({}, opt, { headers: opt.body instanceof FormData ? (P.jeton ? { 'X-Projet-Jeton': P.jeton } : {}) : h }));
+    let j = {}; try { j = await r.json(); } catch (_) {}
+    if (!r.ok) throw Object.assign(new Error(j.erreur || 'Erreur ' + r.status), { j, status: r.status });
+    return j;
+  }
+  async function charger(id, jeton) {
+    P.id = id; P.jeton = jeton;
+    const j = await api('/api/projets/' + id);
+    P.d = Object.assign(P.d, j.donnees || {}); P.statut = j.statut; P.etape = j.etape;
+    P.d.heros = P.d.heros || {}; P.d.personnages = P.d.personnages || [];
+    store.set('mhm_projet', { id, jeton });
+    return j;
+  }
+  let tSave = null, enCours = Promise.resolve();
+  function sauver(etape) {
+    clearTimeout(tSave);
+    $('sauve').textContent = 'Enregistrement…';
+    tSave = setTimeout(() => { enCours = enCours.then(() => sauverMaintenant(etape)).catch(() => {}); }, 500);
+  }
+  async function sauverMaintenant(etape) {
+    if (P.statut !== 'brouillon') return;
+    try {
+      if (!P.id) {
+        const j = await api('/api/projets', { method: 'POST', body: JSON.stringify({ donnees: P.d, etape: etape || ETAPES[i].k }) });
+        P.id = j.id; P.jeton = j.jeton; store.set('mhm_projet', { id: j.id, jeton: j.jeton });
+        history.replaceState(null, '', '/creer?projet=' + j.id + '&j=' + encodeURIComponent(j.jeton));
+      } else {
+        const j = await api('/api/projets/' + P.id, { method: 'PUT', body: JSON.stringify({ donnees: P.d, etape: etape || ETAPES[i].k }) });
+        P.aRevoir = j.a_revoir;
+      }
+      $('sauve').textContent = 'Brouillon enregistré ✓';
+    } catch (e) { $('sauve').textContent = e.status === 409 ? 'Déjà commandé' : 'Hors ligne : gardé sur cet appareil'; }
+    store.set('mhm_brouillon', P.d);
+  }
+  const toast = m => { const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); };
+
+  /* ---------------- catalogue ---------------- */
+  const par = (l, k) => (l || []).find(x => x.cle === k);
+  const theme = () => par(CAT.themes, P.d.theme);
+  const sujet = () => theme() && par(theme().sujets, P.d.sujet);
+  const prenom = () => (P.d.heros.prenom || '').trim();
+  const lui = () => prenom() || 'votre enfant';
+
+  /* ---------------- les étapes ---------------- */
+  const ETAPES = [
+    { k: 'age', titre: 'Pour quel âge est ce livre ?', sous: 'L\'âge du lecteur règle la longueur des textes, le vocabulaire et la complexité de l\'histoire.', auto: true },
+    { k: 'theme', titre: 'Quel genre d\'histoire ?', sous: 'Choisissez un thème : les sujets suivent.', auto: true },
+    { k: 'sujet', titre: () => 'Quel sujet ' + (theme() ? '· ' + theme().nom : '') + ' ?', sous: 'Le cœur de l\'aventure et son décor.', auto: true },
+    { k: 'message', titre: 'Quelle valeur au fil de l\'histoire ?', sous: 'Elle guide le récit en douceur, sans faire la morale.', auto: true },
+    { k: 'heros', titre: () => 'Le héros de l\'histoire', sous: 'Son prénom, son âge, et son apparence : avatar ou photo.' },
+    { k: 'personnages', titre: 'D\'autres personnages ?', sous: 'Frère, sœur, parent, ami, animal, doudou…', fac: true },
+    { k: 'style', titre: 'Quel style d\'illustration ?', sous: 'Appliqué aux personnages, aux décors, à la couverture et à chaque page.', auto: true },
+    { k: 'police', titre: 'Quelle écriture pour le texte ?', sous: 'Toutes nos polices restent faciles à lire.', auto: true },
+    { k: 'cherche', titre: 'Un jeu « Cherche et trouve » ?', sous: 'Un petit élément caché dans chaque illustration, avec la solution.', auto: true },
+    { k: 'langue', titre: 'Dans quelle langue ?', sous: '' },
+    { k: 'evenements', titre: 'Des souvenirs à glisser dans l\'histoire ?', sous: 'Un anniversaire, des vacances, un lieu, une situation vécue…', fac: true },
+    { k: 'dedicace', titre: 'Un petit mot au début du livre ?', sous: 'La dédicace apparaît sur la première page.', fac: true },
+    { k: 'recap', titre: 'Votre livre, en un coup d\'œil', sous: 'Touchez une ligne pour la modifier.' },
+  ];
+  let i = 0;
+  const idx = k => ETAPES.findIndex(e => e.k === k);
+
+  function progression() {
+    const n = ETAPES.length;
+    $('barre').style.width = Math.round((i + 1) / n * 100) + '%';
+    $('progTxt').textContent = ETAPES[i].k === 'recap' ? 'Récapitulatif' : `Étape ${i + 1} sur ${n - 1}`;
+    $('retour').hidden = i === 0;
+  }
+  function aller(k, s) {
+    sens = s || 1;
+    i = Math.max(0, Math.min(ETAPES.length - 1, typeof k === 'number' ? k : idx(k)));
+    rendre();
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    try { fetch('/api/parcours/etape', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ etape: ETAPES[i].k }) }); } catch (_) {}
+  }
+  function suivant() {
+    if (depuisRecap) {                                            // retour au récapitulatif, sauf si un choix dépendant doit être revu
+      const manque = aRevoir();
+      if (manque) return aller(manque, 1);
+      depuisRecap = false; return aller('recap', 1);
+    }
+    aller(i + 1, 1);
+  }
+  function aRevoir() {                                            // première rubrique obligatoire manquante, dans l'ordre du parcours
+    const d = P.d, h = d.heros || {};
+    if (!par(CAT.ages, d.age_lecteur)) return 'age';
+    if (!theme()) return 'theme';
+    if (!sujet()) return 'sujet';
+    if (!par(CAT.messages, d.message)) return 'message';
+    if (!h.prenom || !h.age || !h.genre || !h.voie || (h.voie === 'photo' && !h.photo)) return 'heros';
+    if (!par(CAT.styles, d.style)) return 'style';
+    if (!par(CAT.polices, d.police)) return 'police';
+    if (!d.cherche) return 'cherche';
+    return null;
+  }
+  $('retour').onclick = () => { if (i > 0) aller(i - 1, -1); };
+
+  function choisir(k, v) {
+    const avant = P.d[k];
+    P.d[k] = v;
+    if (k === 'theme' && avant !== v && P.d.sujet && !(theme() && par(theme().sujets, P.d.sujet))) {
+      P.d.sujet = '';                                             // sujet incompatible avec le nouveau thème : à rechoisir (le reste est gardé)
+      toast('Nouveau thème : choisissez son sujet');
+    }
+    sauver();
+    rendre(true);
+    setTimeout(suivant, 260);                                     // choix simple : on passe à la question suivante
+  }
+
+  /* ---------------- rendu ---------------- */
+  function actions(html) { $('actions').hidden = !html; $('actionsIn').innerHTML = html || ''; }
+  function rendre(sansAnim) {
+    const e = ETAPES[i];
+    progression();
+    const el = $('ecran');
+    const t = typeof e.titre === 'function' ? e.titre() : e.titre;
+    let h = `<h1 tabindex="-1" id="titre">${esc(t)}${e.fac ? '<span class="fac">facultatif</span>' : ''}</h1>` + (e.sous ? `<p class="sous">${esc(e.sous)}</p>` : '');
+    h += (VUES[e.k] || (() => ''))();
+    if (!sansAnim) { el.className = 'ecran' + (sens < 0 ? ' retour' : ''); void el.offsetWidth; }
+    el.innerHTML = h;
+    (APRES[e.k] || (() => {}))();
+    if (e.auto) actions(depuisRecap ? '<button class="btn second" type="button" data-act="recap">Revenir au récapitulatif</button>' : '');
+    if (!sansAnim) { const ti = $('titre'); if (ti) ti.focus({ preventScroll: true }); }
+  }
+  const carte = (on, attrs, inner, cls) => `<button type="button" class="carte ${cls || ''}" aria-pressed="${on ? 'true' : 'false'}" ${attrs}>${inner}</button>`;
+  const vignette = (u) => `<img class="vig" src="${esc(u)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'emo',textContent:'📖'}))">`;
+
+  const VUES = {
+    age: () => `<div class="grille">${CAT.ages.map(a => carte(P.d.age_lecteur === a.cle, `data-ch="age_lecteur" data-v="${a.cle}"`, `<span class="emo" aria-hidden="true">${a.emoji}</span><span class="nom">${esc(a.nom)}</span>`)).join('')}</div>
+      <p class="aide">Le lecteur n'est pas forcément le héros : un parent, un frère ou un animal peut aussi être dans le livre.</p>`,
+    theme: () => `<div class="grille">${CAT.themes.map(t => carte(P.d.theme === t.cle, `data-ch="theme" data-v="${t.cle}"`, `<span class="emo" aria-hidden="true">${t.emoji}</span><span class="nom">${esc(t.nom)}</span>`)).join('')}</div>`,
+    sujet: () => !theme() ? '<p class="info">Choisissez d\'abord un thème.</p>' :
+      `<div class="grille">${theme().sujets.map(s => carte(P.d.sujet === s.cle, `data-ch="sujet" data-v="${s.cle}"`,
+        (s.univers ? vignette('/vignette/' + s.univers + '.webp') : `<span class="emo" aria-hidden="true">${theme().emoji}</span>`) + `<span class="nom">${esc(s.nom)}</span>`, s.univers ? 'img' : '')).join('')}</div>`,
+    message: () => `<div class="grille">${CAT.messages.map(m => carte(P.d.message === m.cle, `data-ch="message" data-v="${m.cle}"`, `<span class="emo" aria-hidden="true">${m.emoji}</span><span class="nom">${esc(m.nom)}</span>`)).join('')}</div>`,
+    heros: vueHeros,
+    personnages: vuePersonnages,
+    style: () => `<div class="grille">${CAT.styles.map(s => `<div class="carte img" role="group" aria-label="${esc(s.nom)}" style="cursor:default">
+        <button type="button" class="carte img" style="background:none;box-shadow:none;padding:0;min-height:0;width:100%" aria-pressed="${P.d.style === s.cle}" data-ch="style" data-v="${s.cle}">
+          <img class="vig" src="/style/${s.cle}.webp" alt="Exemple du style ${esc(s.nom)}" loading="lazy"><span class="nom">${esc(s.nom)}</span></button>
+        <button type="button" class="voir" data-voir-style="${s.cle}">Voir un exemple</button></div>`).join('')}</div>
+      ${CAT.styles.length === 1 ? '<p class="aide">C\'est le style peint à la main de nos livres. Chaque nouveau style n\'est proposé qu\'une fois son exemple vérifié.</p>' : ''}`,
+    police: () => `<div class="liste-cartes">${CAT.polices.map(p => `<div class="carte police" role="group" aria-label="${esc(p.nom)}" style="cursor:default;min-height:0">
+        <button type="button" class="carte police" style="background:none;box-shadow:none;padding:6px;min-height:0;width:100%" aria-pressed="${P.d.police === p.cle}" data-ch="police" data-v="${p.cle}">
+          <span class="echantillon" style="font-family:'P-${p.cle}'">${esc(p.nom)}</span><span style="font-family:'P-${p.cle}';font-size:16px">${esc(lui())} ouvre grand les yeux : « Ça y est ! »</span></button>
+        <button type="button" class="voir" data-voir-police="${p.cle}">Voir un exemple</button></div>`).join('')}</div>`,
+    cherche: () => {
+      const on = P.d.cherche && P.d.cherche !== 'non';
+      return `<div class="grille">${carte(P.d.cherche === 'non', 'data-ch="cherche" data-v="non"', '<span class="emo" aria-hidden="true">📖</span><span class="nom">Juste lire</span>')}
+        ${carte(on, 'data-cherche-oui="1"', '<span class="emo" aria-hidden="true">🔍</span><span class="nom">Lire et chercher</span>')}</div>
+        ${on || P._chercheOuvert ? `<div class="boite" style="margin-top:14px"><h2>Quel élément cacher ?</h2><div class="pills">
+          ${[{ cle: 'auto', nom: 'Au hasard', emoji: '🎲' }].concat(CAT.cherche).map(c => `<button type="button" class="pill" aria-pressed="${P.d.cherche === c.cle}" data-ch="cherche" data-v="${c.cle}">${c.emoji} ${esc(c.nom)}</button>`).join('')}</div>
+          <p class="aide">Il est caché une fois dans chaque illustration. Chaque image est contrôlée ; la solution est dans votre espace « Mon livre ».</p></div>` : ''}`;
+    },
+    langue: () => `<div class="champ"><label for="langue">Langue du livre</label><select id="langue">${CAT.langues.map(l => `<option value="${l.cle}" ${P.d.langue === l.cle ? 'selected' : ''}>${esc(l.nom)}</option>`).join('')}</select>
+      ${CAT.langues.length === 1 ? '<p class="aide">Nos livres sont écrits et relus en français. D\'autres langues seront proposées seulement quand elles seront entièrement prises en charge.</p>' : ''}</div>`,
+    evenements: () => `<div class="pills" style="margin:0 0 12px">${CAT.evenements.map(t => `<button type="button" class="pill" aria-pressed="${(P.d.evenements.types || []).includes(t)}" data-ev="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+      <div class="champ"><label for="evtxt">Ce que vous aimeriez voir dans l'histoire <span class="fac">facultatif</span></label>
+      <textarea id="evtxt" maxlength="600" placeholder="Ex. : son anniversaire au bord de la mer avec Mamie Jo ; notre chat Pistache qui dort dans le panier à linge">${esc(P.d.evenements.texte)}</textarea>
+      <p class="aide">Écrivez seulement ce qui est vrai et que vous voulez voir : nous n'inventons aucun détail personnel.</p></div>`,
+    dedicace: () => `<div class="champ"><label for="dedde">De la part de <span class="fac">facultatif</span></label><input type="text" id="dedde" maxlength="50" value="${esc(P.d.dedicace.de)}" placeholder="Ex. : Papa et Maman, Tata Inès…"></div>
+      <div class="champ"><label for="dedtx">La dédicace <span class="fac">facultatif</span></label><textarea id="dedtx" maxlength="400" placeholder="Pour toi, ${esc(lui())}…">${esc(P.d.dedicace.texte)}</textarea>
+      <button type="button" class="lien" id="aideDed">✨ Aidez-moi à écrire</button><p class="aide">Une proposition à modifier comme vous voulez. Sans dédicace, la première page reste classique.</p></div>`,
+    recap: vueRecap,
+  };
+  const APRES = {
+    heros: apresHeros, personnages: apresPersonnages, recap: apresRecap,
+    langue: () => { $('langue').onchange = e => { P.d.langue = e.target.value; sauver(); }; actions('<button class="btn" type="button" data-act="suivant">Continuer</button>'); },
+    evenements: () => { $('evtxt').oninput = e => { P.d.evenements.texte = e.target.value; sauver(); };
+      actions(`<button class="btn" type="button" data-act="suivant">${P.d.evenements.texte || (P.d.evenements.types || []).length ? 'Continuer' : 'Passer cette étape'}</button>`); },
+    dedicace: () => {
+      $('dedde').oninput = e => { P.d.dedicace.de = e.target.value; sauver(); };
+      $('dedtx').oninput = e => { P.d.dedicace.texte = e.target.value; sauver(); };
+      $('aideDed').onclick = async () => {
+        if (!P.id) await sauverMaintenant();
+        try { const j = await api('/api/projets/' + P.id + '/dedicace', { method: 'POST', body: JSON.stringify({ i: ded_i }) }); ded_i = j.suivant; $('dedtx').value = j.texte; P.d.dedicace.texte = j.texte; sauver(); $('aideDed').textContent = '✨ Une autre proposition'; }
+        catch (e) { toast(e.message); }
+      };
+      actions('<button class="btn" type="button" data-act="suivant">Continuer</button>');
+    },
+  };
+
+  /* ---------------- le héros ---------------- */
+  function vueHeros() {
+    const h = P.d.heros;
+    return `<div class="duo"><div class="champ"><label for="hp">Prénom</label><input type="text" id="hp" maxlength="20" autocomplete="off" value="${esc(h.prenom)}" placeholder="Ex. : Lina"></div>
+      <div class="champ"><label for="ha">Âge</label><input type="number" id="ha" min="0" max="17" inputmode="numeric" value="${esc(h.age)}" placeholder="5"></div></div>
+      <div class="champ"><span class="lab">C'est…</span><div class="pills">${[['fille', 'une fille'], ['garcon', 'un garçon']].map(([v, l]) => `<button type="button" class="pill" aria-pressed="${h.genre === v}" data-genre="${v}">${l}</button>`).join('')}</div></div>
+      <div class="champ"><span class="lab">Dans le texte, on dit <span class="fac">facultatif</span></span><div class="pills">${[['il', '« il »'], ['elle', '« elle »'], ['prenom', 'son prénom, sans « il » ni « elle »']].map(([v, l]) => `<button type="button" class="pill" aria-pressed="${h.pronoms === v}" data-pron="${v}">${l}</button>`).join('')}</div></div>
+      <span class="lab" style="font-weight:700;display:block;margin:6px 0 8px">Son apparence dans le livre</span>
+      <div class="voies"><button type="button" class="voie" aria-pressed="${h.voie === 'avatar'}" data-voie="avatar"><span class="emo" aria-hidden="true">🎨</span><b>Créer son avatar</b><span>Teint, cheveux, yeux, lunettes, tenue…</span></button>
+        <button type="button" class="voie" aria-pressed="${h.voie === 'photo'}" data-voie="photo"><span class="emo" aria-hidden="true">📷</span><b>Utiliser une photo</b><span>Elle sert de modèle à l'illustrateur, jamais collée dans le livre.</span></button></div>
+      <div id="voieZone"></div>
+      <details class="boite" ${h.passions || h.plat || h.details ? 'open' : ''}><summary style="font-weight:700;cursor:pointer">Ce qu'il aime, ses petits détails <span class="fac">facultatif</span></summary>
+        <div class="champ" style="margin-top:12px"><label for="hl">Loisirs, centres d'intérêt</label><input type="text" id="hl" maxlength="120" value="${esc(h.passions)}" placeholder="Ex. : dessin, vélo, les volcans"></div>
+        <div class="champ"><label for="hf">Plat préféré</label><input type="text" id="hf" maxlength="60" value="${esc(h.plat)}" placeholder="Ex. : les crêpes"></div>
+        <div class="champ"><label for="hd">Détail distinctif</label><input type="text" id="hd" maxlength="120" value="${esc(h.details)}" placeholder="Ex. : une petite tache de naissance sur la joue, toujours une casquette"></div></details>
+      <p class="erreur" id="herr" role="alert"></p>`;
+  }
+  function apresHeros() {
+    const h = P.d.heros;
+    const maj = () => { sauver(); validerHeros(false); };
+    $('hp').oninput = e => { h.prenom = e.target.value.replace(/^./, c => c.toUpperCase()); maj(); };
+    $('ha').oninput = e => { h.age = e.target.value.replace(/\D/g, '').slice(0, 2); maj(); };
+    $('hl').oninput = e => { h.passions = e.target.value; sauver(); };
+    $('hf').oninput = e => { h.plat = e.target.value; sauver(); };
+    $('hd').oninput = e => { h.details = e.target.value; sauver(); };
+    zoneVoie();
+    actions('<button class="btn" type="button" data-act="heros-ok">Continuer</button>');
+  }
+  function zoneVoie() {
+    const h = P.d.heros, z = $('voieZone'); if (!z) return;
+    if (h.voie === 'avatar') {
+      z.innerHTML = '<div id="voieEd"></div>';
+    } else if (h.voie === 'photo') {
+      z.innerHTML = `<div id="voiePh">${zonePhoto('heros', h.photo)}</div><details class="boite" open><summary style="font-weight:700;cursor:pointer">Vérifiez ces détails pour guider l'illustration</summary>
+        <p class="aide">La photo guide le visage et les traits ; ces couleurs évitent les erreurs (une photo peut tromper sur la lumière).</p><div id="voieEd"></div></details>`;
+      brancherPhoto('heros', id => { h.photo = id; sauver(); $('voiePh').innerHTML = zonePhoto('heros', h.photo); });
+    } else z.innerHTML = '';
+    editeurHeros();
+  }
+  function editeurHeros() {                   // seul l'éditeur est redessiné : une photo en cours de recadrage n'est jamais perdue
+    const h = P.d.heros, z = $('voieEd'); if (!z) return;
+    h.avatar = Object.assign(DEF_ENFANT(h.genre), h.avatar || {}, { genre: h.genre || (h.avatar || {}).genre || 'fille' });
+    if (!COIF[h.avatar.genre].includes(h.avatar.coiffure)) h.avatar.coiffure = COIF[h.avatar.genre][0];
+    z.innerHTML = h.voie === 'photo' ? editeur('enfant', h.avatar, 'heros', ['peau', 'couleur_cheveux', 'coiffure', 'yeux', 'lunettes', 'tenue', 'couleur_tenue']) : editeur('enfant', h.avatar, 'heros');
+  }
+  function validerHeros(montrer) {
+    const h = P.d.heros, err = [];
+    if (!h.prenom || !h.prenom.trim()) err.push('son prénom');
+    if (h.age === '' || h.age == null || +h.age > 17) err.push('son âge (0 à 17 ans)');
+    if (!h.genre) err.push('fille ou garçon');
+    if (!h.voie) err.push('avatar ou photo');
+    if (h.voie === 'photo' && !h.photo) err.push('la photo');
+    if (montrer && $('herr')) $('herr').textContent = err.length ? 'Il manque : ' + err.join(', ') + '.' : '';
+    return !err.length;
+  }
+
+  /* éditeur d'avatar : mêmes options que le créateur, aperçu immédiat */
+  const LIB = { genre: 'Genre', peau: 'Teint', coiffure: 'Coiffure', couleur_cheveux: 'Cheveux', yeux: 'Yeux', lunettes: 'Lunettes', couleur_lunettes: 'Couleur des lunettes',
+                taches: 'Taches de rousseur', tenue: 'Tenue', couleur_tenue: 'Couleur de la tenue', type: 'Espèce', couleur: 'Couleur', taille: 'Taille', motif: 'Motif',
+                couleur2: 'Deuxième couleur', oreilles: 'Oreilles', collier: 'Collier', accessoire: 'Accessoire', couleur_accessoire: 'Couleur de l\'accessoire' };
+  const GROUPES = { enfant: ['peau', 'coiffure', 'couleur_cheveux', 'yeux', 'lunettes', 'couleur_lunettes', 'taches', 'tenue', 'couleur_tenue'],
+                    animal: ['type', 'couleur', 'taille', 'motif', 'couleur2', 'oreilles', 'yeux', 'collier'],
+                    doudou: ['type', 'couleur', 'accessoire', 'couleur_accessoire'] };
+  function editeur(kind, cfg, cible, seulement) {
+    const O = OPT[kind];
+    const visible = k => {
+      if (seulement && !seulement.includes(k)) return false;
+      if (kind === 'enfant' && k === 'couleur_lunettes') return cfg.lunettes !== 'aucune';
+      if (kind === 'doudou' && k === 'couleur_accessoire') return cfg.accessoire !== 'aucun';
+      if (kind === 'animal') {
+        const ty = Avatar.pick(O.type, cfg.type) || {};
+        if ((ty.sans || []).includes(k)) return false;
+        if (k === 'couleur2') return cfg.motif !== 'uni';
+        if (k === 'oreilles') return ['chien', 'lapin'].includes(cfg.type);
+        if (['motif', 'collier'].includes(k) && cfg.type === 'oiseau') return false;
+      }
+      return true;
+    };
+    let liste = (k) => O[k];
+    const opts = GROUPES[kind].filter(visible).map(k => {
+      let l = liste(k);
+      if (kind === 'enfant' && k === 'coiffure') l = l.filter(c => COIF[cfg.genre || 'fille'].includes(c.id));
+      if (kind === 'animal' && k === 'type') l = l;
+      if (kind === 'animal' && k === 'couleur') { const ty = Avatar.pick(O.type, cfg.type) || {}; if (ty.couleurs) l = ty.couleurs.map(id => Avatar.pick(O.couleur, id)); }
+      const puces = l.map(o => {
+        const on = cfg[k] === o.id;
+        if (o.c && !o.img) return `<button type="button" class="puce couleur" style="background:${o.c}" aria-pressed="${on}" aria-label="${esc(o.fr)}" title="${esc(o.fr)}" data-av="${cible}" data-k="${k}" data-v="${o.id}"></button>`;
+        if (o.img) return `<button type="button" class="puce vignette" aria-pressed="${on}" aria-label="${esc(o.fr)}" title="${esc(o.fr)}" data-av="${cible}" data-k="${k}" data-v="${o.id}"><img src="/static/avatars/${o.img}.webp" alt="" loading="lazy"></button>`;
+        return `<button type="button" class="puce" aria-pressed="${on}" data-av="${cible}" data-k="${k}" data-v="${o.id}">${esc(o.fr)}</button>`;
+      }).join('');
+      return `<div class="opt"><div class="lab">${LIB[k] || k}</div><div class="puces">${puces}</div></div>`;
+    }).join('');
+    const svg = kind === 'enfant' ? Avatar.child(cfg) : Avatar.creature(cfg, kind);
+    return `<div class="avatar"><div class="vue" aria-hidden="true" id="vue-${cible}">${svg}</div><div>${opts}</div></div>`;
+  }
+  function cfgCible(cible) {
+    if (cible === 'heros') return { cfg: P.d.heros.avatar, kind: 'enfant' };
+    const n = +cible.split('_')[1], x = P.d.personnages[n];
+    return { cfg: x.avatar, kind: x.type === 'animal' ? 'animal' : x.type === 'objet' ? 'doudou' : 'enfant' };
+  }
+
+  /* ---------------- photo : dépôt, recadrage, conseils ---------------- */
+  function zonePhoto(role, phid) {
+    if (phid) return `<div class="boite" style="text-align:center"><img class="miniature" src="/api/projets/${P.id}/photos/${phid}?j=${encodeURIComponent(P.jeton)}" alt="Photo envoyée">
+      <button type="button" class="lien" data-photo-changer="${role}">Remplacer la photo</button> · <button type="button" class="lien" data-photo-suppr="${role}" data-ph="${phid}">Supprimer</button>
+      <p class="aide">Photo privée : visible seulement par vous et notre équipe, effacée ${CAT.limites.photo_jours} jours après la livraison du livre (ou dès que vous la supprimez).</p></div>`;
+    return `<div class="boite" id="ph-${role}"><label class="depot" for="file-${role}"><span style="font-size:30px" aria-hidden="true">📷</span><br><b>Choisir une photo</b><br><span class="aide">JPEG ou PNG, 12 Mo au plus</span></label>
+      <input type="file" id="file-${role}" accept="image/*" class="sr">
+      <ul class="conseils"><li>Le visage bien net, de face ou de trois-quarts</li><li>Une bonne lumière, sans lunettes de soleil</li><li>Une seule personne sur la photo</li><li>Inutile de montrer le corps entier : le visage suffit</li></ul>
+      <div id="crop-${role}" hidden></div></div>`;
+  }
+  function brancherPhoto(role, fini) {
+    const inp = $('file-' + role); if (!inp) return;
+    inp.onchange = () => { const f = inp.files[0]; if (f) recadrer(role, f, fini); };
+  }
+  function recadrer(role, file, fini) {
+    const zone = $('crop-' + role); zone.hidden = false;
+    const url = URL.createObjectURL(file);
+    zone.innerHTML = `<p class="aide" style="text-align:center">Faites glisser et zoomez pour centrer le visage.</p><div class="cadre" id="cadre-${role}"><img id="img-${role}" src="${url}" alt="Photo à recadrer"></div>
+      <label class="aide" style="display:block;text-align:center">Zoom <input type="range" id="zoom-${role}" min="1" max="3" step="0.01" value="1" style="width:60%;vertical-align:middle"></label>
+      <div class="cases" style="margin-top:10px"><label><input type="checkbox" id="ok-${role}"> Je suis autorisé·e à utiliser cette photo (je suis le parent ou j'ai l'accord de la personne et de ses parents).</label></div>
+      <button type="button" class="btn plein" id="env-${role}">Utiliser cette photo</button><p class="erreur" id="perr-${role}" role="alert"></p>`;
+    const img = $('img-' + role), cadre = $('cadre-' + role);
+    let s0 = 1, z = 1, x = 0, y = 0, W = 0, H = 0, C = 0;
+    const borne = () => { const s = s0 * z; x = Math.min(0, Math.max(C - W * s, x)); y = Math.min(0, Math.max(C - H * s, y)); img.style.transform = `translate(${x}px,${y}px) scale(${s})`; };
+    img.onload = () => { W = img.naturalWidth; H = img.naturalHeight; C = cadre.clientWidth; s0 = C / Math.min(W, H); x = (C - W * s0) / 2; y = (C - H * s0) / 2; borne(); };
+    let drag = null;
+    cadre.onpointerdown = e => { drag = { x: e.clientX - x, y: e.clientY - y }; cadre.setPointerCapture(e.pointerId); };
+    cadre.onpointermove = e => { if (!drag) return; x = e.clientX - drag.x; y = e.clientY - drag.y; borne(); };
+    cadre.onpointerup = () => { drag = null; };
+    $('zoom-' + role).oninput = e => { const c = C / 2, s1 = s0 * z, s2 = s0 * +e.target.value; x = c - (c - x) * s2 / s1; y = c - (c - y) * s2 / s1; z = +e.target.value; borne(); };
+    $('env-' + role).onclick = async () => {
+      const err = $('perr-' + role); err.textContent = '';
+      if (!$('ok-' + role).checked) { err.textContent = 'Cochez la case d\'autorisation pour continuer.'; return; }
+      const s = s0 * z, fd = new FormData();
+      fd.append('photo', file); fd.append('role', role); fd.append('consentement', 'oui');
+      fd.append('x', (-x / s / W).toFixed(4)); fd.append('y', (-y / s / H).toFixed(4)); fd.append('w', (C / s / W).toFixed(4)); fd.append('h', (C / s / H).toFixed(4));
+      $('env-' + role).disabled = true; $('env-' + role).textContent = 'Envoi…';
+      try {
+        if (!P.id) await sauverMaintenant();
+        const j = await api('/api/projets/' + P.id + '/photos', { method: 'POST', body: fd });
+        P.d.photo_ok = true; URL.revokeObjectURL(url); fini(j.id);
+      } catch (e) { err.textContent = e.message; $('env-' + role).disabled = false; $('env-' + role).textContent = 'Utiliser cette photo'; }
+    };
+  }
+
+  /* ---------------- personnages secondaires ---------------- */
+  const EMO_T = { personne: '🧑', animal: '🐾', objet: '🧸' };
+  let edition = null;              // index du personnage en cours d'édition
+  function vuePersonnages() {
+    const L = P.d.personnages, max = CAT.limites.personnages_max;
+    if (edition !== null) return vuePerso(edition);
+    return (L.length ? L.map((x, n) => `<div class="perso"><span class="emo" aria-hidden="true">${EMO_T[x.type]}</span><div class="t"><b>${esc(x.nom || 'Sans nom')}</b><span>${esc(x.relation || CAT.types[x.type].nom)}</span></div>
+        <button type="button" class="lien" data-perso-edit="${n}">Modifier</button><button type="button" class="lien" data-perso-suppr="${n}" aria-label="Retirer ${esc(x.nom)}">Retirer</button></div>`).join('')
+      : '<p class="info">Personne d\'autre ? Aucun souci : le héros peut vivre son aventure seul, ou avec un ami imaginaire inventé par l\'histoire.</p>') +
+      (L.length < max ? `<p class="lab" style="font-weight:700;margin:16px 0 8px">Ajouter un personnage</p><div class="grille trois">${Object.entries(CAT.types).map(([k, t]) =>
+        carte(false, `data-perso-add="${k}"`, `<span class="emo" aria-hidden="true">${EMO_T[k]}</span><span class="nom">${esc(t.nom)}</span>`)).join('')}</div>`
+        : `<p class="aide">${max} personnages au plus, en plus du héros : au-delà, les illustrations perdent en qualité.</p>`);
+  }
+  function vuePerso(n) {
+    const x = P.d.personnages[n], t = CAT.types[x.type];
+    const fratrie = x.type === 'personne' && ['frère', 'sœur'].includes(x.relation);
+    const doudou = x.type === 'objet' && x.relation === 'doudou';
+    let h = `<div class="boite"><h2>${EMO_T[x.type]} ${esc(t.nom)}</h2>
+      <div class="champ"><label for="pr">Lien avec ${esc(lui())}</label><select id="pr"><option value="">Choisir…</option>${t.relations.map(r => `<option ${x.relation === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></div>
+      <div class="duo"><div class="champ"><label for="pn">${x.type === 'personne' ? 'Prénom ou nom' : 'Son nom'}</label><input type="text" id="pn" maxlength="20" value="${esc(x.nom)}" placeholder="${x.type === 'personne' ? 'Ex. : Mamie Jo' : x.type === 'animal' ? 'Ex. : Pistache' : 'Ex. : Doudou Lapin'}"></div>
+      ${x.type === 'personne' ? `<div class="champ"><label for="pa">Âge <span class="fac">facultatif</span></label><input type="number" id="pa" min="0" max="110" value="${esc(x.age)}"></div>` : '<div></div>'}</div>`;
+    if (x.type === 'animal') { x.avatar = Object.assign(DEF_ANIMAL(), x.avatar || {}); h += editeur('animal', x.avatar, 'perso_' + n); }
+    else if (doudou) { x.avatar = Object.assign(DEF_DOUDOU(), x.avatar || {}); h += editeur('doudou', x.avatar, 'perso_' + n); }
+    else {
+      const voies = fratrie ? [['avatar', '🎨 Avatar'], ['photo', '📷 Photo'], ['description', '✏️ Description']] : x.type === 'personne' ? [['photo', '📷 Photo'], ['description', '✏️ Description']] : [['description', '✏️ Description']];
+      if (!voies.some(v => v[0] === x.voie)) x.voie = voies[voies.length - 1][0];
+      if (voies.length > 1) h += `<div class="pills" style="margin:0 0 12px">${voies.map(([v, l]) => `<button type="button" class="pill" aria-pressed="${x.voie === v}" data-pvoie="${v}">${l}</button>`).join('')}</div>`;
+      if (x.voie === 'avatar') { x.avatar = Object.assign(DEF_ENFANT(x.relation === 'sœur' ? 'fille' : 'garcon'), x.avatar || {}, { genre: x.relation === 'sœur' ? 'fille' : 'garcon' });
+        if (!COIF[x.avatar.genre].includes(x.avatar.coiffure)) x.avatar.coiffure = COIF[x.avatar.genre][0]; h += editeur('enfant', x.avatar, 'perso_' + n); }
+      if (x.voie === 'photo') h += zonePhoto('perso_' + n, x.photo);
+      if (x.voie !== 'avatar') h += `<div class="champ"><label for="pd">${x.voie === 'photo' ? 'Quelques mots pour compléter' : 'À quoi ressemble-t-' + (x.type === 'objet' ? 'il' : 'il ou elle')} ? ${x.voie === 'photo' ? '<span class="fac">facultatif</span>' : ''}</label>
+        <input type="text" id="pd" maxlength="200" value="${esc(x.desc)}" placeholder="${x.type === 'objet' ? 'Ex. : une petite voiture rouge un peu cabossée' : 'Ex. : cheveux gris en chignon, lunettes rondes, toujours un foulard bleu'}"></div>`;
+    }
+    return h + '<p class="erreur" id="perr" role="alert"></p></div>';
+  }
+  function apresPersonnages() {
+    if (edition === null) { actions(`<button class="btn" type="button" data-act="suivant">${P.d.personnages.length ? 'Continuer' : 'Passer cette étape'}</button>`); return; }
+    const x = P.d.personnages[edition];
+    $('pr').onchange = e => { x.relation = e.target.value; if (x.type === 'objet' || x.type === 'personne') { delete x.avatar; } sauver(); rendre(true); };
+    $('pn').oninput = e => { x.nom = e.target.value.replace(/^./, c => c.toUpperCase()); sauver(); };
+    if ($('pa')) $('pa').oninput = e => { x.age = e.target.value.replace(/\D/g, '').slice(0, 3); sauver(); };
+    if ($('pd')) $('pd').oninput = e => { x.desc = e.target.value; sauver(); };
+    brancherPhoto('perso_' + edition, id => { x.photo = id; sauver(); rendre(true); });
+    actions('<button class="btn second" type="button" data-act="perso-annuler">Annuler</button><button class="btn" type="button" data-act="perso-ok">Valider ce personnage</button>');
+  }
+  function persoValide(x) {
+    if (!x.nom || !x.nom.trim()) return 'Indiquez son nom.';
+    if (!x.relation) return 'Choisissez son lien avec ' + lui() + '.';
+    if (x.voie === 'photo' && !x.photo) return 'Ajoutez la photo, ou choisissez « Description ».';
+    if (x.voie === 'description' && x.type === 'personne' && !(x.desc || '').trim()) return 'Décrivez-le en quelques mots (cheveux, lunettes, vêtements…).';
+    return '';
+  }
+
+  /* ---------------- récapitulatif et paiement ---------------- */
+  function vueRecap() {
+    const d = P.d, h = d.heros, a = par(CAT.ages, d.age_lecteur), s = sujet(), m = par(CAT.messages, d.message), st = par(CAT.styles, d.style), po = par(CAT.polices, d.police);
+    const ch = d.cherche === 'non' ? 'Juste lire' : d.cherche === 'auto' ? 'Lire et chercher (élément au hasard)' : d.cherche ? 'Lire et chercher · ' + ((par(CAT.cherche, d.cherche) || {}).nom || '') : '';
+    const L = (k, lab, val, opt) => `<button type="button" class="ligne ${!val && !opt ? 'manque' : ''}" data-edit="${k}" style="text-align:left;cursor:pointer;width:100%">
+      <span class="t"><span class="k">${lab}</span><span class="v">${val ? esc(val) : opt ? '<span style="color:var(--doux);font-weight:400">Aucun</span>' : 'À choisir'}</span></span><span aria-hidden="true">✏️</span></button>`;
+    const pr = CAT.prix;
+    return `<div class="recap">
+      ${L('age', 'Lecteur', a && a.nom)}${L('theme', 'Thème', theme() && theme().nom)}${L('sujet', 'Sujet', s && s.nom)}${L('message', 'Valeur', m && m.nom)}
+      ${L('heros', 'Héros', h.prenom ? `${h.prenom}, ${h.age} an${+h.age > 1 ? 's' : ''} · ${h.voie === 'photo' ? 'à partir d\'une photo' : h.voie === 'avatar' ? 'avatar' : '?'}` : '')}
+      ${L('personnages', 'Personnages', d.personnages.map(x => x.nom + (x.relation ? ' (' + x.relation + ')' : '')).join(', '), true)}
+      ${L('style', 'Style', st && st.nom)}${L('police', 'Écriture', po && po.nom)}${L('cherche', 'Cherche et trouve', ch)}${L('langue', 'Langue', (par(CAT.langues, d.langue) || {}).nom)}
+      ${L('evenements', 'Souvenirs', [(d.evenements.types || []).join(', '), d.evenements.texte].filter(Boolean).join(' · '), true)}
+      ${L('dedicace', 'Dédicace', d.dedicace.texte ? (d.dedicace.texte.slice(0, 60) + (d.dedicace.texte.length > 60 ? '…' : '')) : '', true)}</div>
+    <div class="boite" id="apercuBox"><h2>Voir sa couverture avant de payer</h2><p class="aide" style="margin:0 0 10px">Une vraie illustration de couverture, avec ${esc(lui())} et ses personnages. Un aperçu offert par enfant ; la couverture du livre sera celle-ci si rien ne change.</p>
+      <div id="apercuZone"><button type="button" class="btn second plein" data-act="apercu">Créer l'aperçu de la couverture</button></div></div>
+    <div class="boite"><h2>Son livre imprimé</h2>
+      <p style="margin:0 0 10px">Le livre de ${esc(lui())} : une histoire unique, illustrée, imprimée avec une couverture rigide (${pr.pages.impression} pages, 21,6 × 21,6 cm) et livrée chez vous.</p>
+      <ul style="margin:0 0 10px;padding-left:20px;font-size:15px"><li>Création lancée seulement après la confirmation du paiement</li>
+        <li>Notre équipe relit chaque page avant l'impression</li><li>Suivi de la création, puis du colis, dans votre espace « Mon livre »</li></ul>
+      <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;margin:6px 0 4px"><input type="checkbox" id="ebk" ${P.ebook ? 'checked' : ''} style="margin-top:3px">
+        <span>Ajouter la version numérique (PDF à lire sur écran et à télécharger) : <b>+ ${eu(pr.ebook_ajout)}</b></span></label>
+      <div class="prix" id="devis" style="margin-top:10px"><div><span>Livre imprimé</span><span class="gros">${eu(pr.relie)}</span></div><div><span>Livraison en France</span><span>${eu(pr.port_fr)}</span></div></div></div>
+    <div class="boite"><h2>Livraison</h2>
+      <div class="champ"><label for="mail">Votre e-mail</label><input type="email" id="mail" autocomplete="email" value="${esc(P.email || '')}" placeholder="vous@exemple.fr"></div>
+      <div class="champ"><label for="a_nom">Nom et prénom</label><input type="text" id="a_nom" autocomplete="name" maxlength="80" value="${esc(AD.nom || '')}"></div>
+      <div class="champ"><label for="a_l1">Adresse</label><input type="text" id="a_l1" autocomplete="address-line1" maxlength="120" value="${esc(AD.adresse1 || '')}"></div>
+      <div class="champ"><label for="a_l2">Complément <span class="fac">facultatif</span></label><input type="text" id="a_l2" autocomplete="address-line2" maxlength="120" value="${esc(AD.adresse2 || '')}"></div>
+      <div class="champ"><label for="a_cp">Code postal</label><input type="text" id="a_cp" autocomplete="postal-code" inputmode="numeric" maxlength="12" value="${esc(AD.code_postal || '')}"></div>
+      <div class="champ"><label for="a_v">Ville</label><input type="text" id="a_v" autocomplete="address-level2" maxlength="80" value="${esc(AD.ville || '')}"></div>
+      <div class="champ"><label for="a_p">Pays</label><select id="a_p">${[['FR', 'France'], ['RE', 'La Réunion'], ['BE', 'Belgique'], ['LU', 'Luxembourg'], ['CH', 'Suisse'], ['MC', 'Monaco']].map(([k, n]) => `<option value="${k}" ${(AD.pays || 'FR') === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="champ"><label for="a_t">Téléphone <span class="aide" style="display:inline">(demandé par le transporteur)</span></label><input type="tel" id="a_t" autocomplete="tel" maxlength="20" value="${esc(AD.telephone || '')}"></div>
+      <div class="cases"><label><input type="checkbox" id="cgv"> J'accepte les <a href="/cgv" target="_blank">conditions générales de vente</a>.</label>
+      <label id="retrL" style="${P.ebook ? '' : 'display:none'}"><input type="checkbox" id="retr"> Je demande la création immédiate de la version numérique et je renonce à mon droit de rétractation pour ce contenu personnalisé.</label>
+      ${(h.voie === 'photo' || d.personnages.some(x => x.voie === 'photo')) ? `<label><input type="checkbox" id="phok" ${d.photo_ok ? 'checked' : ''}> Je confirme être autorisé·e à utiliser les photos transmises (voir la <a href="/confidentialite" target="_blank">confidentialité</a>).</label>` : ''}</div>
+      <div class="champ"><label for="promo">Code promo <span class="fac">facultatif</span></label><input type="text" id="promo" maxlength="30" autocomplete="off" value="${esc(PROMO)}"></div>
+      <p class="erreur" id="perr" role="alert"></p></div>
+    <p class="reprendre">Pas maintenant ? <button type="button" class="lien" data-act="plus-tard">Reprendre plus tard</button></p>`;
+  }
+  function apresRecap() {
+    const manque = aRevoir();
+    actions(manque ? `<button class="btn" type="button" data-edit="${manque}">Compléter : ${esc((ETAPES.find(e => e.k === manque) || {}).k === 'heros' ? 'le héros' : typeof ETAPES[idx(manque)].titre === 'string' ? ETAPES[idx(manque)].titre.replace(/ \?$/, '').toLowerCase() : 'une étape')}</button>`
+      : `<button class="btn" type="button" data-act="payer" id="bpay">Payer · ${eu(CAT.prix.relie + CAT.prix.port_fr)}</button>`);
+    if ($('phok')) $('phok').onchange = e => { P.d.photo_ok = e.target.checked; sauver(); };
+    if (!$('ebk')) return;
+    $('ebk').onchange = e => { P.ebook = e.target.checked; $('retrL').style.display = P.ebook ? '' : 'none'; devisCommande(); };
+    $('a_p').onchange = () => { AD.pays = $('a_p').value; devisCommande(); }; $('promo').onchange = () => { PROMO = $('promo').value.trim(); devisCommande(); };
+    [['a_nom', 'nom'], ['a_l1', 'adresse1'], ['a_l2', 'adresse2'], ['a_cp', 'code_postal'], ['a_v', 'ville'], ['a_t', 'telephone']].forEach(([i, k]) => { $(i).oninput = () => { AD[k] = $(i).value; }; });
+    $('mail').oninput = () => { P.email = $('mail').value.trim(); };
+    if (!AD.nom) fetch('/api/compte', { cache: 'no-store' }).then(r => r.json()).then(c => {        // connecté : dernière adresse pré-remplie
+      const a = (c && c.adresse) || {}; if (!c || !c.connecte) return;
+      if (!$('mail').value) $('mail').value = c.email || '';
+      [['a_nom', 'nom'], ['a_l1', 'adresse1'], ['a_l2', 'adresse2'], ['a_cp', 'code_postal'], ['a_v', 'ville'], ['a_t', 'telephone']].forEach(([i, k]) => { if ($(i) && !$(i).value && a[k]) $(i).value = a[k]; });
+      if (a.pays && $('a_p')) { $('a_p').value = a.pays; devisCommande(); }
+    }).catch(() => {});
+    devisCommande();
+  }
+  async function devisCommande() {
+    const z = $('devis'); if (!z || !P.id) return;
+    try {
+      const q = await api('/api/projets/' + P.id + '/devis', { method: 'POST', body: JSON.stringify({ pays: $('a_p').value, ebook: !!P.ebook, code_promo: $('promo').value.trim() }) });
+      z.innerHTML = q.lignes.map(l => `<div><span>${esc(l.nom)}${l.quantite > 1 ? ' × ' + l.quantite : ''}</span><span>${l.montant < 0 ? '− ' + eu(-l.montant) : eu(l.montant)}</span></div>`).join('')
+        + `<div><b>Total</b><b class="gros">${eu(q.total)}</b></div>`;
+      if ($('bpay')) $('bpay').textContent = 'Payer · ' + eu(q.total);
+    } catch (e) { z.insertAdjacentHTML('beforeend', `<p class="erreur">${esc(e.message)}</p>`); }
+  }
+  async function lancerApercu() {
+    const z = $('apercuZone');
+    z.innerHTML = '<p class="aide">Préparation… les personnages, puis la couverture. Vous pouvez continuer : l\'aperçu s\'affichera ici.</p>';
+    try {
+      await sauverMaintenant();
+      const j = await api('/api/projets/' + P.id + '/apercu', { method: 'POST', body: '{}' });
+      apercuId = j.id; suivreApercu();
+    } catch (e) { z.innerHTML = `<p class="erreur">${esc(e.message)}</p>`; }
+  }
+  async function suivreApercu() {
+    const z = $('apercuZone'); if (!z || !apercuId) return;
+    try {
+      const e = await (await fetch('/api/apercu/' + apercuId)).json();
+      if (e.statut === 'pret') { z.innerHTML = `<img class="couv-apercu" src="/api/apercu/${apercuId}/image.jpg" alt="Aperçu de la couverture du livre de ${esc(lui())}">`; return; }
+      if (e.statut === 'refuse' || e.statut === 'erreur') { z.innerHTML = `<p class="erreur">${esc(e.erreur || 'Aperçu impossible.')}</p>`; return; }
+      z.innerHTML = `<p class="aide">${esc(e.etape || 'En cours')}…</p>`;
+    } catch (_) {}
+    setTimeout(suivreApercu, 4000);
+  }
+  async function payer(b) {
+    const err = $('perr'); err.textContent = '';
+    const mail = $('mail').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(mail)) { err.textContent = 'Indiquez une adresse e-mail valide.'; $('mail').focus(); return; }
+    if (!$('cgv').checked) { err.textContent = 'Acceptez les conditions générales de vente pour continuer.'; return; }
+    if (P.ebook && !$('retr').checked) { err.textContent = 'Pour la version numérique, cochez la case de création immédiate.'; return; }
+    const adresse = { nom: $('a_nom').value, adresse1: $('a_l1').value, adresse2: $('a_l2').value, code_postal: $('a_cp').value, ville: $('a_v').value, pays: $('a_p').value, telephone: $('a_t').value };
+    AD = adresse;
+    if ($('phok') && !$('phok').checked) { err.textContent = 'Confirmez l\'autorisation d\'utiliser les photos.'; return; }
+    P.email = mail; b.disabled = true; b.textContent = 'Ouverture du paiement sécurisé…';
+    try {
+      await sauverMaintenant();
+      const j = await api('/api/projets/' + P.id + '/acheter', { method: 'POST', body: JSON.stringify({ formule: 'livre', email: mail, adresse, ebook: !!P.ebook, cgv: true, renonce_retractation: !!(P.ebook && $('retr').checked), code_promo: $('promo').value.trim(), apercu: apercuId }) });
+      location.href = j.url;
+    } catch (e) { err.textContent = e.message; b.disabled = false; b.textContent = 'Payer'; devisCommande(); if (e.j && e.j.suivi) location.href = e.j.suivi; }
+  }
+  function plusTard() {
+    const l = P.id ? `${location.origin}/creer?projet=${P.id}&j=${encodeURIComponent(P.jeton)}` : location.href;
+    $('dlgC').innerHTML = `<h2>Reprendre plus tard</h2><p>Votre brouillon est enregistré sur cet appareil. Pour le retrouver ailleurs, gardez ce lien personnel :</p>
+      <input type="text" readonly value="${esc(l)}" id="lienR" onclick="this.select()"><p class="aide">Connecté à votre compte, vous le retrouvez aussi dans « Mon compte ».</p>
+      <button type="button" class="btn plein" id="copier" style="margin-top:10px">Copier le lien</button>`;
+    $('dlg').showModal();
+    $('copier').onclick = async () => { try { await navigator.clipboard.writeText(l); toast('Lien copié'); } catch (_) { $('lienR').select(); } };
+  }
+
+  /* ---------------- fenêtres d'exemple (n'enregistrent aucun choix) ---------------- */
+  function voirStyle(k) {
+    const s = par(CAT.styles, k);
+    $('dlgC').innerHTML = `<h2>${esc(s.nom)}</h2><img src="/style/${k}.webp" alt="Exemple du style ${esc(s.nom)}" style="border-radius:14px;width:100%"><p class="aide">Exemple de rendu. Votre livre sera illustré dans ce style, avec ${esc(lui())} et ses personnages.</p>
+      <button type="button" class="btn plein" data-ch="style" data-v="${k}" data-ferme="1">Choisir ce style</button>`;
+    $('dlg').showModal();
+  }
+  function voirPolice(k) {
+    const p = par(CAT.polices, k);
+    $('dlgC').innerHTML = `<h2>${esc(p.nom)}</h2><div class="page-ex" style="background-image:url('/style/gouache.webp')"><p style="font-family:'P-${k}'">${esc(CAT.phrase_police.replace('Zoé', lui()))}</p></div>
+      <p class="aide">Aperçu d'une page : le texte du livre est composé dans cette écriture, sur le bas de l'illustration.</p>
+      <button type="button" class="btn plein" data-ch="police" data-v="${k}" data-ferme="1">Choisir cette écriture</button>`;
+    $('dlg').showModal();
+  }
+  $('dlgX').onclick = () => $('dlg').close();
+  $('dlg').addEventListener('click', e => { if (e.target === $('dlg')) $('dlg').close(); });
+
+  /* ---------------- événements (délégation) ---------------- */
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const D = b.dataset;
+    if (D.voirStyle) { e.stopPropagation(); return voirStyle(D.voirStyle); }
+    if (D.voirPolice) { e.stopPropagation(); return voirPolice(D.voirPolice); }
+    if (D.ch) { if (D.ferme) $('dlg').close(); return choisir(D.ch, D.v); }
+    if (D.chercheOui) { P._chercheOuvert = true; if (!P.d.cherche || P.d.cherche === 'non') { P.d.cherche = ''; } return rendre(true); }
+    if (D.genre) { const h = P.d.heros; h.genre = D.genre; if (h.avatar) h.avatar.genre = D.genre;
+      document.querySelectorAll('[data-genre]').forEach(x => x.setAttribute('aria-pressed', x.dataset.genre === D.genre)); sauver(); editeurHeros(); return; }
+    if (D.pron) { P.d.heros.pronoms = P.d.heros.pronoms === D.pron ? '' : D.pron;
+      document.querySelectorAll('[data-pron]').forEach(x => x.setAttribute('aria-pressed', x.dataset.pron === P.d.heros.pronoms)); sauver(); return; }
+    if (D.voie) { P.d.heros.voie = D.voie; sauver(); return rendre(true); }
+    if (D.av) {
+      const { cfg, kind } = cfgCible(D.av); cfg[D.k] = D.v;
+      if (kind === 'animal' && D.k === 'type') Object.assign(cfg, OPT.modeles.animal[D.v] || {}, { type: D.v });
+      sauver(); const y = scrollY; if (D.av === 'heros') editeurHeros(); else rendre(true); scrollTo(0, y); return;
+    }
+    if (D.ev) { const l = P.d.evenements.types || (P.d.evenements.types = []); const k = l.indexOf(D.ev); k < 0 ? l.push(D.ev) : l.splice(k, 1); sauver(); return rendre(true); }
+    if (D.persoAdd) { P.d.personnages.push({ type: D.persoAdd, relation: D.persoAdd === 'animal' ? 'animal de compagnie' : '', nom: '', voie: 'description', desc: '' }); edition = P.d.personnages.length - 1; return rendre(); }
+    if (D.persoEdit) { edition = +D.persoEdit; return rendre(); }
+    if (D.persoSuppr) { const x = P.d.personnages[+D.persoSuppr]; if (x.photo) { try { await api(`/api/projets/${P.id}/photos/${x.photo}`, { method: 'DELETE' }); } catch (_) {} }
+      P.d.personnages.splice(+D.persoSuppr, 1); sauver(); return rendre(true); }
+    if (D.pvoie) { P.d.personnages[edition].voie = D.pvoie; sauver(); return rendre(true); }
+    if (D.photoChanger) { const role = D.photoChanger; if (role === 'heros') { P.d.heros.photo = ''; $('voiePh').innerHTML = zonePhoto('heros', ''); brancherPhoto('heros', id => { P.d.heros.photo = id; sauver(); $('voiePh').innerHTML = zonePhoto('heros', id); }); } else { P.d.personnages[+role.split('_')[1]].photo = ''; rendre(true); } return; }
+    if (D.photoSuppr) { try { await api(`/api/projets/${P.id}/photos/${D.ph}`, { method: 'DELETE' }); } catch (_) {}
+      if (D.photoSuppr === 'heros') { P.d.heros.photo = ''; zoneVoie(); } else { P.d.personnages[+D.photoSuppr.split('_')[1]].photo = ''; rendre(true); } sauver(); toast('Photo supprimée'); return; }
+    if (D.edit) { depuisRecap = true; return aller(D.edit, -1); }
+    switch (D.act) {
+      case 'suivant': return suivant();
+      case 'recap': depuisRecap = false; return aller('recap', 1);
+      case 'heros-ok': if (validerHeros(true)) suivant(); return;
+      case 'perso-annuler': { const x = P.d.personnages[edition]; if (!x.nom && !x.relation) P.d.personnages.splice(edition, 1); edition = null; sauver(); return rendre(); }
+      case 'perso-ok': { const x = P.d.personnages[edition], m = persoValide(x); if (m) { $('perr').textContent = m; return; } edition = null; sauver(); return rendre(); }
+      case 'apercu': return lancerApercu();
+      case 'payer': return payer(b);
+      case 'plus-tard': return plusTard();
+    }
+  });
+
+  /* ---------------- démarrage : reprise d'un brouillon ---------------- */
+  try {
+    const memo = store.get('mhm_projet');
+    if (q.get('projet') && q.get('j')) await charger(q.get('projet'), q.get('j'));
+    else if (memo && memo.id) await charger(memo.id, memo.jeton);
+  } catch (_) { P.id = null; P.jeton = null; const b = store.get('mhm_brouillon'); if (b) P.d = Object.assign(P.d, b); }
+  if (P.statut && P.statut !== 'brouillon') {
+    location.replace(`/mon-livre/${P.id}?j=${encodeURIComponent(P.jeton)}`); return;
+  }
+  const u = q.get('univers'); if (u) { for (const t of CAT.themes) { const s = t.sujets.find(x => x.univers === u || x.cle === u); if (s) { P.d.theme = t.cle; P.d.sujet = s.cle; break; } } }
+  if (q.get('prenom')) P.d.heros.prenom = q.get('prenom').slice(0, 20);
+  if (P.id && P.etape && idx(P.etape) > 0) { const m = aRevoir(); i = P.etape === 'recap' || P.etape === 'paiement' ? idx('recap') : idx(P.etape); if (m && idx(m) < i) i = idx(m); }
+  rendre();
+})();
+</script>
+</body>
+</html>

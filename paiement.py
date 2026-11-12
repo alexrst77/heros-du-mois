@@ -52,6 +52,58 @@ FORMULES["ebook"] = {"nom": "E-book personnalisé (PDF)", "livres": 1, "prix_liv
 FORMULES["imprime"] = {"nom": "Version imprimée de son e-book", "livres": 1, "prix_livre": FORMULES["livre"]["prix_livre"],
                        "prix": FORMULES["livre"]["prix_livre"], "mode": "payment", "reimpression": True}
 
+# Parcours « Créer son livre » : le livre numérique (formule « ebook », prix PRIX_EBOOK) se paie d'abord ; la version reliée se
+# commande ensuite (formule « relie ») : prix du livre relié (PRIX_LIVRE_1) × quantité, MOINS le montant numérique réellement payé
+# (une seule fois par livre, jamais sur la livraison), plus la livraison. Aucun nouveau tarif : ce sont les prix déjà en place.
+FORMULES["relie"] = {"nom": "Livre relié de son livre numérique", "livres": 1, "prix_livre": FORMULES["livre"]["prix_livre"],
+                     "prix": FORMULES["livre"]["prix_livre"], "mode": "payment", "reimpression": True}
+QUANTITES_RELIE = (1, 2, 3)          # exemplaires du même livre dans une commande reliée
+
+
+def port_relie(n, pays="FR"):
+    """Livraison d'une commande reliée de n exemplaires du même livre : grille des livres (1 livre, 2 à 5 livres, offerte dès 6)."""
+    pays = (pays or "FR").upper()
+    if pays in PAYS_PORT_REEL and PORT_REEL:
+        return PORT_REEL("livre" if n == 1 else "pack3", False, False)
+    base = PORT_FR[1] if n == 1 else 0 if n >= 6 else PORT_FR[3]
+    return base + SUPPLEMENT_PAYS.get(pays, SUPPLEMENT_PAYS["BE"])
+
+
+def devis_relie(n, credit, pays="FR", promo=None):
+    """Montants d'une commande reliée, calculés ICI (jamais par le navigateur). credit : montant numérique réellement payé, en
+    centimes, appliqué une seule fois. Code promo : sur le complément des livres, jamais sur la livraison."""
+    n = int(n)
+    if n not in QUANTITES_RELIE:
+        raise ValueError("quantité non proposée")
+    unit = FORMULES["relie"]["prix_livre"]
+    livres = unit * n
+    deduction = max(0, min(int(credit or 0), livres))
+    p = promo_valide(promo)
+    remise = round((livres - deduction) * p[1] / 100) if p else 0
+    port = port_relie(n, pays)
+    return {"quantite": n, "prix_unitaire": unit, "livres": livres, "deduction": deduction, "remise": remise,
+            "code_promo": p[0] if p else None, "port": port, "total": livres - deduction - remise + port}
+
+
+def checkout_libre(order_id, email, base_url, lignes_stripe, remise_cents=0, remise_nom=None, retour=None, metadata=None):
+    """Paiement Stripe à partir de lignes déjà calculées côté serveur : [(libellé, prix unitaire, quantité)].
+    remise_cents : un coupon à usage unique du montant exact (déduction numérique + code promo), jamais négatif."""
+    items = [{"price_data": {"currency": "eur", "unit_amount": int(u), "product_data": {"name": n[:250]}}, "quantity": int(q)}
+             for n, u, q in lignes_stripe if int(u) > 0 and int(q) > 0]
+    retour = retour or f"{base_url}/creer?commande={order_id}"
+    sep = "&" if "?" in retour else "?"
+    data = {"mode": "payment", "customer_email": email, "client_reference_id": order_id, "locale": "fr", "line_items": items,
+            "metadata": dict(metadata or {}, commande=order_id), "payment_intent_data": {"metadata": {"commande": order_id}},
+            "success_url": f"{retour}{sep}commande={order_id}&session_id={{CHECKOUT_SESSION_ID}}",
+            "cancel_url": f"{retour}{sep}commande={order_id}&annule=1"}
+    if remise_cents > 0:
+        cp = _api("POST", "/coupons", {"amount_off": int(remise_cents), "currency": "eur", "duration": "once", "max_redemptions": 1,
+                                       "name": (remise_nom or "Déduction")[:40], "metadata": {"commande": order_id}})
+        data["discounts"] = [{"coupon": cp["id"]}]
+    s = _api("POST", "/checkout/sessions", data)
+    return s["id"], s["url"]
+
+
 # Grand livre A4 portrait (3 à 5 histoires, un monde par histoire, réunies en UN livre). Proposé seulement quand Alex a fixé ses
 # prix dans Railway (PRIX_GRAND_3, PRIX_GRAND_4, PRIX_GRAND_5, en centimes) : aucun prix par défaut, rien n'est inventé.
 for _n in (3, 4, 5):
@@ -231,7 +283,7 @@ def _api(method, path, data=None):
         raise StripeError(f"Stripe : {msg}")
 
 
-def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None, remise_cents=0, ebook=False):
+def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, coloriage=False, objets=(), promo=None, remise_cents=0, ebook=False, retour=None):
     """Paiement unique : les livres (quantité × prix du livre), le calendrier s'il y en a un, puis la livraison sur une ligne
     à part (si elle n'est pas offerte)."""
     f = FORMULES[formule]
@@ -264,8 +316,8 @@ def checkout(order_id, formule, email, base_url, pays="FR", calendrier=False, co
         items.append({"price_data": {"currency": "eur", "unit_amount": port, "product_data": {"name": "Livraison (un seul colis)"}}, "quantity": 1})
     data = {"mode": "payment", "customer_email": email, "client_reference_id": order_id, "locale": "fr", "line_items": items,
             "metadata": {"commande": order_id, "formule": formule}, "payment_intent_data": {"metadata": {"commande": order_id}},
-            "success_url": f"{base_url}/creer?commande={order_id}&session_id={{CHECKOUT_SESSION_ID}}",
-            "cancel_url": f"{base_url}/creer?commande={order_id}&annule=1"}
+            "success_url": f"{retour or base_url + '/creer?x=1'}&commande={order_id}&session_id={{CHECKOUT_SESSION_ID}}",
+            "cancel_url": f"{retour or base_url + '/creer?x=1'}&commande={order_id}&annule=1"}
     if remise_cents > 0:              # code promo : coupon Stripe à usage unique, du montant exact de la remise
         c, pct = promo_valide(promo)
         cp = _api("POST", "/coupons", {"amount_off": int(remise_cents), "currency": "eur", "duration": "once", "max_redemptions": 1,

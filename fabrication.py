@@ -36,12 +36,31 @@ def _texte_page(c, lignes, couleur="#1F2557", fond="#FBF5EA"):
     c.setFillColor(HexColor(fond)); c.rect(0, 0, PAGE_IMP, PAGE_IMP, fill=1, stroke=0)
     y = PAGE_IMP / 2 + 20 * len(lignes) / 2
     for txt, taille, gras in lignes:
-        c.setFillColor(HexColor(couleur)); c.setFont('StoryBold' if gras else 'Story', taille)
+        c.setFillColor(HexColor(couleur)); c.setFont(M.FN(gras), taille)
         c.drawCentredString(PAGE_IMP / 2, y, txt); y -= taille * 1.6
 
 
+def _dedicace_page(c, d, numero):
+    c.setFillColor(HexColor("#FBF5EA")); c.rect(0, 0, PAGE_IMP, PAGE_IMP, fill=1, stroke=0)
+    st = ParagraphStyle('ded', fontName=M.FN(), fontSize=17, leading=26, textColor=HexColor('#1F2557'), alignment=1)
+    q = Paragraph(escape(d['texte']).replace('\n', '<br/>'), st); _, h = q.wrap(PAGE_IMP - 2 * (SAFE + BLEED) - 40, 380)
+    q.drawOn(c, SAFE + BLEED + 20, PAGE_IMP / 2 - h / 2 + 30)
+    if d.get('de'):
+        c.setFillColor(HexColor('#B5562E')); c.setFont(M.FN(True), 13); c.drawCentredString(PAGE_IMP / 2, PAGE_IMP / 2 - h / 2 - 14, d['de'])
+    c.setFillColor(HexColor('#8A8FB0')); c.setFont(M.FN(), 9)
+    c.drawCentredString(PAGE_IMP / 2, SAFE + BLEED + 6, f"Mon Héros du Mois · collection, livre n° {numero}")
+
+
 def interieur(book, out, base, numero, prenom):
-    """PDF intérieur pour l'imprimeur : 24 pages de 630 pt (fini 612 pt + fond perdu)."""
+    """PDF intérieur pour l'imprimeur : 24 pages de 630 pt (fini 612 pt + fond perdu). Police du livre (configurateur) appliquée."""
+    jeton, j2 = M.POLICE.set(book.get('police')), M.CORPS.set(float(book.get('corps') or 1.0))
+    try:
+        return _interieur(book, out, base, numero, prenom)
+    finally:
+        M.POLICE.reset(jeton); M.CORPS.reset(j2)
+
+
+def _interieur(book, out, base, numero, prenom):
     M._register()
     base = Path(base)
     paths = {i: str(base / book['spreads'][i]) for i in range(9)}
@@ -50,8 +69,12 @@ def interieur(book, out, base, numero, prenom):
     c.setTitle(book['title'] + " – intérieur"); c.setAuthor("Mon Héros du Mois")
     # p1 : ex-libris (page de droite)
     _texte_page(c, [("Ce livre appartient à", 16, False), (prenom, 34, True)]); c.showPage()
-    # p2 : mentions (gauche)
-    _texte_page(c, [("Mon Héros du Mois", 11, False), (f"Collection – livre n° {numero}", 11, False)]); c.showPage()
+    # p2 : dédicace si le parent en a écrit une (gauche), sinon mentions ; même nombre de pages dans les deux cas
+    d = book.get('dedicace') or {}
+    if d.get('texte'):
+        _dedicace_page(c, d, numero); c.showPage()
+    else:
+        _texte_page(c, [("Mon Héros du Mois", 11, False), (f"Collection – livre n° {numero}", 11, False)]); c.showPage()
     # p3 : page de titre (droite)
     _texte_page(c, [(l, 30 if i == 0 else 22, i == 0) for i, l in enumerate(book.get('coverTitle', {}).get('lines') or [book['title']])]); c.showPage()
     # p4 à p21 : les 18 pages d'histoire ; p4 (paire, à gauche) + p5 (droite) = double page 1, etc.
@@ -79,6 +102,14 @@ def dimensions_couverture(pages=PAGES_IMPRESSION):
 
 
 def couverture_a_plat(book, out, base, numero, prenom, dims=None):
+    jeton = M.POLICE.set(book.get('police'))
+    try:
+        return _couverture_a_plat(book, out, base, numero, prenom, dims)
+    finally:
+        M.POLICE.reset(jeton)
+
+
+def _couverture_a_plat(book, out, base, numero, prenom, dims=None):
     """Couverture à plat. dims : {'largeur', 'hauteur', 'source', 'confirme'}. Sans gabarit Lulu, maquette marquée non confirmée :
     dos de 0,25 po (tableau du guide Lulu, 24 à 84 pages) et rabat de 0,75 po, à remplacer par les dimensions de l'API."""
     M._register()

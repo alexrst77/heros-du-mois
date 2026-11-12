@@ -776,15 +776,20 @@ __LDJSON__
     <p class="sous">Pas de livre tout fait où l'on change seulement le prénom : chaque histoire est écrite pour votre enfant, à partir de vos choix.</p>
     <ol class="choix">
       <li><div class="cv av"><img src="/static/vitrine/jade_avatar.webp" alt="L'avatar de Jade" loading="lazy" width="480" height="480"></div>
-        <b>Le héros</b><p>Coiffure, couleur de peau, yeux, lunettes, tenue : il lui ressemble. Aucune photo demandée.</p></li>
+        <b>Le héros</b><p>Son avatar (coiffure, peau, yeux, lunettes, tenue) ou sa photo, qui sert de modèle à l'illustration : il lui ressemble.</p></li>
       <li><div class="cv comp"><img width="480" height="480" src="/static/avatars/doudou-ours.webp" alt="Un doudou ours en peluche" loading="lazy"><img width="480" height="480" src="/static/avatars/animal-chien.webp" alt="Un petit chien" loading="lazy"></div>
-        <b>Ses compagnons</b><p>Son doudou et jusqu'à trois animaux, avec leur nom. Ils vivent l'aventure avec lui.</p></li>
+        <b>Ses compagnons</b><p>Frère, sœur, mamie, ami, doudou ou animal, avec leur nom : ils vivent l'aventure avec lui.</p></li>
       <li><div class="cv mondes3"><img width="180" height="180" src="/static/vitrine/univ/mini/desert.webp" alt="Univers Désert et oasis" loading="lazy"><img width="180" height="180" src="/static/vitrine/univ/mini/espace.webp" alt="Univers Parmi les étoiles" loading="lazy"><img width="180" height="180" src="/static/vitrine/univ/mini/mer.webp" alt="Univers Sous l'océan" loading="lazy"></div>
         <b>L'univers</b><p><span data-n="univers">15</span> mondes : forêt enchantée, espace, océan, désert et oasis… ou une fête de famille.</p></li>
       <li><div class="cv themes"><span>La peur du noir</span><span>La rentrée</span><span>Un petit frère</span><span>La confiance en soi</span><span>Les émotions</span></div>
         <b>Le thème</b><p>Ce que l'histoire l'aide à vivre : <span data-n="themes">29</span> thèmes au choix, ou une aventure juste pour rire.</p></li>
     </ol>
-    <div class="concept-bas"><a class="btn" href="/creer">Composer son histoire</a><span>Environ 3 minutes, sans inscription</span></div>
+    <ol class="parcours-etapes" aria-label="Comment ça marche">
+      <li><b>1. Vous composez</b><span>Âge, histoire, valeur, héros, style, écriture : une question à la fois, sans inscription.</span></li>
+      <li><b>2. Vous voyez sa couverture</b><span>Un aperçu offert avant de payer. Puis vous commandez le livre imprimé (<span data-prix="relie">…</span> + livraison).</span></li>
+      <li><b>3. Relu, imprimé, livré</b><span>Notre équipe relit chaque page avant l'impression. Vous suivez la création, puis le colis, dans « Mon livre ».</span></li>
+    </ol>
+    <div class="concept-bas"><a class="btn" href="/creer">Créer son livre</a><span>Sans inscription · brouillon enregistré automatiquement</span></div>
   </div>
 </section>
 
@@ -985,8 +990,8 @@ __LDJSON__
     <div class="fin">
       <div>
         <h2>Ce soir, c'est lui le héros</h2>
-        <p>Composez son histoire en quelques minutes. Vous voyez sa couverture avant de payer.</p>
-        <a class="btn" href="/creer">Composer son histoire</a>
+        <p>Composez son histoire pas à pas. Vous voyez sa couverture avant de payer.</p>
+        <a class="btn" href="/creer">Créer son livre</a>
       </div>
       <img src="/static/vitrine/photo_08.webp" alt="Le livre de Noé ouvert le soir sous la couette" loading="lazy" width="800" height="1000">
     </div>
@@ -1234,5 +1239,9 @@ __BARRE__
   document.addEventListener('keydown', e => { if (e.key === 'Escape') ouvrir(false); });
 })();
 </script>
+<style>.parcours-etapes{list-style:none;padding:0;margin:26px 0 6px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.parcours-etapes li{background:#fff;border-radius:20px;padding:14px 16px;box-shadow:0 8px 22px -16px rgba(36,24,77,.45)}
+.parcours-etapes b{display:block;font:800 18px/1.2 var(--titre);margin:0 0 4px}.parcours-etapes span{font-size:15px;color:var(--encre-2)}</style>
+<script>fetch('/api/catalogue').then(r=>r.json()).then(c=>{const eu=v=>(v/100).toFixed(2).replace('.',',')+' €';document.querySelectorAll('[data-prix]').forEach(e=>{const v=c.prix[e.dataset.prix];if(v!=null)e.textContent=eu(v);});}).catch(()=>{});</script>
 </body>
 </html>

@@ -274,7 +274,7 @@ def mon_compte():
     with db._db() as c:
         hs = [dict(r) for r in c.execute("select id, nom, apercu, maj from heros where client_id=? order by maj desc", (cl["id"],))]
     resp = jsonify(connecte=True, email=cl["email"], nom=cl.get("nom") or "", adresse=json.loads(cl["adresse"]) if cl.get("adresse") else None,
-                   heros=hs, commandes=commandes_de(cl), nouveautes=_nouveautes(cl["email"]), **base)
+                   heros=hs, commandes=commandes_de(cl), nouveautes=_nouveautes(cl["email"]), livres=livres_de(cl), **base)
     t = request.cookies.get(COOKIE)                       # session prolongée à chaque visite : on reste connecté tant qu'on revient
     if request.cookies.get(VUE_ADMIN):                    # vue admin : ni prolongée, ni comptée comme visite du client
         return resp
@@ -283,6 +283,24 @@ def mon_compte():
         c.execute("update clients set vu=? where id=?", (time.time(), cl["id"]))
     resp.set_cookie(COOKIE, t, max_age=DUREE, httponly=True, samesite="Lax", secure=request.is_secure or request.headers.get("X-Forwarded-Proto") == "https")
     return resp
+
+
+def livres_de(cl):
+    """Parcours « Créer son livre » : brouillons, livres en création, livres prêts (versions), commandes reliées."""
+    import parcours
+    ETAT = {"brouillon": "Brouillon", "attente_paiement": "Paiement non finalisé", "generation": "En création", "pret": "Disponible"}
+    with db._db() as c:
+        rows = [dict(r) for r in c.execute("select * from projets where client_id=? or lower(coalesce(email,''))=? order by maj desc limit 50",
+                                           (cl["id"], cl["email"].lower()))]
+    out = []
+    for p in rows:
+        d = json.loads(p["donnees"] or "{}")
+        with db._db() as c:
+            v = c.execute("select max(numero) from versions where projet_id=?", (p["id"],)).fetchone()[0] or (1 if p["statut"] == "pret" else 0)
+        out.append({"id": p["id"], "statut": ETAT.get(p["statut"], p["statut"]), "prenom": (d.get("heros") or {}).get("prenom") or "",
+                    "titre": p.get("titre"), "maj": p["maj"], "version": v, "papier": len(parcours.commandes_papier(p["id"])),
+                    "lien": f"/creer?projet={p['id']}&j={p['jeton']}" if p["statut"] == "brouillon" else f"/mon-livre/{p['id']}?j={p['jeton']}"})
+    return out
 
 
 def _nouveautes(email):

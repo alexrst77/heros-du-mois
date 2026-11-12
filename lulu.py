@@ -253,7 +253,7 @@ def create_print_job(order_id, items, addr, email, pod=None, shipping=None):
     return api("POST", "/print-jobs/", {
         "contact_email": os.getenv("LULU_CONTACT_EMAIL") or email,
         "external_id": order_id,
-        "line_items": [{"external_id": it["id"], "title": it["titre"][:250], "quantity": 1, "pod_package_id": it.get("pod") or pod,
+        "line_items": [{"external_id": it["id"], "title": it["titre"][:250], "quantity": int(it.get("quantite") or 1), "pod_package_id": it.get("pod") or pod,
                         "printable_normalization": {"pod_package_id": it.get("pod") or pod, "cover": {"source_url": it["couverture"]},
                                                     "interior": {"source_url": it["interieur"]}}} for it in items],
         "shipping_address": address(addr, email),

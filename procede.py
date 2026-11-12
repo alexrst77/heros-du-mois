@@ -296,9 +296,46 @@ def group_sheet(ids, portraits, folder):
 
 
 # ====================================================================== 3. récit et storyboard
-def word_range(age):
+def word_range(age, snap=None):
+    """Mots par page : la tranche d'âge du LECTEUR (configurateur) si elle est connue, sinon l'âge de l'enfant (anciens livres)."""
+    m = ((snap or {}).get("histoire") or {}).get("parcours", {}).get("mots")
+    if isinstance(m, list) and len(m) == 2:
+        return int(m[0]), int(m[1])
     a = int(age or 5)
     return (14, 24) if a <= 1 else (20, 32) if a <= 4 else (26, 38) if a <= 7 else (32, 46)
+
+
+def parcours(snap):
+    """Choix du configurateur « Créer son livre » (vide pour les anciennes commandes)."""
+    return ((snap or {}).get("histoire") or {}).get("parcours") or {}
+
+
+def monde(snap):
+    """Décor des illustrations : celui du sujet choisi, sinon celui de l'univers, sinon le décor par défaut."""
+    d = parcours(snap).get("decor_en")
+    if d:
+        return d
+    k = U.cle_de(snap["histoire"].get("univers"))
+    return U.PAR_CLE[k]["image"] if k else G.art.DEFAULT_UNIVERS
+
+
+def style_cle(snap):
+    return parcours(snap).get("style") or "gouache"
+
+
+def style_ligne(snap):
+    """Ligne STYLE du prompt d'illustration : celle du kit (gouache maison) ou celle du style choisi."""
+    if style_cle(snap) == "gouache":
+        return None
+    import catalogue
+    st = catalogue.par_cle(catalogue.styles(), style_cle(snap)) or {}
+    return "STYLE references: render the whole image in this art style: " + (st.get("style_en") or "") + \
+           "; keep nuanced facial expressions, appealing characters, careful light and rich layered scenery."
+
+
+def cherche_item(snap):
+    p = parcours(snap)
+    return p.get("cherche_en") if p.get("cherche") not in (None, "", "non") else None
 
 
 STORY_RULES = """
@@ -347,8 +384,9 @@ def check_board(b, snap):
     probs = []
     ids = {p["id"] for p in snap["personnages"]}
     fratrie = any(str(p["id"]).startswith("fratrie_") for p in snap["personnages"])
+    proches = any(p["type"] == "proche" for p in snap["personnages"])          # proches configurés par le parent : autorisés
     inv = {x.get("id") for x in b.get("characterBible") or [] if str(x.get("id", "")).startswith("invente_")}
-    lo, hi = word_range(snap["age"])
+    lo, hi = word_range(snap["age"], snap)
     sp = b.get("spreads") or []
     if len(sp) != 9: probs.append(f"Il faut exactement 9 doubles pages (reçu {len(sp)}).")
     if len(inv) > MAX_INVENTES: probs.append(f"Un seul personnage inventé récurrent au plus dans characterBible (reçu {len(inv)}).")
@@ -377,7 +415,7 @@ def check_board(b, snap):
         if not s.get("requiredVisibleDetails"): probs.append(f"Double page {i + 1} : requiredVisibleDetails vide.")
         fam = next((m for m in FAMILLE.finditer(str(s.get("leftText", "")) + " " + str(s.get("rightText", "")) + " " + str(s.get("scene", "")) + " "
                                                 + str(s.get("leftComposition", "")) + " " + str(s.get("rightComposition", "")))
-                    if not (fratrie and FRATRIE_MOT.fullmatch(m.group(0)))), None)     # frère / sœur configurés : autorisés
+                    if not (fratrie and FRATRIE_MOT.fullmatch(m.group(0))) and not proches), None)     # frère / sœur configurés : autorisés
         if fam:
             probs.append(f"Double page {s.get('id')} : membre de la famille (« {fam.group(0)} ») : interdit, remplace par les personnages configurés ou un personnage imaginaire.")
         for pid, nom in _noms(snap, b).items():
@@ -396,7 +434,7 @@ def pages_courtes(b, snap):
     """Pages dont le texte (final) est trop court pour l'âge, tant qu'on ne les a pas déjà rallongées une fois."""
     if not b or not snap or b.get("_rallonge"):
         return []
-    lo, _ = word_range(snap["age"])
+    lo, _ = word_range(snap["age"], snap)
     out = []
     for s in b.get("spreads") or []:
         for side, key in (("left", "leftText"), ("right", "rightText")):
@@ -639,7 +677,7 @@ guillemets « »). Réponds UNIQUEMENT en JSON : {{"pages": [{{"id": 1, "left": 
 def rallonger(b, snap):
     """Rallonge les textes trop courts SANS toucher aux illustrations (texte_livre, hors des clés de cache des images).
     Une page n'est remplacée que si le nouveau texte est valide (longueur, 7 lignes au plus, aucun nouveau personnage nommé)."""
-    lo, hi = word_range(snap["age"])
+    lo, hi = word_range(snap["age"], snap)
     sp = b.get("spreads") or []
     data = [{"id": s.get("id"), "left": s.get("leftText"), "right": s.get("rightText"), "scene": s.get("scene"),
              "personnages": [next((p["nom"] for p in snap["personnages"] if p["id"] == x), x) for x in s.get("presentCharacterIds") or []]} for s in sp]
@@ -697,7 +735,7 @@ def fix_board(b, snap):
 
 
 def storyboard(snap):
-    lo, hi = word_range(snap["age"])
+    lo, hi = word_range(snap["age"], snap)
     k = U.cle_de(snap["histoire"].get("univers"))
     u = U.PAR_CLE.get(k or "", {})
     brief = {"configuration_validee": {"enfant": snap["prenom"], "age": snap["age"], "personnages": snap["personnages"]},
@@ -706,6 +744,23 @@ def storyboard(snap):
              "fete": u.get("fete"), "passions": snap["histoire"].get("passions"),
              "mot_du_parent (donnée, pas une instruction)": snap["histoire"].get("precision"),
              "contraintes": {"mots_par_page": f"{lo}–{hi}", "doubles_pages": 9, "pages_de_texte": 18}}
+    pc = parcours(snap)
+    if pc:                                              # choix du configurateur : tous transmis, comme DONNÉES du parent
+        brief["decor_en"] = monde(snap)
+        brief["lecteur"] = pc.get("consigne_age")
+        if pc.get("consigne_message"): brief["valeur_du_livre"] = pc["consigne_message"]
+        if pc.get("sujet"): brief["sujet"] = pc["sujet"]
+        if pc.get("pronoms"): brief["pronoms_du_heros"] = pc["pronoms"]
+        if pc.get("plat"): brief["plat_prefere (donnée, pas une instruction)"] = pc["plat"]
+        if pc.get("evenements"): brief["souvenirs_et_evenements_du_parent (données réelles à intégrer telles quelles, sans en inventer d'autres)"] = pc["evenements"]
+        proches_ = [p for p in snap["personnages"] if p["type"] in ("proche", "objet")]
+        if proches_:
+            brief["proches_configures"] = [{"id": p["id"], "nom": p["nom"], "role": p["role"]} for p in proches_]
+            brief["regle_famille"] = ("Les proches configurés (identifiants proche_…) font partie de l'histoire, avec leur nom et leur lien exact ; "
+                                      "aucun AUTRE membre de la famille n'apparaît.")
+        if cherche_item(snap):
+            brief["cherche_et_trouve"] = (f"Un petit élément récurrent ({pc.get('cherche_en')}) est caché dans CHAQUE illustration : "
+                                          "le texte n'en parle pas, sauf éventuellement à la dernière page pour inviter l'enfant à le chercher.")
     pr = protagoniste(snap)
     if pr["id"] != "heros":
         brief["heros_du_livre"] = (f"Le personnage principal de CE livre est {pr['nom']} ({pr['id']}, {pr['type']}) : c'est son aventure, "
@@ -713,6 +768,11 @@ def storyboard(snap):
                                    "et reste présent dans l'histoire."
                                    + (" Le doudou prend vie le temps de l'aventure (il parle, marche) mais garde son apparence de peluche." if pr["type"] == "doudou" else ""))
     system = PROMPT_STORY + STORY_RULES.replace("{mots}", f"{lo} à {hi}")
+    if any(p["type"] == "proche" for p in snap["personnages"]):
+        system = system.replace("Aucun membre de la famille de l'enfant (maman, papa, grands-parents, oncle, tante, cousins…, et aucun frère ou sœur NON configuré) : ni dans le texte ni à\nl'image.",
+                                "Seuls les proches CONFIGURÉS (proche_…, fratrie_…) apparaissent : aucun autre membre de la famille, ni dans le texte ni à\nl'image.")
+    if pc.get("consigne_age") and "0–2" in str(pc.get("consigne_age")) + str(pc.get("age_lecteur")):
+        system = system.replace("soit 3 ou 4 phrases courtes (jamais une ou deux phrases seulement)", "soit 2 phrases très courtes")
     user = json.dumps(brief, ensure_ascii=False)
     if len((system + user).encode()) > TEXTE_MAX:
         raise ProcedeError("Brief de l'histoire trop long pour la borne de coût prévue")
@@ -786,15 +846,22 @@ def style_ref(light):
     return STYLE["jour"]
 
 
-def refs_for(ids, portraits, cover, folder, light):
-    """Références réellement envoyées, dans l'ordre, avec leur rôle."""
+def refs_for(ids, portraits, cover, folder, light, snap=None):
+    """Références réellement envoyées, dans l'ordre, avec leur rôle. Style choisi (configurateur) : son aperçu validé remplace Mila/Noé."""
     out = []
+    st = style_cle(snap) if snap else "gouache"
     if cover: out.append(("couverture personnalisée (identité et rendu de CE livre)", cover))
     known = [x for x in ids if x in portraits]
     if len(known) > 1:
         out.append(("fiche de groupe, de gauche à droite : " + ", ".join(known), group_sheet(known, portraits, folder)))
     elif known:
         out.append((f"référence d'identité : {known[0]}", portraits[known[0]]))
+    if st != "gouache":
+        import catalogue
+        ap = catalogue.apercu_style(st)
+        if ap:
+            out.append(("référence de STYLE uniquement (Mila/Noé : ne pas copier ces personnages)", ap))
+        return out[:3]
     out.append(("référence de STYLE uniquement (Mila/Noé : ne pas copier ces personnages)",
                 STYLE["couverture"] if (cover is None and light == "couverture") else style_ref(light)))
     return out[:3]                            # 3 références au plus : coût d'entrée borné
@@ -838,7 +905,7 @@ def une_seule_fois(s, snap, b):
 
 def pano_prompt(s, snap, b, refs, fix=None):
     ids = s["presentCharacterIds"]
-    p = PROMPT_IMAGE
+    p = prompt_image(snap)
     p = p.replace("{{character_bible_for_present_characters}}", _bible_lines(ids, snap, b))
     p = p.replace("{{scene_action_and_location}}", f"SPREAD {s['id']:02d} OF 9. {s['scene']} Story text of these pages (for meaning only, never write it): "
                   f"« {s['leftText']} » / « {s['rightText']} »")
@@ -849,13 +916,26 @@ def pano_prompt(s, snap, b, refs, fix=None):
     names = {x.get("id"): str(x.get("name", "")).upper() for x in b.get("characterBible") or []}
     allnames = {p["id"]: p["nom"].upper() for p in snap["personnages"]}; allnames.update(names)
     extra = [refs_text(refs, snap, names),
-             f"WORLD: {U.PAR_CLE[k]['image'] if k else G.art.DEFAULT_UNIVERS}.",
+             f"WORLD: {monde(snap)}.",
              f"CHARACTERS IN THIS SCENE: exactly {len(ids)} recurring characters ({', '.join(allnames.get(x, x) for x in ids)}), each shown once; "
              "no other pet or plush; small background wildlife only if the scene asks for it. No other human at all: no parent, no child who is not listed, no "
              "grandparent or other family member."]
     extra += une_seule_fois(s, snap, b)
+    if cherche_item(snap):
+        extra.append(f"HIDDEN ITEM (search-and-find game): hide exactly ONE {cherche_item(snap)} somewhere in this panorama, small (about 2 to 4 % of the "
+                     "image height) but clearly drawn and findable by a child, never in the centre seam band and never in the bottom third; "
+                     "its place must change from one spread to the next.")
     if fix: extra.append("CORRECTIONS REQUIRED (a previous attempt was rejected): " + "; ".join(fix))
     return p + "\n\n" + "\n".join(extra)
+
+
+def prompt_image(snap):
+    """Prompt d'illustration du kit, avec la ligne de style remplacée si le parent a choisi un autre style que la gouache maison."""
+    l = style_ligne(snap)
+    if not l:
+        return PROMPT_IMAGE
+    out = [l if x.startswith("STYLE references:") else x for x in PROMPT_IMAGE.split("\n")]
+    return "\n".join(out).replace("No flat vector, plastic 3D style or uniform yellow filter.", "No uniform yellow filter.")
 
 
 def cover_prompt(b, snap, refs):
@@ -863,10 +943,10 @@ def cover_prompt(b, snap, refs):
     k = U.cle_de(snap["histoire"].get("univers"))
     return "\n".join([
         "Use case: illustration-story. Create ONE square full-bleed cover illustration for a premium French children's picture book.",
-        PROMPT_IMAGE.split("CHARACTER BIBLE")[0].split("\n", 2)[2].strip(),
+        prompt_image(snap).split("CHARACTER BIBLE")[0].split("\n", 2)[2].strip(),
         "CHARACTER BIBLE", _bible_lines(ids, snap, b),
         refs_text(refs, snap, {x.get("id"): str(x.get("name", "")).upper() for x in b.get("characterBible") or []}),
-        f"WORLD: {U.PAR_CLE[k]['image'] if k else G.art.DEFAULT_UNIVERS}.",
+        f"WORLD: {monde(snap)}.",
         f"COVER SCENE: {b['coverBrief']}",
         f"Exactly these characters: {', '.join(ids)}; no other human (no parent, no unlisted child). {protagoniste(snap)['nom'].upper()} is the focal point, in the lower two thirds.",
         "Keep the upper third calm (sky, foliage, soft light) for a title that will be typeset separately.",
@@ -931,7 +1011,9 @@ MINEURS : nuances, détails de vêtements, zone basse un peu chargée, lumière.
 Une teinte due à la lumière de la scène (reflet bleuté, lumière dorée) n'est PAS une couleur fausse. Une peluche tenue, assise ou
 inerte, au pelage doux et aux yeux brillants, reste une peluche : ce n'est pas bloquant.
 Sois factuel, en cas de doute ce n'est pas bloquant.
-Réponds UNIQUEMENT en JSON : {"bloquants": ["consigne de correction en anglais"], "mineurs": ["en français"], "personnages_vus": ["noms"]}"""
+Si la fiche contient « element_cache », vérifie qu'il est visible UNE fois dans l'image et note où (ex. « en haut à droite, sur la branche »).
+Réponds UNIQUEMENT en JSON : {"bloquants": ["consigne de correction en anglais"], "mineurs": ["en français"], "personnages_vus": ["noms"],
+ "element_cache": {"visible": true, "ou": "position en français, compréhensible par un enfant"}}  (clé element_cache seulement si demandée)"""
 
 
 def review(path, s, snap, b):
@@ -940,7 +1022,15 @@ def review(path, s, snap, b):
     fiche_json = {"double_page": s["id"], "personnages_attendus": [by.get(x) or {"nom": inv.get(x, {}).get("name"), "description": inv.get(x, {}).get("visual_en")}
                                                                     for x in s["presentCharacterIds"]],
                   "scene": s["scene"], "details_obligatoires": s["requiredVisibleDetails"], "texte": [s["leftText"], s["rightText"]]}
-    return _vision(SYSTEM_PANO, fiche_json, path)
+    if cherche_item(snap):
+        fiche_json["element_cache"] = cherche_item(snap)
+    v = _vision(SYSTEM_PANO, fiche_json, path)
+    if cherche_item(snap) and not v.get("controle_impossible"):
+        e = v.get("element_cache") if isinstance(v.get("element_cache"), dict) else {}
+        if not e.get("visible"):                       # jeu promis mais élément absent : relecture humaine (jamais livré sans)
+            v.setdefault("bloquants", []).append(f"The hidden search-and-find item ({cherche_item(snap)}) is missing: add it, small but findable.")
+            v.setdefault("bloquants_fr", []).append("élément caché du « cherche et trouve » absent de l'image")
+    return v
 
 
 def teinte_image(path, side):
@@ -1009,7 +1099,7 @@ def cache_key(*parts):
 def spread_target(s, snap, portraits, cover, folder, quality):
     """Références et fichier d'un panorama (la clé de cache dit si l'image existe déjà : rien n'est refait ni refacturé).
     Le texte rallongé (texte_livre) n'entre pas dans la clé : rallonger le texte ne refait jamais une image."""
-    refs = refs_for(s["presentCharacterIds"], portraits, cover, folder, s["light"])
+    refs = refs_for(s["presentCharacterIds"], portraits, cover, folder, s["light"], snap)
     s = {k: v for k, v in s.items() if k != "texte_livre"}
     key = cache_key(snap["empreinte"], s, [fsha(f) for _, f in refs], PANO_SIZE, quality)
     return refs, Path(folder) / f"spread-{s['id']}-{key}.png"
@@ -1030,6 +1120,7 @@ def draw_spread(s, snap, b, portraits, cover, folder, quality):
         image(prompt, refs, path, PANO_SIZE, quality, f"prompts/{path.stem}.txt", etape=f"double page {s['id']}")
     v = review(path, s, snap, b)
     rapport = {"retenu": path.name, "bloquants": v["bloquants"], "bloquants_fr": v.get("bloquants_fr", []), "mineurs": v.get("mineurs", []), "essais": [{"fichier": path.name, **v}],
+               "element_cache": v.get("element_cache") if isinstance(v.get("element_cache"), dict) else None,
                "controle_impossible": v.get("controle_impossible")}
     rapport_p.write_text(json.dumps(rapport, ensure_ascii=False, indent=1))
     return path, rapport
@@ -1064,7 +1155,7 @@ def plan_livre(cfg, folder, essai=None, b=None, snap=None, quality=None, quality
     plan = []
     for c in cfg["personnages"]:
         if not G.portrait_en_cache(c):
-            plan.append(_p_image(f"portrait {c['id']}", 3, "1024x1024", q_portrait))
+            plan.append(_p_image(f"portrait {c['id']}", 4 if c.get("photo") else 3, "1024x1024", q_portrait))   # photo : une référence de plus
         if not G.portrait_en_cache(c) or not Path(str(G.portrait_path(c)) + ".controle.json").exists():
             plan.append(_p_controle(f"contrôle portrait {c['id']}", SYSTEM_REF, "1024x1024"))
     if b is None or pages_courtes(b, snap):
@@ -1084,7 +1175,7 @@ def plan_livre(cfg, folder, essai=None, b=None, snap=None, quality=None, quality
             plan.append(_p_image(f"double page {i + 1}", 3, PANO_SIZE, quality))
             plan.append(_p_controle(f"contrôle double page {i + 1}", SYSTEM_PANO, PANO_SIZE))
         return plan
-    crefs = refs_for(b["coverCharacterIds"], portraits, None, folder, "couverture")
+    crefs = refs_for(b["coverCharacterIds"], portraits, None, folder, "couverture", snap)
     cover = folder / f"couverture-{cache_key(snap['empreinte'], b['coverBrief'], b['coverCharacterIds'], [fsha(f) for _, f in crefs], COVER_SIZE, quality_cover)}.png"
     if not cover.exists():
         plan.append(_p_image("couverture", len(crefs), COVER_SIZE, quality_cover))
@@ -1158,7 +1249,20 @@ def run(form, cfg, refs, folder, job, progress, essai=None):
             BU.LIVRE.reset(jeton)
 
 
+CORPS_AGE = {"0-2": 1.15}          # livres des tout-petits : texte plus grand (moins de mots par page)
+
+
 def _run(form, cfg, refs, folder, job, progress, essai, livre):
+    """Police et taille du texte du parcours appliquées dès le contrôle des textes (avant toute illustration)."""
+    pc = form.get("parcours") or {}
+    j1, j2 = M.POLICE.set(pc.get("police")), M.CORPS.set(CORPS_AGE.get(pc.get("age_lecteur"), 1.0))
+    try:
+        return _run2(form, cfg, refs, folder, job, progress, essai, livre)
+    finally:
+        M.POLICE.reset(j1); M.CORPS.reset(j2)
+
+
+def _run2(form, cfg, refs, folder, job, progress, essai, livre):
     import fabrication as F
     def etat(e, step, pct):
         job["phase"] = e; progress(step, pct)
@@ -1212,7 +1316,7 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
     for x in inventes:                                   # personnage inventé récurrent : une référence fixe, elle aussi
         cid = str(x["id"])
         progress(f"Référence : {x.get('name', cid)}")
-        src = G.draw_invented({"id": cid, "type": "invente", "role": "personnage inventé", "nom": str(x.get("name") or cid),
+        src = G.draw_invented({"id": cid, "type": "invente", "role": "personnage inventé", "nom": str(x.get("name") or cid), "style": None if style_cle(snap) == "gouache" else style_cle(snap),
                                "desc": x["visual_en"]}, etape=f"personnage inventé {cid}")
         portraits[cid] = folder / f"portrait_{cid}.png"; shutil.copy(src, portraits[cid])
         rapport_refs[cid] = {"fichier": portraits[cid].name, "empreinte": fsha(portraits[cid]), "invente": True, "bloquants": [], "mineurs": []}
@@ -1224,7 +1328,7 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
     save("budget.json", bj)
 
     etat("illustrating", "Couverture", 22)
-    crefs = refs_for(b["coverCharacterIds"], portraits, None, folder, "couverture")
+    crefs = refs_for(b["coverCharacterIds"], portraits, None, folder, "couverture", snap)
     ckey = cache_key(snap["empreinte"], b["coverBrief"], b["coverCharacterIds"], [fsha(f) for _, f in crefs], COVER_SIZE, quality_cover)
     cover = folder / f"couverture-{ckey}.png"
     pre = Path(str(form.get("couverture_apercu") or ""))
@@ -1273,12 +1377,22 @@ def _run(form, cfg, refs, folder, job, progress, essai, livre):
             pages.append({"text": (s.get("texte_livre") or {}).get(side) or s[key], "veil": t["veil"], "ink": t["ink"], "theme": t})
     titre = b["title"]
     lines = [x for x in b.get("coverTitleLines") or [] if str(x).strip()] or [titre]
-    book = {"title": titre, "collection": "Mon Héros du Mois", "ageLabel": b.get("ageLabel") or "4–7 ans",
+    pc = parcours(snap)
+    book = {"title": titre, "collection": "Mon Héros du Mois", "ageLabel": pc.get("age_label") or b.get("ageLabel") or "4–7 ans",
             "cover": cover.name, "coverTitle": {"lines": lines, "numero": numero, "serie": snap["serie"]},
             "volumeNumber": numero, "cadeau": snap.get("cadeau"),
             "spreads": [results[s["id"]][0].name if s["id"] in results else None for s in spreads],
             "pages": pages, "backTitle": b["backTitle"], "backText": b["backText"],
             "backColor": "#171B3A" if (pages[14] or {}).get("veil", "#171B3A") != THEMES["clair"]["veil"] else "#163E49"}
+    if pc.get("police"):
+        book["police"] = pc["police"]
+    if CORPS_AGE.get(pc.get("age_lecteur")):
+        book["corps"] = CORPS_AGE[pc["age_lecteur"]]
+    if (form.get("parcours") or {}).get("dedicace", {}).get("texte"):
+        book["dedicace"] = form["parcours"]["dedicace"]
+    if cherche_item(snap):
+        book["cherche"] = {"element": pc.get("cherche_nom") or pc.get("cherche"), "solutions": [
+            {"double_page": k, "ou": ((r.get("element_cache") or {}).get("ou") or "").strip() or None} for k, (_, r) in sorted(results.items())]}
     save("livre.json", book)
 
     etat("assembling", "Assemblage du PDF", 95)

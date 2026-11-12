@@ -97,6 +97,9 @@
           <small>modifié le ${new Date(h.maj * 1000).toLocaleDateString('fr-FR')}</small>
           <button class="btn" data-ouvrir="${h.id}">Créer avec ${esc(h.nom)}</button><button class="lien" data-suppr="${h.id}" data-nom="${esc(h.nom)}">Supprimer</button></div>`).join('')}
         <a class="nouveau" href="/creer">+ Nouveau héros</a></div>
+      ${(C.livres || []).length ? `<h2>Mes livres</h2>${C.livres.map(l => `<div class="cmd"><div><div class="q">${esc(l.titre || ('Le livre de ' + (l.prenom || '…')))}</div>
+          <div class="d">${esc(l.statut)}${l.version > 1 ? ' · version ' + l.version : ''}${l.papier ? ' · ' + l.papier + ' commande(s) reliée(s)' : ''} · ${new Date(l.maj * 1000).toLocaleDateString('fr-FR')}</div></div>
+          <div class="t"><a class="btn petit" href="${esc(l.lien)}">${l.statut === 'Brouillon' ? 'Reprendre' : 'Ouvrir « Mon livre »'}</a></div></div>`).join('')}` : ''}
       <h2>Mes commandes</h2>
       ${K.length ? K.map(c => `<div class="cmd"><div><div class="q">${esc(c.quoi)}</div><div class="d">Commande du ${new Date(c.cree * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} · n° ${esc(c.id.toUpperCase())}</div>
           <span class="st ${c.statut === 'Expédié' ? 'ok' : ''}">${esc(c.statut)}</span></div><div class="m">${eur(c.montant)}</div>
@@ -112,7 +115,7 @@
       b.disabled = true;
       const j = await (await fetch('/api/compte/heros/' + b.dataset.ouvrir)).json();
       try { const cur = JSON.parse(localStorage.getItem('heros-avatar') || '{}'); localStorage.setItem('heros-avatar', JSON.stringify(Object.assign(cur, j.etat))); } catch (_) {}
-      location.href = '/creer';
+      location.href = '/creer/autres-creations';
     });
     document.querySelectorAll('[data-suppr]').forEach(b => b.onclick = async () => {
       if (!confirm(`Supprimer ${b.dataset.nom} de vos héros enregistrés ?`)) return;

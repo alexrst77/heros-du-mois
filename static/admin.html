@@ -144,7 +144,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const eur = c => (c / 100).toFixed(2).replace('.', ',') + ' €';
 const usd = v => (v || 0).toFixed(2).replace('.', ',') + ' $';
 const day = t => t ? new Date(t * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '';
-const FORMULE = { livre: '1 livre', pack3: 'Pack 3 livres', pack6: 'Pack 6 livres', pack12: 'Pack 12 livres', fetes: '6 livres de fête', mensuel: 'Abonnement (ancien)', annuel: 'Abonnement annuel', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu', calendrier: '📅 Calendrier', coloriage: '🖍️ Cahier de coloriage', gourde: '🥤 Gourde', tasse: '☕ Tasse', sac: '🎒 Sac à dos', ebook: '📩 E-book', imprime: '🖨️ Version imprimée d\'un e-book' };
+const FORMULE = { livre: '1 livre', relie: '📕 Livre relié (de son e-book)', ebook: '📱 Livre numérique', pack3: 'Pack 3 livres', pack6: 'Pack 6 livres', pack12: 'Pack 12 livres', fetes: '6 livres de fête', mensuel: 'Abonnement (ancien)', annuel: 'Abonnement annuel', essai_brouillon: 'Essai brouillon', essai_apercu: 'Essai aperçu', calendrier: '📅 Calendrier', coloriage: '🖍️ Cahier de coloriage', gourde: '🥤 Gourde', tasse: '☕ Tasse', sac: '🎒 Sac à dos', ebook: '📩 E-book', imprime: '🖨️ Version imprimée d\'un e-book' };
 const NOMX = { calendrier: 'le calendrier', coloriage: 'le cahier', gourde: 'la gourde', tasse: 'la tasse', sac: 'le sac à dos' };
 // colis = livres + calendrier de la même commande
 const NB = o => (o.pack_total || 0) + (o.pack_cal || 0), PRETS = o => (o.pack_prets || 0) + (o.pack_cal_prets || 0);
@@ -1018,9 +1018,58 @@ function vueReglages() {
   </div>`;
 }
 
+/* ================================================================ parcours « Créer son livre » */
+let PARC = null, PARC_J = 30;
+function parcCharger() { fetch('/admin/api/parcours' + Q + (Q ? '&' : '?') + 'jours=' + PARC_J, { headers: H }).then(r => r.json()).then(x => { PARC = x; if (TAB === 'parcours') render(); }); }
+async function parcSet(rub, cle, champs) {
+  const r = await fetch('/admin/api/catalogue' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ rubrique: rub, cle, champs }) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) alert(j.erreur || 'Erreur'); PARC = null; render();
+}
+async function parcStyles(b, cle) {
+  if (!confirm(cle ? `Générer l'aperçu du style « ${cle} » ? (1 image OpenAI, qualité moyenne)` : 'Générer les aperçus manquants ? (1 image OpenAI moyenne qualité par style)')) return;
+  b.disabled = true; const r = await fetch('/admin/api/styles/generer' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify(cle ? { cle } : {}) });
+  const j = await r.json().catch(() => ({})); alert(r.ok ? `Lancé pour : ${(j.styles || []).join(', ') || 'aucun'}. Recharge cet onglet dans une minute.` : j.erreur); b.disabled = false;
+}
+async function parcCorr(id, statut) { const reponse = statut === 'faite' || statut === 'refusee' ? prompt('Message affiché au client (facultatif) :', '') : '';
+  await fetch('/admin/api/corrections/' + id + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ statut, reponse }) }); PARC = null; render(); }
+async function parcRetoucher(id) { const consigne = prompt('Consigne pour l\'illustrateur (en anglais de préférence ; vide = la demande du client) :', ''); if (consigne === null) return;
+  const r = await fetch('/admin/api/corrections/' + id + '/retoucher' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ consigne }) });
+  const j = await r.json().catch(() => ({})); alert(r.ok ? 'Retouche lancée : recharge dans une minute.' : j.erreur); PARC = null; render(); }
+async function parcPublier(id) { if (!confirm('Publier l\'image retouchée dans une nouvelle version du livre ?')) return;
+  const r = await fetch('/admin/api/corrections/' + id + '/publier' + Q, { method: 'POST', headers: H }); const j = await r.json().catch(() => ({})); alert(r.ok ? 'Version ' + j.version + ' publiée.' : j.erreur); PARC = null; render(); }
+async function parcCredit(id) { if (!confirm('Le livre numérique a été remboursé : annuler sa déduction ?')) return;
+  await fetch('/admin/api/credits/' + id + '/annuler' + Q, { method: 'POST', headers: H }); PARC = null; render(); }
+function vueParcours() {
+  if (!PARC) { parcCharger(); return '<div class="card">Chargement…</div>'; }
+  const S = PARC.stats, K = PARC.catalogue, pr = PARC.prix, max = Math.max(1, ...S.etapes.map(e => e.visiteurs));
+  const NOMS = { age: 'Âge', theme: 'Thème', sujet: 'Sujet', message: 'Valeur', heros: 'Héros', personnages: 'Personnages', style: 'Style', police: 'Police', cherche: 'Cherche et trouve', langue: 'Langue', evenements: 'Souvenirs', dedicace: 'Dédicace', recap: 'Récapitulatif', paiement: 'Paiement lancé' };
+  const tog = (rub, x) => `<label style="display:inline-flex;gap:6px;align-items:center;margin:3px 10px 3px 0"><input type="checkbox" ${x.actif ? 'checked' : ''} onchange="parcSet('${rub}','${x.cle}',{actif:this.checked})"> ${esc(x.nom)}</label>`;
+  return `<div class="card"><h3>🧭 Abandons par étape (${S.jours} derniers jours, visiteurs distincts, aucune donnée personnelle)</h3>
+      <table>${S.etapes.map(e => `<tr><td>${NOMS[e.etape] || e.etape}</td><td style="width:60%"><div style="height:10px;border-radius:9px;background:#F0703C;width:${Math.round(e.visiteurs / max * 100)}%"></div></td><td class="r">${e.visiteurs}</td></tr>`).join('')}</table>
+      <p class="meta">Projets créés : <b>${S.projets}</b> · livres numériques payés : <b>${S.achats_numeriques}</b> · passés au relié : <b>${S.passages_papier}</b>${S.taux_papier != null ? ` (${S.taux_papier} %)` : ''}</p></div>
+    <div class="card"><h3>💶 Tarifs du parcours (lus dans Railway)</h3><p class="meta" style="margin:0">Livre numérique : <b>${eur(pr.numerique)}</b> (PRIX_EBOOK) · livre relié : <b>${eur(pr.relie)}</b> (PRIX_LIVRE_1) · déduction : le montant numérique réellement payé, une fois par livre · reste : ${eur(pr.complement)} + livraison (${eur(pr.port_fr_1)} pour 1 livre en France, PORT_1).<br>
+      Limites : ${K.limites.personnages_max} personnages, ${K.limites.proches_max} proches, ${K.limites.corrections_texte} versions de texte, ${K.limites.corrections_image} retouches d'illustration, photos effacées ${K.limites.photo_jours} j après le livre prêt (PERSONNAGES_MAX, PROCHES_MAX, CORRECTIONS_TEXTE, CORRECTIONS_IMAGE, PHOTO_JOURS).</p></div>
+    <div class="card"><h3>🎨 Styles d'illustration</h3><p class="meta">Un style n'est vendu qu'avec son aperçu (même scène pour tous). Regarde l'aperçu, puis coche « en vente ».</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">${K.styles.map(st => `<div style="text-align:center">
+        ${st.apercu || st.maison ? `<img src="/style/${st.cle}.webp?t=${Date.now()}" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px">` : '<div style="aspect-ratio:1;border-radius:12px;background:#F3EEE8;display:grid;place-items:center" class="meta">pas d\'aperçu</div>'}
+        <b>${esc(st.nom)}</b><br>${st.apercu || st.maison ? tog('styles', Object.assign({}, st, { nom: 'en vente' })) : `<button class="btn" onclick="parcStyles(this,'${st.cle}')">Générer l'aperçu</button>`}</div>`).join('')}</div>
+      <div class="acts"><button class="btn" onclick="parcStyles(this)">Générer tous les aperçus manquants</button></div></div>
+    <div class="card"><h3>📚 Thèmes et sujets</h3>${K.themes.map(t => `<details><summary>${tog('themes', t)}</summary><div style="padding:4px 0 8px 22px">${t.sujets.map(x => tog('sujets', Object.assign({}, x, { cle: t.cle + '/' + x.cle }))).join('')}</div></details>`).join('')}</div>
+    <div class="card"><h3>💛 Valeurs · ✍️ Polices · 🔍 Cherche et trouve · 🌍 Langues · 👶 Âges</h3>
+      <p>${K.messages.map(x => tog('messages', x)).join('')}</p><p>${K.polices.map(x => tog('polices', x)).join('')}</p><p>${K.cherche.map(x => tog('cherche', x)).join('')}</p>
+      <p>${K.langues.map(x => tog('langues', x)).join('')} <span class="meta">Seul le français est pris en charge par la génération et les contrôles.</span></p><p>${K.ages.map(x => tog('ages', x)).join('')}</p></div>
+    <div class="card"><h3>🎨 Retouches d'illustration demandées</h3>${S.corrections.length ? S.corrections.map(c => `<div class="meta" style="margin:8px 0;padding:8px 0;border-top:1px solid #eee">${day(c.cree)} · projet ${esc(c.projet_id)} · ${c.page ? 'double page ' + c.page : 'couverture'} : <b>${esc(c.demande)}</b> · <i>${esc(c.statut)}</i>${c.reponse ? ' · ' + esc(c.reponse) : ''}<br>
+        ${['demandee', 'en_cours'].includes(c.statut) ? `<button class="btn" onclick="parcRetoucher('${c.id}')">🎨 Refaire cette image</button> ` : ''}
+        ${c.statut === 'a_valider' ? `<a href="/admin/api/corrections/${c.id}/image${Q}" target="_blank">Voir l'image retouchée</a> <button class="btn main" onclick="parcPublier('${c.id}')">Publier (nouvelle version)</button> ` : ''}
+        ${c.statut !== 'faite' ? `<button class="btn" onclick="parcCorr('${c.id}','refusee')">Non retenue</button>` : ''}</div>`).join('') : '<p class="meta">Aucune demande.</p>'}
+      <p class="meta">« Refaire cette image » : une seule illustration est refaite (1 image OpenAI, plafond 0,50 $ par retouche), avec la consigne du client que tu peux préciser. Rien ne change pour le client tant que tu n'as pas cliqué « Publier ».</p></div>
+    <div class="card"><h3>🎟️ Déductions (crédits numériques)</h3>${S.credits.length ? `<table><tr><th>Date</th><th>Projet</th><th>Commande numérique</th><th class="r">Montant</th><th>État</th><th>Commande reliée</th><th></th></tr>${S.credits.map(c => `<tr><td>${day(c.cree)}</td><td>${esc(c.projet_id)}</td><td>${esc((c.commande_numerique || '').toUpperCase())}</td><td class="r">${eur(c.montant)}</td><td>${esc(c.statut)}</td><td>${esc((c.commande_papier || '').toUpperCase())}</td>
+        <td>${['disponible', 'reserve'].includes(c.statut) ? `<button class="btn" onclick="parcCredit('${c.id}')">Remboursé</button>` : ''}</td></tr>`).join('')}</table>` : '<p class="meta">Aucune pour l\'instant.</p>'}</div>`;
+}
+
 /* ================================================================ navigation */
-const TABS = [['tableau', '🏠', 'Tableau de bord'], ['commandes', '📚', 'Commandes'], ['rentabilite', '💶', 'Rentabilité'], ['factures', '🧾', 'Factures'], ['clients', '👥', 'Clients'], ['messages', '💬', 'Messages'], ['reglages', '⚙️', 'Réglages']];
-const VUES = { tableau: vueTableau, commandes: vueCommandes, rentabilite: vueRentabilite, factures: vueFactures, clients: vueClients, messages: vueMessages, reglages: vueReglages };
+const TABS = [['tableau', '🏠', 'Tableau de bord'], ['commandes', '📚', 'Commandes'], ['rentabilite', '💶', 'Rentabilité'], ['factures', '🧾', 'Factures'], ['clients', '👥', 'Clients'], ['parcours', '📖', 'Créer son livre'], ['messages', '💬', 'Messages'], ['reglages', '⚙️', 'Réglages']];
+const VUES = { tableau: vueTableau, commandes: vueCommandes, rentabilite: vueRentabilite, factures: vueFactures, clients: vueClients, parcours: vueParcours, messages: vueMessages, reglages: vueReglages };
 function render() {
   const nb = D.commandes.filter(o => AFAIRE.includes(etat(o).k)).length;
   const badge = { tableau: nb, factures: D.a_facturer || 0, messages: D.messages_non_lus || 0 };
@@ -1028,7 +1077,7 @@ function render() {
   const c = D.config;
   document.getElementById('bas').innerHTML = `${c.stripe === 'live' ? '🟢 Stripe réel' : c.stripe === 'test' ? '🟡 Stripe test' : '⚪️ Stripe simulé'}<br>${c.lulu === 'production' ? '🟢 Lulu réel' : c.lulu === 'non configuré' ? '⚪️ Lulu non branché' : '🟡 Lulu bac à sable'}<br><a href="/" target="_blank">Voir le site ↗</a>`;
   document.getElementById('titre').textContent = (TABS.find(x => x[0] === TAB) || TABS[0])[2];
-  document.getElementById('teteActs').innerHTML = TAB === 'clients' ? `<button class="btn" onclick="CLI=null;CAMP=null;render()">↻ Actualiser</button>` : TAB === 'commandes' || TAB === 'tableau' ? `<button class="btn" onclick="load()">↻ Actualiser</button>` : TAB === 'rentabilite' ? `<button class="btn" onclick="RENTA=null;render()">↻ Recharger les ventes</button>` : '';
+  document.getElementById('teteActs').innerHTML = TAB === 'clients' ? `<button class="btn" onclick="CLI=null;CAMP=null;render()">↻ Actualiser</button>` : TAB === 'commandes' || TAB === 'tableau' ? `<button class="btn" onclick="load()">↻ Actualiser</button>` : TAB === 'rentabilite' ? `<button class="btn" onclick="RENTA=null;render()">↻ Recharger les ventes</button>` : TAB === 'parcours' ? `<button class="btn" onclick="PARC=null;render()">↻ Actualiser</button>` : '';
   const y = scrollY, f = document.activeElement && document.activeElement.id;
   if (TAB === 'reglages' && f && /^(v_|t_|pfq)/.test(f)) return;   // saisie en cours : on ne touche à rien
   if (TAB === 'rentabilite' && RENTA && document.getElementById('simRes') && f && f.startsWith('h_')) return;   // ne pas casser la saisie
