@@ -101,7 +101,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--action); outline
 .avatar { display: grid; grid-template-columns: 140px 1fr; gap: 14px; align-items: start; }
 @media (max-width: 520px) { .avatar { grid-template-columns: 1fr; } .avatar .vue { max-width: 150px; margin: 0 auto; } }
 .avatar .vue { background: radial-gradient(circle at 50% 40%, #FFF, #FFE9D9); border-radius: 22px; padding: 6px; border: 1.5px solid var(--trait); }
-.avatar .vue svg { width: 100%; height: auto; display: block; }
+.avatar .vue svg, .avatar .vue img { width: 100%; height: auto; display: block; }
 .opt { margin: 0 0 12px; } .opt .lab { font: 700 14px var(--texte); margin: 0 0 6px; color: var(--doux); }
 .puces { display: flex; flex-wrap: wrap; gap: 7px; }
 .puce { appearance: none; border: 2px solid var(--trait); background: var(--carte); border-radius: 12px; padding: 6px 10px; cursor: pointer; font: 600 14px var(--texte); min-height: 40px; }
@@ -111,7 +111,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--action); outline
 .puce.vignette img { width: 100%; height: 100%; object-fit: contain; }
 
 /* photo */
-.depot { border: 2px dashed #E3C9B4; border-radius: var(--rayon); padding: 18px; text-align: center; background: #FFFBF7; cursor: pointer; }
+.depot { display: block; border: 2px dashed #E3C9B4; border-radius: var(--rayon); padding: 18px; text-align: center; background: #FFFBF7; cursor: pointer; }
 .cadre { position: relative; width: min(100%, 320px); aspect-ratio: 1; margin: 0 auto 10px; overflow: hidden; border-radius: 20px; background: #EEE; touch-action: none; cursor: grab; }
 .cadre img { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; user-select: none; -webkit-user-drag: none; }
 .cadre::after { content: ""; position: absolute; inset: 0; border: 3px solid rgba(255,255,255,.9); border-radius: 20px; pointer-events: none; box-shadow: inset 0 0 0 999px rgba(0,0,0,0); }
@@ -443,6 +443,52 @@ dialog .fermer { position: absolute; top: 10px; right: 10px; }
   const GROUPES = { enfant: ['peau', 'coiffure', 'couleur_cheveux', 'yeux', 'lunettes', 'couleur_lunettes', 'taches', 'tenue', 'couleur_tenue'],
                     animal: ['type', 'couleur', 'taille', 'motif', 'couleur2', 'oreilles', 'yeux', 'collier'],
                     doudou: ['type', 'couleur', 'accessoire', 'couleur_accessoire'] };
+  /* avatars peints (comme l'ancien créateur) : modèle peint recoloré dans le navigateur, sans appel payant */
+  const PAINT = new Map();
+  const modelBase = (kind, cfg) => kind === 'animal' ? OPT.modeles.animal[cfg.type] : OPT.modeles[kind];
+  const modelName = (kind, cfg) => kind === 'enfant' ? Avatar.pick(OPT.enfant.coiffure, cfg.coiffure).img + (cfg.taches === 'oui' ? '' : '-lisse')
+    : Avatar.pick(OPT[kind].type, cfg.type).img + (kind === 'doudou' && cfg.accessoire !== 'noeud' ? '-nu' : '');
+  const colorOf = (list, id) => Avatar.pick(list, id).c;
+  const sansDe = type => (Avatar.pick(OPT.animal.type, type) || {}).sans || [];
+  function targetsOf(kind, cfg) {
+    const b = modelBase(kind, cfg), t = {};
+    if (kind === 'enfant') {
+      if (cfg.couleur_cheveux !== b.couleur_cheveux) t.R = colorOf(OPT.enfant.couleur_cheveux, cfg.couleur_cheveux);
+      if (cfg.peau !== b.peau) t.G = colorOf(OPT.enfant.peau, cfg.peau);
+      if (cfg.tenue && cfg.tenue !== 'pyjama') { t.tenue = cfg.tenue; t.B = colorOf(OPT.enfant.couleur_tenue, cfg.couleur_tenue); }
+      else if (cfg.couleur_tenue !== b.couleur_tenue) t.B = colorOf(OPT.enfant.couleur_tenue, cfg.couleur_tenue);
+      if (cfg.yeux !== b.yeux) t.E = colorOf(OPT.enfant.yeux, cfg.yeux);
+      if (cfg.lunettes !== 'aucune') t.glasses = { type: cfg.lunettes, color: colorOf(OPT.enfant.couleur_lunettes, cfg.couleur_lunettes) };
+    } else if (kind === 'doudou') {
+      if (cfg.couleur !== b.couleur) { t.R = colorOf(OPT.doudou.couleur, cfg.couleur); t.dye = true; }
+      if (cfg.accessoire === 'noeud' && cfg.couleur_accessoire !== b.couleur_accessoire) t.B = colorOf(OPT.doudou.couleur_accessoire, cfg.couleur_accessoire);
+      if (cfg.accessoire === 'echarpe') t.A = colorOf(OPT.doudou.couleur_accessoire, cfg.couleur_accessoire);
+    } else {
+      const main = colorOf(OPT.animal.couleur, cfg.couleur);
+      if (cfg.couleur !== b.couleur) { t.R = main; t.dye = true; }
+      if (cfg.motif === 'uni' && cfg.type !== 'oiseau') t.G = Avatar.shade(main, .2);
+      else if (cfg.couleur2 !== b.couleur2) t.G = colorOf(OPT.animal.couleur2, cfg.couleur2);
+      if (['taches', 'raye', 'masque'].includes(cfg.motif) && cfg.type !== 'oiseau') { t.motif = cfg.motif; t.M = colorOf(OPT.animal.couleur2, cfg.couleur2); }
+      if (cfg.yeux !== b.yeux) t.E = colorOf(OPT.animal.yeux, cfg.yeux);
+      if (cfg.collier && cfg.collier !== 'aucun' && cfg.type !== 'oiseau') t.C = colorOf(OPT.animal.collier, cfg.collier);
+      const Z = { couleur: ['R', 'dye', 'G', 'motif', 'M'], motif: ['G', 'motif', 'M'], collier: ['C'] };
+      sansDe(cfg.type).forEach(k => (Z[k] || []).forEach(z => delete t[z]));      // race de chien, tortue, poisson : le modèle peint impose
+      if ((Avatar.pick(OPT.animal.type, cfg.type) || {}).clair_suit && t.R) t.G = Avatar.shade(main, .2);      // labrador, bouledogue : poitrail assorti
+    }
+    return t;
+  }
+  function peint(kind, cfg) {
+    let k;
+    try { k = kind + ':' + modelName(kind, cfg) + JSON.stringify(targetsOf(kind, cfg)); } catch (_) { return null; }
+    let st = PAINT.get(k);
+    if (!st) {
+      st = { k, url: '/static/avatars/' + modelName(kind, cfg) + '.webp' }; PAINT.set(k, st);
+      const t = targetsOf(kind, cfg);
+      if (Object.keys(t).length) Avatar.recolor(modelName(kind, cfg), t).then(u => { st.url = u;
+        document.querySelectorAll('img[data-pk]').forEach(i => { if (i.dataset.pk === k) i.src = u; }); }).catch(() => {});
+    }
+    return st;
+  }
   function editeur(kind, cfg, cible, seulement) {
     const O = OPT[kind];
     const visible = k => {
@@ -472,7 +518,8 @@ dialog .fermer { position: absolute; top: 10px; right: 10px; }
       }).join('');
       return `<div class="opt"><div class="lab">${LIB[k] || k}</div><div class="puces">${puces}</div></div>`;
     }).join('');
-    const svg = kind === 'enfant' ? Avatar.child(cfg) : Avatar.creature(cfg, kind);
+    const pt = peint(kind, cfg);
+    const svg = pt ? `<img src="${pt.url}" data-pk="${esc(pt.k)}" alt="">` : (kind === 'enfant' ? Avatar.child(cfg) : Avatar.creature(cfg, kind));
     return `<div class="avatar"><div class="vue" aria-hidden="true" id="vue-${cible}">${svg}</div><div>${opts}</div></div>`;
   }
   function cfgCible(cible) {
