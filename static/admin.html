@@ -254,7 +254,7 @@ function carte(o) {
     ${err}${issues}
     <div class="acts">${bt.main}${fac}</div>
     ${RES[o.id] ? `<div class="result ${RES[o.id].cls || ''}"><button class="x" title="Fermer" onclick="delete RES['${o.id}'];render()">×</button>${RES[o.id].html}</div>` : ''}
-    <details class="plus" ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">${o.email ? `<div class="acts" style="margin:0 0 8px"><button class="btn" onclick="historique('${esc(o.email)}',this)">📜 Historique et e-mails du client</button></div>` : ''}
+    <details class="plus" ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">${o.email ? `<div class="acts" style="margin:0 0 8px"><button class="btn" onclick="historique('${esc(o.email)}',this)">📜 Historique et e-mails du client</button></div>` : ''}<div class="acts" style="margin:0 0 8px"><span class="meta" style="align-self:center">✉️ ${esc(o.email || 'pas d\'e-mail')}</span> <button class="btn" onclick="corrigerEmail('${o.id}','${esc(o.email || '')}',this)">✏️ Corriger l'e-mail</button> <button class="btn" onclick="act('${o.id}','mail-confirmation',this)">📧 Renvoyer la confirmation</button> <button class="btn" onclick="act('${o.id}','mail-pret',this)">📚 Renvoyer « livres prêts »</button> <button class="btn" onclick="act('${o.id}','mail-connexion',this)">🔑 Envoyer un lien de connexion</button></div>
       <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
       ${o.pack_mail ? `<div>📧 Mail « prêt » envoyé le ${new Date(o.pack_mail * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
       ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(LULU_FR[o.lulu_statut] || o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
@@ -724,6 +724,8 @@ const CONFIRM = {
   'essai-brouillon': "Lancer un essai brouillon (tout le livre en petite qualité, ≈ 0,5 $) ?",
   'mois-suivant': "Fabriquer maintenant le livre suivant de cet abonnement ?",
   'mail-pret': "Envoyer au client le mail « votre livre est prêt » ?",
+  'mail-confirmation': "Renvoyer au client le mail de confirmation de commande ?",
+  'mail-connexion': "Envoyer au client un lien de connexion à son espace (valable 24 h) ?",
   'test-calendrier': 'Fabriquer un calendrier de test avec les avatars de cette commande ? (vraie fabrication, ≈ 1,50 $ d\'IA, aucun paiement)',
   'test-coloriage': 'Fabriquer un cahier de coloriage de test avec les avatars de cette commande ? (vraie fabrication, ≈ 2,50 $ d\'IA, aucun paiement)',
   'test-gourde': 'Fabriquer une gourde de test (illustration + fichier Printful) avec les avatars de cette commande ? (≈ 0,30 $ d\'IA, aucune commande Printful)',
@@ -760,10 +762,19 @@ function resultat(action, j) {
       · <a target="_blank" href="/admin/fichier/__ID__/impression_couverture.pdf${Q}&t=${Date.now()}">ouvrir le PDF</a>
       ${(i.problemes || []).length ? `<div class="meta" style="margin-top:6px">⚠️ ${i.problemes.map(esc).join('<br>⚠️ ')}</div>` : ''}` };
   const T = { finaliser: '✅ Livre validé et sauvegardé.', relancer: '▶️ Fabrication relancée.', 'refaire-refusees': '🔁 Images refusées relancées.',
-              imprimer: "🖨️ Envoyé à l'imprimeur.", suivi: '🔄 Suivi actualisé.', 'mail-pret': '📧 Mail envoyé à ' + esc(i.envoye_a || ''),
+              imprimer: "🖨️ Envoyé à l'imprimeur.", suivi: '🔄 Suivi actualisé.', 'mail-pret': '📧 Mail envoyé à ' + esc(i.envoye_a || ''), 'mail-confirmation': '📧 Confirmation renvoyée à ' + esc(i.envoye_a || ''), 'mail-connexion': '🔑 Lien de connexion envoyé à ' + esc(i.envoye_a || ''),
               'essai-apercu': '🧪 Essai aperçu lancé.', 'essai-brouillon': '🧪 Essai brouillon lancé.', 'mois-suivant': '➕ Livre suivant lancé.',
               'arreter-abonnement': '⏹️ Abonnement arrêté.', livre: '🏠 Noté : colis livré.', 'pas-livre': '↩️ Remis en « expédié ».', 'test-calendrier': '🧪 Calendrier de test lancé : il apparaît dans la liste (5 à 10 minutes).', 'test-coloriage': '🧪 Cahier de test lancé : il apparaît dans la liste (10 à 15 minutes).', 'test-gourde': '🧪 Gourde de test lancée (2 à 3 minutes).', 'test-tasse': '🧪 Tasse de test lancée (2 à 3 minutes).', 'test-sac': '🧪 Sac de test lancé (2 à 3 minutes).', effacer: '🧹 Données effacées.', 'valider-paiement-test': '💳 Paiement simulé.' };
   return { cls: 'ok', html: T[action] || '✅ Fait.' };
+}
+async function corrigerEmail(id, actuel, btn) {
+  const v = prompt("Bonne adresse e-mail du client :\n(elle remplace l'ancienne sur toute la commande et sur son espace client)", actuel);
+  if (v === null || !v.trim() || v.trim().toLowerCase() === actuel.toLowerCase()) return;
+  btn.disabled = true;
+  const j = await (await fetch(`/admin/api/${id}/email${Q}`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: v.trim() }) })).json().catch(() => ({ erreur: 'Erreur' }));
+  btn.disabled = false;
+  RES[id] = j.erreur ? { cls: 'err', html: '⚠️ ' + esc(j.erreur) } : { cls: 'ok', html: `✅ E-mail corrigé : <b>${esc(j.info.email)}</b> (avant : ${esc(j.info.ancien)}). Renvoie maintenant les mails voulus avec les boutons 📧.` };
+  await load();
 }
 async function act(id, action, btn) {
   if (action === 'supprimer') {

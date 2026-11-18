@@ -1872,6 +1872,27 @@ def admin_action(oid, action):
                 fin = fabrication.est_finalise(A.OUT / (o["job_id"] or "_"))
                 raise RuntimeError("mail non envoyé : " + (DERNIERE_ERREUR_MAIL.get(oid) or ("livre non finalisé" if not fin else "les autres livres du pack ne sont pas encore validés, ou livre d'essai")))
             return jsonify(ok=True, info={"envoye_a": o["email"]})
+        if action in ("email", "mail-confirmation", "mail-connexion"):       # e-mail mal saisi : correction, puis renvois un par un
+            ori = o["origine"] or oid
+            if action == "email":
+                nouveau = str((request.get_json(force=True, silent=True) or {}).get("email") or "").strip().lower()[:190]
+                if not EMAIL.match(nouveau):
+                    raise RuntimeError("adresse e-mail invalide")
+                ancien = comptes.changer_email(ori, nouveau)
+                log(f"commande {ori} : e-mail corrigé ({ancien} → {nouveau})")
+                return jsonify(ok=True, info={"email": nouveau, "ancien": ancien})
+            if not mail_configure():
+                raise RuntimeError("envoi de mails non configuré (BREVO_API_KEY absent dans Railway)")
+            tete = db.get(ori)
+            if action == "mail-confirmation":
+                if tete["statut"] == "attente_paiement":
+                    raise RuntimeError("commande non payée : pas de confirmation à envoyer")
+                if not mail_confirmation(ori):
+                    raise RuntimeError("mail non envoyé (voir le journal)")
+            else:
+                if not comptes.mail_connexion(tete["email"], minutes=24 * 60):
+                    raise RuntimeError("mail non envoyé (voir le journal)")
+            return jsonify(ok=True, info={"envoye_a": tete["email"]})
         if action == "budget":
             folder = A.OUT / (o["job_id"] or "_")
             lid = procede.livre_id(folder) if folder.exists() else oid

@@ -100,6 +100,57 @@ def admin_lien_connexion():
     return jsonify(url=url)
 
 
+def mail_connexion(email, suite=None, minutes=LIEN_MIN):
+    """E-mail avec un lien de connexion à usage unique (valable `minutes`). Renvoie True si l'e-mail est parti."""
+    import boutique as B
+    site, url = creer_lien(email, suite, minutes=minutes)
+    duree = f"{minutes // 60} heures" if minutes >= 120 else f"{minutes} minutes"
+    texte = (f"Bonjour,\n\nPour vous connecter à votre compte Mon Héros du Mois et suivre vos commandes, ouvrez ce lien (valable {duree}) :\n{url}\n\n"
+             "Vous n'avez rien demandé ? Ignorez simplement ce message.\n\nL'équipe Mon Héros du Mois")
+    html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
+<div style="max-width:520px;margin:0 auto;padding:28px 18px;text-align:center">
+ <p style="text-align:center;margin:0 0 10px"><img src="{site}/static/marque/logo-mail.png" alt="Mon Héros du Mois" width="220" style="width:220px;max-width:70%;height:auto;border:0"></p>
+ <h1 style="font-size:24px;margin:0 0 16px">Votre lien de connexion</h1>
+ <p style="font:15px/1.5 system-ui,sans-serif;margin:0 0 22px">Touchez le bouton pour retrouver vos héros et vos commandes.<br>Il est valable {duree}.</p>
+ <a href="{url}" style="display:inline-block;background:#FFC94A;color:#1F2557;font:800 16px system-ui,sans-serif;padding:14px 26px;border-radius:999px;text-decoration:none">Me connecter</a>
+ <p style="font:13px system-ui,sans-serif;color:#6B6F8E;margin:24px 0 0">Vous n'avez rien demandé ? Ignorez simplement ce message.</p>
+</div></body></html>"""
+    try:
+        return bool(B.send_mail("🔑 Votre lien de connexion Mon Héros du Mois", texte, to=email, html=html))
+    except Exception as e:
+        B.log(f"lien de connexion pour {email} : envoi impossible : {e}")
+        return False
+
+
+def changer_email(origine, nouveau):
+    """E-mail mal saisi à la commande : corrigé sur tous les livres de la commande et sur l'espace client (fusionné si la bonne
+    adresse a déjà un compte). Les anciens e-mails ne sont pas renvoyés ici : Alex choisit lesquels renvoyer."""
+    nouveau = nouveau.strip().lower()
+    with db._db() as c:
+        rows = [dict(r) for r in c.execute("select id, email, client_id from commandes where id=? or origine=?", (origine, origine))]
+    if not rows:
+        raise RuntimeError("commande introuvable")
+    ancien = (rows[0]["email"] or "").strip().lower()
+    for r in rows:
+        db.update(r["id"], email=nouveau)
+    with db._lock, db._db() as c:
+        vieux = c.execute("select * from clients where email=?", (ancien,)).fetchone() if ancien else None
+        bon = c.execute("select * from clients where email=?", (nouveau,)).fetchone()
+        if vieux and not bon:
+            c.execute("update clients set email=? where id=?", (nouveau, vieux["id"]))
+        elif vieux and bon and vieux["id"] != bon["id"]:
+            c.execute("update commandes set client_id=? where id=? or origine=?", (bon["id"], origine, origine))
+            for h in c.execute("select id, nom from heros where client_id=?", (vieux["id"],)).fetchall():
+                if not c.execute("select 1 from heros where client_id=? and lower(nom)=lower(?)", (bon["id"], h["nom"])).fetchone():
+                    c.execute("update heros set client_id=? where id=?", (bon["id"], h["id"]))
+            if not c.execute("select 1 from commandes where client_id=? and not (id=? or origine=?)", (vieux["id"], origine, origine)).fetchone():
+                for t in ("sessions", "heros"):
+                    c.execute(f"delete from {t} where client_id=?", (vieux["id"],))
+                c.execute("delete from clients where id=?", (vieux["id"],))
+    compte_depuis_commande(origine)
+    return ancien
+
+
 @bp.post("/api/compte/lien")
 def envoyer_lien():
     import boutique as B
@@ -113,22 +164,7 @@ def envoyer_lien():
         n = c.execute("select count(*) from liens where email=? and expire > ?", (email, time.time() + LIEN_MIN * 60 - 3600)).fetchone()[0]
     if n >= 4:
         return jsonify(erreur="Plusieurs liens ont déjà été envoyés : regardez vos e-mails (et les indésirables), ou réessayez dans une heure."), 429
-    site, url = creer_lien(email, d.get("suite"))
-    texte = (f"Bonjour,\n\nPour vous connecter à votre compte Mon Héros du Mois, ouvrez ce lien (valable {LIEN_MIN} minutes) :\n{url}\n\n"
-             "Vous n'avez rien demandé ? Ignorez simplement ce message.\n\nL'équipe Mon Héros du Mois")
-    html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
-<div style="max-width:520px;margin:0 auto;padding:28px 18px;text-align:center">
- <p style="text-align:center;margin:0 0 10px"><img src="{site}/static/marque/logo-mail.png" alt="Mon Héros du Mois" width="220" style="width:220px;max-width:70%;height:auto;border:0"></p>
- <h1 style="font-size:24px;margin:0 0 16px">Votre lien de connexion</h1>
- <p style="font:15px/1.5 system-ui,sans-serif;margin:0 0 22px">Touchez le bouton pour retrouver vos héros et vos commandes.<br>Il est valable {LIEN_MIN} minutes.</p>
- <a href="{url}" style="display:inline-block;background:#FFC94A;color:#1F2557;font:800 16px system-ui,sans-serif;padding:14px 26px;border-radius:999px;text-decoration:none">Me connecter</a>
- <p style="font:13px system-ui,sans-serif;color:#6B6F8E;margin:24px 0 0">Vous n'avez rien demandé ? Ignorez simplement ce message.</p>
-</div></body></html>"""
-    try:
-        ok = B.send_mail("🔑 Votre lien de connexion Mon Héros du Mois", texte, to=email, html=html)
-    except Exception as e:
-        B.log(f"lien de connexion pour {email} : envoi impossible : {e}")
-        ok = False
+    ok = mail_connexion(email, d.get("suite"))
     if not ok:
         return jsonify(erreur="L'e-mail n'a pas pu partir. Réessayez dans un instant."), 502
     return jsonify(ok=True)
