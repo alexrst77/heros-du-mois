@@ -684,7 +684,7 @@ async function historique(email, btn) {
     <div class="acts" style="margin:8px 0"><button class="btn" onclick="voirCompte('${esc(email)}')">👁️ Voir son compte</button> <button class="btn" onclick="emailClient('${esc(email)}',this)">✏️ Corriger son e-mail</button> <button class="btn" onclick="lienMailClient('${esc(email)}',this)">🔑 Lui envoyer un lien de connexion</button> <button class="btn" onclick="lienConnexion('${esc(email)}',this)">📋 Lien à copier</button></div><div id="lienCx"></div>
     <h4 style="margin:14px 0 6px">Commandes</h4>${(j.commandes || []).length ? `<table>${j.commandes.map(o => `<tr><td>${quand(o.cree)}</td><td>${esc(o.titre || o.quoi)}${o.numero > 1 ? ' (livre ' + o.numero + ')' : ''}</td><td>${esc(o.statut)}</td><td class="r">${o.montant ? eur(o.montant) : ''}</td></tr>`).join('')}</table>` : '<p class="meta">Aucune commande.</p>'}
     ${groupes(j.commandes).length ? `<h4 style="margin:14px 0 6px">Renvoyer un e-mail</h4><table>${groupes(j.commandes).map(g => `<tr><td>${quand(g.cree)}</td><td>${esc(g.nom)}</td>
-      <td class="r" style="white-space:nowrap"><button class="btn" onclick="renvoi('${g.id}','mail-confirmation',this)">📧 Confirmation</button> <button class="btn" onclick="renvoi('${g.id}','mail-pret',this)">📚 Livres prêts</button></td></tr>`).join('')}</table>` : ''}
+      <td class="r" style="white-space:nowrap"><button class="btn" onclick="renvoi('${g.id}','mail-confirmation',this)">📧 Confirmation</button> <button class="btn" onclick="renvoi('${g.id}','mail-pret',this)">📚 Livres prêts</button> <button class="btn" onclick="renvoi('${g.id}','mail-expedition',this)">📦 Expédition + suivi</button></td></tr>`).join('')}</table>` : ''}
     <h4 style="margin:14px 0 6px">E-mails reçus</h4>${tous.length ? `<table>${tous.map(ligneMail).join('')}</table>` : '<p class="meta">Aucun e-mail enregistré pour cette adresse.</p>'}
     <p class="meta">${j.suivi_actif ? '✅ Remis = accepté par sa boîte mail · 👀 Ouvert = affiché (certaines messageries, comme Apple Mail, l\'indiquent même sans lecture) · ❌ = non reçu. Suivi lu chez Brevo.' : 'Envoi sans Brevo : seul « envoyé » est connu.'} Le contenu des e-mails n'est pas gardé.</p>
     ${(j.anciens || []).some(m => m.erreur) ? `<p class="meta" style="color:#B3261E">${esc(j.anciens.find(m => m.erreur).erreur)}</p>` : ''}
@@ -755,6 +755,7 @@ const CONFIRM = {
   'essai-brouillon': "Lancer un essai brouillon (tout le livre en petite qualité, ≈ 0,5 $) ?",
   'mois-suivant': "Fabriquer maintenant le livre suivant de cet abonnement ?",
   'mail-pret': "Envoyer au client le mail « votre livre est prêt » ?",
+  'mail-expedition': "Envoyer au client le mail « colis parti » avec le lien de suivi ?",
   'mail-confirmation': "Renvoyer au client le mail de confirmation de commande ?",
   'mail-connexion': "Envoyer au client un lien de connexion à son espace (valable 24 h) ?",
   'test-calendrier': 'Fabriquer un calendrier de test avec les avatars de cette commande ? (vraie fabrication, ≈ 1,50 $ d\'IA, aucun paiement)',

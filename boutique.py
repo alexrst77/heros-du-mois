@@ -1332,7 +1332,10 @@ def refresh_print(oid):
         kw["statut"] = "expediee"
     elif st["statut"] in ("REJECTED", "ERROR", "CANCELED"):
         kw.update(statut="erreur", erreur=f"Lulu : {st['statut']} {st.get('message') or ''}")
-    return db.update(oid, **kw)
+    r = db.update(oid, **kw)
+    if st["statut"] == "SHIPPED" and o["statut"] != "expediee":        # colis parti : le client reçoit le lien de suivi (une fois)
+        threading.Thread(target=mail_expedition, args=(o["origine"] or oid,), daemon=True).start()
+    return r
 
 
 @bp.get("/impression/<oid>/<jeton>/<name>")
@@ -1872,6 +1875,15 @@ def admin_action(oid, action):
                 fin = fabrication.est_finalise(A.OUT / (o["job_id"] or "_"))
                 raise RuntimeError("mail non envoyé : " + (DERNIERE_ERREUR_MAIL.get(oid) or ("livre non finalisé" if not fin else "les autres livres du pack ne sont pas encore validés, ou livre d'essai")))
             return jsonify(ok=True, info={"envoye_a": o["email"]})
+        if action == "mail-expedition":           # renvoi à la main du mail « colis parti » avec le(s) lien(s) de suivi
+            if not mail_configure():
+                raise RuntimeError("envoi de mails non configuré (BREVO_API_KEY absent dans Railway)")
+            ori = o["origine"] or oid
+            if not any(x["statut"] == "expediee" for x in db.lister(100000) if (x["origine"] or x["id"]) == ori):
+                raise RuntimeError("la commande n'est pas encore expédiée")
+            if not mail_expedition(ori, force=True):
+                raise RuntimeError("mail non envoyé (voir le journal)")
+            return jsonify(ok=True, info={"envoye_a": db.get(ori)["email"]})
         if action in ("email", "mail-confirmation", "mail-connexion"):       # e-mail mal saisi : correction, puis renvois un par un
             ori = o["origine"] or oid
             if action == "email":
@@ -2410,6 +2422,53 @@ def mail_livre_pret(oid):
         DERNIERE_ERREUR_MAIL[oid] = f"{type(e).__name__}: {e}"
         log(f"commande {origine} : mail « livre prêt » impossible : {type(e).__name__}: {e}")
         return False
+
+
+def mail_expedition(origine, force=False):
+    """« Votre colis est parti » : livres de la commande, lien(s) de suivi du transporteur, espace client.
+    Envoyé une seule fois automatiquement (quand Lulu passe à SHIPPED) ; force=True : renvoi à la main depuis l'admin."""
+    with db._lock, db._db() as c:
+        c.execute("create table if not exists mails_expedition (origine text primary key, envoye real)")
+        if not force and c.execute("select 1 from mails_expedition where origine=?", (origine,)).fetchone():
+            return False
+    tete = db.get(origine)
+    if not tete or not tete.get("email"):
+        return False
+    pack = [x for x in db.lister(100000) if (x["origine"] or x["id"]) == origine]
+    suivis = sorted({u for x in pack for u in (x.get("suivi") or []) if isinstance(u, str) and u.startswith("http")})
+    titres = [x["titre"] for x in sorted(pack, key=lambda x: x.get("numero") or 0) if x.get("titre")]
+    try:
+        prenom = load_book(origine)[0].get("prenom") or "" if len(titres) <= 1 else ""     # plusieurs livres (souvent plusieurs enfants) : « vos livres »
+    except Exception:
+        prenom = ""
+    site = base_url()
+    eh = escape
+    liste_t = "\n".join(f"– {t}" for t in titres)
+    liens_t = "\n".join(f"Suivre le colis{' ' + str(i + 1) if len(suivis) > 1 else ''} : {u}" for i, u in enumerate(suivis)) or \
+        "Le numéro de suivi n'est pas encore disponible : vous le retrouverez dans votre espace client."
+    texte = (f"Bonjour,\n\nBonne nouvelle : {'le livre de ' + prenom + ' est parti' if prenom else 'vos livres sont partis' if len(titres) > 1 else 'votre commande est partie'} "
+             f"de chez notre imprimeur !\n\n{liste_t}\n\n{liens_t}\n\nVous retrouvez aussi le suivi dans votre espace : {site}/compte\n\n"
+             f"Une question ? Répondez simplement à ce mail.\n\nÀ très vite,\nL'équipe Mon Héros du Mois\n{site}")
+    boutons = "".join(f'<p style="margin:0 0 10px"><a href="{eh(u)}" style="display:inline-block;background:#FFC94A;color:#1F2557;font:800 16px system-ui,sans-serif;'
+                      f'padding:14px 26px;border-radius:999px;text-decoration:none">📦 Suivre le colis{" " + str(i + 1) if len(suivis) > 1 else ""}</a></p>'
+                      for i, u in enumerate(suivis)) or '<p style="font:15px system-ui,sans-serif">Le numéro de suivi arrive bientôt : il sera dans votre espace client.</p>'
+    html = f"""<!doctype html><html><body style="margin:0;background:#FBF5EA;font-family:Georgia,serif;color:#1F2557">
+<div style="max-width:520px;margin:0 auto;padding:28px 18px;text-align:center">
+ <p style="margin:0 0 10px"><img src="{site}/static/marque/logo-mail.png" alt="Mon Héros du Mois" width="220" style="width:220px;max-width:70%;height:auto;border:0"></p>
+ <h1 style="font-size:24px;margin:0 0 14px">Votre colis est parti !</h1>
+ <p style="font:15px/1.5 system-ui,sans-serif;margin:0 0 16px">{eh('Le livre de ' + prenom + ' a quitté' if prenom else 'Vos livres ont quitté' if len(titres) > 1 else 'Votre commande a quitté')} notre imprimeur :</p>
+ <p style="font:15px/1.6 system-ui,sans-serif;margin:0 0 20px">{'<br>'.join('« ' + eh(t) + ' »' for t in titres)}</p>
+ {boutons}
+ <p style="font:14px system-ui,sans-serif;margin:16px 0 0"><a href="{site}/compte" style="color:#3D6BD8">Retrouver ma commande dans mon espace</a></p>
+ <p style="font:13px system-ui,sans-serif;color:#6B6F8E;margin:22px 0 0">Une question&nbsp;? Répondez simplement à ce mail.</p>
+</div></body></html>"""
+    sujet = f"📦 Le livre de {prenom} est en route !" if prenom else "📦 Vos livres sont en route !" if len(titres) > 1 else "📦 Votre colis est en route !"
+    ok = send_mail(sujet, texte, reply_to=CONTACT, to=tete["email"], html=html)
+    if ok:
+        with db._lock, db._db() as c:
+            c.execute("insert or replace into mails_expedition values (?,?)", (origine, time.time()))
+    log(f"commande {origine} : mail d'expédition {'envoyé' if ok else 'non envoyé'} à {tete['email']} ({len(suivis)} lien(s) de suivi)")
+    return ok
 
 
 def mail_alerte_commande(oid):
