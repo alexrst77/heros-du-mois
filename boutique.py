@@ -2441,7 +2441,7 @@ def mail_expedition(origine, force=False):
         prenom = load_book(origine)[0].get("prenom") or "" if len(titres) <= 1 else ""     # plusieurs livres (souvent plusieurs enfants) : « vos livres »
     except Exception:
         prenom = ""
-    site = base_url()
+    site = (os.getenv("PUBLIC_URL") or "https://www.monherosdumois.fr").rstrip("/")     # aussi hors requête (envoi automatique)
     eh = escape
     liste_t = "\n".join(f"– {t}" for t in titres)
     liens_t = "\n".join(f"Suivre le colis{' ' + str(i + 1) if len(suivis) > 1 else ''} : {u}" for i, u in enumerate(suivis)) or \
