@@ -151,6 +151,44 @@ def changer_email(origine, nouveau):
     return ancien
 
 
+@bp.post("/admin/api/client-email")
+def admin_client_email():
+    """Admin, depuis le compte client : e-mail corrigé sur TOUTES ses commandes et son espace (un seul clic)."""
+    import boutique as B
+    if not B.admin_ok():
+        abort(403)
+    d = request.get_json(force=True, silent=True) or {}
+    ancien = str(d.get("ancien") or "").strip().lower()[:190]
+    nouveau = str(d.get("nouveau") or "").strip().lower()[:190]
+    if not EMAIL.match(nouveau):
+        return jsonify(erreur="Adresse e-mail invalide."), 400
+    with db._db() as c:
+        cl = c.execute("select id from clients where email=?", (ancien,)).fetchone()
+        origines = sorted({r["o"] for r in c.execute("select coalesce(nullif(origine,''), id) o from commandes where lower(email)=? or client_id=?",
+                                                      (ancien, cl["id"] if cl else "-"))})
+    for o in origines:
+        changer_email(o, nouveau)
+    with db._lock, db._db() as c:                         # compte sans commande : l'adresse est corrigée quand même
+        if not c.execute("select 1 from clients where email=?", (nouveau,)).fetchone():
+            c.execute("update clients set email=? where email=?", (nouveau, ancien))
+    B.log(f"client {ancien} → {nouveau} : e-mail corrigé sur {len(origines)} commande(s)")
+    return jsonify(ok=True, email=nouveau, commandes=len(origines))
+
+
+@bp.post("/admin/api/client-lien-mail")
+def admin_client_lien_mail():
+    """Admin : envoie au client, par e-mail, un lien de connexion valable 24 h."""
+    import boutique as B
+    if not B.admin_ok():
+        abort(403)
+    email = str((request.get_json(force=True, silent=True) or {}).get("email") or "").strip().lower()[:190]
+    if not EMAIL.match(email):
+        return jsonify(erreur="Adresse e-mail invalide."), 400
+    if not mail_connexion(email, minutes=24 * 60):
+        return jsonify(erreur="L'e-mail n'a pas pu partir (voir le journal)."), 502
+    return jsonify(ok=True, envoye_a=email)
+
+
 @bp.post("/api/compte/lien")
 def envoyer_lien():
     import boutique as B

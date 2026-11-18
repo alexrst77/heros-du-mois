@@ -254,7 +254,7 @@ function carte(o) {
     ${err}${issues}
     <div class="acts">${bt.main}${fac}</div>
     ${RES[o.id] ? `<div class="result ${RES[o.id].cls || ''}"><button class="x" title="Fermer" onclick="delete RES['${o.id}'];render()">×</button>${RES[o.id].html}</div>` : ''}
-    <details class="plus" ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">${o.email ? `<div class="acts" style="margin:0 0 8px"><button class="btn" onclick="historique('${esc(o.email)}',this)">📜 Historique et e-mails du client</button></div>` : ''}<div class="acts" style="margin:0 0 8px"><span class="meta" style="align-self:center">✉️ ${esc(o.email || 'pas d\'e-mail')}</span> <button class="btn" onclick="corrigerEmail('${o.id}','${esc(o.email || '')}',this)">✏️ Corriger l'e-mail</button> <button class="btn" onclick="act('${o.id}','mail-confirmation',this)">📧 Renvoyer la confirmation</button> <button class="btn" onclick="act('${o.id}','mail-pret',this)">📚 Renvoyer « livres prêts »</button> <button class="btn" onclick="act('${o.id}','mail-connexion',this)">🔑 Envoyer un lien de connexion</button></div>
+    <details class="plus" ${OPEN.has(o.id) ? 'open' : ''} ontoggle="this.open ? OPEN.add('${o.id}') : OPEN.delete('${o.id}')"><summary>Plus d'options et infos</summary><div class="more">${o.email ? `<div class="acts" style="margin:0 0 8px"><button class="btn" onclick="historique('${esc(o.email)}',this)">📜 Historique et e-mails du client</button></div>` : ''}
       <div>👤 ${esc(o.email)} · ${esc(a.nom)}, ${esc(a.adresse1)} ${esc(a.adresse2)}, ${esc(a.code_postal)} ${esc(a.ville)} · ${esc(a.telephone)}</div>
       ${o.pack_mail ? `<div>📧 Mail « prêt » envoyé le ${new Date(o.pack_mail * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</div>` : ''}
       ${o.lulu_id ? `<div>🖨️ Lulu : travail ${esc(o.lulu_id)} · ${esc(LULU_FR[o.lulu_statut] || o.lulu_statut)} · ${esc(o.lulu_cout)}</div>` : ''}
@@ -681,8 +681,10 @@ async function historique(email, btn) {
   if (j.erreur) return toast('⚠️ ' + j.erreur);
   const tous = (j.mails || []).concat((j.anciens || []).filter(m => !m.erreur));
   document.getElementById('dlgIn').innerHTML = `<h3>📜 ${esc(j.client && j.client.nom || email)}</h3><p class="meta">${esc(email)}${j.client ? ' · compte créé le ' + new Date(j.client.cree * 1000).toLocaleDateString('fr-FR') + (j.client.vu ? ' · vu ' + quand(j.client.vu) : '') : ' · pas de compte'}</p>
-    <div class="acts" style="margin:8px 0"><button class="btn" onclick="voirCompte('${esc(email)}')">👁️ Voir son compte</button> <button class="btn" onclick="lienConnexion('${esc(email)}',this)">🔑 Créer son lien de connexion</button></div><div id="lienCx"></div>
+    <div class="acts" style="margin:8px 0"><button class="btn" onclick="voirCompte('${esc(email)}')">👁️ Voir son compte</button> <button class="btn" onclick="emailClient('${esc(email)}',this)">✏️ Corriger son e-mail</button> <button class="btn" onclick="lienMailClient('${esc(email)}',this)">🔑 Lui envoyer un lien de connexion</button> <button class="btn" onclick="lienConnexion('${esc(email)}',this)">📋 Lien à copier</button></div><div id="lienCx"></div>
     <h4 style="margin:14px 0 6px">Commandes</h4>${(j.commandes || []).length ? `<table>${j.commandes.map(o => `<tr><td>${quand(o.cree)}</td><td>${esc(o.titre || o.quoi)}${o.numero > 1 ? ' (livre ' + o.numero + ')' : ''}</td><td>${esc(o.statut)}</td><td class="r">${o.montant ? eur(o.montant) : ''}</td></tr>`).join('')}</table>` : '<p class="meta">Aucune commande.</p>'}
+    ${groupes(j.commandes).length ? `<h4 style="margin:14px 0 6px">Renvoyer un e-mail</h4><table>${groupes(j.commandes).map(g => `<tr><td>${quand(g.cree)}</td><td>${esc(g.nom)}</td>
+      <td class="r" style="white-space:nowrap"><button class="btn" onclick="renvoi('${g.id}','mail-confirmation',this)">📧 Confirmation</button> <button class="btn" onclick="renvoi('${g.id}','mail-pret',this)">📚 Livres prêts</button></td></tr>`).join('')}</table>` : ''}
     <h4 style="margin:14px 0 6px">E-mails reçus</h4>${tous.length ? `<table>${tous.map(ligneMail).join('')}</table>` : '<p class="meta">Aucun e-mail enregistré pour cette adresse.</p>'}
     <p class="meta">${j.suivi_actif ? '✅ Remis = accepté par sa boîte mail · 👀 Ouvert = affiché (certaines messageries, comme Apple Mail, l\'indiquent même sans lecture) · ❌ = non reçu. Suivi lu chez Brevo.' : 'Envoi sans Brevo : seul « envoyé » est connu.'} Le contenu des e-mails n'est pas gardé.</p>
     ${(j.anciens || []).some(m => m.erreur) ? `<p class="meta" style="color:#B3261E">${esc(j.anciens.find(m => m.erreur).erreur)}</p>` : ''}
@@ -690,6 +692,35 @@ async function historique(email, btn) {
   document.getElementById('dlg').showModal();
 }
 function voirCompte(email) { window.open('/admin/voir-compte' + Q + '&email=' + encodeURIComponent(email), '_blank'); }
+function groupes(cmds) {       // une ligne par commande (un pack de 3 livres = une seule commande)
+  const G = {};
+  (cmds || []).forEach(o => { const k = o.origine || o.id; const g = G[k] || (G[k] = { id: k, cree: o.cree, titres: [], quoi: o.quoi }); if (o.titre) g.titres.push(o.titre); });
+  return Object.values(G).map(g => Object.assign(g, { nom: g.quoi + (g.titres.length ? ' · ' + g.titres.join(', ') : '') }));
+}
+async function renvoi(id, action, btn) {
+  if (!confirm(CONFIRM[action] || 'Envoyer ?')) return;
+  btn.disabled = true;
+  const j = await (await fetch(`/admin/api/${id}/${action}${Q}`, { method: 'POST', headers: H })).json().catch(() => ({ erreur: 'Erreur du serveur' }));
+  btn.disabled = false;
+  toast(j.erreur ? '⚠️ ' + j.erreur : '✅ Envoyé à ' + ((j.info || {}).envoye_a || ''));
+}
+async function emailClient(ancien, btn) {
+  const v = prompt("Bonne adresse e-mail du client :\n(remplace l'ancienne sur toutes ses commandes et son espace client)", ancien);
+  if (v === null || !v.trim() || v.trim().toLowerCase() === ancien) return;
+  btn.disabled = true;
+  const j = await (await fetch('/admin/api/client-email' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ ancien, nouveau: v.trim() }) })).json().catch(() => ({ erreur: 'Erreur' }));
+  btn.disabled = false;
+  if (j.erreur) return toast('⚠️ ' + j.erreur);
+  toast(`✅ E-mail corrigé (${j.commandes} commande${j.commandes > 1 ? 's' : ''})`);
+  historique(j.email); load();
+}
+async function lienMailClient(email, btn) {
+  if (!confirm("Envoyer à " + email + " un lien de connexion à son espace (valable 24 h) ?")) return;
+  btn.disabled = true;
+  const j = await (await fetch('/admin/api/client-lien-mail' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })).json().catch(() => ({ erreur: 'Erreur' }));
+  btn.disabled = false;
+  toast(j.erreur ? '⚠️ ' + j.erreur : '🔑 Lien envoyé à ' + j.envoye_a);
+}
 async function lienConnexion(email, btn) {
   btn.disabled = true;
   const j = await (await fetch('/admin/api/lien-connexion' + Q, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })).json().catch(() => ({ erreur: 'Erreur' }));
